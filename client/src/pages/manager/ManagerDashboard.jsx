@@ -1,0 +1,110 @@
+import { useState, useEffect, useCallback } from 'react';
+import Layout from '../../components/layout/Layout';
+import TodayBoard from '../../components/manager/TodayBoard';
+import AddStudentToday from '../../components/manager/AddStudentToday';
+import Button from '../../components/ui/Button';
+import { api } from '../../api/client';
+import { today, formatDate } from '../../utils/dateUtils';
+
+export default function ManagerDashboard() {
+  const [assignments, setAssignments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  const todayStr = today();
+
+  const fetchAssignments = useCallback(async () => {
+    try {
+      const data = await api.get(`/daily?date=${todayStr}`);
+      setAssignments(data);
+    } catch (err) {
+      setError('Failed to load today\'s board');
+    } finally {
+      setLoading(false);
+    }
+  }, [todayStr]);
+
+  useEffect(() => {
+    fetchAssignments();
+  }, [fetchAssignments]);
+
+  const handleAdded = (newAssignment) => {
+    setAssignments((prev) => [...prev, newAssignment]);
+  };
+
+  const handleUpdate = (updated) => {
+    setAssignments((prev) =>
+      prev.map((a) => (a.id === updated.id ? updated : a))
+    );
+  };
+
+  const handleRemove = (id) => {
+    setAssignments((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const existingStudentIds = assignments.map((a) => a.student_id);
+  const completedCount = assignments.filter((a) => a.completed).length;
+
+  return (
+    <Layout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-bold font-ninja text-ninja-navy tracking-wide">
+              Today's <span className="text-ninja-blue">Dojo</span>
+            </h1>
+            <p className="text-ninja-muted font-ninja mt-1">{formatDate(todayStr)}</p>
+          </div>
+          <Button onClick={() => setShowAddModal(true)} size="md">
+            + Add Student
+          </Button>
+        </div>
+
+        {/* Stats */}
+        {assignments.length > 0 && (
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
+              <p className="text-3xl font-bold font-ninja text-ninja-blue">{assignments.length}</p>
+              <p className="text-ninja-muted font-ninja text-sm mt-1">Total Students</p>
+            </div>
+            <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
+              <p className="text-3xl font-bold font-ninja text-green-500">{completedCount}</p>
+              <p className="text-ninja-muted font-ninja text-sm mt-1">Completed</p>
+            </div>
+            <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
+              <p className="text-3xl font-bold font-ninja text-ninja-muted">{assignments.length - completedCount}</p>
+              <p className="text-ninja-muted font-ninja text-sm mt-1">Remaining</p>
+            </div>
+          </div>
+        )}
+
+        {/* Board */}
+        <div className="bg-white border border-ninja-border rounded-xl p-6 shadow-sm">
+          <h2 className="text-xl font-bold font-ninja text-ninja-navy mb-4 tracking-wide">Session Board</h2>
+
+          {error && (
+            <p className="text-ninja-red font-ninja text-center py-4">{error}</p>
+          )}
+
+          {loading ? (
+            <p className="text-ninja-muted font-ninja text-center py-8">Loading...</p>
+          ) : (
+            <TodayBoard
+              assignments={assignments}
+              onRemove={handleRemove}
+            />
+          )}
+        </div>
+      </div>
+
+      <AddStudentToday
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAdded={handleAdded}
+        existingStudentIds={existingStudentIds}
+      />
+    </Layout>
+  );
+}
