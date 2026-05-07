@@ -1,0 +1,114 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Commands
+
+```bash
+# Start both servers (client :5173, server :3001)
+npm run dev
+
+# Server only
+npm run server
+
+# Client only
+npm run client
+
+# Build client for production
+npm run build
+
+# Re-seed the database (resets users + sample students)
+npm run seed
+
+# If ports are stuck, clear them first
+lsof -ti:3001 | xargs kill -9; lsof -ti:5173 | xargs kill -9
+```
+
+Default dev credentials: `manager` / `ninja123`, `sensei1` / `ninja123`, `sensei2` / `ninja123`
+
+## Architecture
+
+This is a monorepo with two independent packages:
+
+- **`server/`** — Node.js + Express + SQLite (CommonJS, `require`)
+- **`client/`** — React + Vite + Tailwind CSS (ESM, `import`)
+
+Dependencies must be installed separately: `npm install` at root (installs `concurrently`), then `cd server && npm install`, then `cd client && npm install`.
+
+### Server
+
+The Express app (`server/index.js`) initializes the SQLite database at startup, attaches it to `app` via `app.set('db', db)`, and routes all requests pull the DB instance with `req.app.get('db')`. There is no ORM — all queries use `better-sqlite3` directly with prepared statements.
+
+Sessions are stored in the same SQLite file via `better-sqlite3-session-store`. Session data (`userId`, `role`, `displayName`) is set on login and checked by middleware in `server/middleware/auth.js`. Three guards exist: `requireAuth`, `requireSensei` (sensei or manager), `requireManager` (manager only).
+
+In production (`NODE_ENV=production`), the server serves the built client from `client/dist/` and handles all non-API routes with the SPA's `index.html`.
+
+Environment variables are read from `.env` at the project root (not inside `server/`):
+- `SESSION_SECRET` — required for production
+- `PORT` — default 3001
+- `DB_PATH` — default `./server/data/codeninjas.db`
+
+### Database
+
+Four tables in `server/db/schema.sql`:
+
+- **`users`** — manager and sensei accounts with bcrypt password hashes
+- **`students`** — all ninja profiles; belt/project fields are only populated for CREATE program students; `active=0` is a soft delete
+- **`daily_assignments`** — date-scoped To Do board; `UNIQUE(student_id, session_date)` prevents duplicates; `sensei_id` is nullable until assigned; `completed` flips to 1 when a progress log is submitted
+- **`progress_logs`** — immutable session notes with snapshots (`belt_level_at`, `belt_sublevel_at`, `project_at`, `status_at`) capturing student state at the time of logging
+
+Schema changes require updating `server/db/schema.sql` (for fresh installs) and adding a runtime migration in `server/db/init.js` using `PRAGMA table_info` + `ALTER TABLE` (for existing DBs). See the `birthday` column addition as the pattern to follow.
+
+### Client
+
+The Vite dev server proxies `/api/*` to `localhost:3001` (configured in `client/vite.config.js`), so all API calls use relative paths like `/api/students`.
+
+All fetch calls go through `client/src/api/client.js` which handles JSON serialization, credentials, and throws on non-OK responses.
+
+Auth state is managed by `client/src/context/AuthContext.jsx`. On mount it calls `GET /api/auth/me` to restore the session. Role-based routing uses `client/src/components/layout/ProtectedRoute.jsx` — managers also pass sensei-role checks.
+
+### Belt Config — Single Source of Truth
+
+`client/src/utils/beltConfig.js` defines all belt names, level caps per belt, and display colors. Both the frontend form validation and the server-side API routes mirror these constraints. When adding or changing belt rules, update this file and the corresponding server-side validation in `server/routes/students.js` and `server/routes/progress.js`.
+
+Belt level caps: White (8), Yellow (10), Orange (12), Green (10), Blue (3). Purple/Brown/Red/Black have no sublevel tracking (`levels: null`).
+
+### Roles & Programs
+
+- **Manager**: full access — builds the daily session board, edits/removes student profiles, adds new students
+- **Sensei**: sees all of today's students (no pre-assignment), logs session notes for any student, can advance belt/project for CREATE students, and can view (read-only) the full student roster and profiles
+
+The session board is open — any sensei can log progress for any student added to the board that day. A student is marked complete once any sensei submits a progress log. There is no sensei pre-assignment.
+
+The student roster (`/manager/students`) and student profile (`/manager/students/:id`) routes are accessible to both roles. The "Add Student", "Edit", and "Remove" buttons are conditionally rendered only for managers (`user?.role === 'manager'`). Clicking a student name on the session board or a student card navigates to their full profile; senseis also have a separate "Log Progress" button on each card.
+
+Programs: `CREATE`, `Robotics Academy`, `AI Academy`, `JR`. Only CREATE students have belt/project tracking. The other programs currently use only the daily To Do board and notes.
+
+### Student Data
+
+Students have a `birthday` (DATE) field stored in the DB. Age is calculated client-side from the birthday and displayed on the student profile. The `birthday` column was added via a runtime migration in `server/db/init.js` (using `PRAGMA table_info` + `ALTER TABLE`) so existing databases are updated automatically on server start — no manual migration needed.
+
+### Logos & Assets
+
+All source images live in `Images/` at the project root. They must be copied to `client/public/` to be served by Vite:
+- `client/public/CodeNinjasLogoH.svg` — horizontal wordmark, used in navbar and login page
+- `client/public/CodeNinjasLogoF.png` — square icon, used as the browser tab favicon
+- `client/public/CodeNinjasLaptop.png` — used in the manager's empty session board state
+- `client/public/CodeNinjasCelebrate.webp` — used in the sensei's empty dashboard state
+
+When adding new images, copy from `Images/` to `client/public/` and reference them as `/filename.ext` in JSX. No import needed — Vite serves `public/` as the root.
+
+### Theming
+
+The UI matches the Code Ninjas brand (based on codeninjas.com). Tailwind theme tokens are defined in `client/tailwind.config.js`:
+- `bg-ninja-bg` (#f5f7fa) — page background
+- `bg-ninja-card` / `bg-white` — card backgrounds
+- `border-ninja-border` (#e2e8f0) — card borders
+- `text-ninja-blue` / `bg-ninja-blue` (#006ADD) — primary accent (buttons, links, highlights)
+- `bg-ninja-blue-hover` (#0058b8) — button hover state
+- `text-ninja-navy` (#1a2e4a) — headings and body text
+- `text-ninja-muted` (#506690) — secondary/label text
+- `text-ninja-red` (#e51520) — errors and alerts only
+
+Font: **Nunito** (Google Fonts, weights 400/600/700/800/900), loaded in `client/index.html`.
+

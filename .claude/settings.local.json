@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm show:*)",
+      "Bash(node:*)",
+      "Bash(npm run:*)",
+      "WebFetch(domain:www.codeninjas.com)"
+    ]
+  }
+}
