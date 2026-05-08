@@ -189,11 +189,11 @@ router.delete('/:id/programs/:program', requireManager, requireOwnLocation, asyn
   }
 });
 
-// PATCH /api/students/:id — name and birthday only
+// PATCH /api/students/:id
 router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { id } = req.params;
-  const { full_name, birthday } = req.body;
+  const { full_name, birthday, parent_name, parent_email, parent_phone } = req.body;
 
   try {
     const { rows: existing } = await pool.query(
@@ -204,8 +204,18 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
     if (!student) return res.status(404).json({ error: 'Student not found' });
 
     const { rows } = await pool.query(
-      'UPDATE students SET full_name = $1, birthday = $2 WHERE id = $3 RETURNING *',
-      [full_name ?? student.full_name, birthday !== undefined ? birthday : student.birthday, id]
+      `UPDATE students SET
+        full_name = $1, birthday = $2,
+        parent_name = $3, parent_email = $4, parent_phone = $5
+       WHERE id = $6 RETURNING *`,
+      [
+        full_name ?? student.full_name,
+        birthday !== undefined ? birthday : student.birthday,
+        parent_name !== undefined ? parent_name : student.parent_name,
+        parent_email !== undefined ? parent_email : student.parent_email,
+        parent_phone !== undefined ? parent_phone : student.parent_phone,
+        id,
+      ]
     );
     res.json(rows[0]);
   } catch (err) {
@@ -251,6 +261,80 @@ router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
     console.error('Error deleting student:', err);
     res.status(500).json({ error: 'Failed to delete student' });
   }
+});
+
+// POST /api/students/import — bulk import from CSV data
+router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { students: incoming } = req.body;
+  const locationId = req.session.activeLocationId;
+
+  if (!Array.isArray(incoming) || incoming.length === 0) {
+    return res.status(400).json({ error: 'No student data provided' });
+  }
+
+  const BELT_MAP = {
+    'White Belt': 'White', 'Yellow Belt': 'Yellow', 'Orange Belt': 'Orange',
+    'Green Belt': 'Green', 'Blue Belt': 'Blue', 'Purple Belt': 'Purple',
+    'Brown Belt': 'Brown', 'Red Belt': 'Red', 'Black Belt': 'Black',
+  };
+
+  const added = [];
+  const duplicates = [];
+
+  for (const row of incoming) {
+    const fullName = row.full_name?.trim();
+    const program = row.program?.trim();
+    if (!fullName || !program) continue;
+
+    const beltLevel = BELT_MAP[row.belt_raw?.trim()] || null;
+
+    // Check for existing student with same name + program at this location
+    const { rows: existing } = await pool.query(
+      `SELECT s.id FROM students s
+       JOIN student_programs sp ON sp.student_id = s.id
+       WHERE LOWER(s.full_name) = LOWER($1) AND s.location_id = $2 AND sp.program = $3 AND s.active = true`,
+      [fullName, locationId, program]
+    );
+
+    if (existing.length) {
+      duplicates.push(fullName);
+      continue;
+    }
+
+    // Find or create the student (they may exist but not in this program yet)
+    const { rows: existingStudent } = await pool.query(
+      'SELECT id FROM students WHERE LOWER(full_name) = LOWER($1) AND location_id = $2 AND active = true',
+      [fullName, locationId]
+    );
+
+    let studentId;
+    if (existingStudent.length) {
+      studentId = existingStudent[0].id;
+    } else {
+      const birthday = row.birthday ? (() => {
+        const d = new Date(row.birthday);
+        return isNaN(d) ? null : d.toISOString().split('T')[0];
+      })() : null;
+
+      const { rows: inserted } = await pool.query(
+        `INSERT INTO students (full_name, birthday, location_id, parent_name, parent_email, parent_phone)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+        [fullName, birthday, locationId, row.parent_name || null, row.parent_email || null, row.parent_phone || null]
+      );
+      studentId = inserted[0].id;
+    }
+
+    await pool.query(
+      `INSERT INTO student_programs (student_id, program, belt_level, belt_sublevel)
+       VALUES ($1, $2, $3, $4) ON CONFLICT (student_id, program) DO NOTHING`,
+      [studentId, program, beltLevel, beltLevel ? 1 : null]
+    );
+
+    added.push(fullName);
+  }
+
+  res.json({ added: added.length, duplicates });
 });
 
 module.exports = router;
