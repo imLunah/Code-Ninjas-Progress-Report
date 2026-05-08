@@ -5,62 +5,163 @@ import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
 import { BELTS, PROJECTS, STATUSES, PROGRAMS, getMaxLevel } from '../../utils/beltConfig';
 
-export default function AddStudentPage() {
-  const navigate = useNavigate();
-  const [form, setForm] = useState({
-    full_name: '',
-    birthday: '',
-    program: '',
-    belt_level: '',
-    belt_sublevel: '',
-    current_project: '',
-    project_status: '',
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const isCreate = form.program === 'CREATE';
-  const maxLevel = getMaxLevel(form.belt_level);
+function EnrollmentRow({ enrollment, index, onChange, onRemove, showRemove }) {
+  const isCreate = enrollment.program === 'CREATE';
+  const maxLevel = getMaxLevel(enrollment.belt_level);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => {
-      const next = { ...prev, [name]: value };
-      // Reset CREATE-specific fields when program changes
-      if (name === 'program' && value !== 'CREATE') {
-        next.belt_level = '';
-        next.belt_sublevel = '';
-        next.current_project = '';
-        next.project_status = '';
-      }
-      // Reset sublevel when belt changes
-      if (name === 'belt_level') {
-        next.belt_sublevel = '';
-      }
-      return next;
-    });
+    const updated = { ...enrollment, [name]: value };
+    if (name === 'program' && value !== 'CREATE') {
+      updated.belt_level = '';
+      updated.belt_sublevel = '';
+      updated.current_project = '';
+      updated.project_status = '';
+    }
+    if (name === 'belt_level') updated.belt_sublevel = '';
+    onChange(index, updated);
+  };
+
+  return (
+    <div className="border border-ninja-border rounded-xl p-4 space-y-3 bg-ninja-bg">
+      <div className="flex items-center justify-between">
+        <label className="block text-ninja-muted text-sm font-ninja font-semibold uppercase tracking-wide">
+          Program *
+        </label>
+        {showRemove && (
+          <button
+            type="button"
+            onClick={() => onRemove(index)}
+            className="text-ninja-red text-sm font-ninja hover:underline"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+
+      <select
+        name="program"
+        value={enrollment.program}
+        onChange={handleChange}
+        required
+        className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+      >
+        <option value="">Select a program...</option>
+        {PROGRAMS.map((p) => (
+          <option key={p} value={p}>{p}</option>
+        ))}
+      </select>
+
+      {isCreate && (
+        <div className="space-y-3 pt-2 border-t border-ninja-border/50">
+          <p className="text-ninja-muted font-ninja text-xs italic">CREATE details (optional):</p>
+
+          <select
+            name="belt_level"
+            value={enrollment.belt_level}
+            onChange={handleChange}
+            className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+          >
+            <option value="">Select belt...</option>
+            {BELTS.map((b) => <option key={b.name} value={b.name}>{b.name}</option>)}
+          </select>
+
+          {maxLevel && enrollment.belt_level && (
+            <input
+              type="number"
+              name="belt_sublevel"
+              value={enrollment.belt_sublevel}
+              onChange={handleChange}
+              min={1}
+              max={maxLevel}
+              placeholder={`Sublevel (1–${maxLevel})`}
+              className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+            />
+          )}
+
+          <select
+            name="current_project"
+            value={enrollment.current_project}
+            onChange={handleChange}
+            className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+          >
+            <option value="">Select project...</option>
+            {PROJECTS.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+
+          <select
+            name="project_status"
+            value={enrollment.project_status}
+            onChange={handleChange}
+            className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+          >
+            <option value="">Select status...</option>
+            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const EMPTY_ENROLLMENT = { program: '', belt_level: '', belt_sublevel: '', current_project: '', project_status: '' };
+
+export default function AddStudentPage() {
+  const navigate = useNavigate();
+  const [name, setName] = useState('');
+  const [birthday, setBirthday] = useState('');
+  const [enrollments, setEnrollments] = useState([{ ...EMPTY_ENROLLMENT }]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleEnrollmentChange = (index, updated) => {
+    setEnrollments((prev) => prev.map((e, i) => (i === index ? updated : e)));
+  };
+
+  const addEnrollment = () => {
+    setEnrollments((prev) => [...prev, { ...EMPTY_ENROLLMENT }]);
+  };
+
+  const removeEnrollment = (index) => {
+    setEnrollments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const valid = enrollments.filter((e) => e.program);
+    if (valid.length === 0) {
+      setError('At least one program is required');
+      return;
+    }
+    const programs = valid.map((e) => e.program);
+    if (new Set(programs).size !== programs.length) {
+      setError('A ninja cannot be enrolled in the same program twice');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
-      const payload = {
-        full_name: form.full_name,
-        birthday: form.birthday || null,
-        program: form.program,
-        belt_level: isCreate && form.belt_level ? form.belt_level : null,
-        belt_sublevel: isCreate && form.belt_sublevel ? parseInt(form.belt_sublevel) : null,
-        current_project: isCreate && form.current_project ? form.current_project : null,
-        project_status: isCreate && form.project_status ? form.project_status : null,
-      };
+      const student = await api.post('/students', {
+        full_name: name,
+        birthday: birthday || null,
+      });
 
-      const student = await api.post('/students', payload);
+      for (const enrollment of valid) {
+        const isCreate = enrollment.program === 'CREATE';
+        await api.post(`/students/${student.id}/programs`, {
+          program: enrollment.program,
+          belt_level: isCreate && enrollment.belt_level ? enrollment.belt_level : null,
+          belt_sublevel: isCreate && enrollment.belt_sublevel ? parseInt(enrollment.belt_sublevel) : null,
+          current_project: isCreate && enrollment.current_project ? enrollment.current_project : null,
+          project_status: isCreate && enrollment.project_status ? enrollment.project_status : null,
+        });
+      }
+
       navigate(`/manager/students/${student.id}`);
     } catch (err) {
-      setError(err.message || 'Failed to create student');
+      setError(err.message || 'Failed to create ninja');
     } finally {
       setLoading(false);
     }
@@ -95,11 +196,10 @@ export default function AddStudentPage() {
               </label>
               <input
                 type="text"
-                name="full_name"
-                value={form.full_name}
-                onChange={handleChange}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 required
-                placeholder="Student's full name"
+                placeholder="Ninja's full name"
                 className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
               />
             </div>
@@ -110,117 +210,42 @@ export default function AddStudentPage() {
               </label>
               <input
                 type="date"
-                name="birthday"
-                value={form.birthday}
-                onChange={handleChange}
+                value={birthday}
+                onChange={(e) => setBirthday(e.target.value)}
                 className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
               />
             </div>
 
-            <div>
-              <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
-                Program *
-              </label>
-              <select
-                name="program"
-                value={form.program}
-                onChange={handleChange}
-                required
-                className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-              >
-                <option value="">Select a program...</option>
-                {PROGRAMS.map((p) => (
-                  <option key={p} value={p}>{p}</option>
+            <div className="border-t border-ninja-border pt-4">
+              <p className="text-ninja-muted font-ninja text-sm font-semibold uppercase tracking-wide mb-3">
+                Programs
+              </p>
+              <div className="space-y-3">
+                {enrollments.map((enrollment, index) => (
+                  <EnrollmentRow
+                    key={index}
+                    enrollment={enrollment}
+                    index={index}
+                    onChange={handleEnrollmentChange}
+                    onRemove={removeEnrollment}
+                    showRemove={enrollments.length > 1}
+                  />
                 ))}
-              </select>
+              </div>
+              <button
+                type="button"
+                onClick={addEnrollment}
+                className="mt-3 text-ninja-blue font-ninja text-sm hover:underline"
+              >
+                + Add another program
+              </button>
             </div>
-
-            {isCreate && (
-              <>
-                <div className="border-t border-ninja-border pt-4">
-                  <p className="text-ninja-muted font-ninja text-sm mb-3 italic">CREATE program details (optional):</p>
-                </div>
-
-                <div>
-                  <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
-                    Belt Level
-                  </label>
-                  <select
-                    name="belt_level"
-                    value={form.belt_level}
-                    onChange={handleChange}
-                    className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-                  >
-                    <option value="">Select belt...</option>
-                    {BELTS.map((b) => (
-                      <option key={b.name} value={b.name}>{b.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {maxLevel && form.belt_level && (
-                  <div>
-                    <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
-                      Belt Sublevel (1–{maxLevel})
-                    </label>
-                    <input
-                      type="number"
-                      name="belt_sublevel"
-                      value={form.belt_sublevel}
-                      onChange={handleChange}
-                      min={1}
-                      max={maxLevel}
-                      placeholder={`1 to ${maxLevel}`}
-                      className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
-                    Current Project
-                  </label>
-                  <select
-                    name="current_project"
-                    value={form.current_project}
-                    onChange={handleChange}
-                    className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-                  >
-                    <option value="">Select project...</option>
-                    {PROJECTS.map((p) => (
-                      <option key={p} value={p}>{p}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
-                    Project Status
-                  </label>
-                  <select
-                    name="project_status"
-                    value={form.project_status}
-                    onChange={handleChange}
-                    className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-                  >
-                    <option value="">Select status...</option>
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-              </>
-            )}
 
             <div className="flex gap-3 pt-4">
               <Button type="submit" disabled={loading} className="flex-1">
-                {loading ? 'Creating...' : 'Create Student'}
+                {loading ? 'Creating...' : 'Create Ninja'}
               </Button>
-              <Button
-                variant="secondary"
-                type="button"
-                onClick={() => navigate('/manager/students')}
-              >
+              <Button variant="secondary" type="button" onClick={() => navigate('/manager/students')}>
                 Cancel
               </Button>
             </div>

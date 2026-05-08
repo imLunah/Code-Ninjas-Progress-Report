@@ -2,6 +2,22 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth, requireManager, requireSensei, requireOwnLocation } = require('../middleware/auth');
 
+const PROGRAMS_SUBQUERY = `
+  COALESCE(
+    (SELECT json_agg(
+      json_build_object(
+        'id', sp.id,
+        'program', sp.program,
+        'belt_level', sp.belt_level,
+        'belt_sublevel', sp.belt_sublevel,
+        'current_project', sp.current_project,
+        'project_status', sp.project_status
+      ) ORDER BY sp.created_at
+    ) FROM student_programs sp WHERE sp.student_id = s.id),
+    '[]'::json
+  ) AS programs
+`;
+
 // GET /api/students
 router.get('/', requireAuth, async (req, res) => {
   const pool = req.app.get('db');
@@ -9,7 +25,8 @@ router.get('/', requireAuth, async (req, res) => {
 
   let query = `
     SELECT s.*,
-      (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id) as last_activity
+      (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id) AS last_activity,
+      ${PROGRAMS_SUBQUERY}
     FROM students s
     WHERE s.active = true AND s.location_id = $1
   `;
@@ -23,12 +40,12 @@ router.get('/', requireAuth, async (req, res) => {
   }
   if (program) {
     paramCount++;
-    query += ` AND s.program = $${paramCount}`;
+    query += ` AND EXISTS (SELECT 1 FROM student_programs sp2 WHERE sp2.student_id = s.id AND sp2.program = $${paramCount})`;
     params.push(program);
   }
   if (belt) {
     paramCount++;
-    query += ` AND s.belt_level = $${paramCount}`;
+    query += ` AND EXISTS (SELECT 1 FROM student_programs sp2 WHERE sp2.student_id = s.id AND sp2.belt_level = $${paramCount})`;
     params.push(belt);
   }
 
@@ -50,14 +67,14 @@ router.get('/:id', requireAuth, async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      'SELECT * FROM students WHERE id = $1 AND active = true AND location_id = $2',
+      `SELECT s.*, ${PROGRAMS_SUBQUERY} FROM students s WHERE s.id = $1 AND s.active = true AND s.location_id = $2`,
       [id, req.session.activeLocationId]
     );
     const student = rows[0];
     if (!student) return res.status(404).json({ error: 'Student not found' });
 
     const { rows: progressLogs } = await pool.query(`
-      SELECT pl.*, u.display_name as sensei_name
+      SELECT pl.*, u.display_name AS sensei_name
       FROM progress_logs pl
       LEFT JOIN users u ON pl.sensei_id = u.id
       WHERE pl.student_id = $1
@@ -74,31 +91,102 @@ router.get('/:id', requireAuth, async (req, res) => {
 // POST /api/students
 router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
-  const { full_name, program, belt_level, belt_sublevel, current_project, project_status, birthday } = req.body;
+  const { full_name, birthday } = req.body;
 
-  if (!full_name || !program) {
-    return res.status(400).json({ error: 'Full name and program are required' });
-  }
+  if (!full_name) return res.status(400).json({ error: 'Full name is required' });
 
   try {
-    const { rows } = await pool.query(`
-      INSERT INTO students (full_name, program, belt_level, belt_sublevel, current_project, project_status, birthday, location_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING *
-    `, [full_name, program, belt_level || null, belt_sublevel || null, current_project || null, project_status || null, birthday || null, req.session.activeLocationId]);
-
-    res.status(201).json(rows[0]);
+    const { rows } = await pool.query(
+      'INSERT INTO students (full_name, birthday, location_id) VALUES ($1, $2, $3) RETURNING *',
+      [full_name, birthday || null, req.session.activeLocationId]
+    );
+    res.status(201).json({ ...rows[0], programs: [] });
   } catch (err) {
     console.error('Error creating student:', err);
     res.status(500).json({ error: 'Failed to create student' });
   }
 });
 
-// PATCH /api/students/:id
+// POST /api/students/:id/programs — add a program enrollment
+router.post('/:id/programs', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+  const { program, belt_level, belt_sublevel, current_project, project_status } = req.body;
+
+  if (!program) return res.status(400).json({ error: 'program is required' });
+
+  try {
+    const { rows: studentRows } = await pool.query(
+      'SELECT id FROM students WHERE id = $1 AND active = true AND location_id = $2',
+      [id, req.session.activeLocationId]
+    );
+    if (!studentRows[0]) return res.status(404).json({ error: 'Student not found' });
+
+    const { rows } = await pool.query(`
+      INSERT INTO student_programs (student_id, program, belt_level, belt_sublevel, current_project, project_status)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `, [id, program, belt_level || null, belt_sublevel || null, current_project || null, project_status || null]);
+
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Student already enrolled in this program' });
+    console.error('Error adding program:', err);
+    res.status(500).json({ error: 'Failed to add program' });
+  }
+});
+
+// PATCH /api/students/:id/programs/:program — update enrollment details
+router.patch('/:id/programs/:program', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id, program } = req.params;
+  const { belt_level, belt_sublevel, current_project, project_status } = req.body;
+
+  try {
+    const { rows } = await pool.query(`
+      UPDATE student_programs
+      SET belt_level = $1, belt_sublevel = $2, current_project = $3, project_status = $4
+      WHERE student_id = $5 AND program = $6
+      RETURNING *
+    `, [
+      belt_level !== undefined ? belt_level : null,
+      belt_sublevel !== undefined ? belt_sublevel : null,
+      current_project !== undefined ? current_project : null,
+      project_status !== undefined ? project_status : null,
+      id,
+      decodeURIComponent(program),
+    ]);
+    if (!rows[0]) return res.status(404).json({ error: 'Enrollment not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Error updating program:', err);
+    res.status(500).json({ error: 'Failed to update program' });
+  }
+});
+
+// DELETE /api/students/:id/programs/:program — remove an enrollment
+router.delete('/:id/programs/:program', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id, program } = req.params;
+
+  try {
+    const { rows } = await pool.query(
+      'DELETE FROM student_programs WHERE student_id = $1 AND program = $2 RETURNING id',
+      [id, decodeURIComponent(program)]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Enrollment not found' });
+    res.json({ message: 'Program removed' });
+  } catch (err) {
+    console.error('Error removing program:', err);
+    res.status(500).json({ error: 'Failed to remove program' });
+  }
+});
+
+// PATCH /api/students/:id — name and birthday only
 router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { id } = req.params;
-  const { full_name, belt_level, belt_sublevel, current_project, project_status, birthday } = req.body;
+  const { full_name, birthday } = req.body;
 
   try {
     const { rows: existing } = await pool.query(
@@ -108,21 +196,10 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
     const student = existing[0];
     if (!student) return res.status(404).json({ error: 'Student not found' });
 
-    const { rows } = await pool.query(`
-      UPDATE students
-      SET full_name = $1, belt_level = $2, belt_sublevel = $3, current_project = $4, project_status = $5, birthday = $6
-      WHERE id = $7
-      RETURNING *
-    `, [
-      full_name ?? student.full_name,
-      belt_level !== undefined ? belt_level : student.belt_level,
-      belt_sublevel !== undefined ? belt_sublevel : student.belt_sublevel,
-      current_project !== undefined ? current_project : student.current_project,
-      project_status !== undefined ? project_status : student.project_status,
-      birthday !== undefined ? birthday : student.birthday,
-      id,
-    ]);
-
+    const { rows } = await pool.query(
+      'UPDATE students SET full_name = $1, birthday = $2 WHERE id = $3 RETURNING *',
+      [full_name ?? student.full_name, birthday !== undefined ? birthday : student.birthday, id]
+    );
     res.json(rows[0]);
   } catch (err) {
     console.error('Error updating student:', err);
@@ -130,7 +207,7 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
   }
 });
 
-// PATCH /api/students/:id/note (sensei + manager)
+// PATCH /api/students/:id/note
 router.patch('/:id/note', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { id } = req.params;

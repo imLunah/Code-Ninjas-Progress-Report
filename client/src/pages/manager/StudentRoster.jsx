@@ -119,31 +119,45 @@ export default function StudentRoster() {
                     >
                       <td className="px-4 py-3 font-ninja font-bold text-ninja-navy">{s.full_name}</td>
                       <td className="px-4 py-3">
-                        <ProgramBadge program={s.program} size="xs" />
+                        <div className="flex flex-wrap gap-1">
+                          {(s.programs || []).map((p) => (
+                            <ProgramBadge key={p.program} program={p.program} size="xs" />
+                          ))}
+                          {(s.programs || []).length === 0 && (
+                            <span className="text-ninja-muted font-ninja text-sm">—</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
-                        {s.belt_level
-                          ? <BeltBadge belt={s.belt_level} sublevel={s.belt_sublevel} size="xs" />
-                          : <span className="text-ninja-muted font-ninja text-sm">—</span>
-                        }
+                        {(() => {
+                          const create = (s.programs || []).find((p) => p.program === 'CREATE');
+                          return create?.belt_level
+                            ? <BeltBadge belt={create.belt_level} sublevel={create.belt_sublevel} size="xs" />
+                            : <span className="text-ninja-muted font-ninja text-sm">—</span>;
+                        })()}
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
-                        <span className="text-ninja-muted font-ninja text-sm">{s.current_project || '—'}</span>
+                        <span className="text-ninja-muted font-ninja text-sm">
+                          {(s.programs || []).find((p) => p.program === 'CREATE')?.current_project || '—'}
+                        </span>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
-                        {s.project_status ? (
-                          <span className={`text-xs font-ninja font-semibold px-2 py-0.5 rounded-md ${
-                            s.project_status === 'Completed'
-                              ? 'bg-green-100 text-green-700'
-                              : s.project_status === 'Working On'
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {s.project_status}
-                          </span>
-                        ) : (
-                          <span className="text-ninja-muted font-ninja text-sm">—</span>
-                        )}
+                        {(() => {
+                          const status = (s.programs || []).find((p) => p.program === 'CREATE')?.project_status;
+                          return status ? (
+                            <span className={`text-xs font-ninja font-semibold px-2 py-0.5 rounded-md ${
+                              status === 'Completed'
+                                ? 'bg-green-100 text-green-700'
+                                : status === 'Working On'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {status}
+                            </span>
+                          ) : (
+                            <span className="text-ninja-muted font-ninja text-sm">—</span>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3 hidden lg:table-cell">
                         <span className="text-ninja-muted font-ninja text-sm">

@@ -45,7 +45,7 @@ export default function ManagerDashboard() {
     setAssignments((prev) => prev.filter((a) => a.id !== id));
   };
 
-  const existingStudentIds = assignments.map((a) => a.student_id);
+  const existingEntries = assignments.map((a) => ({ student_id: a.student_id, program: a.program }));
   const completedCount = assignments.filter((a) => a.completed).length;
 
   return (
@@ -111,7 +111,7 @@ export default function ManagerDashboard() {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAdded={handleAdded}
-        existingStudentIds={existingStudentIds}
+        existingEntries={existingEntries}
       />
     </Layout>
   );

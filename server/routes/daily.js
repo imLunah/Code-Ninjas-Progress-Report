@@ -13,15 +13,16 @@ const ASSIGNMENT_SELECT = `
     da.sensei_id,
     da.session_date,
     da.completed,
+    da.program,
     s.full_name as student_name,
-    s.program,
-    s.belt_level,
-    s.belt_sublevel,
-    s.current_project,
-    s.project_status,
+    sp.belt_level,
+    sp.belt_sublevel,
+    sp.current_project,
+    sp.project_status,
     u.display_name as sensei_name
   FROM daily_assignments da
   JOIN students s ON da.student_id = s.id
+  LEFT JOIN student_programs sp ON sp.student_id = da.student_id AND sp.program = da.program
   LEFT JOIN users u ON da.sensei_id = u.id
 `;
 
@@ -63,24 +64,26 @@ router.get('/my', requireSensei, async (req, res) => {
 // POST /api/daily
 router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
-  const { student_id, session_date } = req.body;
+  const { student_id, program, session_date } = req.body;
 
-  if (!student_id) {
-    return res.status(400).json({ error: 'student_id is required' });
+  if (!student_id || !program) {
+    return res.status(400).json({ error: 'student_id and program are required' });
   }
 
   const date = session_date || todayDate();
 
   try {
-    const { rows: studentRows } = await pool.query(
-      'SELECT id FROM students WHERE id = $1 AND active = true AND location_id = $2',
-      [student_id, req.session.activeLocationId]
+    const { rows: enrollmentRows } = await pool.query(
+      `SELECT sp.id FROM student_programs sp
+       JOIN students s ON sp.student_id = s.id
+       WHERE sp.student_id = $1 AND sp.program = $2 AND s.active = true AND s.location_id = $3`,
+      [student_id, program, req.session.activeLocationId]
     );
-    if (!studentRows[0]) return res.status(404).json({ error: 'Student not found' });
+    if (!enrollmentRows[0]) return res.status(404).json({ error: 'Ninja not enrolled in this program' });
 
     const { rows: inserted } = await pool.query(
-      'INSERT INTO daily_assignments (student_id, session_date) VALUES ($1, $2) RETURNING id',
-      [student_id, date]
+      'INSERT INTO daily_assignments (student_id, program, session_date) VALUES ($1, $2, $3) RETURNING id',
+      [student_id, program, date]
     );
 
     const { rows } = await pool.query(
@@ -91,7 +94,7 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
     res.status(201).json(rows[0]);
   } catch (err) {
     if (err.code === '23505') {
-      return res.status(409).json({ error: 'Student already added for this date' });
+      return res.status(409).json({ error: 'Ninja already added for this program on this date' });
     }
     console.error('Error adding assignment:', err);
     res.status(500).json({ error: 'Failed to add assignment' });

@@ -1,5 +1,6 @@
 import { formatDate } from '../../utils/dateUtils';
 import BeltBadge from '../ui/BeltBadge';
+import ProgramBadge from '../ui/ProgramBadge';
 
 export default function ProgressHistory({ logs = [] }) {
   if (logs.length === 0) {
@@ -26,6 +27,9 @@ export default function ProgressHistory({ logs = [] }) {
                 <span className="text-ninja-muted text-sm font-ninja">
                   by {log.sensei_name}
                 </span>
+              )}
+              {log.program && (
+                <ProgramBadge program={log.program} size="xs" />
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
