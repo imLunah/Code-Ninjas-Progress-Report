@@ -17,7 +17,7 @@ export default function SenseiDashboard() {
   useEffect(() => {
     api.get(`/daily?date=${todayStr}`)
       .then(setAssignments)
-      .catch(() => setError('Failed to load today\'s students'))
+      .catch(() => setError('Failed to load today\'s ninjas'))
       .finally(() => setLoading(false));
   }, [todayStr, user?.activeLocation?.id]);
 
