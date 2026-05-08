@@ -1,5 +1,5 @@
 const express = require('express');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const router = express.Router();
 const { requireManager } = require('../middleware/auth');
 
@@ -12,8 +12,9 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    const db = req.app.get('db');
-    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+    const pool = req.app.get('db');
+    const { rows } = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const user = rows[0];
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid username or password' });
@@ -28,11 +29,14 @@ router.post('/login', async (req, res) => {
     req.session.role = user.role;
     req.session.displayName = user.display_name;
     req.session.activeLocationId = user.location_id;
-    req.session.homeLocationId = user.location_id;  // never changes on switch
+    req.session.homeLocationId = user.location_id;
 
-    const activeLocation = db.prepare('SELECT id, name, slug FROM locations WHERE id = ?').get(user.location_id);
+    const { rows: [activeLocation] } = await pool.query(
+      'SELECT id, name, slug FROM locations WHERE id = $1',
+      [user.location_id]
+    );
     const availableLocations = user.role === 'manager'
-      ? db.prepare('SELECT id, name, slug FROM locations ORDER BY name').all()
+      ? (await pool.query('SELECT id, name, slug FROM locations ORDER BY name')).rows
       : [activeLocation];
 
     res.json({
@@ -62,43 +66,65 @@ router.post('/logout', (req, res) => {
 });
 
 // POST /api/auth/switch-location (manager only)
-router.post('/switch-location', requireManager, (req, res) => {
-  const db = req.app.get('db');
+router.post('/switch-location', requireManager, async (req, res) => {
+  const pool = req.app.get('db');
   const { locationId } = req.body;
   if (!locationId) return res.status(400).json({ error: 'locationId is required' });
-  const location = db.prepare('SELECT id, name, slug FROM locations WHERE id = ?').get(locationId);
-  if (!location) return res.status(404).json({ error: 'Location not found' });
-  req.session.activeLocationId = location.id;
-  res.json({ activeLocation: location });
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, name, slug FROM locations WHERE id = $1',
+      [locationId]
+    );
+    const location = rows[0];
+    if (!location) return res.status(404).json({ error: 'Location not found' });
+    req.session.activeLocationId = location.id;
+    res.json({ activeLocation: location });
+  } catch (err) {
+    console.error('Switch location error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // GET /api/auth/me
-router.get('/me', (req, res) => {
+router.get('/me', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  const db = req.app.get('db');
-  const user = db.prepare('SELECT id, username, display_name, role, location_id FROM users WHERE id = ?').get(req.session.userId);
+  try {
+    const pool = req.app.get('db');
+    const { rows } = await pool.query(
+      'SELECT id, username, display_name, role, location_id FROM users WHERE id = $1',
+      [req.session.userId]
+    );
+    const user = rows[0];
 
-  if (!user) {
-    return res.status(401).json({ error: 'User not found' });
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    const { rows: [activeLocation] } = await pool.query(
+      'SELECT id, name, slug FROM locations WHERE id = $1',
+      [req.session.activeLocationId]
+    );
+    const availableLocations = user.role === 'manager'
+      ? (await pool.query('SELECT id, name, slug FROM locations ORDER BY name')).rows
+      : [activeLocation];
+
+    res.json({
+      id: user.id,
+      username: user.username,
+      displayName: user.display_name,
+      role: user.role,
+      homeLocationId: user.location_id,
+      activeLocation,
+      availableLocations,
+    });
+  } catch (err) {
+    console.error('Me error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
-
-  const activeLocation = db.prepare('SELECT id, name, slug FROM locations WHERE id = ?').get(req.session.activeLocationId);
-  const availableLocations = user.role === 'manager'
-    ? db.prepare('SELECT id, name, slug FROM locations ORDER BY name').all()
-    : [activeLocation];
-
-  res.json({
-    id: user.id,
-    username: user.username,
-    displayName: user.display_name,
-    role: user.role,
-    homeLocationId: user.location_id,
-    activeLocation,
-    availableLocations,
-  });
 });
 
 module.exports = router;
