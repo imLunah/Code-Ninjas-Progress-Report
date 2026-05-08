@@ -5,7 +5,7 @@ import BeltBadge from '../../components/ui/BeltBadge';
 import ProgramBadge from '../../components/ui/ProgramBadge';
 import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
-import { BELTS, PROGRAMS } from '../../utils/beltConfig';
+import { PROGRAMS } from '../../utils/beltConfig';
 import { formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 
@@ -15,8 +15,6 @@ export default function StudentRoster() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [programFilter, setProgramFilter] = useState('');
-  const [beltFilter, setBeltFilter] = useState('');
-
   const navigate = useNavigate();
   const { user, isReadOnly } = useAuth();
 
@@ -24,14 +22,13 @@ export default function StudentRoster() {
     const params = new URLSearchParams();
     if (search) params.set('search', search);
     if (programFilter) params.set('program', programFilter);
-    if (beltFilter) params.set('belt', beltFilter);
 
     setLoading(true);
     api.get(`/students?${params.toString()}`)
       .then(setStudents)
       .catch(() => setError('Failed to load ninjas'))
       .finally(() => setLoading(false));
-  }, [search, programFilter, beltFilter, user?.activeLocation?.id]);
+  }, [search, programFilter, user?.activeLocation?.id]);
 
   return (
     <Layout>
@@ -68,16 +65,6 @@ export default function StudentRoster() {
             <option value="">All Programs</option>
             {PROGRAMS.map((p) => (
               <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
-          <select
-            value={beltFilter}
-            onChange={(e) => setBeltFilter(e.target.value)}
-            className="bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-          >
-            <option value="">All Belts</option>
-            {BELTS.map((b) => (
-              <option key={b.name} value={b.name}>{b.name}</option>
             ))}
           </select>
         </div>
