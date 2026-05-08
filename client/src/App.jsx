@@ -7,6 +7,7 @@ import ManagerDashboard from './pages/manager/ManagerDashboard';
 import StudentRoster from './pages/manager/StudentRoster';
 import AddStudentPage from './pages/manager/AddStudentPage';
 import StudentProfile from './pages/manager/StudentProfile';
+import StaffPage from './pages/manager/StaffPage';
 import SenseiDashboard from './pages/sensei/SenseiDashboard';
 import LogProgressPage from './pages/sensei/LogProgressPage';
 
@@ -48,6 +49,14 @@ export default function App() {
             element={
               <ProtectedRoute role="sensei">
                 <StudentRoster />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manager/staff"
+            element={
+              <ProtectedRoute role="manager">
+                <StaffPage />
               </ProtectedRoute>
             }
           />
