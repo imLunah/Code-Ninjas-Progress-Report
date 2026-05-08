@@ -115,6 +115,10 @@ The student roster (`/manager/students`) and student profile (`/manager/students
 
 Programs: `CREATE`, `Robotics Academy`, `AI Academy`, `JR`. Only CREATE students have belt/project tracking. The other programs currently use only the daily To Do board and notes.
 
+### SQLite Boolean Gotcha
+
+SQLite stores boolean columns (`completed`, `active`) as integers `0`/`1`, not `false`/`true`. When used in React JSX conditionals like `{value && <Component />}`, the integer `0` renders as a literal "0" in the DOM. Always coerce to boolean with `!!value` before using as a JSX condition. Example: `const isCompleted = !!student.completed;`
+
 ### Student Data
 
 Students have a `birthday` (DATE) field stored in the DB. Age is calculated client-side from the birthday and displayed on the student profile. The `birthday` column was added via a runtime migration in `server/db/init.js` (using `PRAGMA table_info` + `ALTER TABLE`) so existing databases are updated automatically on server start — no manual migration needed.
