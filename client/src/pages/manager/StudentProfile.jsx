@@ -117,6 +117,8 @@ export default function StudentProfile() {
   const [error, setError] = useState('');
   const [showEdit, setShowEdit] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  const [confirmRemoveProgram, setConfirmRemoveProgram] = useState(null);
   const [editingEnrollment, setEditingEnrollment] = useState(null);
   const [showAddProgram, setShowAddProgram] = useState(false);
 
@@ -151,7 +153,6 @@ export default function StudentProfile() {
   };
 
   const handleRemoveProgram = async (program) => {
-    if (!window.confirm(`Remove ${student.full_name} from ${program}?`)) return;
     try {
       await api.delete(`/students/${id}/programs/${encodeURIComponent(program)}`);
       setStudent((prev) => ({
@@ -160,11 +161,12 @@ export default function StudentProfile() {
       }));
     } catch (err) {
       setError('Failed to remove program');
+    } finally {
+      setConfirmRemoveProgram(null);
     }
   };
 
   const handleDeactivate = async () => {
-    if (!window.confirm(`Remove ${student.full_name} from the roster? This cannot be undone.`)) return;
     setDeactivating(true);
     try {
       await api.delete(`/students/${id}`);
@@ -172,6 +174,8 @@ export default function StudentProfile() {
     } catch (err) {
       setError('Failed to deactivate ninja');
       setDeactivating(false);
+    } finally {
+      setConfirmDeactivate(false);
     }
   };
 
@@ -260,9 +264,20 @@ export default function StudentProfile() {
                   <Button onClick={() => setShowEdit(true)} variant="secondary">
                     Edit
                   </Button>
-                  <Button onClick={handleDeactivate} variant="danger" disabled={deactivating}>
-                    {deactivating ? 'Removing...' : 'Remove'}
-                  </Button>
+                  {confirmDeactivate ? (
+                    <div className="flex items-center gap-2">
+                      <Button variant="danger" disabled={deactivating} onClick={handleDeactivate}>
+                        {deactivating ? 'Removing...' : 'Confirm'}
+                      </Button>
+                      <Button variant="secondary" onClick={() => setConfirmDeactivate(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button onClick={() => setConfirmDeactivate(true)} variant="danger">
+                      Remove
+                    </Button>
+                  )}
                 </>
               )}
             </div>
@@ -335,13 +350,20 @@ export default function StudentProfile() {
                         Edit
                       </Button>
                     )}
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      onClick={() => handleRemoveProgram(enrollment.program)}
-                    >
-                      Remove
-                    </Button>
+                    {confirmRemoveProgram === enrollment.program ? (
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="danger" onClick={() => handleRemoveProgram(enrollment.program)}>
+                          Confirm
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={() => setConfirmRemoveProgram(null)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="danger" onClick={() => setConfirmRemoveProgram(enrollment.program)}>
+                        Remove
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
