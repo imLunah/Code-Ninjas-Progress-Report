@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   display_name TEXT NOT NULL,
   role TEXT NOT NULL CHECK(role IN ('manager','sensei')),
+  active BOOLEAN DEFAULT TRUE,
   location_id INTEGER REFERENCES locations(id),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
