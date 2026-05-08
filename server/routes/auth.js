@@ -31,6 +31,10 @@ router.post('/login', async (req, res) => {
     req.session.activeLocationId = user.location_id;
     req.session.homeLocationId = user.location_id;
 
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => (err ? reject(err) : resolve()));
+    });
+
     const { rows: [activeLocation] } = await pool.query(
       'SELECT id, name, slug FROM locations WHERE id = $1',
       [user.location_id]
