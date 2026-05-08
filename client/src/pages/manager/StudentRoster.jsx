@@ -15,6 +15,7 @@ export default function StudentRoster() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [programFilter, setProgramFilter] = useState('');
+  const [sortBy, setSortBy] = useState('name');
   const navigate = useNavigate();
   const { user, isReadOnly } = useAuth();
 
@@ -29,6 +30,19 @@ export default function StudentRoster() {
       .catch(() => setError('Failed to load ninjas'))
       .finally(() => setLoading(false));
   }, [search, programFilter, user?.activeLocation?.id]);
+
+  const sorted = [...students].sort((a, b) => {
+    if (sortBy === 'last_active') {
+      if (!a.last_activity && !b.last_activity) return 0;
+      if (!a.last_activity) return 1;
+      if (!b.last_activity) return -1;
+      return new Date(b.last_activity) - new Date(a.last_activity);
+    }
+    if (sortBy === 'joined') {
+      return new Date(b.created_at) - new Date(a.created_at);
+    }
+    return a.full_name.localeCompare(b.full_name);
+  });
 
   return (
     <Layout>
@@ -67,6 +81,15 @@ export default function StudentRoster() {
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+          >
+            <option value="name">Name (A–Z)</option>
+            <option value="last_active">Last Active</option>
+            <option value="joined">Newest Members</option>
+          </select>
         </div>
 
         {/* Table */}
@@ -98,7 +121,7 @@ export default function StudentRoster() {
                       </td>
                     </tr>
                   )}
-                  {students.map((s) => (
+                  {sorted.map((s) => (
                     <tr
                       key={s.id}
                       onClick={() => navigate(`/manager/students/${s.id}`)}
