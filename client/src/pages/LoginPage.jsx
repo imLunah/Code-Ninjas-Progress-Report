@@ -40,7 +40,7 @@ export default function LoginPage() {
             <div className="text-3xl mb-3">🚧</div>
             <h2 className="text-lg font-bold font-ninja text-ninja-navy mb-2">Early Alpha</h2>
             <p className="text-ninja-muted font-ninja text-sm leading-relaxed mb-5">
-              DojoLink is still in early development. Expect bugs, missing features, and changes as we continue building. John is working very long hours on this — thanks for your patience!
+              DojoLink is still in early development. Expect bugs, missing features, and changes as we continue building. John is working very long hours on this. Thanks for your patience!
             </p>
             <button
               onClick={() => setAlphaDismissed(true)}
