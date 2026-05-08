@@ -5,8 +5,10 @@ import AddStudentToday from '../../components/manager/AddStudentToday';
 import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ManagerDashboard() {
+  const { user, isReadOnly } = useAuth();
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -23,7 +25,7 @@ export default function ManagerDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [todayStr]);
+  }, [todayStr, user?.activeLocation?.id]);
 
   useEffect(() => {
     fetchAssignments();
@@ -57,9 +59,11 @@ export default function ManagerDashboard() {
             </h1>
             <p className="text-ninja-muted font-ninja mt-1">{formatDate(todayStr)}</p>
           </div>
-          <Button onClick={() => setShowAddModal(true)} size="md">
-            + Add Student
-          </Button>
+          {!isReadOnly && (
+            <Button onClick={() => setShowAddModal(true)} size="md">
+              + Add Student
+            </Button>
+          )}
         </div>
 
         {/* Stats */}

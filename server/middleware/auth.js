@@ -1,5 +1,6 @@
 function requireAuth(req, res, next) {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.session.activeLocationId) return res.status(403).json({ error: 'No active location. Please log in again.' });
   next();
 }
 
@@ -15,4 +16,12 @@ function requireSensei(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireManager, requireSensei };
+// Blocks writes when a manager is viewing a center other than their own
+function requireOwnLocation(req, res, next) {
+  if (req.session.activeLocationId !== req.session.homeLocationId) {
+    return res.status(403).json({ error: 'You can only make changes at your own center.' });
+  }
+  next();
+}
+
+module.exports = { requireAuth, requireManager, requireSensei, requireOwnLocation };

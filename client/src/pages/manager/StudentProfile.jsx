@@ -13,7 +13,7 @@ import { api } from '../../api/client';
 export default function StudentProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isReadOnly } = useAuth();
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -25,7 +25,7 @@ export default function StudentProfile() {
       .then(setStudent)
       .catch(() => setError('Failed to load student'))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, user?.activeLocation?.id]);
 
   const handleSaved = (updated) => {
     setStudent((prev) => ({ ...prev, ...updated }));
@@ -103,7 +103,7 @@ export default function StudentProfile() {
                 Member since {new Date(student.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
               </p>
             </div>
-            {user?.role === 'manager' && (
+            {user?.role === 'manager' && !isReadOnly && (
               <div className="flex gap-2">
                 <Button onClick={() => setShowEdit(true)} variant="secondary">
                   Edit

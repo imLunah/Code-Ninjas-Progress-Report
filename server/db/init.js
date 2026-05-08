@@ -4,6 +4,10 @@ const Database = require('better-sqlite3');
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../data/codeninjas.db');
 
+function hasColumn(db, table, col) {
+  return db.prepare(`PRAGMA table_info(${table})`).all().some(c => c.name === col);
+}
+
 function initDb() {
   // Ensure the data directory exists
   const dataDir = path.dirname(DB_PATH);
@@ -22,9 +26,16 @@ function initDb() {
   db.exec(schema);
 
   // Migrations: add columns that didn't exist at initial schema creation
-  const studentCols = db.prepare('PRAGMA table_info(students)').all().map(c => c.name);
-  if (!studentCols.includes('birthday')) {
+  if (!hasColumn(db, 'students', 'birthday')) {
     db.exec('ALTER TABLE students ADD COLUMN birthday DATE');
+  }
+
+  if (!hasColumn(db, 'users', 'location_id')) {
+    db.exec('ALTER TABLE users ADD COLUMN location_id INTEGER REFERENCES locations(id)');
+  }
+
+  if (!hasColumn(db, 'students', 'location_id')) {
+    db.exec('ALTER TABLE students ADD COLUMN location_id INTEGER REFERENCES locations(id)');
   }
 
   return db;
