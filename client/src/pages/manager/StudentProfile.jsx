@@ -75,7 +75,7 @@ export default function StudentProfile() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="flex flex-wrap items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold font-ninja text-ninja-navy">{student.full_name}</h1>
+                <h1 className="text-xl sm:text-3xl font-bold font-ninja text-ninja-navy">{student.full_name}</h1>
                 <ProgramBadge program={student.program} size="md" />
               </div>
               {student.program === 'CREATE' && (

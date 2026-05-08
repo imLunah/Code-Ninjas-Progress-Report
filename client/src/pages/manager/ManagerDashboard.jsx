@@ -54,7 +54,7 @@ export default function ManagerDashboard() {
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-bold font-ninja text-ninja-navy tracking-wide">
+            <h1 className="text-2xl sm:text-4xl font-bold font-ninja text-ninja-navy tracking-wide">
               Today's <span className="text-ninja-blue">Dojo</span>
             </h1>
             <p className="text-ninja-muted font-ninja mt-1">{formatDate(todayStr)}</p>
