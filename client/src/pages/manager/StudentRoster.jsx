@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Papa from 'papaparse';
 import Layout from '../../components/layout/Layout';
 import BeltBadge from '../../components/ui/BeltBadge';
 import ProgramBadge from '../../components/ui/ProgramBadge';
@@ -9,6 +10,15 @@ import { PROGRAMS } from '../../utils/beltConfig';
 import { formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 
+function parseProgram(membership) {
+  if (!membership) return null;
+  if (membership.includes('CODE NINJAS: CREATE')) return 'CREATE';
+  if (membership.includes('CODE NINJAS: JR')) return 'JR';
+  if (membership.includes('Robotics')) return 'Robotics Academy';
+  if (membership.includes('AI')) return 'AI Academy';
+  return null;
+}
+
 export default function StudentRoster() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,20 +26,35 @@ export default function StudentRoster() {
   const [search, setSearch] = useState('');
   const [programFilter, setProgramFilter] = useState('');
   const [sortBy, setSortBy] = useState('name');
+
+  // Bulk delete
+  const [selected, setSelected] = useState(new Set());
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // CSV import
+  const [importModal, setImportModal] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState('');
+  const fileInputRef = useRef(null);
+
   const navigate = useNavigate();
   const { user, isReadOnly } = useAuth();
+  const isManager = user?.role === 'manager' && !isReadOnly;
 
-  useEffect(() => {
+  const loadStudents = () => {
     const params = new URLSearchParams();
     if (search) params.set('search', search);
     if (programFilter) params.set('program', programFilter);
-
     setLoading(true);
     api.get(`/students?${params.toString()}`)
-      .then(setStudents)
+      .then((data) => { setStudents(data); setSelected(new Set()); })
       .catch(() => setError('Failed to load ninjas'))
       .finally(() => setLoading(false));
-  }, [search, programFilter, user?.activeLocation?.id]);
+  };
+
+  useEffect(() => { loadStudents(); }, [search, programFilter, user?.activeLocation?.id]);
 
   const sorted = [...students].sort((a, b) => {
     if (sortBy === 'last_active') {
@@ -38,11 +63,89 @@ export default function StudentRoster() {
       if (!b.last_activity) return -1;
       return new Date(b.last_activity) - new Date(a.last_activity);
     }
-    if (sortBy === 'joined') {
-      return new Date(b.created_at) - new Date(a.created_at);
-    }
+    if (sortBy === 'joined') return new Date(b.created_at) - new Date(a.created_at);
     return a.full_name.localeCompare(b.full_name);
   });
+
+  // --- Bulk delete ---
+  const toggleSelect = (id) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selected.size === sorted.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(sorted.map((s) => s.id)));
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    setDeleting(true);
+    try {
+      await Promise.all([...selected].map((id) => api.delete(`/students/${id}`)));
+      setConfirmDelete(false);
+      setSelected(new Set());
+      loadStudents();
+    } catch {
+      setError('Failed to delete some ninjas');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // --- CSV import ---
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImportError('');
+    setImportResult(null);
+    setImporting(true);
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        const rows = results.data;
+        const students = rows
+          .map((row) => ({
+            full_name: `${row['Participant First Name'] || ''} ${row['Participant Last Name'] || ''}`.trim(),
+            birthday: row['Birthday'] || null,
+            parent_name: `${row['Customer First Name'] || ''} ${row['Customer Last Name'] || ''}`.trim() || null,
+            parent_email: row['Email']?.trim() || null,
+            parent_phone: row['Mobile Phone']?.trim() || null,
+            program: parseProgram(row['Membership']),
+            belt_raw: row['Rank'] || null,
+          }))
+          .filter((s) => s.full_name && s.program);
+
+        if (students.length === 0) {
+          setImportError('No valid students found in this file. Make sure it\'s a MyStudio export.');
+          setImporting(false);
+          return;
+        }
+
+        try {
+          const result = await api.post('/students/import', { students });
+          setImportResult(result);
+          loadStudents();
+        } catch (err) {
+          setImportError(err.message || 'Import failed');
+        } finally {
+          setImporting(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+      },
+      error: () => {
+        setImportError('Failed to read CSV file.');
+        setImporting(false);
+      },
+    });
+  };
 
   return (
     <Layout>
@@ -55,10 +158,29 @@ export default function StudentRoster() {
             </h1>
             <p className="text-ninja-muted font-ninja mt-1">{students.length} active ninjas</p>
           </div>
-          {user?.role === 'manager' && !isReadOnly && (
-            <Button onClick={() => navigate('/manager/students/new')}>
-              + Add Ninja
-            </Button>
+          {isManager && (
+            <div className="flex gap-2 flex-wrap">
+              {selected.size > 0 && !confirmDelete && (
+                <Button variant="danger" onClick={() => setConfirmDelete(true)}>
+                  Delete Selected ({selected.size})
+                </Button>
+              )}
+              {selected.size > 0 && confirmDelete && (
+                <>
+                  <span className="self-center text-ninja-red font-ninja text-sm font-semibold">Remove {selected.size} ninja{selected.size > 1 ? 's' : ''}?</span>
+                  <Button variant="danger" onClick={handleDeleteSelected} disabled={deleting}>
+                    {deleting ? 'Deleting...' : 'Confirm'}
+                  </Button>
+                  <Button variant="secondary" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+                </>
+              )}
+              <Button variant="secondary" onClick={() => { setImportModal(true); setImportResult(null); setImportError(''); }}>
+                Import CSV
+              </Button>
+              <Button onClick={() => navigate('/manager/students/new')}>
+                + Add Ninja
+              </Button>
+            </div>
           )}
         </div>
 
@@ -94,17 +216,23 @@ export default function StudentRoster() {
 
         {/* Table */}
         <div className="bg-white border border-ninja-border rounded-xl overflow-hidden shadow-sm">
-          {error && (
-            <p className="text-ninja-red font-ninja text-center py-8">{error}</p>
-          )}
-          {loading && (
-            <p className="text-ninja-muted font-ninja text-center py-8">Loading ninjas...</p>
-          )}
+          {error && <p className="text-ninja-red font-ninja text-center py-8">{error}</p>}
+          {loading && <p className="text-ninja-muted font-ninja text-center py-8">Loading ninjas...</p>}
           {!loading && !error && (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-ninja-border bg-ninja-bg">
+                    {isManager && (
+                      <th className="px-4 py-3 w-10">
+                        <input
+                          type="checkbox"
+                          checked={sorted.length > 0 && selected.size === sorted.length}
+                          onChange={toggleAll}
+                          className="rounded border-ninja-border accent-ninja-blue cursor-pointer"
+                        />
+                      </th>
+                    )}
                     <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3">Name</th>
                     <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3">Program</th>
                     <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3">Belt</th>
@@ -114,9 +242,9 @@ export default function StudentRoster() {
                   </tr>
                 </thead>
                 <tbody>
-                  {students.length === 0 && (
+                  {sorted.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="text-center text-ninja-muted font-ninja py-12">
+                      <td colSpan={isManager ? 7 : 6} className="text-center text-ninja-muted font-ninja py-12">
                         No ninjas found
                       </td>
                     </tr>
@@ -124,21 +252,28 @@ export default function StudentRoster() {
                   {sorted.map((s) => (
                     <tr
                       key={s.id}
-                      onClick={() => navigate(`/manager/students/${s.id}`)}
-                      className="border-b border-ninja-border/50 hover:bg-ninja-bg cursor-pointer transition-colors"
+                      className={`border-b border-ninja-border/50 hover:bg-ninja-bg transition-colors ${selected.has(s.id) ? 'bg-blue-50' : ''}`}
                     >
-                      <td className="px-4 py-3 font-ninja font-bold text-ninja-navy">{s.full_name}</td>
-                      <td className="px-4 py-3">
+                      {isManager && (
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selected.has(s.id)}
+                            onChange={() => toggleSelect(s.id)}
+                            className="rounded border-ninja-border accent-ninja-blue cursor-pointer"
+                          />
+                        </td>
+                      )}
+                      <td className="px-4 py-3 font-ninja font-bold text-ninja-navy cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>{s.full_name}</td>
+                      <td className="px-4 py-3 cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
                         <div className="flex flex-wrap gap-1">
                           {(s.programs || []).map((p) => (
                             <ProgramBadge key={p.program} program={p.program} size="xs" />
                           ))}
-                          {(s.programs || []).length === 0 && (
-                            <span className="text-ninja-muted font-ninja text-sm">—</span>
-                          )}
+                          {(s.programs || []).length === 0 && <span className="text-ninja-muted font-ninja text-sm">—</span>}
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
                         {(() => {
                           const create = (s.programs || []).find((p) => p.program === 'CREATE');
                           return create?.belt_level
@@ -146,30 +281,24 @@ export default function StudentRoster() {
                             : <span className="text-ninja-muted font-ninja text-sm">—</span>;
                         })()}
                       </td>
-                      <td className="px-4 py-3 hidden md:table-cell">
+                      <td className="px-4 py-3 hidden md:table-cell cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
                         <span className="text-ninja-muted font-ninja text-sm">
                           {(s.programs || []).find((p) => p.program === 'CREATE')?.current_project || '—'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 hidden md:table-cell">
+                      <td className="px-4 py-3 hidden md:table-cell cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
                         {(() => {
                           const status = (s.programs || []).find((p) => p.program === 'CREATE')?.project_status;
                           return status ? (
                             <span className={`text-xs font-ninja font-semibold px-2 py-0.5 rounded-md ${
-                              status === 'Completed'
-                                ? 'bg-green-100 text-green-700'
-                                : status === 'Working On'
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'bg-gray-100 text-gray-600'
-                            }`}>
-                              {status}
-                            </span>
-                          ) : (
-                            <span className="text-ninja-muted font-ninja text-sm">—</span>
-                          );
+                              status === 'Completed' ? 'bg-green-100 text-green-700'
+                              : status === 'Working On' ? 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-600'
+                            }`}>{status}</span>
+                          ) : <span className="text-ninja-muted font-ninja text-sm">—</span>;
                         })()}
                       </td>
-                      <td className="px-4 py-3 hidden lg:table-cell">
+                      <td className="px-4 py-3 hidden lg:table-cell cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
                         <span className="text-ninja-muted font-ninja text-sm">
                           {s.last_activity ? formatDate(s.last_activity) : 'Never'}
                         </span>
@@ -182,6 +311,68 @@ export default function StudentRoster() {
           )}
         </div>
       </div>
+
+      {/* CSV Import Modal */}
+      {importModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <h2 className="text-lg font-bold font-ninja text-ninja-navy mb-1">Import from MyStudio CSV</h2>
+            <p className="text-ninja-muted font-ninja text-sm mb-5">
+              Export your membership list from MyStudio and upload it here. Programs and belt levels are auto-detected. Duplicates are skipped.
+            </p>
+
+            {!importResult && (
+              <>
+                {importError && (
+                  <div className="bg-red-50 border border-red-200 text-ninja-red rounded-lg p-3 mb-4 text-sm font-ninja">
+                    {importError}
+                  </div>
+                )}
+                <label className={`flex flex-col items-center justify-center border-2 border-dashed border-ninja-border rounded-xl p-8 cursor-pointer hover:border-ninja-blue transition-colors ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <svg className="w-8 h-8 text-ninja-muted mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  <span className="text-ninja-muted font-ninja text-sm">{importing ? 'Importing...' : 'Click to select CSV file'}</span>
+                  <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleFileChange} />
+                </label>
+              </>
+            )}
+
+            {importResult && (
+              <div className="space-y-3">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-green-700 font-ninja font-semibold text-sm">
+                    ✓ {importResult.added} ninja{importResult.added !== 1 ? 's' : ''} imported successfully
+                  </p>
+                </div>
+                {importResult.duplicates?.length > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-amber-700 font-ninja font-semibold text-sm mb-2">
+                      {importResult.duplicates.length} duplicate{importResult.duplicates.length !== 1 ? 's' : ''} skipped:
+                    </p>
+                    <ul className="text-amber-700 font-ninja text-sm space-y-0.5 max-h-32 overflow-y-auto">
+                      {importResult.duplicates.map((name, i) => (
+                        <li key={i}>• {name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-2 mt-5">
+              {importResult && !importing && (
+                <Button variant="secondary" onClick={() => { setImportResult(null); setImportError(''); }}>
+                  Import Another
+                </Button>
+              )}
+              <Button variant={importResult ? 'primary' : 'secondary'} onClick={() => setImportModal(false)} className="ml-auto">
+                {importResult ? 'Done' : 'Cancel'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
