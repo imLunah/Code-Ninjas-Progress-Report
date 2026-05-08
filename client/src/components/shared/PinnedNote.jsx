@@ -54,7 +54,7 @@ export default function PinnedNote({ studentId, initialNote, onUpdated }) {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={3}
-            placeholder="e.g. Troubled, likes working with a timer, needs a break every 20 minutes..."
+            placeholder="e.g. Gets frustrated easily — celebrate small wins. Stays focused with a visible timer. Benefits from a short break halfway through. Loves building games, responds well to challenges."
             className="w-full bg-white border border-amber-300 text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-amber-500 transition-colors resize-none"
             autoFocus
           />
