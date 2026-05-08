@@ -38,7 +38,7 @@ export default function LoginPage() {
           {/* Branding */}
           <div className="text-center mb-8">
             <img src="/CodeNinjasLogoH.svg" alt="Code Ninjas" className="h-16 mx-auto mb-3" />
-            <p className="text-ninja-muted font-ninja text-base font-semibold">Dojo Tracker</p>
+            <p className="text-ninja-muted font-ninja text-base font-semibold">DojoLink</p>
             <div className="mt-4 h-0.5 bg-gradient-to-r from-transparent via-ninja-blue to-transparent" />
           </div>
 
