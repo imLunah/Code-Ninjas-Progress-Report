@@ -192,18 +192,18 @@ export default function StudentRoster() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
             placeholder="Search by name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 min-w-[200px] bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+            className="w-full sm:flex-1 bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
           />
           <select
             value={programFilter}
             onChange={(e) => setProgramFilter(e.target.value)}
-            className="bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+            className="w-full sm:w-auto bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
           >
             <option value="">All Programs</option>
             {PROGRAMS.map((p) => (
@@ -213,7 +213,7 @@ export default function StudentRoster() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+            className="w-full sm:w-auto bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
           >
             <option value="name">Name (A–Z)</option>
             <option value="last_active">Last Active</option>
@@ -223,8 +223,8 @@ export default function StudentRoster() {
         </div>{/* end sticky header */}
 
         {/* Scrollable table */}
-        <div className="flex-1 overflow-y-auto min-h-0">
-        <div className="bg-white border border-ninja-border rounded-xl overflow-hidden shadow-sm">
+        <div className="flex-1 overflow-auto min-h-0">
+        <div className="bg-white border border-ninja-border rounded-xl overflow-clip shadow-sm">
           {error && <p className="text-ninja-red font-ninja text-center py-8">{error}</p>}
           {loading && <p className="text-ninja-muted font-ninja text-center py-8">Loading ninjas...</p>}
           {!loading && !error && (
@@ -269,8 +269,8 @@ export default function StudentRoster() {
               </div>
 
               {/* Desktop table */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full">
+              <div className="hidden md:block">
+                <table className="w-full min-w-[640px]">
                   <thead className="sticky top-0 z-10">
                     <tr className="border-b border-ninja-border bg-ninja-bg">
                       {isManager && (
