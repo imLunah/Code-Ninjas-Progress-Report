@@ -2,7 +2,7 @@
 
 An internal progress tracking web app for Code Ninjas franchise centers. Replaces Discord thread-based tracking with a structured, role-based dashboard for Center Directors and Senseis.
 
-Supports three locations: **Yorba Linda**, **Fullerton**, and **Cerritos** — each fully isolated with their own students, senseis, and session boards.
+Supports three locations: **Yorba Linda**, **Fullerton**, and **Cerritos** — each fully isolated with their own ninjas, senseis, and session boards.
 
 **Live at:** [codeninjas-progress-tracker.vercel.app](https://codeninjas-progress-tracker.vercel.app)
 
@@ -11,19 +11,35 @@ Supports three locations: **Yorba Linda**, **Fullerton**, and **Cerritos** — e
 ## Features
 
 ### Center Directors (Manager role)
-- Build the daily session board by adding students
-- View and edit student profiles (belt level, project, status, birthday)
-- Add and remove students from the roster
+- Build the daily session board by adding ninjas and their programs
+- Add ninjas to the board per-program — a ninja taking two classes gets two separate board rows
+- View and edit ninja profiles — manage program enrollments (add, edit, remove)
+- Edit belt level, project, and status per CREATE enrollment
+- Add and remove ninjas from the roster
+- Log progress for any ninja (same as senseis)
 - Switch between all 3 center locations to view progress (read-only for other centers)
 
 ### Senseis
 - View today's session board for their center
-- Log progress notes for any student on the board
-- Advance belt level, sublevel, and project status for CREATE students
-- Browse the full student roster and individual profiles (read-only)
+- Log progress notes for any ninja on the board, scoped to the specific program
+- Advance belt level, sublevel, and project status for CREATE ninjas
+- Browse the full ninja roster and individual profiles (read-only)
+- View the Senseis page and other staff profiles
+
+### Ninja Profiles
+- Shows all program enrollments with belt/project details per CREATE enrollment
+- Pinned staff note — persistent callout editable by all staff, visible on profile and log page
+- Progress history filterable by program when a ninja is enrolled in multiple classes
+- Stats: total sessions, current belt, current project
+
+### Multi-Program Support
+- Ninjas can be enrolled in multiple programs simultaneously (e.g., CREATE + Robotics Academy)
+- Each program is checked in separately on the session board
+- Progress logs are tracked per program
+- Belt and project state is stored independently per CREATE enrollment
 
 ### Multi-Location Support
-- Each center has its own isolated data — students, senseis, and boards never cross over
+- Each center has its own fully isolated data — ninjas, senseis, and boards never cross over
 - Center Directors can switch between locations via a navbar dropdown to view other centers
 - All write operations are locked to a director's home center (enforced server-side)
 
@@ -77,7 +93,7 @@ Run the schema in `supabase/schema.sql` via the Supabase SQL editor, then seed:
 npm run seed
 ```
 
-Creates 3 locations, 3 Center Directors, 6 Senseis, and 12 sample students (4 per center).
+Creates 3 locations, 3 Center Directors, 6 Senseis, and 12 sample ninjas (4 per center). Some ninjas are seeded with dual-program enrollments to demonstrate multi-program support.
 
 ### Run in development
 
@@ -126,10 +142,10 @@ All accounts use password: `ninja123`
 
 Four programs are supported: **CREATE**, **Robotics Academy**, **AI Academy**, and **JR**.
 
-Only CREATE students have belt and project tracking:
+Only CREATE ninjas have belt and project tracking:
 
-| Belt | Max Level |
-|------|-----------|
+| Belt | Max Sublevel |
+|------|-------------|
 | White | 8 |
 | Yellow | 10 |
 | Orange | 12 |
@@ -146,22 +162,45 @@ Statuses: Started, Working On, Completed
 
 ```
 ├── api/
-│   └── index.js          # Vercel serverless entry point
-├── client/               # React + Vite frontend
+│   └── index.js              # Vercel serverless entry point
+├── client/                   # React + Vite frontend
 │   ├── src/
-│   │   ├── api/          # Fetch wrapper
-│   │   ├── components/   # UI, layout, manager, sensei, shared components
-│   │   ├── context/      # AuthContext (user, switchLocation, isReadOnly)
-│   │   ├── pages/        # Manager and Sensei page views
-│   │   └── utils/        # beltConfig.js, dateUtils.js
-│   └── public/           # Static assets (logos, images)
+│   │   ├── api/              # Fetch wrapper (client.js)
+│   │   ├── components/
+│   │   │   ├── layout/       # Layout, Navbar, ProtectedRoute
+│   │   │   ├── manager/      # TodayBoard, AddStudentToday, EditStudentModal,
+│   │   │   │                 #   EnrollmentEditModal, SenseiProfileModal, AddSenseiModal
+│   │   │   ├── sensei/       # LogEntryForm, BeltProgressFields, ProjectFields
+│   │   │   ├── shared/       # StudentCard, ProgressHistory, PinnedNote
+│   │   │   └── ui/           # Button, Card, Modal, BeltBadge, ProgramBadge
+│   │   ├── context/          # AuthContext (user, switchLocation, isReadOnly)
+│   │   ├── pages/
+│   │   │   ├── manager/      # ManagerDashboard, StudentRoster, StudentProfile,
+│   │   │   │                 #   AddStudentPage, StaffPage
+│   │   │   └── sensei/       # SenseiDashboard, LogProgressPage
+│   │   └── utils/            # beltConfig.js, dateUtils.js
+│   └── public/               # Static assets (logos, images)
 ├── server/
-│   ├── db/               # pool.js, seed.js
-│   ├── middleware/        # auth.js (requireAuth, requireManager, requireOwnLocation)
-│   ├── routes/           # auth, students, daily, progress, users
-│   └── index.js          # Express app entry
+│   ├── db/                   # pool.js, seed.js
+│   ├── middleware/            # auth.js (requireAuth, requireManager, requireSensei, requireOwnLocation)
+│   ├── routes/               # auth.js, students.js, daily.js, progress.js, users.js
+│   └── index.js              # Express app entry
 ├── supabase/
-│   └── schema.sql        # PostgreSQL schema
-├── vercel.json           # Vercel deployment config
-└── CLAUDE.md             # Architecture guide for AI-assisted development
+│   └── schema.sql            # PostgreSQL schema
+├── CHANGELOG.md              # Release history
+├── vercel.json               # Vercel deployment config
+└── CLAUDE.md                 # Architecture guide for AI-assisted development
 ```
+
+---
+
+## Database Schema
+
+| Table | Purpose |
+|-------|---------|
+| `locations` | The 3 centers |
+| `users` | Manager and sensei accounts; `active` flag for soft delete |
+| `students` | Ninja profiles; no program/belt columns (those live in `student_programs`) |
+| `student_programs` | Per-enrollment belt/project tracking; `UNIQUE(student_id, program)` |
+| `daily_assignments` | Session board; `UNIQUE(student_id, program, session_date)` |
+| `progress_logs` | Immutable session notes scoped per program; belt/project snapshot at time of log |
