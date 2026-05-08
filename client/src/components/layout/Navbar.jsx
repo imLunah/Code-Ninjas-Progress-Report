@@ -25,7 +25,7 @@ export default function Navbar() {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <Link to="/">
-              <img src="/CodeNinjasLogoH.svg" alt="Code Ninjas" className="h-8" />
+              <img src="/DojoLinkLogoH.svg" alt="Code Ninjas" className="h-8" />
             </Link>
             <span className="text-ninja-muted text-sm font-ninja hidden sm:block">| DojoLink</span>
           </div>
