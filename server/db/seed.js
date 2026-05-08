@@ -65,39 +65,45 @@ async function seed() {
     {
       location_id: locMap['yorba-linda'],
       students: [
-        { full_name: 'Alex Johnson', belt_level: 'White', belt_sublevel: 1 },
-        { full_name: 'Sam Williams', belt_level: 'Yellow', belt_sublevel: 2 },
-        { full_name: 'Jordan Lee', belt_level: 'Orange', belt_sublevel: 3 },
-        { full_name: 'Taylor Brown', belt_level: 'White', belt_sublevel: 2 },
+        { full_name: 'Alex Johnson', programs: [{ program: 'CREATE', belt_level: 'White', belt_sublevel: 1 }] },
+        { full_name: 'Sam Williams', programs: [{ program: 'CREATE', belt_level: 'Yellow', belt_sublevel: 2 }, { program: 'Robotics Academy' }] },
+        { full_name: 'Jordan Lee', programs: [{ program: 'CREATE', belt_level: 'Orange', belt_sublevel: 3 }] },
+        { full_name: 'Taylor Brown', programs: [{ program: 'CREATE', belt_level: 'White', belt_sublevel: 2 }, { program: 'AI Academy' }] },
       ],
     },
     {
       location_id: locMap['fullerton'],
       students: [
-        { full_name: 'Morgan Davis', belt_level: 'Yellow', belt_sublevel: 1 },
-        { full_name: 'Riley Martinez', belt_level: 'Orange', belt_sublevel: 2 },
-        { full_name: 'Casey Wilson', belt_level: 'White', belt_sublevel: 3 },
-        { full_name: 'Drew Anderson', belt_level: 'Yellow', belt_sublevel: 3 },
+        { full_name: 'Morgan Davis', programs: [{ program: 'CREATE', belt_level: 'Yellow', belt_sublevel: 1 }] },
+        { full_name: 'Riley Martinez', programs: [{ program: 'CREATE', belt_level: 'Orange', belt_sublevel: 2 }] },
+        { full_name: 'Casey Wilson', programs: [{ program: 'Robotics Academy' }] },
+        { full_name: 'Drew Anderson', programs: [{ program: 'CREATE', belt_level: 'Yellow', belt_sublevel: 3 }] },
       ],
     },
     {
       location_id: locMap['cerritos'],
       students: [
-        { full_name: 'Quinn Thomas', belt_level: 'Orange', belt_sublevel: 1 },
-        { full_name: 'Avery Jackson', belt_level: 'White', belt_sublevel: 2 },
-        { full_name: 'Blake White', belt_level: 'Yellow', belt_sublevel: 1 },
-        { full_name: 'Skyler Harris', belt_level: 'Orange', belt_sublevel: 3 },
+        { full_name: 'Quinn Thomas', programs: [{ program: 'CREATE', belt_level: 'Orange', belt_sublevel: 1 }] },
+        { full_name: 'Avery Jackson', programs: [{ program: 'CREATE', belt_level: 'White', belt_sublevel: 2 }, { program: 'JR' }] },
+        { full_name: 'Blake White', programs: [{ program: 'CREATE', belt_level: 'Yellow', belt_sublevel: 1 }] },
+        { full_name: 'Skyler Harris', programs: [{ program: 'AI Academy' }] },
       ],
     },
   ];
 
   for (const loc of studentsByLocation) {
     for (const student of loc.students) {
-      await pool.query(
-        'INSERT INTO students (full_name, program, belt_level, belt_sublevel, location_id) VALUES ($1, $2, $3, $4, $5)',
-        [student.full_name, 'CREATE', student.belt_level, student.belt_sublevel, loc.location_id]
+      const { rows: [inserted] } = await pool.query(
+        'INSERT INTO students (full_name, location_id) VALUES ($1, $2) RETURNING id',
+        [student.full_name, loc.location_id]
       );
-      console.log(`Created student: ${student.full_name}`);
+      for (const enrollment of student.programs) {
+        await pool.query(
+          'INSERT INTO student_programs (student_id, program, belt_level, belt_sublevel) VALUES ($1, $2, $3, $4)',
+          [inserted.id, enrollment.program, enrollment.belt_level || null, enrollment.belt_sublevel || null]
+        );
+      }
+      console.log(`Created ninja: ${student.full_name} (${student.programs.map(p => p.program).join(', ')})`);
     }
   }
 

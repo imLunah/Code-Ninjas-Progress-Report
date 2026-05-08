@@ -86,7 +86,7 @@ export default function SenseiDashboard() {
                 key={a.id}
                 student={a}
                 onClick={() => navigate(`/manager/students/${a.student_id}`)}
-                onLogProgress={() => navigate(`/sensei/student/${a.student_id}`)}
+                onLogProgress={() => navigate(`/sensei/student/${a.student_id}?program=${encodeURIComponent(a.program)}`)}
               />
             ))}
           </div>
