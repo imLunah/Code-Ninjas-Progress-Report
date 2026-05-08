@@ -74,11 +74,15 @@ export default function ManagerDashboard() {
               <p className="text-ninja-muted font-ninja text-sm mt-1">Total Students</p>
             </div>
             <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
-              <p className="text-3xl font-bold font-ninja text-green-500">{completedCount}</p>
+              <p className={`text-3xl font-bold font-ninja ${completedCount > 0 ? 'text-green-500' : 'text-ninja-border'}`}>
+                {completedCount}
+              </p>
               <p className="text-ninja-muted font-ninja text-sm mt-1">Completed</p>
             </div>
             <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
-              <p className="text-3xl font-bold font-ninja text-ninja-muted">{assignments.length - completedCount}</p>
+              <p className={`text-3xl font-bold font-ninja ${assignments.length - completedCount > 0 ? 'text-ninja-muted' : 'text-ninja-border'}`}>
+                {assignments.length - completedCount}
+              </p>
               <p className="text-ninja-muted font-ninja text-sm mt-1">Remaining</p>
             </div>
           </div>
