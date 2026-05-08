@@ -242,6 +242,26 @@ export default function StudentProfile() {
               <p className="text-ninja-muted font-ninja text-sm mt-1">
                 Member since {new Date(student.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
               </p>
+              {isManager && (student.parent_name || student.parent_email || student.parent_phone) && (
+                <div className="mt-3 pt-3 border-t border-ninja-border">
+                  {student.parent_name && (
+                    <p className="text-ninja-muted font-ninja text-sm">
+                      <span className="font-semibold text-ninja-navy">Parent:</span> {student.parent_name}
+                    </p>
+                  )}
+                  {student.parent_email && (
+                    <p className="text-ninja-muted font-ninja text-sm">
+                      <span className="font-semibold text-ninja-navy">Email:</span>{' '}
+                      <a href={`mailto:${student.parent_email}`} className="text-ninja-blue hover:underline">{student.parent_email}</a>
+                    </p>
+                  )}
+                  {student.parent_phone && (
+                    <p className="text-ninja-muted font-ninja text-sm">
+                      <span className="font-semibold text-ninja-navy">Phone:</span> {student.parent_phone}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
               {programs.length === 1 ? (

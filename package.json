@@ -7,7 +7,8 @@
     "server": "node server/index.js",
     "client": "cd client && npm run dev",
     "build": "cd client && npm run build",
-    "seed": "node server/db/seed.js"
+    "seed": "node server/db/seed.js",
+    "import": "node server/db/import.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -19,6 +20,7 @@
     "pg": "^8.11.3"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "csv-parse": "^6.2.1"
   }
 }
