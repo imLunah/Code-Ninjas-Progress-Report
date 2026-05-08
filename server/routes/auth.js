@@ -13,7 +13,7 @@ router.post('/login', async (req, res) => {
 
   try {
     const pool = req.app.get('db');
-    const { rows } = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const { rows } = await pool.query('SELECT * FROM users WHERE username = $1 AND active = true', [username]);
     const user = rows[0];
 
     if (!user) {
