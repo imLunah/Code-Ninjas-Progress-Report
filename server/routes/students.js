@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { requireAuth, requireManager, requireOwnLocation } = require('../middleware/auth');
+const { requireAuth, requireManager, requireSensei, requireOwnLocation } = require('../middleware/auth');
 
 // GET /api/students
 router.get('/', requireAuth, async (req, res) => {
@@ -127,6 +127,25 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
   } catch (err) {
     console.error('Error updating student:', err);
     res.status(500).json({ error: 'Failed to update student' });
+  }
+});
+
+// PATCH /api/students/:id/note (sensei + manager)
+router.patch('/:id/note', requireSensei, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+  const { pinned_note } = req.body;
+
+  try {
+    const { rows } = await pool.query(
+      'UPDATE students SET pinned_note = $1 WHERE id = $2 AND active = true AND location_id = $3 RETURNING pinned_note',
+      [pinned_note || null, id, req.session.activeLocationId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Student not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Error updating pinned note:', err);
+    res.status(500).json({ error: 'Failed to update note' });
   }
 });
 
