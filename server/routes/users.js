@@ -1,12 +1,12 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
-const { requireManager, requireOwnLocation } = require('../middleware/auth');
+const { requireManager, requireSensei, requireOwnLocation } = require('../middleware/auth');
 
 const SALT_ROUNDS = 10;
 
 // GET /api/users
-router.get('/', requireManager, async (req, res) => {
+router.get('/', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
   const { role } = req.query;
 
@@ -43,6 +43,35 @@ router.get('/', requireManager, async (req, res) => {
   } catch (err) {
     console.error('Error fetching users:', err);
     res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// GET /api/users/:id — sensei profile with their progress logs
+router.get('/:id', requireSensei, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+
+  try {
+    const { rows: userRows } = await pool.query(
+      'SELECT id, username, display_name, role, location_id, created_at FROM users WHERE id = $1 AND active = true AND location_id = $2',
+      [id, req.session.activeLocationId]
+    );
+    const user = userRows[0];
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const { rows: logs } = await pool.query(`
+      SELECT pl.id, pl.session_date, pl.notes, pl.belt_level_at, pl.belt_sublevel_at, pl.project_at, pl.status_at,
+             s.full_name AS student_name
+      FROM progress_logs pl
+      JOIN students s ON pl.student_id = s.id
+      WHERE pl.sensei_id = $1 AND s.location_id = $2
+      ORDER BY pl.session_date DESC, pl.created_at DESC
+    `, [id, req.session.activeLocationId]);
+
+    res.json({ ...user, progress_logs: logs });
+  } catch (err) {
+    console.error('Error fetching user:', err);
+    res.status(500).json({ error: 'Failed to fetch user' });
   }
 });
 
