@@ -29,7 +29,7 @@ export default function SenseiDashboard() {
         {/* Header */}
         <div>
           <h1 className="text-2xl sm:text-4xl font-bold font-ninja text-ninja-navy tracking-wide">
-            Today's <span className="text-ninja-blue">Students</span>
+            Today's <span className="text-ninja-blue">Ninjas</span>
           </h1>
           <p className="text-ninja-muted font-ninja mt-1">{formatDate(todayStr)}</p>
           {user && (
@@ -63,18 +63,18 @@ export default function SenseiDashboard() {
         )}
 
         {loading && (
-          <p className="text-ninja-muted font-ninja text-center py-8">Loading your students...</p>
+          <p className="text-ninja-muted font-ninja text-center py-8">Loading your ninjas...</p>
         )}
 
         {!loading && !error && assignments.length === 0 && (
           <div className="bg-white border border-ninja-border rounded-xl p-12 text-center shadow-sm">
             <img src="/CodeNinjasCelebrate.webp" alt="Code Ninjas" className="h-24 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold font-ninja text-ninja-navy mb-2">No Students Yet</h3>
+            <h3 className="text-2xl font-bold font-ninja text-ninja-navy mb-2">No Ninjas Yet</h3>
             <p className="text-ninja-muted font-ninja">
-              No students have been added to today's board yet.
+              No ninjas have been added to today's board yet.
             </p>
             <p className="text-ninja-muted font-ninja text-sm mt-1">
-              Check with your Center Director to get students added.
+              Check with your Center Director to get ninjas added.
             </p>
           </div>
         )}

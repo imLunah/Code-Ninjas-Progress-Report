@@ -87,7 +87,7 @@ export default function LogEntryForm({ student, onLogged }) {
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="What did the student work on today? Any breakthroughs or challenges?"
+          placeholder="What did the ninja work on today? Any breakthroughs or challenges?"
           rows={4}
           className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors resize-none"
           required
@@ -122,7 +122,7 @@ export default function LogEntryForm({ student, onLogged }) {
               className="w-4 h-4 accent-ninja-blue"
             />
             <span className="text-ninja-navy font-ninja text-sm">
-              Update student profile with these values
+              Update ninja profile with these values
             </span>
           </label>
         </div>
