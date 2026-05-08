@@ -1,6 +1,45 @@
 # Changelog
 
-All notable changes to the Code Ninjas Dojo Tracker are documented here.
+All notable changes to DojoLink are documented here.
+
+---
+
+## [0.4.0] — 2026-05-08
+
+### DojoLink Rebrand, CSV Import, Bulk Delete & Parent Contacts
+
+**Rebrand**
+- App renamed from Code Ninjas Dojo Tracker to **DojoLink**
+- New DojoLink logo throughout navbar and login page
+- New GitHub repo (`imLunah/dojolink`) and Vercel deployment (`dojolink-neon.vercel.app`)
+- Open Graph meta tags added — sharing the link now shows a preview card with the DojoLink preview image
+- Browser tab title updated to DojoLink
+
+**CSV Import from MyStudio**
+- New "Import CSV" button on the Ninja Roster (managers only)
+- Upload any MyStudio membership export and students are added automatically
+- Programs (CREATE, JR, Robotics Academy, AI Academy) and belt levels are auto-detected from the CSV
+- Duplicate detection: students with the same name and program already in the system are skipped — a list of skipped duplicates is shown after import
+- Also available as a CLI script: `npm run import -- <csv-path> <location-slug>`
+
+**Bulk Delete**
+- Checkboxes on every row in the Ninja Roster
+- Select all / deselect all toggle in the table header
+- "Delete Selected (N)" button appears when any rows are checked
+- Inline confirm before anything is deleted
+
+**Parent Contact Info**
+- Parent name, email, and phone are now stored on each ninja profile (imported from MyStudio CSV or entered manually)
+- Visible only to Center Directors — senseis never see parent contact details
+- Editable via the Edit Ninja modal (new Parent/Guardian section)
+- Parent email is a clickable mailto link on the profile page
+
+**Bug fixes**
+- Fixed "Invalid Date" shown on profiles for ninjas imported from MyStudio CSV (pg DATE timezone serialization)
+- Fixed "Back to Dashboard" on the Log Progress page routing Center Directors to the sensei dashboard instead of their own
+- Login usernames are now case-insensitive — `CD_YorbaLinda` and `cd_yorbalinda` both work
+- Fixed RLS not enabled on `student_programs` table in Supabase
+- Alpha notice popup on login page to set expectations during early development
 
 ---
 
