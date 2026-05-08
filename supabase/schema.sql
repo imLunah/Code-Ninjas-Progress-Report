@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS student_programs (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(student_id, program)
 );
+ALTER TABLE public.student_programs ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS daily_assignments (
   id SERIAL PRIMARY KEY,
