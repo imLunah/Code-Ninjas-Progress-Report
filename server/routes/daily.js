@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { requireAuth, requireManager, requireSensei } = require('../middleware/auth');
+const { requireAuth, requireManager, requireSensei, requireOwnLocation } = require('../middleware/auth');
 
 function todayDate() {
   return new Date().toISOString().split('T')[0];
@@ -29,9 +29,9 @@ router.get('/', requireAuth, (req, res) => {
       FROM daily_assignments da
       JOIN students s ON da.student_id = s.id
       LEFT JOIN users u ON da.sensei_id = u.id
-      WHERE da.session_date = ?
+      WHERE da.session_date = ? AND s.location_id = ?
       ORDER BY da.created_at ASC
-    `).all(date);
+    `).all(date, req.session.activeLocationId);
 
     res.json(assignments);
   } catch (err) {
@@ -64,9 +64,9 @@ router.get('/my', requireSensei, (req, res) => {
       FROM daily_assignments da
       JOIN students s ON da.student_id = s.id
       LEFT JOIN users u ON da.sensei_id = u.id
-      WHERE da.session_date = ? AND da.sensei_id = ?
+      WHERE da.session_date = ? AND da.sensei_id = ? AND s.location_id = ?
       ORDER BY da.created_at ASC
-    `).all(date, senseiId);
+    `).all(date, senseiId, req.session.activeLocationId);
 
     res.json(assignments);
   } catch (err) {
@@ -76,7 +76,7 @@ router.get('/my', requireSensei, (req, res) => {
 });
 
 // POST /api/daily
-router.post('/', requireManager, (req, res) => {
+router.post('/', requireManager, requireOwnLocation, (req, res) => {
   const db = req.app.get('db');
   const { student_id, session_date } = req.body;
 
@@ -87,8 +87,8 @@ router.post('/', requireManager, (req, res) => {
   const date = session_date || todayDate();
 
   try {
-    // Check student exists
-    const student = db.prepare('SELECT * FROM students WHERE id = ? AND active = 1').get(student_id);
+    // Check student exists and belongs to active location
+    const student = db.prepare('SELECT * FROM students WHERE id = ? AND active = 1 AND location_id = ?').get(student_id, req.session.activeLocationId);
     if (!student) {
       return res.status(404).json({ error: 'Student not found' });
     }
@@ -129,13 +129,17 @@ router.post('/', requireManager, (req, res) => {
 });
 
 // PATCH /api/daily/:id/assign
-router.patch('/:id/assign', requireManager, (req, res) => {
+router.patch('/:id/assign', requireManager, requireOwnLocation, (req, res) => {
   const db = req.app.get('db');
   const { id } = req.params;
   const { sensei_id } = req.body;
 
   try {
-    const assignment = db.prepare('SELECT * FROM daily_assignments WHERE id = ?').get(id);
+    const assignment = db.prepare(`
+      SELECT da.* FROM daily_assignments da
+      JOIN students s ON da.student_id = s.id
+      WHERE da.id = ? AND s.location_id = ?
+    `).get(id, req.session.activeLocationId);
     if (!assignment) {
       return res.status(404).json({ error: 'Assignment not found' });
     }
@@ -170,12 +174,16 @@ router.patch('/:id/assign', requireManager, (req, res) => {
 });
 
 // DELETE /api/daily/:id
-router.delete('/:id', requireManager, (req, res) => {
+router.delete('/:id', requireManager, requireOwnLocation, (req, res) => {
   const db = req.app.get('db');
   const { id } = req.params;
 
   try {
-    const assignment = db.prepare('SELECT * FROM daily_assignments WHERE id = ?').get(id);
+    const assignment = db.prepare(`
+      SELECT da.* FROM daily_assignments da
+      JOIN students s ON da.student_id = s.id
+      WHERE da.id = ? AND s.location_id = ?
+    `).get(id, req.session.activeLocationId);
     if (!assignment) {
       return res.status(404).json({ error: 'Assignment not found' });
     }

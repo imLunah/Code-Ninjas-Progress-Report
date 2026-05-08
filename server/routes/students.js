@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { requireAuth, requireManager } = require('../middleware/auth');
+const { requireAuth, requireManager, requireOwnLocation } = require('../middleware/auth');
 
 // GET /api/students
 router.get('/', requireAuth, (req, res) => {
@@ -11,9 +11,9 @@ router.get('/', requireAuth, (req, res) => {
     SELECT s.*,
       (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id) as last_activity
     FROM students s
-    WHERE s.active = 1
+    WHERE s.active = 1 AND s.location_id = ?
   `;
-  const params = [];
+  const params = [req.session.activeLocationId];
 
   if (search) {
     query += ' AND s.full_name LIKE ?';
@@ -45,7 +45,7 @@ router.get('/:id', requireAuth, (req, res) => {
   const { id } = req.params;
 
   try {
-    const student = db.prepare('SELECT * FROM students WHERE id = ? AND active = 1').get(id);
+    const student = db.prepare('SELECT * FROM students WHERE id = ? AND active = 1 AND location_id = ?').get(id, req.session.activeLocationId);
     if (!student) {
       return res.status(404).json({ error: 'Student not found' });
     }
@@ -66,7 +66,7 @@ router.get('/:id', requireAuth, (req, res) => {
 });
 
 // POST /api/students
-router.post('/', requireManager, (req, res) => {
+router.post('/', requireManager, requireOwnLocation, (req, res) => {
   const db = req.app.get('db');
   const { full_name, program, belt_level, belt_sublevel, current_project, project_status, birthday } = req.body;
 
@@ -76,9 +76,9 @@ router.post('/', requireManager, (req, res) => {
 
   try {
     const result = db.prepare(`
-      INSERT INTO students (full_name, program, belt_level, belt_sublevel, current_project, project_status, birthday)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(full_name, program, belt_level || null, belt_sublevel || null, current_project || null, project_status || null, birthday || null);
+      INSERT INTO students (full_name, program, belt_level, belt_sublevel, current_project, project_status, birthday, location_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(full_name, program, belt_level || null, belt_sublevel || null, current_project || null, project_status || null, birthday || null, req.session.activeLocationId);
 
     const student = db.prepare('SELECT * FROM students WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(student);
@@ -89,13 +89,13 @@ router.post('/', requireManager, (req, res) => {
 });
 
 // PATCH /api/students/:id
-router.patch('/:id', requireManager, (req, res) => {
+router.patch('/:id', requireManager, requireOwnLocation, (req, res) => {
   const db = req.app.get('db');
   const { id } = req.params;
   const { full_name, belt_level, belt_sublevel, current_project, project_status, birthday } = req.body;
 
   try {
-    const student = db.prepare('SELECT * FROM students WHERE id = ? AND active = 1').get(id);
+    const student = db.prepare('SELECT * FROM students WHERE id = ? AND active = 1 AND location_id = ?').get(id, req.session.activeLocationId);
     if (!student) {
       return res.status(404).json({ error: 'Student not found' });
     }
@@ -123,12 +123,12 @@ router.patch('/:id', requireManager, (req, res) => {
 });
 
 // DELETE /api/students/:id (soft delete)
-router.delete('/:id', requireManager, (req, res) => {
+router.delete('/:id', requireManager, requireOwnLocation, (req, res) => {
   const db = req.app.get('db');
   const { id } = req.params;
 
   try {
-    const student = db.prepare('SELECT * FROM students WHERE id = ? AND active = 1').get(id);
+    const student = db.prepare('SELECT * FROM students WHERE id = ? AND active = 1 AND location_id = ?').get(id, req.session.activeLocationId);
     if (!student) {
       return res.status(404).json({ error: 'Student not found' });
     }

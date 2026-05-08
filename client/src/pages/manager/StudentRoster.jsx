@@ -18,7 +18,7 @@ export default function StudentRoster() {
   const [beltFilter, setBeltFilter] = useState('');
 
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isReadOnly } = useAuth();
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -31,7 +31,7 @@ export default function StudentRoster() {
       .then(setStudents)
       .catch(() => setError('Failed to load students'))
       .finally(() => setLoading(false));
-  }, [search, programFilter, beltFilter]);
+  }, [search, programFilter, beltFilter, user?.activeLocation?.id]);
 
   return (
     <Layout>
@@ -44,7 +44,7 @@ export default function StudentRoster() {
             </h1>
             <p className="text-ninja-muted font-ninja mt-1">{students.length} active ninjas</p>
           </div>
-          {user?.role === 'manager' && (
+          {user?.role === 'manager' && !isReadOnly && (
             <Button onClick={() => navigate('/manager/students/new')}>
               + Add Student
             </Button>

@@ -19,7 +19,7 @@ export default function SenseiDashboard() {
       .then(setAssignments)
       .catch(() => setError('Failed to load today\'s students'))
       .finally(() => setLoading(false));
-  }, [todayStr]);
+  }, [todayStr, user?.activeLocation?.id]);
 
   const completedCount = assignments.filter((a) => a.completed).length;
 

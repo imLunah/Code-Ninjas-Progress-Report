@@ -8,7 +8,21 @@ async function seed() {
   console.log('Initializing database...');
   const db = initDb();
 
-  // Check if users already exist
+  // Insert locations
+  console.log('Seeding locations...');
+  db.prepare(`INSERT OR IGNORE INTO locations (name, slug) VALUES (?, ?)`).run('Code Ninjas Yorba Linda', 'yorba-linda');
+  db.prepare(`INSERT OR IGNORE INTO locations (name, slug) VALUES (?, ?)`).run('Code Ninjas Fullerton', 'fullerton');
+  db.prepare(`INSERT OR IGNORE INTO locations (name, slug) VALUES (?, ?)`).run('Code Ninjas Cerritos', 'cerritos');
+
+  // Build locMap from slug -> id
+  const locRows = db.prepare('SELECT id, slug FROM locations').all();
+  const locMap = {};
+  for (const row of locRows) {
+    locMap[row.slug] = row.id;
+  }
+  console.log('Location map:', locMap);
+
+  // Check if any users already exist
   const existingUsers = db.prepare('SELECT COUNT(*) as count FROM users').get();
   if (existingUsers.count > 0) {
     console.log('Users already exist, skipping seed.');
@@ -18,48 +32,82 @@ async function seed() {
 
   console.log('Seeding users...');
 
-  const users = [
-    { username: 'manager', password: 'ninja123', display_name: 'Manager', role: 'manager' },
-    { username: 'sensei1', password: 'ninja123', display_name: 'Sensei Alex', role: 'sensei' },
-    { username: 'sensei2', password: 'ninja123', display_name: 'Sensei Jordan', role: 'sensei' },
-  ];
-
   const insertUser = db.prepare(
-    'INSERT INTO users (username, password_hash, display_name, role) VALUES (?, ?, ?, ?)'
+    'INSERT INTO users (username, password_hash, display_name, role, location_id) VALUES (?, ?, ?, ?, ?)'
   );
 
-  for (const user of users) {
-    const hash = await bcrypt.hash(user.password, SALT_ROUNDS);
-    insertUser.run(user.username, hash, user.display_name, user.role);
-    console.log(`Created user: ${user.username} (${user.role})`);
+  // Center Directors (role: 'manager'), one per location
+  const managers = [
+    { username: 'cd_yorbalinda', display_name: 'Director – Yorba Linda', location_id: locMap['yorba-linda'] },
+    { username: 'cd_fullerton', display_name: 'Director – Fullerton', location_id: locMap['fullerton'] },
+    { username: 'cd_cerritos', display_name: 'Director – Cerritos', location_id: locMap['cerritos'] },
+  ];
+
+  for (const m of managers) {
+    const hash = await bcrypt.hash('ninja123', SALT_ROUNDS);
+    insertUser.run(m.username, hash, m.display_name, 'manager', m.location_id);
+    console.log(`Created manager: ${m.username}`);
   }
 
-  // Seed some sample students
-  console.log('Seeding sample students...');
-  const insertStudent = db.prepare(
-    `INSERT INTO students (full_name, program, belt_level, belt_sublevel, current_project, project_status)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  );
-
-  const students = [
-    { full_name: 'Alex Johnson', program: 'CREATE', belt_level: 'Yellow', belt_sublevel: 3, current_project: 'Build 1', project_status: 'Working On' },
-    { full_name: 'Sam Williams', program: 'CREATE', belt_level: 'Orange', belt_sublevel: 5, current_project: 'Solve 1', project_status: 'Started' },
-    { full_name: 'Jordan Lee', program: 'Robotics Academy', belt_level: null, belt_sublevel: null, current_project: null, project_status: null },
-    { full_name: 'Taylor Brown', program: 'AI Academy', belt_level: null, belt_sublevel: null, current_project: null, project_status: null },
-    { full_name: 'Morgan Davis', program: 'JR', belt_level: null, belt_sublevel: null, current_project: null, project_status: null },
-    { full_name: 'Riley Martinez', program: 'CREATE', belt_level: 'White', belt_sublevel: 2, current_project: 'Build 1', project_status: 'Started' },
+  // Senseis, 2 per location
+  const senseis = [
+    { username: 'sensei_yl1', display_name: 'Sensei Alex (YL)', location_id: locMap['yorba-linda'] },
+    { username: 'sensei_yl2', display_name: 'Sensei Jordan (YL)', location_id: locMap['yorba-linda'] },
+    { username: 'sensei_fl1', display_name: 'Sensei Taylor (FL)', location_id: locMap['fullerton'] },
+    { username: 'sensei_fl2', display_name: 'Sensei Morgan (FL)', location_id: locMap['fullerton'] },
+    { username: 'sensei_cr1', display_name: 'Sensei Riley (CR)', location_id: locMap['cerritos'] },
+    { username: 'sensei_cr2', display_name: 'Sensei Casey (CR)', location_id: locMap['cerritos'] },
   ];
 
-  for (const student of students) {
-    insertStudent.run(
-      student.full_name,
-      student.program,
-      student.belt_level,
-      student.belt_sublevel,
-      student.current_project,
-      student.project_status
-    );
-    console.log(`Created student: ${student.full_name}`);
+  for (const s of senseis) {
+    const hash = await bcrypt.hash('ninja123', SALT_ROUNDS);
+    insertUser.run(s.username, hash, s.display_name, 'sensei', s.location_id);
+    console.log(`Created sensei: ${s.username}`);
+  }
+
+  // Seed 4 CREATE students per location (12 total)
+  console.log('Seeding sample students...');
+  const insertStudent = db.prepare(
+    'INSERT INTO students (full_name, program, belt_level, belt_sublevel, location_id) VALUES (?, ?, ?, ?, ?)'
+  );
+
+  const beltLevels = ['White', 'Yellow', 'Orange'];
+
+  const studentsByLocation = [
+    {
+      location_id: locMap['yorba-linda'],
+      students: [
+        { full_name: 'Alex Johnson (YL)', belt_level: 'White', belt_sublevel: 1 },
+        { full_name: 'Sam Williams (YL)', belt_level: 'Yellow', belt_sublevel: 2 },
+        { full_name: 'Jordan Lee (YL)', belt_level: 'Orange', belt_sublevel: 3 },
+        { full_name: 'Taylor Brown (YL)', belt_level: 'White', belt_sublevel: 2 },
+      ],
+    },
+    {
+      location_id: locMap['fullerton'],
+      students: [
+        { full_name: 'Morgan Davis (FL)', belt_level: 'Yellow', belt_sublevel: 1 },
+        { full_name: 'Riley Martinez (FL)', belt_level: 'Orange', belt_sublevel: 2 },
+        { full_name: 'Casey Wilson (FL)', belt_level: 'White', belt_sublevel: 3 },
+        { full_name: 'Drew Anderson (FL)', belt_level: 'Yellow', belt_sublevel: 3 },
+      ],
+    },
+    {
+      location_id: locMap['cerritos'],
+      students: [
+        { full_name: 'Quinn Thomas (CR)', belt_level: 'Orange', belt_sublevel: 1 },
+        { full_name: 'Avery Jackson (CR)', belt_level: 'White', belt_sublevel: 2 },
+        { full_name: 'Blake White (CR)', belt_level: 'Yellow', belt_sublevel: 1 },
+        { full_name: 'Skyler Harris (CR)', belt_level: 'Orange', belt_sublevel: 3 },
+      ],
+    },
+  ];
+
+  for (const loc of studentsByLocation) {
+    for (const student of loc.students) {
+      insertStudent.run(student.full_name, 'CREATE', student.belt_level, student.belt_sublevel, loc.location_id);
+      console.log(`Created student: ${student.full_name}`);
+    }
   }
 
   console.log('Seed complete!');

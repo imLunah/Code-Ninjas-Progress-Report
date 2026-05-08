@@ -24,7 +24,19 @@ npm run seed
 lsof -ti:3001 | xargs kill -9; lsof -ti:5173 | xargs kill -9
 ```
 
-Default dev credentials: `manager` / `ninja123`, `sensei1` / `ninja123`, `sensei2` / `ninja123`
+### Multi-location dev credentials
+
+| Role | Username | Password | Location |
+|------|----------|----------|----------|
+| Center Director | `cd_yorbalinda` | `ninja123` | Yorba Linda |
+| Center Director | `cd_fullerton` | `ninja123` | Fullerton |
+| Center Director | `cd_cerritos` | `ninja123` | Cerritos |
+| Sensei | `sensei_yl1` | `ninja123` | Yorba Linda |
+| Sensei | `sensei_yl2` | `ninja123` | Yorba Linda |
+| Sensei | `sensei_fl1` | `ninja123` | Fullerton |
+| Sensei | `sensei_fl2` | `ninja123` | Fullerton |
+| Sensei | `sensei_cr1` | `ninja123` | Cerritos |
+| Sensei | `sensei_cr2` | `ninja123` | Cerritos |
 
 ## Architecture
 
@@ -39,7 +51,7 @@ Dependencies must be installed separately: `npm install` at root (installs `conc
 
 The Express app (`server/index.js`) initializes the SQLite database at startup, attaches it to `app` via `app.set('db', db)`, and routes all requests pull the DB instance with `req.app.get('db')`. There is no ORM — all queries use `better-sqlite3` directly with prepared statements.
 
-Sessions are stored in the same SQLite file via `better-sqlite3-session-store`. Session data (`userId`, `role`, `displayName`) is set on login and checked by middleware in `server/middleware/auth.js`. Three guards exist: `requireAuth`, `requireSensei` (sensei or manager), `requireManager` (manager only).
+Sessions are stored in the same SQLite file via `better-sqlite3-session-store`. Session data (`userId`, `role`, `displayName`, `activeLocationId`, `homeLocationId`) is set on login and checked by middleware in `server/middleware/auth.js`. Four guards exist: `requireAuth`, `requireSensei` (sensei or manager), `requireManager` (manager only), `requireOwnLocation` (blocks writes when viewing another center).
 
 In production (`NODE_ENV=production`), the server serves the built client from `client/dist/` and handles all non-API routes with the SPA's `index.html`.
 
@@ -48,13 +60,32 @@ Environment variables are read from `.env` at the project root (not inside `serv
 - `PORT` — default 3001
 - `DB_PATH` — default `./server/data/codeninjas.db`
 
+### Multi-Location Support
+
+The app supports 3 fully isolated centers: **Code Ninjas Yorba Linda**, **Code Ninjas Fullerton**, and **Code Ninjas Cerritos**. Each center has its own senseis and students. Data isolation is enforced server-side via `req.session.activeLocationId` — no location param is passed on individual API calls.
+
+**Session fields:**
+- `activeLocationId` — the center currently being viewed (changes on switch)
+- `homeLocationId` — the center the user belongs to (set at login, never changes)
+
+**`requireOwnLocation` middleware** (`server/middleware/auth.js`) blocks all write operations (`POST`, `PATCH`, `DELETE`) when `activeLocationId !== homeLocationId`. This means Center Directors can view any center but can only make changes at their home center.
+
+**`isReadOnly`** is computed in `AuthContext.jsx`: `user.role === 'manager' && user.activeLocation?.id !== user.homeLocationId`. Frontend components use this to hide edit buttons (Add Student, Edit, Remove) when a director is viewing another center.
+
+**Navbar location switcher:**
+- Center Directors see a `<select>` dropdown populated from `user.availableLocations` (all 3 centers). Selecting one calls `POST /api/auth/switch-location` and all page data re-fetches.
+- Senseis see a static `<span>` with their center name — no switcher.
+
+**`daily_assignments` and `progress_logs` do not have a `location_id` column** — they inherit location scope through the `student_id → students.location_id` join, avoiding denormalization.
+
 ### Database
 
-Four tables in `server/db/schema.sql`:
+Five tables in `server/db/schema.sql`:
 
-- **`users`** — manager and sensei accounts with bcrypt password hashes
-- **`students`** — all ninja profiles; belt/project fields are only populated for CREATE program students; `active=0` is a soft delete
-- **`daily_assignments`** — date-scoped To Do board; `UNIQUE(student_id, session_date)` prevents duplicates; `sensei_id` is nullable until assigned; `completed` flips to 1 when a progress log is submitted
+- **`locations`** — the 3 centers (Yorba Linda, Fullerton, Cerritos) with `name` and `slug`
+- **`users`** — manager and sensei accounts with bcrypt password hashes; `location_id` references their home center
+- **`students`** — all ninja profiles; `location_id` scopes them to a center; belt/project fields only populated for CREATE; `active=0` is a soft delete
+- **`daily_assignments`** — date-scoped To Do board; `UNIQUE(student_id, session_date)` prevents duplicates; `sensei_id` nullable; `completed` flips to 1 when a progress log is submitted
 - **`progress_logs`** — immutable session notes with snapshots (`belt_level_at`, `belt_sublevel_at`, `project_at`, `status_at`) capturing student state at the time of logging
 
 Schema changes require updating `server/db/schema.sql` (for fresh installs) and adding a runtime migration in `server/db/init.js` using `PRAGMA table_info` + `ALTER TABLE` (for existing DBs). See the `birthday` column addition as the pattern to follow.

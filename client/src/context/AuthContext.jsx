@@ -32,8 +32,16 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
+  const switchLocation = async (locationId) => {
+    const data = await api.post('/auth/switch-location', { locationId });
+    setUser(prev => ({ ...prev, activeLocation: data.activeLocation }));
+  };
+
+  // true when a manager is viewing a center other than their home center
+  const isReadOnly = user?.role === 'manager' && user?.activeLocation?.id !== user?.homeLocationId;
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, switchLocation, isReadOnly }}>
       {children}
     </AuthContext.Provider>
   );
