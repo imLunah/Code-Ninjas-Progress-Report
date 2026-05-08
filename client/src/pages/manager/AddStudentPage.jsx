@@ -76,7 +76,7 @@ export default function AddStudentPage() {
           >
             ← Back to Roster
           </button>
-          <h1 className="text-4xl font-bold font-ninja text-ninja-navy">
+          <h1 className="text-2xl sm:text-4xl font-bold font-ninja text-ninja-navy">
             New <span className="text-ninja-blue">Ninja</span>
           </h1>
         </div>

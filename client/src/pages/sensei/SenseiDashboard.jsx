@@ -28,7 +28,7 @@ export default function SenseiDashboard() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-4xl font-bold font-ninja text-ninja-navy tracking-wide">
+          <h1 className="text-2xl sm:text-4xl font-bold font-ninja text-ninja-navy tracking-wide">
             Today's <span className="text-ninja-blue">Students</span>
           </h1>
           <p className="text-ninja-muted font-ninja mt-1">{formatDate(todayStr)}</p>
