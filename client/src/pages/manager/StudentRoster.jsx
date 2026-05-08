@@ -40,13 +40,13 @@ export default function StudentRoster() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-4xl font-bold font-ninja text-ninja-navy tracking-wide">
-              Student <span className="text-ninja-blue">Roster</span>
+              Ninja <span className="text-ninja-blue">Roster</span>
             </h1>
             <p className="text-ninja-muted font-ninja mt-1">{students.length} active ninjas</p>
           </div>
           {user?.role === 'manager' && !isReadOnly && (
             <Button onClick={() => navigate('/manager/students/new')}>
-              + Add Student
+              + Add Ninja
             </Button>
           )}
         </div>
@@ -107,7 +107,7 @@ export default function StudentRoster() {
                   {students.length === 0 && (
                     <tr>
                       <td colSpan={6} className="text-center text-ninja-muted font-ninja py-12">
-                        No students found
+                        No ninjas found
                       </td>
                     </tr>
                   )}

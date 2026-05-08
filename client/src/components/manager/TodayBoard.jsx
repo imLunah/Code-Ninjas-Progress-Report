@@ -26,8 +26,8 @@ export default function TodayBoard({ assignments, onRemove }) {
     return (
       <div className="text-center py-12 text-ninja-muted font-ninja">
         <img src="/CodeNinjasLaptop.png" alt="Code Ninjas" className="h-24 mx-auto mb-3" />
-        <p className="text-lg">No students added for today yet.</p>
-        <p className="text-sm mt-1">Use the "Add Student" button to get started.</p>
+        <p className="text-lg">No ninjas added for today yet.</p>
+        <p className="text-sm mt-1">Use the "Add Ninja" button to get started.</p>
       </div>
     );
   }

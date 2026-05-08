@@ -24,7 +24,7 @@ export default function StudentProfile() {
   useEffect(() => {
     api.get(`/students/${id}`)
       .then(setStudent)
-      .catch(() => setError('Failed to load student'))
+      .catch(() => setError('Failed to load ninja'))
       .finally(() => setLoading(false));
   }, [id, user?.activeLocation?.id]);
 
@@ -55,7 +55,7 @@ export default function StudentProfile() {
   if (error || !student) {
     return (
       <Layout>
-        <p className="text-ninja-red font-ninja text-center py-12">{error || 'Student not found'}</p>
+        <p className="text-ninja-red font-ninja text-center py-12">{error || 'Ninja not found'}</p>
       </Layout>
     );
   }
