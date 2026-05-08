@@ -4,6 +4,8 @@ An internal progress tracking web app for Code Ninjas franchise centers. Replace
 
 Supports three locations: **Yorba Linda**, **Fullerton**, and **Cerritos** — each fully isolated with their own students, senseis, and session boards.
 
+**Live at:** [codeninjas-progress-tracker.vercel.app](https://codeninjas-progress-tracker.vercel.app)
+
 ---
 
 ## Features
@@ -33,8 +35,9 @@ Supports three locations: **Yorba Linda**, **Fullerton**, and **Cerritos** — e
 |-------|-------|
 | Frontend | React 18, Vite, Tailwind CSS |
 | Backend | Node.js, Express |
-| Database | SQLite via `better-sqlite3` |
-| Auth | express-session with `better-sqlite3-session-store` |
+| Database | PostgreSQL via Supabase |
+| Auth | express-session with `connect-pg-simple` |
+| Hosting | Vercel (frontend + serverless API) |
 | Styling | Code Ninjas brand theme, Nunito font |
 
 ---
@@ -44,14 +47,37 @@ Supports three locations: **Yorba Linda**, **Fullerton**, and **Cerritos** — e
 ### Prerequisites
 - Node.js 18+
 - npm
+- A Supabase project with the schema applied (see `supabase/schema.sql`)
 
 ### Install dependencies
 
 ```bash
-npm install              # root (installs concurrently)
+npm install              # root
 cd server && npm install
 cd ../client && npm install
 ```
+
+### Environment variables
+
+Create a `.env` file at the project root:
+
+```
+DATABASE_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-1-us-west-1.pooler.supabase.com:6543/postgres
+SESSION_SECRET=your-secret-here
+PORT=3001
+```
+
+> Use the **Transaction pooler** URL from Supabase (port 6543). The username must include the project ref: `postgres.PROJECT_REF`.
+
+### Set up the database
+
+Run the schema in `supabase/schema.sql` via the Supabase SQL editor, then seed:
+
+```bash
+npm run seed
+```
+
+Creates 3 locations, 3 Center Directors, 6 Senseis, and 12 sample students (4 per center).
 
 ### Run in development
 
@@ -62,13 +88,19 @@ npm run dev
 - Client: `http://localhost:5173`
 - Server: `http://localhost:3001`
 
-### Seed the database
+---
 
-```bash
-npm run seed
-```
+## Deployment
 
-Creates 3 locations, 3 Center Directors, 6 Senseis, and 12 sample students (4 per center).
+Deployed on **Vercel** with **Supabase** as the database. Every push to `main` auto-deploys.
+
+Required Vercel environment variables:
+
+| Variable | Value |
+|----------|-------|
+| `DATABASE_URL` | Supabase Transaction pooler connection string |
+| `SESSION_SECRET` | Any long random string |
+| `NODE_ENV` | `production` |
 
 ---
 
@@ -113,6 +145,8 @@ Statuses: Started, Working On, Completed
 ## Project Structure
 
 ```
+├── api/
+│   └── index.js          # Vercel serverless entry point
 ├── client/               # React + Vite frontend
 │   ├── src/
 │   │   ├── api/          # Fetch wrapper
@@ -122,23 +156,12 @@ Statuses: Started, Working On, Completed
 │   │   └── utils/        # beltConfig.js, dateUtils.js
 │   └── public/           # Static assets (logos, images)
 ├── server/
-│   ├── db/               # schema.sql, init.js, seed.js
+│   ├── db/               # pool.js, seed.js
 │   ├── middleware/        # auth.js (requireAuth, requireManager, requireOwnLocation)
 │   ├── routes/           # auth, students, daily, progress, users
 │   └── index.js          # Express app entry
+├── supabase/
+│   └── schema.sql        # PostgreSQL schema
+├── vercel.json           # Vercel deployment config
 └── CLAUDE.md             # Architecture guide for AI-assisted development
 ```
-
----
-
-## Environment Variables
-
-Create a `.env` file at the project root:
-
-```
-SESSION_SECRET=your-secret-here
-PORT=3001
-DB_PATH=./server/data/codeninjas.db
-```
-
-`SESSION_SECRET` is required in production. `PORT` and `DB_PATH` have defaults.
