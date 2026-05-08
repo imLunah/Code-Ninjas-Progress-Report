@@ -354,7 +354,7 @@ export default function StudentRoster() {
                   </tbody>
                 </table>
               </div>
-            </>)
+            </>
           )}
         </div>
         </div>{/* end scrollable */}
