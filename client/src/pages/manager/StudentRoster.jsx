@@ -43,6 +43,11 @@ export default function StudentRoster() {
   const { user, isReadOnly } = useAuth();
   const isManager = user?.role === 'manager' && !isReadOnly;
 
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   const loadStudents = () => {
     const params = new URLSearchParams();
     if (search) params.set('search', search);
@@ -149,7 +154,7 @@ export default function StudentRoster() {
 
   return (
     <Layout>
-      <div className="flex flex-col h-[calc(100vh-4rem)]">
+      <div className="flex flex-col h-[calc(100vh-6rem-2rem)] sm:h-[calc(100vh-6rem-4rem)]">
         {/* Sticky header + filters */}
         <div className="flex-shrink-0 space-y-4 pb-4">
         {/* Header */}
