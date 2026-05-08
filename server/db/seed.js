@@ -77,28 +77,28 @@ async function seed() {
     {
       location_id: locMap['yorba-linda'],
       students: [
-        { full_name: 'Alex Johnson (YL)', belt_level: 'White', belt_sublevel: 1 },
-        { full_name: 'Sam Williams (YL)', belt_level: 'Yellow', belt_sublevel: 2 },
-        { full_name: 'Jordan Lee (YL)', belt_level: 'Orange', belt_sublevel: 3 },
-        { full_name: 'Taylor Brown (YL)', belt_level: 'White', belt_sublevel: 2 },
+        { full_name: 'Alex Johnson', belt_level: 'White', belt_sublevel: 1 },
+        { full_name: 'Sam Williams', belt_level: 'Yellow', belt_sublevel: 2 },
+        { full_name: 'Jordan Lee', belt_level: 'Orange', belt_sublevel: 3 },
+        { full_name: 'Taylor Brown', belt_level: 'White', belt_sublevel: 2 },
       ],
     },
     {
       location_id: locMap['fullerton'],
       students: [
-        { full_name: 'Morgan Davis (FL)', belt_level: 'Yellow', belt_sublevel: 1 },
-        { full_name: 'Riley Martinez (FL)', belt_level: 'Orange', belt_sublevel: 2 },
-        { full_name: 'Casey Wilson (FL)', belt_level: 'White', belt_sublevel: 3 },
-        { full_name: 'Drew Anderson (FL)', belt_level: 'Yellow', belt_sublevel: 3 },
+        { full_name: 'Morgan Davis', belt_level: 'Yellow', belt_sublevel: 1 },
+        { full_name: 'Riley Martinez', belt_level: 'Orange', belt_sublevel: 2 },
+        { full_name: 'Casey Wilson', belt_level: 'White', belt_sublevel: 3 },
+        { full_name: 'Drew Anderson', belt_level: 'Yellow', belt_sublevel: 3 },
       ],
     },
     {
       location_id: locMap['cerritos'],
       students: [
-        { full_name: 'Quinn Thomas (CR)', belt_level: 'Orange', belt_sublevel: 1 },
-        { full_name: 'Avery Jackson (CR)', belt_level: 'White', belt_sublevel: 2 },
-        { full_name: 'Blake White (CR)', belt_level: 'Yellow', belt_sublevel: 1 },
-        { full_name: 'Skyler Harris (CR)', belt_level: 'Orange', belt_sublevel: 3 },
+        { full_name: 'Quinn Thomas', belt_level: 'Orange', belt_sublevel: 1 },
+        { full_name: 'Avery Jackson', belt_level: 'White', belt_sublevel: 2 },
+        { full_name: 'Blake White', belt_level: 'Yellow', belt_sublevel: 1 },
+        { full_name: 'Skyler Harris', belt_level: 'Orange', belt_sublevel: 3 },
       ],
     },
   ];
