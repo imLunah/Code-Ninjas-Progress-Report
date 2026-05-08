@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AssignSenseiDropdown({ assignmentId, currentSenseiId, onAssigned }) {
   const [senseis, setSenseis] = useState([]);
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     api.get('/users?role=sensei')
       .then(setSenseis)
       .catch(console.error);
-  }, []);
+  }, [user?.activeLocation?.id]);
 
   const handleChange = async (e) => {
     const senseiId = e.target.value ? parseInt(e.target.value) : null;

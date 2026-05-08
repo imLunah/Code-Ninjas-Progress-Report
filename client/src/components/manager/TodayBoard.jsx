@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 import BeltBadge from '../ui/BeltBadge';
 import ProgramBadge from '../ui/ProgramBadge';
 import Button from '../ui/Button';
 
 export default function TodayBoard({ assignments, onRemove }) {
+  const { isReadOnly } = useAuth();
   const navigate = useNavigate();
   const [confirmId, setConfirmId] = useState(null);
 
@@ -71,19 +73,21 @@ export default function TodayBoard({ assignments, onRemove }) {
       )}
 
       {/* Remove */}
-      {confirmId === a.id ? (
-        <div className="flex items-center gap-1">
-          <Button variant="danger" size="sm" onClick={() => handleRemove(a.id)}>
-            Confirm
+      {!isReadOnly && (
+        confirmId === a.id ? (
+          <div className="flex items-center gap-1">
+            <Button variant="danger" size="sm" onClick={() => handleRemove(a.id)}>
+              Confirm
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setConfirmId(null)}>
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          <Button variant="danger" size="sm" onClick={() => setConfirmId(a.id)}>
+            ✕
           </Button>
-          <Button variant="secondary" size="sm" onClick={() => setConfirmId(null)}>
-            Cancel
-          </Button>
-        </div>
-      ) : (
-        <Button variant="danger" size="sm" onClick={() => setConfirmId(a.id)}>
-          ✕
-        </Button>
+        )
       )}
     </div>
   );

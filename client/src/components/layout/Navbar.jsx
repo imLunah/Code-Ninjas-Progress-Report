@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user, logout, switchLocation } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -25,6 +25,27 @@ export default function Navbar() {
             </Link>
             <span className="text-ninja-muted text-sm font-ninja hidden sm:block">| Dojo Tracker</span>
           </div>
+
+          {/* Location switcher */}
+          {user && (
+            <div className="flex items-center">
+              {user.role === 'manager' ? (
+                <select
+                  value={user.activeLocation?.id ?? ''}
+                  onChange={(e) => switchLocation(Number(e.target.value))}
+                  className="bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-sm font-semibold focus:outline-none focus:border-ninja-blue transition-colors"
+                >
+                  {user.availableLocations?.map((loc) => (
+                    <option key={loc.id} value={loc.id}>{loc.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-ninja-muted text-sm font-ninja px-3 py-1.5 bg-ninja-bg border border-ninja-border rounded-lg">
+                  {user.activeLocation?.name ?? ''}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Navigation Links */}
           {user && (

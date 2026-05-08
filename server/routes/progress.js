@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { requireSensei } = require('../middleware/auth');
+const { requireSensei, requireOwnLocation } = require('../middleware/auth');
 
 // POST /api/progress
-router.post('/', requireSensei, (req, res) => {
+router.post('/', requireSensei, requireOwnLocation, (req, res) => {
   const db = req.app.get('db');
   const {
     student_id,
@@ -24,8 +24,8 @@ router.post('/', requireSensei, (req, res) => {
   const senseiId = req.session.userId;
 
   try {
-    // Check student exists
-    const student = db.prepare('SELECT * FROM students WHERE id = ? AND active = 1').get(student_id);
+    // Check student exists and belongs to active location
+    const student = db.prepare('SELECT * FROM students WHERE id = ? AND active = 1 AND location_id = ?').get(student_id, req.session.activeLocationId);
     if (!student) {
       return res.status(404).json({ error: 'Student not found' });
     }
