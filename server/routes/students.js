@@ -3,36 +3,40 @@ const router = express.Router();
 const { requireAuth, requireManager, requireOwnLocation } = require('../middleware/auth');
 
 // GET /api/students
-router.get('/', requireAuth, (req, res) => {
-  const db = req.app.get('db');
+router.get('/', requireAuth, async (req, res) => {
+  const pool = req.app.get('db');
   const { search, program, belt } = req.query;
 
   let query = `
     SELECT s.*,
       (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id) as last_activity
     FROM students s
-    WHERE s.active = 1 AND s.location_id = ?
+    WHERE s.active = true AND s.location_id = $1
   `;
   const params = [req.session.activeLocationId];
+  let paramCount = 1;
 
   if (search) {
-    query += ' AND s.full_name LIKE ?';
+    paramCount++;
+    query += ` AND s.full_name ILIKE $${paramCount}`;
     params.push(`%${search}%`);
   }
   if (program) {
-    query += ' AND s.program = ?';
+    paramCount++;
+    query += ` AND s.program = $${paramCount}`;
     params.push(program);
   }
   if (belt) {
-    query += ' AND s.belt_level = ?';
+    paramCount++;
+    query += ` AND s.belt_level = $${paramCount}`;
     params.push(belt);
   }
 
   query += ' ORDER BY s.full_name ASC';
 
   try {
-    const students = db.prepare(query).all(...params);
-    res.json(students);
+    const { rows } = await pool.query(query, params);
+    res.json(rows);
   } catch (err) {
     console.error('Error fetching students:', err);
     res.status(500).json({ error: 'Failed to fetch students' });
@@ -40,23 +44,25 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // GET /api/students/:id
-router.get('/:id', requireAuth, (req, res) => {
-  const db = req.app.get('db');
+router.get('/:id', requireAuth, async (req, res) => {
+  const pool = req.app.get('db');
   const { id } = req.params;
 
   try {
-    const student = db.prepare('SELECT * FROM students WHERE id = ? AND active = 1 AND location_id = ?').get(id, req.session.activeLocationId);
-    if (!student) {
-      return res.status(404).json({ error: 'Student not found' });
-    }
+    const { rows } = await pool.query(
+      'SELECT * FROM students WHERE id = $1 AND active = true AND location_id = $2',
+      [id, req.session.activeLocationId]
+    );
+    const student = rows[0];
+    if (!student) return res.status(404).json({ error: 'Student not found' });
 
-    const progressLogs = db.prepare(`
+    const { rows: progressLogs } = await pool.query(`
       SELECT pl.*, u.display_name as sensei_name
       FROM progress_logs pl
       LEFT JOIN users u ON pl.sensei_id = u.id
-      WHERE pl.student_id = ?
+      WHERE pl.student_id = $1
       ORDER BY pl.session_date DESC, pl.created_at DESC
-    `).all(id);
+    `, [id]);
 
     res.json({ ...student, progress_logs: progressLogs });
   } catch (err) {
@@ -66,8 +72,8 @@ router.get('/:id', requireAuth, (req, res) => {
 });
 
 // POST /api/students
-router.post('/', requireManager, requireOwnLocation, (req, res) => {
-  const db = req.app.get('db');
+router.post('/', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
   const { full_name, program, belt_level, belt_sublevel, current_project, project_status, birthday } = req.body;
 
   if (!full_name || !program) {
@@ -75,13 +81,13 @@ router.post('/', requireManager, requireOwnLocation, (req, res) => {
   }
 
   try {
-    const result = db.prepare(`
+    const { rows } = await pool.query(`
       INSERT INTO students (full_name, program, belt_level, belt_sublevel, current_project, project_status, birthday, location_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(full_name, program, belt_level || null, belt_sublevel || null, current_project || null, project_status || null, birthday || null, req.session.activeLocationId);
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *
+    `, [full_name, program, belt_level || null, belt_sublevel || null, current_project || null, project_status || null, birthday || null, req.session.activeLocationId]);
 
-    const student = db.prepare('SELECT * FROM students WHERE id = ?').get(result.lastInsertRowid);
-    res.status(201).json(student);
+    res.status(201).json(rows[0]);
   } catch (err) {
     console.error('Error creating student:', err);
     res.status(500).json({ error: 'Failed to create student' });
@@ -89,33 +95,35 @@ router.post('/', requireManager, requireOwnLocation, (req, res) => {
 });
 
 // PATCH /api/students/:id
-router.patch('/:id', requireManager, requireOwnLocation, (req, res) => {
-  const db = req.app.get('db');
+router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
   const { id } = req.params;
   const { full_name, belt_level, belt_sublevel, current_project, project_status, birthday } = req.body;
 
   try {
-    const student = db.prepare('SELECT * FROM students WHERE id = ? AND active = 1 AND location_id = ?').get(id, req.session.activeLocationId);
-    if (!student) {
-      return res.status(404).json({ error: 'Student not found' });
-    }
+    const { rows: existing } = await pool.query(
+      'SELECT * FROM students WHERE id = $1 AND active = true AND location_id = $2',
+      [id, req.session.activeLocationId]
+    );
+    const student = existing[0];
+    if (!student) return res.status(404).json({ error: 'Student not found' });
 
-    db.prepare(`
+    const { rows } = await pool.query(`
       UPDATE students
-      SET full_name = ?, belt_level = ?, belt_sublevel = ?, current_project = ?, project_status = ?, birthday = ?
-      WHERE id = ?
-    `).run(
+      SET full_name = $1, belt_level = $2, belt_sublevel = $3, current_project = $4, project_status = $5, birthday = $6
+      WHERE id = $7
+      RETURNING *
+    `, [
       full_name ?? student.full_name,
       belt_level !== undefined ? belt_level : student.belt_level,
       belt_sublevel !== undefined ? belt_sublevel : student.belt_sublevel,
       current_project !== undefined ? current_project : student.current_project,
       project_status !== undefined ? project_status : student.project_status,
       birthday !== undefined ? birthday : student.birthday,
-      id
-    );
+      id,
+    ]);
 
-    const updated = db.prepare('SELECT * FROM students WHERE id = ?').get(id);
-    res.json(updated);
+    res.json(rows[0]);
   } catch (err) {
     console.error('Error updating student:', err);
     res.status(500).json({ error: 'Failed to update student' });
@@ -123,17 +131,18 @@ router.patch('/:id', requireManager, requireOwnLocation, (req, res) => {
 });
 
 // DELETE /api/students/:id (soft delete)
-router.delete('/:id', requireManager, requireOwnLocation, (req, res) => {
-  const db = req.app.get('db');
+router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
   const { id } = req.params;
 
   try {
-    const student = db.prepare('SELECT * FROM students WHERE id = ? AND active = 1 AND location_id = ?').get(id, req.session.activeLocationId);
-    if (!student) {
-      return res.status(404).json({ error: 'Student not found' });
-    }
+    const { rows } = await pool.query(
+      'SELECT id FROM students WHERE id = $1 AND active = true AND location_id = $2',
+      [id, req.session.activeLocationId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Student not found' });
 
-    db.prepare('UPDATE students SET active = 0 WHERE id = ?').run(id);
+    await pool.query('UPDATE students SET active = false WHERE id = $1', [id]);
     res.json({ message: 'Student deactivated' });
   } catch (err) {
     console.error('Error deleting student:', err);
