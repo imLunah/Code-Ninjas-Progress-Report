@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS students (
   birthday DATE,
   active BOOLEAN DEFAULT TRUE,
   pinned_note TEXT,
+  parent_name TEXT,
+  parent_email TEXT,
+  parent_phone TEXT,
   location_id INTEGER REFERENCES locations(id),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
