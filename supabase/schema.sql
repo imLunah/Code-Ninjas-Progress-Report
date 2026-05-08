@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS students (
   project_status TEXT CHECK(project_status IN ('Started','Working On','Completed')),
   birthday DATE,
   active BOOLEAN DEFAULT TRUE,
+  pinned_note TEXT,
   location_id INTEGER REFERENCES locations(id),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
