@@ -37,7 +37,7 @@ export default function LoginPage() {
         <div className="bg-white rounded-2xl shadow-lg p-8">
           {/* Branding */}
           <div className="text-center mb-8">
-            <img src="/DojoLinkLogoH.svg" alt="Code Ninjas" className="h-24 mx-auto mb-3" />
+            <img src="/DojoLinkLogoH.svg" alt="Code Ninjas" className="h-48 mx-auto mb-3" />
             <div className="mt-4 h-0.5 bg-gradient-to-r from-transparent via-ninja-blue to-transparent" />
           </div>
 
