@@ -29,7 +29,7 @@ export default function StudentRoster() {
     setLoading(true);
     api.get(`/students?${params.toString()}`)
       .then(setStudents)
-      .catch(() => setError('Failed to load students'))
+      .catch(() => setError('Failed to load ninjas'))
       .finally(() => setLoading(false));
   }, [search, programFilter, beltFilter, user?.activeLocation?.id]);
 
@@ -88,7 +88,7 @@ export default function StudentRoster() {
             <p className="text-ninja-red font-ninja text-center py-8">{error}</p>
           )}
           {loading && (
-            <p className="text-ninja-muted font-ninja text-center py-8">Loading students...</p>
+            <p className="text-ninja-muted font-ninja text-center py-8">Loading ninjas...</p>
           )}
           {!loading && !error && (
             <div className="overflow-x-auto">
