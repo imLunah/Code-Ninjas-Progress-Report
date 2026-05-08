@@ -235,8 +235,8 @@ export default function StudentProfile() {
               )}
               {student.birthday && (
                 <p className="text-ninja-muted font-ninja text-sm mt-2">
-                  Age {Math.floor((Date.now() - new Date(student.birthday)) / (365.25 * 24 * 60 * 60 * 1000))}
-                  {' · '}Born {new Date(student.birthday + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  Age {Math.floor((Date.now() - new Date(student.birthday.split('T')[0] + 'T00:00:00')) / (365.25 * 24 * 60 * 60 * 1000))}
+                  {' · '}Born {new Date(student.birthday.split('T')[0] + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                 </p>
               )}
               <p className="text-ninja-muted font-ninja text-sm mt-1">
