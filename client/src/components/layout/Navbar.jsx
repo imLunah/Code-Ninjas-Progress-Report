@@ -27,7 +27,7 @@ export default function Navbar() {
             <Link to="/">
               <img src="/CodeNinjasLogoH.svg" alt="Code Ninjas" className="h-8" />
             </Link>
-            <span className="text-ninja-muted text-sm font-ninja hidden sm:block">| Dojo Tracker</span>
+            <span className="text-ninja-muted text-sm font-ninja hidden sm:block">| DojoLink</span>
           </div>
 
           {/* Desktop: Location switcher */}
