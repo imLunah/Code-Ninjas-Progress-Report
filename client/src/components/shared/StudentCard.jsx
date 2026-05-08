@@ -2,7 +2,7 @@ import BeltBadge from '../ui/BeltBadge';
 import ProgramBadge from '../ui/ProgramBadge';
 
 export default function StudentCard({ student, onClick, onLogProgress }) {
-  const isCompleted = student.completed;
+  const isCompleted = !!student.completed;
 
   return (
     <div
