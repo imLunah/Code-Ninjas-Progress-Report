@@ -42,23 +42,23 @@ lsof -ti:3001 | xargs kill -9; lsof -ti:5173 | xargs kill -9
 
 This is a monorepo with two independent packages:
 
-- **`server/`** — Node.js + Express + SQLite (CommonJS, `require`)
+- **`server/`** — Node.js + Express + PostgreSQL via Supabase (CommonJS, `require`)
 - **`client/`** — React + Vite + Tailwind CSS (ESM, `import`)
 
-Dependencies must be installed separately: `npm install` at root (installs `concurrently`), then `cd server && npm install`, then `cd client && npm install`.
+Dependencies must be installed separately: `npm install` at root, then `cd server && npm install`, then `cd client && npm install`.
 
 ### Server
 
-The Express app (`server/index.js`) initializes the SQLite database at startup, attaches it to `app` via `app.set('db', db)`, and routes all requests pull the DB instance with `req.app.get('db')`. There is no ORM — all queries use `better-sqlite3` directly with prepared statements.
+The Express app (`server/index.js`) connects to Supabase PostgreSQL via a `pg` connection pool (`server/db/pool.js`), attaches it to `app` via `app.set('db', pool)`, and all routes pull the pool with `req.app.get('db')`. There is no ORM — all queries use `pg` directly with `await pool.query(sql, params)`. Parameters use `$1, $2, $3` placeholders (PostgreSQL style). Inserts use `RETURNING *` to get the created row back.
 
-Sessions are stored in the same SQLite file via `better-sqlite3-session-store`. Session data (`userId`, `role`, `displayName`, `activeLocationId`, `homeLocationId`) is set on login and checked by middleware in `server/middleware/auth.js`. Four guards exist: `requireAuth`, `requireSensei` (sensei or manager), `requireManager` (manager only), `requireOwnLocation` (blocks writes when viewing another center).
+Sessions are stored in Supabase via `connect-pg-simple` (auto-creates a `session` table). Session data (`userId`, `role`, `displayName`, `activeLocationId`, `homeLocationId`) is set on login and checked by middleware in `server/middleware/auth.js`. Four guards exist: `requireAuth`, `requireSensei` (sensei or manager), `requireManager` (manager only), `requireOwnLocation` (blocks writes when viewing another center).
 
-In production (`NODE_ENV=production`), the server serves the built client from `client/dist/` and handles all non-API routes with the SPA's `index.html`.
+The server exports `app` and only calls `app.listen()` when run directly (`require.main === module`), so Vercel can import it as a serverless function via `api/index.js`.
 
 Environment variables are read from `.env` at the project root (not inside `server/`):
+- `DATABASE_URL` — Supabase Transaction pooler connection string (required)
 - `SESSION_SECRET` — required for production
 - `PORT` — default 3001
-- `DB_PATH` — default `./server/data/codeninjas.db`
 
 ### Multi-Location Support
 
@@ -80,15 +80,15 @@ The app supports 3 fully isolated centers: **Code Ninjas Yorba Linda**, **Code N
 
 ### Database
 
-Five tables in `server/db/schema.sql`:
+Hosted on **Supabase** (PostgreSQL). The schema lives in `supabase/schema.sql` and was applied via the Supabase MCP. Five tables:
 
 - **`locations`** — the 3 centers (Yorba Linda, Fullerton, Cerritos) with `name` and `slug`
-- **`users`** — manager and sensei accounts with bcrypt password hashes; `location_id` references their home center
-- **`students`** — all ninja profiles; `location_id` scopes them to a center; belt/project fields only populated for CREATE; `active=0` is a soft delete
-- **`daily_assignments`** — date-scoped To Do board; `UNIQUE(student_id, session_date)` prevents duplicates; `sensei_id` nullable; `completed` flips to 1 when a progress log is submitted
+- **`users`** — manager and sensei accounts with bcryptjs password hashes; `location_id` references their home center
+- **`students`** — all ninja profiles; `location_id` scopes them to a center; belt/project fields only populated for CREATE; `active=false` is a soft delete
+- **`daily_assignments`** — date-scoped To Do board; `UNIQUE(student_id, session_date)` prevents duplicates; `sensei_id` nullable; `completed` flips to `true` when a progress log is submitted
 - **`progress_logs`** — immutable session notes with snapshots (`belt_level_at`, `belt_sublevel_at`, `project_at`, `status_at`) capturing student state at the time of logging
 
-Schema changes require updating `server/db/schema.sql` (for fresh installs) and adding a runtime migration in `server/db/init.js` using `PRAGMA table_info` + `ALTER TABLE` (for existing DBs). See the `birthday` column addition as the pattern to follow.
+Schema changes require updating `supabase/schema.sql` and running the new DDL in the Supabase SQL editor (or via `mcp__supabase__apply_migration`). There is no longer a local init/migration script — all migrations are applied directly to Supabase.
 
 ### Client
 
@@ -115,13 +115,9 @@ The student roster (`/manager/students`) and student profile (`/manager/students
 
 Programs: `CREATE`, `Robotics Academy`, `AI Academy`, `JR`. Only CREATE students have belt/project tracking. The other programs currently use only the daily To Do board and notes.
 
-### SQLite Boolean Gotcha
-
-SQLite stores boolean columns (`completed`, `active`) as integers `0`/`1`, not `false`/`true`. When used in React JSX conditionals like `{value && <Component />}`, the integer `0` renders as a literal "0" in the DOM. Always coerce to boolean with `!!value` before using as a JSX condition. Example: `const isCompleted = !!student.completed;`
-
 ### Student Data
 
-Students have a `birthday` (DATE) field stored in the DB. Age is calculated client-side from the birthday and displayed on the student profile. The `birthday` column was added via a runtime migration in `server/db/init.js` (using `PRAGMA table_info` + `ALTER TABLE`) so existing databases are updated automatically on server start — no manual migration needed.
+Students have a `birthday` (DATE) field stored in the DB. Age is calculated client-side from the birthday and displayed on the student profile.
 
 ### Logos & Assets
 
@@ -146,4 +142,18 @@ The UI matches the Code Ninjas brand (based on codeninjas.com). Tailwind theme t
 - `text-ninja-red` (#e51520) — errors and alerts only
 
 Font: **Nunito** (Google Fonts, weights 400/600/700/800/900), loaded in `client/index.html`.
+
+## Deployment
+
+The app is deployed on **Vercel** (frontend + serverless API) with **Supabase** as the database.
+
+- **Vercel project**: connected to `imLunah/ninja-tracker` on GitHub — every push to `main` auto-deploys
+- **Supabase project**: `hatlannivniuauafptzk` — Transaction pooler on `aws-1-us-west-1`
+- **`vercel.json`**: sets `buildCommand` (builds the React client), `outputDirectory` (`client/dist`), and rewrites all `/api/*` requests to `api/index.js`
+- **`api/index.js`**: Vercel serverless entry point — just re-exports the Express app
+- **Environment variables on Vercel**: `DATABASE_URL`, `SESSION_SECRET`, `NODE_ENV=production`
+
+To re-seed Supabase (wipes users and students, keeps schema): `npm run seed`
+
+Schema changes: update `supabase/schema.sql` and apply via Supabase SQL editor or the MCP tool.
 
