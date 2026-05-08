@@ -271,7 +271,7 @@ export default function StudentRoster() {
               {/* Desktop table */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
-                  <thead>
+                  <thead className="sticky top-0 z-10">
                     <tr className="border-b border-ninja-border bg-ninja-bg">
                       {isManager && (
                         <th className="px-4 py-3 w-10">
