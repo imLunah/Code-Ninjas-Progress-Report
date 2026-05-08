@@ -10,29 +10,34 @@ router.get('/', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const { role } = req.query;
 
-  let query = 'SELECT id, username, display_name, role, location_id, created_at FROM users';
-  const conditions = [];
-  const params = [];
-  let paramCount = 0;
-
-  if (role) {
-    paramCount++;
-    conditions.push(`role = $${paramCount}`);
-    params.push(role);
-    if (role === 'sensei') {
-      paramCount++;
-      conditions.push(`location_id = $${paramCount}`);
-      params.push(req.session.activeLocationId);
-    }
-  }
-
-  if (conditions.length) {
-    query += ' WHERE ' + conditions.join(' AND ');
-  }
-
-  query += ' ORDER BY role, display_name ASC';
-
   try {
+    if (role === 'sensei') {
+      const { rows } = await pool.query(`
+        SELECT u.id, u.username, u.display_name, u.role, u.location_id, u.created_at,
+               COUNT(pl.id)::int AS progress_log_count
+        FROM users u
+        LEFT JOIN progress_logs pl ON pl.sensei_id = u.id
+        WHERE u.role = 'sensei' AND u.location_id = $1
+        GROUP BY u.id
+        ORDER BY u.display_name ASC
+      `, [req.session.activeLocationId]);
+      return res.json(rows);
+    }
+
+    let query = 'SELECT id, username, display_name, role, location_id, created_at FROM users';
+    const conditions = [];
+    const params = [];
+    let paramCount = 0;
+
+    if (role) {
+      paramCount++;
+      conditions.push(`role = $${paramCount}`);
+      params.push(role);
+    }
+
+    if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
+    query += ' ORDER BY role, display_name ASC';
+
     const { rows } = await pool.query(query, params);
     res.json(rows);
   } catch (err) {
