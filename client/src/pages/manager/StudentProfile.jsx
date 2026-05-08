@@ -7,6 +7,7 @@ import ProgramBadge from '../../components/ui/ProgramBadge';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import ProgressHistory from '../../components/shared/ProgressHistory';
+import PinnedNote from '../../components/shared/PinnedNote';
 import EditStudentModal from '../../components/manager/EditStudentModal';
 import { api } from '../../api/client';
 
@@ -103,20 +104,25 @@ export default function StudentProfile() {
                 Member since {new Date(student.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
               </p>
             </div>
-            {user?.role === 'manager' && !isReadOnly && (
-              <div className="flex gap-2">
-                <Button onClick={() => setShowEdit(true)} variant="secondary">
-                  Edit
-                </Button>
-                <Button
-                  onClick={handleDeactivate}
-                  variant="danger"
-                  disabled={deactivating}
-                >
-                  {deactivating ? 'Removing...' : 'Remove'}
-                </Button>
-              </div>
-            )}
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => navigate(`/sensei/student/${student.id}`)}>
+                Log Progress
+              </Button>
+              {user?.role === 'manager' && !isReadOnly && (
+                <>
+                  <Button onClick={() => setShowEdit(true)} variant="secondary">
+                    Edit
+                  </Button>
+                  <Button
+                    onClick={handleDeactivate}
+                    variant="danger"
+                    disabled={deactivating}
+                  >
+                    {deactivating ? 'Removing...' : 'Remove'}
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </Card>
 
@@ -143,6 +149,13 @@ export default function StudentProfile() {
             </>
           )}
         </div>
+
+        {/* Pinned Note */}
+        <PinnedNote
+          studentId={student.id}
+          initialNote={student.pinned_note}
+          onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
+        />
 
         {/* Progress History */}
         <div className="bg-white border border-ninja-border rounded-xl p-6 shadow-sm">

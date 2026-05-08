@@ -6,6 +6,7 @@ import ProgramBadge from '../../components/ui/ProgramBadge';
 import Card from '../../components/ui/Card';
 import LogEntryForm from '../../components/sensei/LogEntryForm';
 import ProgressHistory from '../../components/shared/ProgressHistory';
+import PinnedNote from '../../components/shared/PinnedNote';
 import { api } from '../../api/client';
 
 export default function LogProgressPage() {
@@ -77,6 +78,13 @@ export default function LogProgressPage() {
             </div>
           </div>
         </Card>
+
+        {/* Pinned Note */}
+        <PinnedNote
+          studentId={student.id}
+          initialNote={student.pinned_note}
+          onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
+        />
 
         {/* Recent Logs */}
         {recentLogs.length > 0 && (
