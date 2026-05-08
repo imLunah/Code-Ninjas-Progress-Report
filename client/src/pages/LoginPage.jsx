@@ -7,6 +7,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [alphaDismissed, setAlphaDismissed] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -32,6 +33,24 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-ninja-bg flex items-center justify-center p-4">
+      {/* Alpha notice modal */}
+      {!alphaDismissed && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center">
+            <div className="text-3xl mb-3">🚧</div>
+            <h2 className="text-lg font-bold font-ninja text-ninja-navy mb-2">Early Alpha</h2>
+            <p className="text-ninja-muted font-ninja text-sm leading-relaxed mb-5">
+              DojoLink is still in early development. Expect bugs, missing features, and changes as we continue building. Thanks for being an early tester!
+            </p>
+            <button
+              onClick={() => setAlphaDismissed(true)}
+              className="w-full bg-ninja-blue hover:bg-ninja-blue-hover text-white font-ninja font-bold py-2.5 rounded-lg transition-colors"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
       <div className="w-full max-w-md">
         {/* White Card */}
         <div className="bg-white rounded-2xl shadow-lg p-8">
