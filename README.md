@@ -1,10 +1,10 @@
-# Code Ninjas Dojo Tracker
+# DojoLink
 
 An internal progress tracking web app for Code Ninjas franchise centers. Replaces Discord thread-based tracking with a structured, role-based dashboard for Center Directors and Senseis.
 
 Supports three locations: **Yorba Linda**, **Fullerton**, and **Cerritos** — each fully isolated with their own ninjas, senseis, and session boards.
 
-**Live at:** [codeninjas-progress-tracker.vercel.app](https://codeninjas-progress-tracker.vercel.app)
+**Live at:** [dojolink-neon.vercel.app](https://dojolink-neon.vercel.app)
 
 ---
 
@@ -54,7 +54,7 @@ Supports three locations: **Yorba Linda**, **Fullerton**, and **Cerritos** — e
 | Database | PostgreSQL via Supabase |
 | Auth | express-session with `connect-pg-simple` |
 | Hosting | Vercel (frontend + serverless API) |
-| Styling | Code Ninjas brand theme, Nunito font |
+| Styling | DojoLink brand theme, Nunito font |
 
 ---
 
@@ -68,9 +68,9 @@ Supports three locations: **Yorba Linda**, **Fullerton**, and **Cerritos** — e
 ### Install dependencies
 
 ```bash
-npm install              # root
-cd server && npm install
-cd ../client && npm install
+npm install                              # root (server deps)
+npm install --prefix server              # server
+npm install --include=dev --prefix client # client (--include=dev required for vite)
 ```
 
 ### Environment variables
@@ -108,7 +108,7 @@ npm run dev
 
 ## Deployment
 
-Deployed on **Vercel** with **Supabase** as the database. Every push to `main` auto-deploys.
+Deployed on **Vercel** (`dojolink-neon.vercel.app`) with **Supabase** as the database. Every push to `main` on `imLunah/dojolink` auto-deploys.
 
 Required Vercel environment variables:
 
@@ -122,7 +122,7 @@ Required Vercel environment variables:
 
 ## Dev Credentials
 
-All accounts use password: `ninja123`
+All accounts use password: `ninja123`. Usernames are case-insensitive.
 
 | Role | Username | Location |
 |------|----------|----------|
