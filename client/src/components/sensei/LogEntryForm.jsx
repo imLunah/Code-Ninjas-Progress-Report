@@ -5,18 +5,18 @@ import Button from '../ui/Button';
 import BeltProgressFields from './BeltProgressFields';
 import ProjectFields from './ProjectFields';
 
-export default function LogEntryForm({ student, onLogged }) {
+export default function LogEntryForm({ student, program, enrollment, onLogged }) {
   const [notes, setNotes] = useState('');
-  const [beltLevel, setBeltLevel] = useState(student?.belt_level || '');
-  const [beltSublevel, setBeltSublevel] = useState(student?.belt_sublevel || '');
-  const [project, setProject] = useState(student?.current_project || '');
-  const [status, setStatus] = useState(student?.project_status || '');
+  const [beltLevel, setBeltLevel] = useState(enrollment?.belt_level || '');
+  const [beltSublevel, setBeltSublevel] = useState(enrollment?.belt_sublevel || '');
+  const [project, setProject] = useState(enrollment?.current_project || '');
+  const [status, setStatus] = useState(enrollment?.project_status || '');
   const [updateStudent, setUpdateStudent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const isCreate = student?.program === 'CREATE';
+  const isCreate = program === 'CREATE';
   const sessionDate = today();
 
   const handleSubmit = async (e) => {
@@ -33,6 +33,7 @@ export default function LogEntryForm({ student, onLogged }) {
     try {
       const payload = {
         student_id: student.id,
+        program,
         session_date: sessionDate,
         notes: notes.trim(),
         belt_level_at: isCreate ? (beltLevel || null) : null,
@@ -66,7 +67,6 @@ export default function LogEntryForm({ student, onLogged }) {
         </div>
       )}
 
-      {/* Date (readonly) */}
       <div>
         <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
           Session Date
@@ -79,7 +79,6 @@ export default function LogEntryForm({ student, onLogged }) {
         />
       </div>
 
-      {/* Notes */}
       <div>
         <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
           Session Notes *
@@ -94,7 +93,6 @@ export default function LogEntryForm({ student, onLogged }) {
         />
       </div>
 
-      {/* CREATE-specific fields */}
       {isCreate && (
         <div className="space-y-4 border-t border-ninja-border pt-4">
           <p className="text-ninja-muted font-ninja text-sm italic">Belt & project snapshot for this session:</p>
@@ -113,7 +111,6 @@ export default function LogEntryForm({ student, onLogged }) {
             setStatus={setStatus}
           />
 
-          {/* Update student checkbox */}
           <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"

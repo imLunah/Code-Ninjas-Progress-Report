@@ -7,6 +7,7 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const {
     student_id,
+    program,
     session_date,
     notes,
     belt_level_at,
@@ -16,8 +17,8 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     update_student,
   } = req.body;
 
-  if (!student_id || !notes) {
-    return res.status(400).json({ error: 'student_id and notes are required' });
+  if (!student_id || !program || !notes) {
+    return res.status(400).json({ error: 'student_id, program, and notes are required' });
   }
 
   const date = session_date || new Date().toISOString().split('T')[0];
@@ -25,18 +26,18 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
 
   try {
     const { rows: studentRows } = await pool.query(
-      'SELECT * FROM students WHERE id = $1 AND active = true AND location_id = $2',
+      'SELECT id FROM students WHERE id = $1 AND active = true AND location_id = $2',
       [student_id, req.session.activeLocationId]
     );
-    const student = studentRows[0];
-    if (!student) return res.status(404).json({ error: 'Student not found' });
+    if (!studentRows[0]) return res.status(404).json({ error: 'Student not found' });
 
     const { rows: logRows } = await pool.query(`
-      INSERT INTO progress_logs (student_id, sensei_id, session_date, belt_level_at, belt_sublevel_at, project_at, status_at, notes)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO progress_logs (student_id, program, sensei_id, session_date, belt_level_at, belt_sublevel_at, project_at, status_at, notes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id
     `, [
       student_id,
+      program,
       senseiId,
       date,
       belt_level_at || null,
@@ -47,22 +48,30 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     ]);
 
     if (update_student) {
-      await pool.query(`
-        UPDATE students
-        SET belt_level = $1, belt_sublevel = $2, current_project = $3, project_status = $4
-        WHERE id = $5
-      `, [
-        belt_level_at !== undefined ? belt_level_at : student.belt_level,
-        belt_sublevel_at !== undefined ? belt_sublevel_at : student.belt_sublevel,
-        project_at !== undefined ? project_at : student.current_project,
-        status_at !== undefined ? status_at : student.project_status,
-        student_id,
-      ]);
+      const { rows: enrollmentRows } = await pool.query(
+        'SELECT * FROM student_programs WHERE student_id = $1 AND program = $2',
+        [student_id, program]
+      );
+      const enrollment = enrollmentRows[0];
+      if (enrollment) {
+        await pool.query(`
+          UPDATE student_programs
+          SET belt_level = $1, belt_sublevel = $2, current_project = $3, project_status = $4
+          WHERE student_id = $5 AND program = $6
+        `, [
+          belt_level_at !== undefined ? belt_level_at : enrollment.belt_level,
+          belt_sublevel_at !== undefined ? belt_sublevel_at : enrollment.belt_sublevel,
+          project_at !== undefined ? project_at : enrollment.current_project,
+          status_at !== undefined ? status_at : enrollment.project_status,
+          student_id,
+          program,
+        ]);
+      }
     }
 
     await pool.query(
-      'UPDATE daily_assignments SET completed = true WHERE student_id = $1 AND session_date = $2',
-      [student_id, date]
+      'UPDATE daily_assignments SET completed = true WHERE student_id = $1 AND program = $2 AND session_date = $3',
+      [student_id, program, date]
     );
 
     const { rows } = await pool.query(`
