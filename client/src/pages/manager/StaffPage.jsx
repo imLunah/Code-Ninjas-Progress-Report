@@ -2,23 +2,28 @@ import { useState, useEffect } from 'react';
 import Layout from '../../components/layout/Layout';
 import Button from '../../components/ui/Button';
 import AddSenseiModal from '../../components/manager/AddSenseiModal';
+import SenseiProfileModal from '../../components/manager/SenseiProfileModal';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-
 
 export default function StaffPage() {
   const [senseis, setSenseis] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showModal, setShowModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [confirmRemoveId, setConfirmRemoveId] = useState(null);
+  const [selectedSensei, setSelectedSensei] = useState(null);
+  const [profileLogs, setProfileLogs] = useState([]);
+  const [profileLoading, setProfileLoading] = useState(false);
   const { user, isReadOnly } = useAuth();
+
+  const isManager = user?.role === 'manager';
 
   useEffect(() => {
     setLoading(true);
     api.get('/users?role=sensei')
       .then(setSenseis)
-      .catch(() => setError('Failed to load staff'))
+      .catch(() => setError('Failed to load senseis'))
       .finally(() => setLoading(false));
   }, [user?.activeLocation?.id]);
 
@@ -37,6 +42,20 @@ export default function StaffPage() {
     }
   };
 
+  const handleRowClick = async (sensei) => {
+    setSelectedSensei(sensei);
+    setProfileLogs([]);
+    setProfileLoading(true);
+    try {
+      const data = await api.get(`/users/${sensei.id}`);
+      setProfileLogs(data.progress_logs || []);
+    } catch {
+      setProfileLogs([]);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
   const totalLogs = senseis.reduce((sum, s) => sum + (s.progress_log_count || 0), 0);
 
   return (
@@ -50,8 +69,8 @@ export default function StaffPage() {
             </h1>
             <p className="text-ninja-muted font-ninja mt-1">{user?.activeLocation?.name}</p>
           </div>
-          {!isReadOnly && (
-            <Button onClick={() => setShowModal(true)}>+ Add Sensei</Button>
+          {isManager && !isReadOnly && (
+            <Button onClick={() => setShowAddModal(true)}>+ Add Sensei</Button>
           )}
         </div>
 
@@ -75,12 +94,12 @@ export default function StaffPage() {
             <p className="text-ninja-red font-ninja text-center py-8">{error}</p>
           )}
           {loading && (
-            <p className="text-ninja-muted font-ninja text-center py-8">Loading staff...</p>
+            <p className="text-ninja-muted font-ninja text-center py-8">Loading senseis...</p>
           )}
           {!loading && !error && senseis.length === 0 && (
             <div className="text-center py-12">
               <p className="text-ninja-muted font-ninja">No senseis at this location yet.</p>
-              {!isReadOnly && (
+              {isManager && !isReadOnly && (
                 <p className="text-ninja-muted font-ninja text-sm mt-1">
                   Use "+ Add Sensei" to create an account.
                 </p>
@@ -89,7 +108,6 @@ export default function StaffPage() {
           )}
           {!loading && !error && senseis.length > 0 && (
             <>
-              {/* Table header */}
               <div className="grid grid-cols-3 border-b border-ninja-border bg-ninja-bg px-5 py-3">
                 <span className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest">Name</span>
                 <span className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest">Username</span>
@@ -97,14 +115,18 @@ export default function StaffPage() {
               </div>
               <div className="divide-y divide-ninja-border">
                 {senseis.map((s) => (
-                  <div key={s.id} className="grid grid-cols-3 items-center px-5 py-4 gap-2">
+                  <div
+                    key={s.id}
+                    className="grid grid-cols-3 items-center px-5 py-4 gap-2 hover:bg-ninja-bg cursor-pointer transition-colors"
+                    onClick={() => handleRowClick(s)}
+                  >
                     <p className="font-ninja font-bold text-ninja-navy">{s.display_name}</p>
                     <p className="font-ninja text-sm text-ninja-muted">@{s.username}</p>
-                    <div className="flex items-center justify-end gap-3">
+                    <div className="flex items-center justify-end gap-3" onClick={(e) => e.stopPropagation()}>
                       <span className={`text-lg font-bold font-ninja ${s.progress_log_count > 0 ? 'text-ninja-blue' : 'text-ninja-border'}`}>
                         {s.progress_log_count || 0}
                       </span>
-                      {!isReadOnly && (
+                      {isManager && !isReadOnly && (
                         confirmRemoveId === s.id ? (
                           <div className="flex items-center gap-1">
                             <Button variant="danger" size="sm" onClick={() => handleRemove(s.id)}>Confirm</Button>
@@ -124,9 +146,16 @@ export default function StaffPage() {
       </div>
 
       <AddSenseiModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
         onAdded={handleAdded}
+      />
+
+      <SenseiProfileModal
+        isOpen={!!selectedSensei}
+        onClose={() => setSelectedSensei(null)}
+        sensei={selectedSensei}
+        logs={profileLoading ? [] : profileLogs}
       />
     </Layout>
   );

@@ -57,14 +57,15 @@ export default function Navbar() {
               {user.role === 'manager' && (
                 <>
                   <Link to="/manager/dashboard" className="text-ninja-muted hover:text-ninja-blue font-ninja font-semibold text-sm tracking-wide transition-colors">Dashboard</Link>
-                  <Link to="/manager/students" className="text-ninja-muted hover:text-ninja-blue font-ninja font-semibold text-sm tracking-wide transition-colors">Students</Link>
-                  <Link to="/manager/staff" className="text-ninja-muted hover:text-ninja-blue font-ninja font-semibold text-sm tracking-wide transition-colors">Staff</Link>
+                  <Link to="/manager/students" className="text-ninja-muted hover:text-ninja-blue font-ninja font-semibold text-sm tracking-wide transition-colors">Ninjas</Link>
+                  <Link to="/manager/staff" className="text-ninja-muted hover:text-ninja-blue font-ninja font-semibold text-sm tracking-wide transition-colors">Senseis</Link>
                 </>
               )}
               {user.role === 'sensei' && (
                 <>
                   <Link to="/sensei/dashboard" className="text-ninja-muted hover:text-ninja-blue font-ninja font-semibold text-sm tracking-wide transition-colors">Dashboard</Link>
-                  <Link to="/manager/students" className="text-ninja-muted hover:text-ninja-blue font-ninja font-semibold text-sm tracking-wide transition-colors">Students</Link>
+                  <Link to="/manager/students" className="text-ninja-muted hover:text-ninja-blue font-ninja font-semibold text-sm tracking-wide transition-colors">Ninjas</Link>
+                  <Link to="/manager/staff" className="text-ninja-muted hover:text-ninja-blue font-ninja font-semibold text-sm tracking-wide transition-colors">Senseis</Link>
                 </>
               )}
             </div>
@@ -142,10 +143,10 @@ export default function Navbar() {
                     Dashboard
                   </Link>
                   <Link to="/manager/students" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">
-                    Students
+                    Ninjas
                   </Link>
                   <Link to="/manager/staff" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">
-                    Staff
+                    Senseis
                   </Link>
                 </>
               )}
@@ -155,7 +156,10 @@ export default function Navbar() {
                     Dashboard
                   </Link>
                   <Link to="/manager/students" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">
-                    Students
+                    Ninjas
+                  </Link>
+                  <Link to="/manager/staff" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">
+                    Senseis
                   </Link>
                 </>
               )}
