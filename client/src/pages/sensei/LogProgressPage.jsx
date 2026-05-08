@@ -8,11 +8,14 @@ import LogEntryForm from '../../components/sensei/LogEntryForm';
 import ProgressHistory from '../../components/shared/ProgressHistory';
 import PinnedNote from '../../components/shared/PinnedNote';
 import { api } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 
 export default function LogProgressPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+  const dashboardPath = user?.role === 'manager' ? '/manager/dashboard' : '/sensei/dashboard';
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -60,7 +63,7 @@ export default function LogProgressPage() {
     <Layout>
       <div className="space-y-6 max-w-2xl mx-auto">
         <button
-          onClick={() => navigate('/sensei/dashboard')}
+          onClick={() => navigate(dashboardPath)}
           className="text-ninja-muted hover:text-ninja-blue font-ninja text-sm flex items-center gap-1 transition-colors"
         >
           ← Back to Dashboard
