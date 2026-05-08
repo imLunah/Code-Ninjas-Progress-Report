@@ -8,6 +8,7 @@ const pgSession = require('connect-pg-simple')(session);
 const pool = require('./db/pool');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3001;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'codeninjas-default-secret-change-me';
 
