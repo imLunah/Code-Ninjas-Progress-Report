@@ -61,7 +61,7 @@ export default function ManagerDashboard() {
           </div>
           {!isReadOnly && (
             <Button onClick={() => setShowAddModal(true)} size="md">
-              + Add Student
+              + Add Ninja
             </Button>
           )}
         </div>
@@ -71,7 +71,7 @@ export default function ManagerDashboard() {
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
               <p className="text-3xl font-bold font-ninja text-ninja-blue">{assignments.length}</p>
-              <p className="text-ninja-muted font-ninja text-sm mt-1">Total Students</p>
+              <p className="text-ninja-muted font-ninja text-sm mt-1">Total Ninjas</p>
             </div>
             <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
               <p className={`text-3xl font-bold font-ninja ${completedCount > 0 ? 'text-green-500' : 'text-ninja-border'}`}>

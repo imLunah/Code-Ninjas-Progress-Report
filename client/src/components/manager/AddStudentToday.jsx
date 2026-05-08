@@ -30,7 +30,7 @@ export default function AddStudentToday({ isOpen, onClose, onAdded, existingStud
       const data = await api.get(`/students?search=${encodeURIComponent(q)}`);
       setResults(data);
     } catch (err) {
-      setError('Failed to load students');
+      setError('Failed to load ninjas');
     } finally {
       setLoading(false);
     }
@@ -53,14 +53,14 @@ export default function AddStudentToday({ isOpen, onClose, onAdded, existingStud
       });
       onAdded && onAdded(assignment);
     } catch (err) {
-      setError(err.message || 'Failed to add student');
+      setError(err.message || 'Failed to add ninja');
     } finally {
       setAdding(null);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Student to Today's Board">
+    <Modal isOpen={isOpen} onClose={onClose} title="Add Ninja to Today's Board">
       <div className="space-y-4">
         <input
           type="text"
@@ -80,7 +80,7 @@ export default function AddStudentToday({ isOpen, onClose, onAdded, existingStud
             <p className="text-ninja-muted font-ninja text-center py-4">Searching...</p>
           )}
           {!loading && results.length === 0 && (
-            <p className="text-ninja-muted font-ninja text-center py-4">No students found</p>
+            <p className="text-ninja-muted font-ninja text-center py-4">No ninjas found</p>
           )}
           {!loading && results.map((student) => {
             const alreadyAdded = existingStudentIds.includes(student.id);
