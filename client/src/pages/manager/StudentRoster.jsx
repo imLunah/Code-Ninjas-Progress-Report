@@ -228,95 +228,133 @@ export default function StudentRoster() {
           {error && <p className="text-ninja-red font-ninja text-center py-8">{error}</p>}
           {loading && <p className="text-ninja-muted font-ninja text-center py-8">Loading ninjas...</p>}
           {!loading && !error && (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-ninja-border bg-ninja-bg">
-                    {isManager && (
-                      <th className="px-4 py-3 w-10">
-                        <input
-                          type="checkbox"
-                          checked={sorted.length > 0 && selected.size === sorted.length}
-                          onChange={toggleAll}
-                          className="rounded border-ninja-border accent-ninja-blue cursor-pointer"
-                        />
-                      </th>
-                    )}
-                    <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3">Name</th>
-                    <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3">Program</th>
-                    <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3">Belt</th>
-                    <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3 hidden md:table-cell">Project</th>
-                    <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3 hidden md:table-cell">Status</th>
-                    <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3 hidden lg:table-cell">Last Activity</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sorted.length === 0 && (
-                    <tr>
-                      <td colSpan={isManager ? 7 : 6} className="text-center text-ninja-muted font-ninja py-12">
-                        No ninjas found
-                      </td>
-                    </tr>
-                  )}
-                  {sorted.map((s) => (
-                    <tr
+            <>
+              {/* Mobile card list */}
+              <div className="md:hidden divide-y divide-ninja-border/50">
+                {sorted.length === 0 && (
+                  <p className="text-center text-ninja-muted font-ninja py-12">No ninjas found</p>
+                )}
+                {sorted.map((s) => {
+                  const create = (s.programs || []).find((p) => p.program === 'CREATE');
+                  return (
+                    <div
                       key={s.id}
-                      className={`border-b border-ninja-border/50 hover:bg-ninja-bg transition-colors ${selected.has(s.id) ? 'bg-blue-50' : ''}`}
+                      className={`flex items-center gap-3 px-4 py-3 transition-colors ${selected.has(s.id) ? 'bg-blue-50' : 'hover:bg-ninja-bg'}`}
                     >
                       {isManager && (
-                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={selected.has(s.id)}
-                            onChange={() => toggleSelect(s.id)}
-                            className="rounded border-ninja-border accent-ninja-blue cursor-pointer"
-                          />
-                        </td>
+                        <input
+                          type="checkbox"
+                          checked={selected.has(s.id)}
+                          onChange={() => toggleSelect(s.id)}
+                          className="rounded border-ninja-border accent-ninja-blue cursor-pointer flex-shrink-0"
+                        />
                       )}
-                      <td className="px-4 py-3 font-ninja font-bold text-ninja-navy cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>{s.full_name}</td>
-                      <td className="px-4 py-3 cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
-                        <div className="flex flex-wrap gap-1">
+                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
+                        <p className="font-ninja font-bold text-ninja-navy truncate">{s.full_name}</p>
+                        <div className="flex flex-wrap items-center gap-1 mt-1">
                           {(s.programs || []).map((p) => (
                             <ProgramBadge key={p.program} program={p.program} size="xs" />
                           ))}
-                          {(s.programs || []).length === 0 && <span className="text-ninja-muted font-ninja text-sm">—</span>}
+                          {create?.belt_level && (
+                            <BeltBadge belt={create.belt_level} sublevel={create.belt_sublevel} size="xs" />
+                          )}
                         </div>
-                      </td>
-                      <td className="px-4 py-3 cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
-                        {(() => {
-                          const create = (s.programs || []).find((p) => p.program === 'CREATE');
-                          return create?.belt_level
-                            ? <BeltBadge belt={create.belt_level} sublevel={create.belt_sublevel} size="xs" />
-                            : <span className="text-ninja-muted font-ninja text-sm">—</span>;
-                        })()}
-                      </td>
-                      <td className="px-4 py-3 hidden md:table-cell cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
-                        <span className="text-ninja-muted font-ninja text-sm">
-                          {(s.programs || []).find((p) => p.program === 'CREATE')?.current_project || '—'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 hidden md:table-cell cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
-                        {(() => {
-                          const status = (s.programs || []).find((p) => p.program === 'CREATE')?.project_status;
-                          return status ? (
-                            <span className={`text-xs font-ninja font-semibold px-2 py-0.5 rounded-md ${
-                              status === 'Completed' ? 'bg-green-100 text-green-700'
-                              : status === 'Working On' ? 'bg-blue-100 text-blue-700'
-                              : 'bg-gray-100 text-gray-600'
-                            }`}>{status}</span>
-                          ) : <span className="text-ninja-muted font-ninja text-sm">—</span>;
-                        })()}
-                      </td>
-                      <td className="px-4 py-3 hidden lg:table-cell cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
-                        <span className="text-ninja-muted font-ninja text-sm">
-                          {s.last_activity ? formatDate(s.last_activity) : 'Never'}
-                        </span>
-                      </td>
+                      </div>
+                      <span className="text-ninja-muted font-ninja text-xs flex-shrink-0">
+                        {s.last_activity ? formatDate(s.last_activity) : 'Never'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-ninja-border bg-ninja-bg">
+                      {isManager && (
+                        <th className="px-4 py-3 w-10">
+                          <input
+                            type="checkbox"
+                            checked={sorted.length > 0 && selected.size === sorted.length}
+                            onChange={toggleAll}
+                            className="rounded border-ninja-border accent-ninja-blue cursor-pointer"
+                          />
+                        </th>
+                      )}
+                      <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3">Name</th>
+                      <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3">Program</th>
+                      <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3">Belt</th>
+                      <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3">Project</th>
+                      <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3">Status</th>
+                      <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3 hidden lg:table-cell">Last Activity</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {sorted.length === 0 && (
+                      <tr>
+                        <td colSpan={isManager ? 7 : 6} className="text-center text-ninja-muted font-ninja py-12">No ninjas found</td>
+                      </tr>
+                    )}
+                    {sorted.map((s) => (
+                      <tr
+                        key={s.id}
+                        className={`border-b border-ninja-border/50 hover:bg-ninja-bg transition-colors ${selected.has(s.id) ? 'bg-blue-50' : ''}`}
+                      >
+                        {isManager && (
+                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selected.has(s.id)}
+                              onChange={() => toggleSelect(s.id)}
+                              className="rounded border-ninja-border accent-ninja-blue cursor-pointer"
+                            />
+                          </td>
+                        )}
+                        <td className="px-4 py-3 font-ninja font-bold text-ninja-navy cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>{s.full_name}</td>
+                        <td className="px-4 py-3 cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
+                          <div className="flex flex-wrap gap-1">
+                            {(s.programs || []).map((p) => <ProgramBadge key={p.program} program={p.program} size="xs" />)}
+                            {(s.programs || []).length === 0 && <span className="text-ninja-muted font-ninja text-sm">—</span>}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
+                          {(() => {
+                            const create = (s.programs || []).find((p) => p.program === 'CREATE');
+                            return create?.belt_level
+                              ? <BeltBadge belt={create.belt_level} sublevel={create.belt_sublevel} size="xs" />
+                              : <span className="text-ninja-muted font-ninja text-sm">—</span>;
+                          })()}
+                        </td>
+                        <td className="px-4 py-3 cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
+                          <span className="text-ninja-muted font-ninja text-sm">
+                            {(s.programs || []).find((p) => p.program === 'CREATE')?.current_project || '—'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
+                          {(() => {
+                            const status = (s.programs || []).find((p) => p.program === 'CREATE')?.project_status;
+                            return status ? (
+                              <span className={`text-xs font-ninja font-semibold px-2 py-0.5 rounded-md ${
+                                status === 'Completed' ? 'bg-green-100 text-green-700'
+                                : status === 'Working On' ? 'bg-blue-100 text-blue-700'
+                                : 'bg-gray-100 text-gray-600'
+                              }`}>{status}</span>
+                            ) : <span className="text-ninja-muted font-ninja text-sm">—</span>;
+                          })()}
+                        </td>
+                        <td className="px-4 py-3 hidden lg:table-cell cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
+                          <span className="text-ninja-muted font-ninja text-sm">
+                            {s.last_activity ? formatDate(s.last_activity) : 'Never'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>)
           )}
         </div>
         </div>{/* end scrollable */}
