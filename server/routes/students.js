@@ -81,6 +81,13 @@ router.get('/:id', requireAuth, async (req, res) => {
       ORDER BY pl.session_date DESC, pl.created_at DESC
     `, [id]);
 
+    // Strip parent contact fields for senseis
+    if (req.session.role !== 'manager') {
+      delete student.parent_name;
+      delete student.parent_email;
+      delete student.parent_phone;
+    }
+
     res.json({ ...student, progress_logs: progressLogs });
   } catch (err) {
     console.error('Error fetching student:', err);
