@@ -5,11 +5,13 @@ import AddSenseiModal from '../../components/manager/AddSenseiModal';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
+
 export default function StaffPage() {
   const [senseis, setSenseis] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [confirmRemoveId, setConfirmRemoveId] = useState(null);
   const { user, isReadOnly } = useAuth();
 
   useEffect(() => {
@@ -22,6 +24,17 @@ export default function StaffPage() {
 
   const handleAdded = (newSensei) => {
     setSenseis((prev) => [...prev, { ...newSensei, progress_log_count: 0 }]);
+  };
+
+  const handleRemove = async (id) => {
+    try {
+      await api.delete(`/users/${id}`);
+      setSenseis((prev) => prev.filter((s) => s.id !== id));
+    } catch (err) {
+      setError(err.message || 'Failed to remove sensei');
+    } finally {
+      setConfirmRemoveId(null);
+    }
   };
 
   const totalLogs = senseis.reduce((sum, s) => sum + (s.progress_log_count || 0), 0);
@@ -84,13 +97,23 @@ export default function StaffPage() {
               </div>
               <div className="divide-y divide-ninja-border">
                 {senseis.map((s) => (
-                  <div key={s.id} className="grid grid-cols-3 items-center px-5 py-4">
+                  <div key={s.id} className="grid grid-cols-3 items-center px-5 py-4 gap-2">
                     <p className="font-ninja font-bold text-ninja-navy">{s.display_name}</p>
                     <p className="font-ninja text-sm text-ninja-muted">@{s.username}</p>
-                    <div className="text-right">
+                    <div className="flex items-center justify-end gap-3">
                       <span className={`text-lg font-bold font-ninja ${s.progress_log_count > 0 ? 'text-ninja-blue' : 'text-ninja-border'}`}>
                         {s.progress_log_count || 0}
                       </span>
+                      {!isReadOnly && (
+                        confirmRemoveId === s.id ? (
+                          <div className="flex items-center gap-1">
+                            <Button variant="danger" size="sm" onClick={() => handleRemove(s.id)}>Confirm</Button>
+                            <Button variant="secondary" size="sm" onClick={() => setConfirmRemoveId(null)}>Cancel</Button>
+                          </div>
+                        ) : (
+                          <Button variant="danger" size="sm" onClick={() => setConfirmRemoveId(s.id)}>Remove</Button>
+                        )
+                      )}
                     </div>
                   </div>
                 ))}

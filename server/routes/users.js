@@ -17,7 +17,7 @@ router.get('/', requireManager, async (req, res) => {
                COUNT(pl.id)::int AS progress_log_count
         FROM users u
         LEFT JOIN progress_logs pl ON pl.sensei_id = u.id
-        WHERE u.role = 'sensei' AND u.location_id = $1
+        WHERE u.role = 'sensei' AND u.location_id = $1 AND u.active = true
         GROUP BY u.id
         ORDER BY u.display_name ASC
       `, [req.session.activeLocationId]);
@@ -80,6 +80,28 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   } catch (err) {
     console.error('Error creating user:', err);
     res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+// DELETE /api/users/:id (soft delete — manager only, own location, senseis only)
+router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, role FROM users WHERE id = $1 AND active = true AND location_id = $2',
+      [id, req.session.activeLocationId]
+    );
+    const target = rows[0];
+    if (!target) return res.status(404).json({ error: 'User not found' });
+    if (target.role !== 'sensei') return res.status(403).json({ error: 'Can only remove sensei accounts' });
+
+    await pool.query('UPDATE users SET active = false WHERE id = $1', [id]);
+    res.json({ message: 'Sensei removed' });
+  } catch (err) {
+    console.error('Error removing user:', err);
+    res.status(500).json({ error: 'Failed to remove sensei' });
   }
 });
 
