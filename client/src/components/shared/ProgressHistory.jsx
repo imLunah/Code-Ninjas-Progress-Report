@@ -1,8 +1,15 @@
+import { useState } from 'react';
 import { formatDate } from '../../utils/dateUtils';
 import BeltBadge from '../ui/BeltBadge';
 import ProgramBadge from '../ui/ProgramBadge';
 
 export default function ProgressHistory({ logs = [] }) {
+  const programs = [...new Set(logs.map((l) => l.program).filter(Boolean))];
+  const multiProgram = programs.length > 1;
+  const [filter, setFilter] = useState('');
+
+  const visible = filter ? logs.filter((l) => l.program === filter) : logs;
+
   if (logs.length === 0) {
     return (
       <div className="text-center py-8 text-ninja-muted font-ninja">
@@ -13,7 +20,41 @@ export default function ProgressHistory({ logs = [] }) {
 
   return (
     <div className="space-y-3">
-      {logs.map((log) => (
+      {multiProgram && (
+        <div className="flex flex-wrap gap-2 pb-1">
+          <button
+            onClick={() => setFilter('')}
+            className={`px-3 py-1 rounded-lg text-sm font-ninja font-semibold transition-colors ${
+              filter === ''
+                ? 'bg-ninja-blue text-white'
+                : 'bg-ninja-bg border border-ninja-border text-ninja-navy hover:border-ninja-blue'
+            }`}
+          >
+            All
+          </button>
+          {programs.map((p) => (
+            <button
+              key={p}
+              onClick={() => setFilter(p)}
+              className={`px-3 py-1 rounded-lg text-sm font-ninja font-semibold transition-colors ${
+                filter === p
+                  ? 'bg-ninja-blue text-white'
+                  : 'bg-ninja-bg border border-ninja-border text-ninja-navy hover:border-ninja-blue'
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {visible.length === 0 && (
+        <div className="text-center py-6 text-ninja-muted font-ninja text-sm">
+          No logs for this program yet.
+        </div>
+      )}
+
+      {visible.map((log) => (
         <div
           key={log.id}
           className="bg-ninja-bg border border-ninja-border rounded-xl p-4"
@@ -28,7 +69,10 @@ export default function ProgressHistory({ logs = [] }) {
                   by {log.sensei_name}
                 </span>
               )}
-              {log.program && (
+              {log.program && !multiProgram && (
+                <ProgramBadge program={log.program} size="xs" />
+              )}
+              {log.program && multiProgram && filter === '' && (
                 <ProgramBadge program={log.program} size="xs" />
               )}
             </div>
