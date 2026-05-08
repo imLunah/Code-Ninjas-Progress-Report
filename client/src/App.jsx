@@ -55,7 +55,7 @@ export default function App() {
           <Route
             path="/manager/staff"
             element={
-              <ProtectedRoute role="manager">
+              <ProtectedRoute role="sensei">
                 <StaffPage />
               </ProtectedRoute>
             }
