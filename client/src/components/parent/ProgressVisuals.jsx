@@ -92,15 +92,16 @@ function BeltJourney({ enrollment }) {
     <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
       <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-5">CREATE Belt Journey</h2>
 
-      {/* Padding must exceed the box-shadow spread (3px ring + 14px glow = 17px) so overflow doesn't clip it */}
-      <div className="overflow-x-auto -mx-5 pb-3" style={{ padding: '18px 20px 12px' }}>
-        <div className="relative flex justify-between min-w-[490px]">
-          {/* Connecting line at vertical center of the 52px icons */}
-          <div className="absolute left-6 right-6 h-px bg-ninja-border" style={{ top: '26px' }} />
+      {/* items-center keeps all icons' midpoints on the same axis as the line */}
+      <div className="overflow-x-auto pb-2" style={{ margin: '0 -4px', padding: '4px 4px 0' }}>
+        <div className="relative flex items-center justify-between" style={{ minWidth: '460px' }}>
+          {/* Line through the vertical midpoint of all icons */}
+          <div className="absolute h-px bg-ninja-border" style={{ left: '21px', right: '21px', top: '50%' }} />
 
           {BELTS.map((belt, i) => {
             const reached = currentIndex >= 0 && i <= currentIndex;
             const isCurrent = i === currentIndex;
+            const size = isCurrent ? 60 : 42;
 
             return (
               <div key={belt.name} className="flex flex-col items-center gap-1.5 relative z-10">
@@ -109,22 +110,19 @@ function BeltJourney({ enrollment }) {
                   alt={belt.name}
                   draggable={false}
                   style={{
-                    width: '52px',
-                    height: '52px',
+                    width: `${size}px`,
+                    height: `${size}px`,
                     opacity: reached ? 1 : 0.2,
                     filter: reached ? 'none' : 'grayscale(100%)',
-                    borderRadius: '50%',
-                    boxShadow: isCurrent
-                      ? '0 0 0 3px #006ADD, 0 0 14px #006ADD55'
-                      : undefined,
-                    transition: 'box-shadow 0.3s',
+                    transition: 'width 0.2s, height 0.2s',
                   }}
                 />
                 <span
-                  className="text-xs font-ninja leading-none text-center"
+                  className="font-ninja leading-none text-center"
                   style={{
-                    color: isCurrent ? '#1a2e4a' : reached ? '#506690' : '#cbd5e1',
-                    fontWeight: isCurrent ? 700 : 400,
+                    fontSize: '11px',
+                    fontWeight: isCurrent ? 800 : 400,
+                    color: isCurrent ? '#006ADD' : reached ? '#506690' : '#cbd5e1',
                   }}
                 >
                   {belt.name}
