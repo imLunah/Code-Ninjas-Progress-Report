@@ -22,11 +22,8 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(session({
-  store: new pgSession({
-    pool,
-    tableName: 'session',
-  }),
+const sessionConfig = {
+  store: new pgSession({ pool, tableName: 'session' }),
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
@@ -35,10 +32,16 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production',
     maxAge: 1000 * 60 * 60 * 24 * 7,
   },
-}));
+};
+
+// Staff session (connect.sid)
+app.use(session(sessionConfig));
+
+// Parent portal uses a separate cookie so it never overwrites a staff session
+const parentSession = session({ ...sessionConfig, name: 'parent.sid' });
 
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/parent', require('./routes/parent'));
+app.use('/api/parent', parentSession, require('./routes/parent'));
 app.use('/api/students', require('./routes/students'));
 app.use('/api/daily', require('./routes/daily'));
 app.use('/api/progress', require('./routes/progress'));

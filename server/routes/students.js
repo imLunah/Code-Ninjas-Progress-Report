@@ -203,6 +203,10 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
     const student = existing[0];
     if (!student) return res.status(404).json({ error: 'Student not found' });
 
+    const newParentEmail = parent_email !== undefined ? parent_email : student.parent_email;
+    const newParentName = parent_name !== undefined ? parent_name : student.parent_name;
+    const newParentPhone = parent_phone !== undefined ? parent_phone : student.parent_phone;
+
     const { rows } = await pool.query(
       `UPDATE students SET
         full_name = $1, birthday = $2,
@@ -211,12 +215,23 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
       [
         full_name ?? student.full_name,
         birthday !== undefined ? birthday : student.birthday,
-        parent_name !== undefined ? parent_name : student.parent_name,
-        parent_email !== undefined ? parent_email : student.parent_email,
-        parent_phone !== undefined ? parent_phone : student.parent_phone,
+        newParentName,
+        newParentEmail,
+        newParentPhone,
         id,
       ]
     );
+
+    // If parent contact changed, sync siblings (same old email, same location)
+    const emailChanged = parent_email !== undefined && parent_email !== student.parent_email;
+    if (emailChanged && student.parent_email) {
+      await pool.query(
+        `UPDATE students SET parent_name = $1, parent_email = $2, parent_phone = $3
+         WHERE LOWER(parent_email) = LOWER($4) AND location_id = $5 AND active = true AND id != $6`,
+        [newParentName, newParentEmail, newParentPhone, student.parent_email, req.session.activeLocationId, id]
+      );
+    }
+
     res.json(rows[0]);
   } catch (err) {
     console.error('Error updating student:', err);
