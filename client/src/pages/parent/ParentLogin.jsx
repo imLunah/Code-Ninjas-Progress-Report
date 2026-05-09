@@ -30,7 +30,7 @@ export default function ParentLogin() {
 
   return (
     <div className="min-h-screen bg-ninja-bg flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-sm sm:max-w-md">
         <div className="text-center mb-8">
           <img src="/DojoLinkLogoH.svg" alt="DojoLink" className="h-14 mx-auto mb-4" />
           <h1 className="text-2xl font-bold font-ninja text-ninja-navy">Parent Portal</h1>
@@ -39,7 +39,7 @@ export default function ParentLogin() {
           </p>
         </div>
 
-        <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-6">
+        <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-6 sm:p-8">
           {error && (
             <div className="bg-red-50 border border-red-200 text-ninja-red rounded-lg p-3 mb-4 text-sm font-ninja">
               {error}
