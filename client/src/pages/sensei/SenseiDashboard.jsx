@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import StudentCard from '../../components/shared/StudentCard';
+import ClubSessionsPanel from '../../components/shared/ClubSessionsPanel';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
@@ -10,6 +11,7 @@ export default function SenseiDashboard() {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [clubSessions, setClubSessions] = useState([]);
   const navigate = useNavigate();
   const { user } = useAuth();
   const todayStr = today();
@@ -19,6 +21,7 @@ export default function SenseiDashboard() {
       .then(setAssignments)
       .catch(() => setError('Failed to load today\'s ninjas'))
       .finally(() => setLoading(false));
+    api.get('/clubs').then(setClubSessions).catch(() => {});
   }, [todayStr, user?.activeLocation?.id]);
 
   // Group assignments by student so each student shows one card
@@ -98,6 +101,12 @@ export default function SenseiDashboard() {
             })}
           </div>
         )}
+
+        {/* Clubs */}
+        <ClubSessionsPanel
+          sessions={clubSessions}
+          onDeleted={(id) => setClubSessions((prev) => prev.filter((s) => s.id !== id))}
+        />
       </div>
     </Layout>
   );

@@ -27,11 +27,11 @@ const ASSIGNMENT_SELECT = `
 `;
 
 // GET /api/daily?date=YYYY-MM-DD
-// When fetching today (no date param), also includes incomplete assignments from past days.
+// When fetching today's board, also includes incomplete assignments from past days.
 router.get('/', requireAuth, async (req, res) => {
   const pool = req.app.get('db');
   const date = req.query.date || todayDate();
-  const isToday = !req.query.date;
+  const isToday = date === todayDate();
 
   try {
     const query = isToday
