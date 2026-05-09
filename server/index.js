@@ -34,10 +34,14 @@ const sessionConfig = {
   },
 };
 
-// Staff session (connect.sid)
-app.use(session(sessionConfig));
+// Staff session (connect.sid) — skipped for /api/parent so it can't be corrupted
+const staffSession = session(sessionConfig);
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/parent')) return next();
+  staffSession(req, res, next);
+});
 
-// Parent portal uses a separate cookie so it never overwrites a staff session
+// Parent portal uses its own cookie (parent.sid) — completely isolated from staff
 const parentSession = session({ ...sessionConfig, name: 'parent.sid' });
 
 app.use('/api/auth', require('./routes/auth'));

@@ -162,9 +162,6 @@ export default function ParentStudentProfile() {
                       {log.project_at && (
                         <span className="text-ninja-navy font-ninja ml-2">{log.project_at}</span>
                       )}
-                      {log.notes && (
-                        <p className="text-ninja-muted font-ninja text-xs mt-1 italic">"{log.notes}"</p>
-                      )}
                     </div>
                     {log.sensei_name && (
                       <span className="text-ninja-muted font-ninja text-xs flex-shrink-0">{log.sensei_name}</span>
