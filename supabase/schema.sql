@@ -67,6 +67,9 @@ CREATE TABLE IF NOT EXISTS progress_logs (
   project_at TEXT,
   status_at TEXT,
   notes TEXT NOT NULL,
+  sub_program TEXT,
+  module_name TEXT,
+  lesson_name TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

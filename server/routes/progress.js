@@ -15,6 +15,9 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     project_at,
     status_at,
     update_student,
+    sub_program,
+    module_name,
+    lesson_name,
   } = req.body;
 
   if (!student_id || !program || !notes) {
@@ -32,8 +35,8 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     if (!studentRows[0]) return res.status(404).json({ error: 'Student not found' });
 
     const { rows: logRows } = await pool.query(`
-      INSERT INTO progress_logs (student_id, program, sensei_id, session_date, belt_level_at, belt_sublevel_at, project_at, status_at, notes)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO progress_logs (student_id, program, sensei_id, session_date, belt_level_at, belt_sublevel_at, project_at, status_at, notes, sub_program, module_name, lesson_name)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING id
     `, [
       student_id,
@@ -45,6 +48,9 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
       project_at || null,
       status_at || null,
       notes,
+      sub_program || null,
+      module_name || null,
+      lesson_name || null,
     ]);
 
     if (update_student) {

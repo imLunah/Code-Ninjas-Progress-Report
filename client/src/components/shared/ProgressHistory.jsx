@@ -98,6 +98,25 @@ export default function ProgressHistory({ logs = [] }) {
               )}
             </div>
           </div>
+          {(log.sub_program || log.module_name || log.lesson_name) && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {log.sub_program && (
+                <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-md font-ninja font-semibold">
+                  {log.sub_program}
+                </span>
+              )}
+              {log.module_name && (
+                <span className="text-xs bg-ninja-bg border border-ninja-border text-ninja-navy px-2 py-0.5 rounded-md font-ninja">
+                  {log.module_name}
+                </span>
+              )}
+              {log.lesson_name && (
+                <span className="text-xs bg-ninja-bg border border-ninja-border text-ninja-muted px-2 py-0.5 rounded-md font-ninja">
+                  {log.lesson_name}
+                </span>
+              )}
+            </div>
+          )}
           <p className="text-ninja-navy font-ninja text-sm leading-relaxed">{log.notes}</p>
         </div>
       ))}
