@@ -22,9 +22,12 @@ export default function LogProgressPage() {
   const [selectedProgram, setSelectedProgram] = useState('');
 
   // ?program=X pre-selects a single program; ?programs=X,Y lists programs available today
+  // ?done=X,Y lists programs already logged this session by another sensei
   const singleProgramParam = searchParams.get('program');
   const programsParam = searchParams.get('programs');
+  const doneParam = searchParams.get('done');
   const todayPrograms = programsParam ? programsParam.split(',') : null;
+  const donePrograms = new Set(doneParam ? doneParam.split(',') : []);
 
   useEffect(() => {
     api.get(`/students/${id}`)
@@ -33,9 +36,11 @@ export default function LogProgressPage() {
         if (singleProgramParam) {
           setSelectedProgram(singleProgramParam);
         } else if (todayPrograms) {
-          // Only auto-select if exactly one program is on today's board
           const available = (data.programs || []).filter((p) => todayPrograms.includes(p.program));
-          if (available.length === 1) setSelectedProgram(available[0].program);
+          // Auto-select the first un-done program, or just the only program
+          const pending = available.filter((p) => !donePrograms.has(p.program));
+          if (pending.length === 1) setSelectedProgram(pending[0].program);
+          else if (available.length === 1) setSelectedProgram(available[0].program);
         } else if (data.programs?.length === 1) {
           setSelectedProgram(data.programs[0].program);
         }
@@ -111,20 +116,33 @@ export default function LogProgressPage() {
                 Which program are you logging?
               </label>
               <div className="flex flex-wrap gap-2">
-                {availablePrograms.map((p) => (
-                  <button
-                    key={p.program}
-                    onClick={() => setSelectedProgram(p.program)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-ninja font-semibold transition-colors ${
-                      selectedProgram === p.program
-                        ? 'bg-ninja-blue text-white'
-                        : 'bg-ninja-bg border border-ninja-border text-ninja-navy hover:border-ninja-blue'
-                    }`}
-                  >
-                    {p.program}
-                  </button>
-                ))}
+                {availablePrograms.map((p) => {
+                  const isDone = donePrograms.has(p.program);
+                  const isSelected = selectedProgram === p.program;
+                  return (
+                    <button
+                      key={p.program}
+                      onClick={() => setSelectedProgram(p.program)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-ninja font-semibold transition-colors flex items-center gap-1.5 ${
+                        isSelected
+                          ? 'bg-ninja-blue text-white'
+                          : isDone
+                          ? 'bg-green-50 border border-green-300 text-green-700 hover:border-green-500'
+                          : 'bg-ninja-bg border border-ninja-border text-ninja-navy hover:border-ninja-blue'
+                      }`}
+                    >
+                      {isDone && !isSelected && <span className="text-green-600">✓</span>}
+                      {p.program}
+                      {isDone && !isSelected && <span className="text-xs font-normal opacity-75">logged</span>}
+                    </button>
+                  );
+                })}
               </div>
+              {donePrograms.size > 0 && donePrograms.size < availablePrograms.length && (
+                <p className="text-ninja-muted font-ninja text-xs mt-2">
+                  {donePrograms.size}/{availablePrograms.length} programs already logged today.
+                </p>
+              )}
             </div>
           )}
         </Card>
