@@ -4,45 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { formatDate } from '../../utils/dateUtils';
 import { api } from '../../api/client';
 import Button from '../ui/Button';
-
-function CommentBox({ sessionId, onAdded }) {
-  const [body, setBody] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!body.trim()) return;
-    setSaving(true);
-    try {
-      const comment = await api.post(`/clubs/${sessionId}/comments`, { body: body.trim() });
-      onAdded(comment);
-      setBody('');
-    } catch { /* ignore */ } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="flex gap-2 mt-2">
-      <input
-        type="text"
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder="Add a comment..."
-        className="flex-1 bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-sm focus:outline-none focus:border-ninja-blue transition-colors"
-      />
-      <Button type="submit" size="sm" disabled={saving || !body.trim()}>
-        {saving ? '...' : 'Reply'}
-      </Button>
-    </form>
-  );
-}
-
-const CLUB_COLORS = {
-  '3D Design Club': { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-200' },
-  'Minecraft Club':  { bg: 'bg-green-100',  text: 'text-green-700',  border: 'border-green-200'  },
-  'Roblox Club':     { bg: 'bg-red-100',    text: 'text-red-700',    border: 'border-red-200'    },
-};
+import { CLUB_NAME_TO_SLUG, CLUB_COLORS } from '../../utils/clubUtils';
 
 function ClubBadge({ name }) {
   const c = CLUB_COLORS[name] || { bg: 'bg-ninja-bg', text: 'text-ninja-navy', border: 'border-ninja-border' };
@@ -55,26 +17,15 @@ function ClubBadge({ name }) {
 
 export { ClubBadge };
 
-export default function ClubSessionsPanel({ sessions, onDeleted, onNotesUpdated, onAttendeesUpdated }) {
+export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpdated }) {
   const navigate = useNavigate();
   const { user, isReadOnly } = useAuth();
   const isManager = user?.role === 'manager';
 
   const [expanded, setExpanded] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
-  const [editingId, setEditingId] = useState(null);
-  const [draftNotes, setDraftNotes] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [localComments, setLocalComments] = useState({});
 
-  const handleCommentAdded = (sessionId, comment) => {
-    setLocalComments((prev) => ({
-      ...prev,
-      [sessionId]: [...(prev[sessionId] || []), comment],
-    }));
-  };
-
-  // Attendee editing state (manager only)
+  // Attendee editing (manager only)
   const [editingAttendeesId, setEditingAttendeesId] = useState(null);
   const [allStudents, setAllStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
@@ -125,34 +76,8 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onNotesUpdated,
     try {
       await api.delete(`/clubs/${id}`);
       onDeleted && onDeleted(id);
-    } catch {
-      // ignore
-    } finally {
+    } catch { /* ignore */ } finally {
       setConfirmId(null);
-    }
-  };
-
-  const startEdit = (session) => {
-    setEditingId(session.id);
-    setDraftNotes(session.notes || '');
-    setExpanded(session.id);
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setDraftNotes('');
-  };
-
-  const saveNotes = async (id) => {
-    setSaving(true);
-    try {
-      await api.patch(`/clubs/${id}/notes`, { notes: draftNotes });
-      onNotesUpdated && onNotesUpdated(id, draftNotes.trim());
-      setEditingId(null);
-    } catch {
-      // ignore
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -173,7 +98,6 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onNotesUpdated,
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {sessions.map((s) => {
             const isOpen = expanded === s.id;
-            const isEditing = editingId === s.id;
             const isEditingAttendees = editingAttendeesId === s.id;
 
             return (
@@ -264,70 +188,32 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onNotesUpdated,
                   )
                 )}
 
-                {/* Notes */}
-                {isEditing ? (
-                  <div className="space-y-2 flex-1">
-                    <textarea
-                      value={draftNotes}
-                      onChange={(e) => setDraftNotes(e.target.value)}
-                      placeholder="How did the session go? What did the group work on?"
-                      rows={3}
-                      className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
-                      autoFocus
-                    />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => saveNotes(s.id)} disabled={saving}>
-                        {saving ? 'Saving...' : 'Save'}
-                      </Button>
-                      <Button size="sm" variant="secondary" onClick={cancelEdit}>Cancel</Button>
-                    </div>
-                  </div>
-                ) : s.notes ? (
-                  <p className="text-ninja-navy font-ninja text-sm flex-1">{s.notes}</p>
-                ) : null}
-
+                {/* Notes preview */}
+                {s.notes && (
+                  <p className="text-ninja-navy font-ninja text-sm line-clamp-2">{s.notes}</p>
+                )}
                 {s.sensei_name && s.notes && (
                   <p className="text-ninja-muted font-ninja text-xs">Notes by {s.sensei_name}</p>
                 )}
 
-                {/* Comments */}
-                {(() => {
-                  const allComments = [...(s.comments || []), ...(localComments[s.id] || [])];
-                  return (
-                    <>
-                      {allComments.length > 0 && (
-                        <div className="space-y-1 border-t border-ninja-border pt-2">
-                          {allComments.map((c) => (
-                            <div key={c.id} className="flex gap-2">
-                              <div className="flex-shrink-0 w-1 rounded-full bg-ninja-blue" />
-                              <div>
-                                <p className="text-ninja-navy font-ninja text-sm">{c.body}</p>
-                                <p className="text-ninja-muted font-ninja text-xs mt-0.5">
-                                  {c.user_name} · {new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <CommentBox sessionId={s.id} onAdded={(c) => handleCommentAdded(s.id, c)} />
-                    </>
-                  );
-                })()}
-
-                {/* Sensei action button — Log Progress style */}
-                {!isManager && !isEditing && (
-                  <button
-                    onClick={() => startEdit(s)}
-                    className="w-full text-sm font-ninja font-bold text-ninja-blue border border-ninja-blue rounded-lg py-1.5 hover:bg-ninja-blue hover:text-white transition-colors"
-                  >
-                    Log Progress
-                  </button>
+                {/* Comment count hint */}
+                {s.comments?.length > 0 && (
+                  <p className="text-ninja-muted font-ninja text-xs">
+                    {s.comments.length} comment{s.comments.length !== 1 ? 's' : ''}
+                  </p>
                 )}
+
+                {/* Log Progress — opens session detail with notes + comment thread */}
+                <button
+                  onClick={() => navigate(`/clubs/${CLUB_NAME_TO_SLUG[s.club_name]}/sessions/${s.id}`)}
+                  className="w-full text-sm font-ninja font-bold text-ninja-blue border border-ninja-blue rounded-lg py-1.5 hover:bg-ninja-blue hover:text-white transition-colors"
+                >
+                  Log Progress
+                </button>
 
                 {/* Manager delete */}
                 {isManager && !isReadOnly && (
-                  <div className="flex items-center gap-2 mt-auto">
+                  <div className="flex items-center gap-2">
                     {confirmId === s.id ? (
                       <>
                         <Button variant="danger" size="sm" onClick={() => handleDelete(s.id)}>Confirm</Button>
