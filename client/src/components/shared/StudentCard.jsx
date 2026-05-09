@@ -1,3 +1,4 @@
+import { today } from '../../utils/dateUtils';
 import BeltBadge from '../ui/BeltBadge';
 import ProgramBadge from '../ui/ProgramBadge';
 
@@ -7,6 +8,10 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
   const assignments = student.assignments || [{ program: student.program, completed: student.completed }];
   const allCompleted = assignments.every((a) => a.completed);
   const someCompleted = !allCompleted && assignments.some((a) => a.completed);
+  const todayStr = today();
+  const isOverdue = !allCompleted && assignments.some(
+    (a) => !a.completed && a.session_date && String(a.session_date).split('T')[0] < todayStr
+  );
 
   // For CREATE badge details, pull from the primary assignment or the student object
   const createAssignment = assignments.find((a) => a.program === 'CREATE') || {};
@@ -14,7 +19,7 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
   return (
     <div
       className={`bg-white border rounded-xl p-4 transition-all shadow-sm ${
-        allCompleted ? 'border-green-400' : someCompleted ? 'border-yellow-300' : 'border-ninja-border'
+        allCompleted ? 'border-green-400' : isOverdue ? 'border-orange-400 bg-orange-50' : someCompleted ? 'border-yellow-300' : 'border-ninja-border'
       } ${onClick ? 'cursor-pointer hover:border-ninja-blue' : ''}`}
       onClick={onClick}
     >
@@ -26,6 +31,9 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
             </h3>
             {allCompleted && (
               <span className="text-green-500 text-lg" title="All done">✓</span>
+            )}
+            {isOverdue && (
+              <span className="text-orange-600 font-ninja font-semibold text-xs px-2 py-0.5 bg-orange-100 border border-orange-300 rounded-md">Overdue</span>
             )}
           </div>
 
@@ -62,7 +70,7 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
         </div>
         <div
           className={`w-3 h-3 rounded-full mt-1 flex-shrink-0 ${
-            allCompleted ? 'bg-green-500' : someCompleted ? 'bg-yellow-400' : 'bg-ninja-border'
+            allCompleted ? 'bg-green-500' : isOverdue ? 'bg-orange-400' : someCompleted ? 'bg-yellow-400' : 'bg-ninja-border'
           }`}
         />
       </div>
