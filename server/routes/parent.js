@@ -33,9 +33,17 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'No students found linked to that email address.' });
     }
 
+    await new Promise((resolve, reject) => {
+      req.session.regenerate((err) => (err ? reject(err) : resolve()));
+    });
+
     req.session.parentEmail = email.trim().toLowerCase();
     req.session.role = 'parent';
     req.session.parentName = rows[0].parent_name || null;
+
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => (err ? reject(err) : resolve()));
+    });
 
     res.json({ email: req.session.parentEmail, role: 'parent', parentName: req.session.parentName });
   } catch (err) {
