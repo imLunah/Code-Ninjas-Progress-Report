@@ -88,13 +88,14 @@ export default function SenseiDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {groupedList.map((group) => {
               const programsStr = group.assignments.map((a) => a.program).join(',');
+              const doneStr = group.assignments.filter((a) => a.completed).map((a) => a.program).join(',');
               return (
                 <StudentCard
                   key={group.student_id}
                   student={group}
                   onClick={() => navigate(`/manager/students/${group.student_id}`)}
                   onLogProgress={() =>
-                    navigate(`/sensei/student/${group.student_id}?programs=${encodeURIComponent(programsStr)}`)
+                    navigate(`/sensei/student/${group.student_id}?programs=${encodeURIComponent(programsStr)}${doneStr ? `&done=${encodeURIComponent(doneStr)}` : ''}`)
                   }
                 />
               );
