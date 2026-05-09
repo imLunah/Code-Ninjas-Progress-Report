@@ -92,47 +92,47 @@ function BeltJourney({ enrollment }) {
     <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
       <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-5">CREATE Belt Journey</h2>
 
-      <div className="relative flex items-end justify-between gap-1 overflow-x-auto pb-1">
-        {/* Connecting line sits at mid-icon height */}
-        <div className="absolute left-6 right-6 h-0.5 bg-ninja-border" style={{ top: '28px' }} />
+      {/* Horizontal scroll on narrow screens; min-w keeps icons from compressing */}
+      <div className="overflow-x-auto -mx-1 px-1 pb-2">
+        <div className="relative flex justify-between min-w-[480px]">
+          {/* Connecting line at vertical center of the 52px icons */}
+          <div className="absolute left-6 right-6 h-px bg-ninja-border" style={{ top: '26px' }} />
 
-        {BELTS.map((belt, i) => {
-          const reached = currentIndex >= 0 && i <= currentIndex;
-          const isCurrent = i === currentIndex;
+          {BELTS.map((belt, i) => {
+            const reached = currentIndex >= 0 && i <= currentIndex;
+            const isCurrent = i === currentIndex;
 
-          return (
-            <div key={belt.name} className="flex flex-col items-center gap-1 flex-shrink-0 relative z-10">
-              <div
-                className="rounded-full transition-all duration-300"
-                style={{
-                  width: isCurrent ? '64px' : '48px',
-                  height: isCurrent ? '64px' : '48px',
-                  opacity: reached ? 1 : 0.25,
-                  filter: reached ? 'none' : 'grayscale(100%)',
-                  boxShadow: isCurrent ? '0 0 0 3px #006ADD, 0 0 16px #006ADD50' : undefined,
-                  borderRadius: '50%',
-                }}
-                title={belt.name}
-              >
+            return (
+              <div key={belt.name} className="flex flex-col items-center gap-1.5 relative z-10">
                 <img
                   src={BELT_IMAGES[belt.name]}
                   alt={belt.name}
-                  className="w-full h-full object-contain"
                   draggable={false}
+                  style={{
+                    width: '52px',
+                    height: '52px',
+                    opacity: reached ? 1 : 0.2,
+                    filter: reached ? 'none' : 'grayscale(100%)',
+                    borderRadius: '50%',
+                    boxShadow: isCurrent
+                      ? '0 0 0 3px #006ADD, 0 0 14px #006ADD55'
+                      : undefined,
+                    transition: 'box-shadow 0.3s',
+                  }}
                 />
+                <span
+                  className="text-xs font-ninja leading-none text-center"
+                  style={{
+                    color: isCurrent ? '#1a2e4a' : reached ? '#506690' : '#cbd5e1',
+                    fontWeight: isCurrent ? 700 : 400,
+                  }}
+                >
+                  {belt.name}
+                </span>
               </div>
-              <span
-                className="text-xs font-ninja leading-none"
-                style={{
-                  color: isCurrent ? '#1a2e4a' : reached ? '#506690' : '#cbd5e1',
-                  fontWeight: isCurrent ? 700 : 400,
-                }}
-              >
-                {belt.name.slice(0, 3)}
-              </span>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {progress !== null && (
