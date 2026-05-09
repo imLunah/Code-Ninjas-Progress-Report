@@ -149,7 +149,7 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onNotesUpdated 
                     onClick={() => startEdit(s)}
                     className="w-full text-sm font-ninja font-bold text-ninja-blue border border-ninja-blue rounded-lg py-1.5 hover:bg-ninja-blue hover:text-white transition-colors"
                   >
-                    {s.notes ? 'Edit Notes' : 'Write Notes'}
+                    Log Progress
                   </button>
                 )}
 
