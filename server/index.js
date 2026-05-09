@@ -38,6 +38,7 @@ app.use(session({
 }));
 
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/parent', require('./routes/parent'));
 app.use('/api/students', require('./routes/students'));
 app.use('/api/daily', require('./routes/daily'));
 app.use('/api/progress', require('./routes/progress'));

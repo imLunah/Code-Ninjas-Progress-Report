@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Layout from '../../components/layout/Layout';
@@ -122,6 +122,11 @@ export default function StudentProfile() {
   const [editingEnrollment, setEditingEnrollment] = useState(null);
   const [showAddProgram, setShowAddProgram] = useState(false);
 
+  const [messages, setMessages] = useState([]);
+  const [msgBody, setMsgBody] = useState('');
+  const [sending, setSending] = useState(false);
+  const msgBottomRef = useRef(null);
+
   const isManager = user?.role === 'manager';
 
   useEffect(() => {
@@ -129,7 +134,30 @@ export default function StudentProfile() {
       .then(setStudent)
       .catch(() => setError('Failed to load ninja'))
       .finally(() => setLoading(false));
+
+    api.get(`/students/${id}/messages`)
+      .then(setMessages)
+      .catch(() => {});
   }, [id, user?.activeLocation?.id]);
+
+  useEffect(() => {
+    msgBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!msgBody.trim()) return;
+    setSending(true);
+    try {
+      const msg = await api.post(`/students/${id}/messages`, { body: msgBody.trim() });
+      setMessages((prev) => [...prev, msg]);
+      setMsgBody('');
+    } catch {
+      // silently fail
+    } finally {
+      setSending(false);
+    }
+  };
 
   const handleSaved = (updated) => {
     setStudent((prev) => ({ ...prev, ...updated }));
@@ -406,6 +434,63 @@ export default function StudentProfile() {
           initialNote={student.pinned_note}
           onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
         />
+
+        {/* Parent Messages */}
+        <div className="bg-white border border-ninja-border rounded-xl shadow-sm flex flex-col">
+          <div className="px-6 py-4 border-b border-ninja-border">
+            <h2 className="text-xl font-bold font-ninja text-ninja-navy">
+              Parent <span className="text-ninja-blue">Messages</span>
+            </h2>
+            {student.parent_name && (
+              <p className="text-ninja-muted font-ninja text-sm mt-0.5">Conversation with {student.parent_name}</p>
+            )}
+          </div>
+
+          <div className="px-6 py-4 space-y-3 max-h-80 overflow-y-auto">
+            {messages.length === 0 && (
+              <p className="text-ninja-muted font-ninja text-sm text-center py-4 italic">
+                No messages yet.
+              </p>
+            )}
+            {messages.map((m) => {
+              const isParent = m.sender_type === 'parent';
+              return (
+                <div key={m.id} className={`flex flex-col ${isParent ? 'items-start' : 'items-end'}`}>
+                  <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm font-ninja ${
+                    isParent
+                      ? 'bg-ninja-bg border border-ninja-border text-ninja-navy rounded-bl-sm'
+                      : 'bg-ninja-blue text-white rounded-br-sm'
+                  }`}>
+                    {m.body}
+                  </div>
+                  <span className="text-ninja-muted font-ninja text-xs mt-1 px-1">
+                    {isParent ? (m.sender_name || 'Parent') : (m.sender_name || 'Staff')}
+                    {' · '}
+                    {new Date(m.created_at).toLocaleString('en-US', {
+                      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+                    })}
+                  </span>
+                </div>
+              );
+            })}
+            <div ref={msgBottomRef} />
+          </div>
+
+          <div className="px-6 py-4 border-t border-ninja-border">
+            <form onSubmit={handleSendMessage} className="flex gap-2">
+              <input
+                type="text"
+                value={msgBody}
+                onChange={(e) => setMsgBody(e.target.value)}
+                placeholder="Reply to parent..."
+                className="flex-1 bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue transition-colors"
+              />
+              <Button type="submit" disabled={sending || !msgBody.trim()} size="sm">
+                {sending ? '...' : 'Send'}
+              </Button>
+            </form>
+          </div>
+        </div>
 
         {/* Progress History */}
         <div className="bg-white border border-ninja-border rounded-xl p-6 shadow-sm">

@@ -24,4 +24,9 @@ function requireOwnLocation(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireManager, requireSensei, requireOwnLocation };
+function requireParent(req, res, next) {
+  if (!req.session.parentEmail) return res.status(401).json({ error: 'Not authenticated' });
+  next();
+}
+
+module.exports = { requireAuth, requireManager, requireSensei, requireOwnLocation, requireParent };

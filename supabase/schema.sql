@@ -69,3 +69,15 @@ CREATE TABLE IF NOT EXISTS progress_logs (
   notes TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS messages (
+  id SERIAL PRIMARY KEY,
+  student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  sender_type TEXT NOT NULL CHECK (sender_type IN ('parent', 'staff')),
+  sender_id INTEGER REFERENCES users(id),
+  sender_name TEXT,
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS messages_student_id_idx ON messages(student_id);
