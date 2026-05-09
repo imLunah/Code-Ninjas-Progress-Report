@@ -5,6 +5,39 @@ import { formatDate } from '../../utils/dateUtils';
 import { api } from '../../api/client';
 import Button from '../ui/Button';
 
+function CommentBox({ sessionId, onAdded }) {
+  const [body, setBody] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!body.trim()) return;
+    setSaving(true);
+    try {
+      const comment = await api.post(`/clubs/${sessionId}/comments`, { body: body.trim() });
+      onAdded(comment);
+      setBody('');
+    } catch { /* ignore */ } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex gap-2 mt-2">
+      <input
+        type="text"
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        placeholder="Add a comment..."
+        className="flex-1 bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-sm focus:outline-none focus:border-ninja-blue transition-colors"
+      />
+      <Button type="submit" size="sm" disabled={saving || !body.trim()}>
+        {saving ? '...' : 'Reply'}
+      </Button>
+    </form>
+  );
+}
+
 const CLUB_COLORS = {
   '3D Design Club': { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-200' },
   'Minecraft Club':  { bg: 'bg-green-100',  text: 'text-green-700',  border: 'border-green-200'  },
@@ -32,6 +65,14 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onNotesUpdated,
   const [editingId, setEditingId] = useState(null);
   const [draftNotes, setDraftNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [localComments, setLocalComments] = useState({});
+
+  const handleCommentAdded = (sessionId, comment) => {
+    setLocalComments((prev) => ({
+      ...prev,
+      [sessionId]: [...(prev[sessionId] || []), comment],
+    }));
+  };
 
   // Attendee editing state (manager only)
   const [editingAttendeesId, setEditingAttendeesId] = useState(null);
@@ -248,6 +289,31 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onNotesUpdated,
                 {s.sensei_name && s.notes && (
                   <p className="text-ninja-muted font-ninja text-xs">Notes by {s.sensei_name}</p>
                 )}
+
+                {/* Comments */}
+                {(() => {
+                  const allComments = [...(s.comments || []), ...(localComments[s.id] || [])];
+                  return (
+                    <>
+                      {allComments.length > 0 && (
+                        <div className="space-y-1 border-t border-ninja-border pt-2">
+                          {allComments.map((c) => (
+                            <div key={c.id} className="flex gap-2">
+                              <div className="flex-shrink-0 w-1 rounded-full bg-ninja-blue" />
+                              <div>
+                                <p className="text-ninja-navy font-ninja text-sm">{c.body}</p>
+                                <p className="text-ninja-muted font-ninja text-xs mt-0.5">
+                                  {c.user_name} · {new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <CommentBox sessionId={s.id} onAdded={(c) => handleCommentAdded(s.id, c)} />
+                    </>
+                  );
+                })()}
 
                 {/* Sensei action button — Log Progress style */}
                 {!isManager && !isEditing && (

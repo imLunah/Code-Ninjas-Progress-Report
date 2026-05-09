@@ -17,7 +17,12 @@ router.get('/', requireAuth, async (req, res) => {
            FROM club_attendees ca JOIN students s ON ca.student_id = s.id
            WHERE ca.club_session_id = cs.id),
           '[]'::json
-        ) AS attendees
+        ) AS attendees,
+        COALESCE(
+          (SELECT json_agg(json_build_object('id', c.id, 'user_name', c.user_name, 'body', c.body, 'created_at', c.created_at) ORDER BY c.created_at ASC)
+           FROM club_session_comments c WHERE c.session_id = cs.id),
+          '[]'::json
+        ) AS comments
       FROM club_sessions cs
       LEFT JOIN users u ON cs.sensei_id = u.id
       WHERE cs.location_id = $1
@@ -124,6 +129,31 @@ router.patch('/:id/notes', requireSensei, async (req, res) => {
   } catch (err) {
     console.error('Club notes update error:', err);
     res.status(500).json({ error: 'Failed to save notes' });
+  }
+});
+
+// POST /api/clubs/:id/comments — any staff can comment on a club session
+router.post('/:id/comments', requireSensei, async (req, res) => {
+  const pool = req.app.get('db');
+  const { body } = req.body;
+  if (!body?.trim()) return res.status(400).json({ error: 'Comment cannot be empty' });
+
+  try {
+    const { rows: sessionRows } = await pool.query(
+      'SELECT id FROM club_sessions WHERE id = $1 AND location_id = $2',
+      [req.params.id, req.session.activeLocationId]
+    );
+    if (!sessionRows[0]) return res.status(404).json({ error: 'Session not found' });
+
+    const { rows } = await pool.query(
+      `INSERT INTO club_session_comments (session_id, user_id, user_name, body)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [req.params.id, req.session.userId, req.session.displayName, body.trim()]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error('Club comment error:', err);
+    res.status(500).json({ error: 'Failed to save comment' });
   }
 });
 
