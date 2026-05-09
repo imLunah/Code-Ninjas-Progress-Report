@@ -84,7 +84,6 @@ export default function ParentStudentProfile() {
 
   const programs = student.programs || [];
   const create = programs.find((p) => p.program === 'CREATE');
-  const otherPrograms = programs.filter((p) => p.program !== 'CREATE');
 
   return (
     <ParentLayout>
@@ -116,23 +115,21 @@ export default function ParentStudentProfile() {
           </p>
         </div>
 
-        {/* CREATE progress */}
+        {/* CREATE current status */}
         {create && (
           <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
-            <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-3">CREATE Progress</h2>
-
-            {/* Current status */}
-            <div className="flex flex-wrap items-center gap-3 mb-4 pb-4 border-b border-ninja-border">
+            <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-3">CREATE Status</h2>
+            <div className="flex flex-wrap items-center gap-3">
               {create.belt_level ? (
                 <BeltBadge belt={create.belt_level} sublevel={create.belt_sublevel} size="md" />
               ) : (
                 <span className="text-ninja-muted font-ninja text-sm italic">No belt assigned yet</span>
               )}
               {create.current_project && (
-                <div>
+                <div className="flex items-center gap-2">
                   <span className="text-ninja-navy font-ninja font-semibold">{create.current_project}</span>
                   {create.project_status && (
-                    <span className={`ml-2 text-xs font-ninja font-semibold px-2 py-0.5 rounded-md ${
+                    <span className={`text-xs font-ninja font-semibold px-2 py-0.5 rounded-md ${
                       create.project_status === 'Completed' ? 'bg-green-100 text-green-700'
                       : create.project_status === 'Working On' ? 'bg-blue-100 text-blue-700'
                       : 'bg-gray-100 text-gray-600'
@@ -141,52 +138,57 @@ export default function ParentStudentProfile() {
                 </div>
               )}
             </div>
+          </div>
+        )}
 
-            {/* Recent sessions */}
-            <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">
-              Recent Sessions
-            </p>
-            {(student.create_logs || []).length === 0 ? (
-              <p className="text-ninja-muted font-ninja text-sm italic">No sessions logged yet.</p>
-            ) : (
-              <div className="space-y-3">
-                {student.create_logs.map((log, i) => (
-                  <div key={i} className="flex items-start gap-3 text-sm">
-                    <div className="flex-shrink-0 w-24 text-ninja-muted font-ninja text-xs pt-0.5">
-                      {formatDate(log.session_date)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      {log.belt_level_at && (
-                        <BeltBadge belt={log.belt_level_at} sublevel={log.belt_sublevel_at} size="xs" />
-                      )}
-                      {log.project_at && (
-                        <span className="text-ninja-navy font-ninja ml-2">{log.project_at}</span>
-                      )}
-                    </div>
-                    {log.sensei_name && (
-                      <span className="text-ninja-muted font-ninja text-xs flex-shrink-0">{log.sensei_name}</span>
+        {/* Session history — all programs, no notes */}
+        <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
+          <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-4">Session History</h2>
+          {(student.session_logs || []).length === 0 ? (
+            <p className="text-ninja-muted font-ninja text-sm italic">No sessions logged yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {student.session_logs.map((log, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 bg-ninja-bg border border-ninja-border rounded-xl">
+                  <div className="flex-shrink-0 w-20 text-ninja-muted font-ninja text-xs pt-0.5">
+                    {formatDate(log.session_date)}
+                  </div>
+                  <div className="flex-1 min-w-0 flex flex-wrap items-center gap-1.5">
+                    <ProgramBadge program={log.program} size="xs" />
+                    {log.sub_program && (
+                      <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-md font-ninja font-semibold">
+                        {log.sub_program}
+                      </span>
+                    )}
+                    {log.module_name && (
+                      <span className="text-xs bg-white border border-ninja-border text-ninja-navy px-2 py-0.5 rounded-md font-ninja">
+                        {log.module_name}
+                      </span>
+                    )}
+                    {log.lesson_name && (
+                      <span className="text-xs text-ninja-muted font-ninja">
+                        {log.lesson_name}
+                      </span>
+                    )}
+                    {log.belt_level_at && (
+                      <BeltBadge belt={log.belt_level_at} sublevel={log.belt_sublevel_at} size="xs" />
+                    )}
+                    {log.project_at && (
+                      <span className="text-xs text-ninja-navy font-ninja font-semibold">{log.project_at}</span>
+                    )}
+                    {log.status_at && (
+                      <span className={`text-xs font-ninja font-semibold px-2 py-0.5 rounded-md ${
+                        log.status_at === 'Completed' ? 'bg-green-100 text-green-700'
+                        : log.status_at === 'Working On' ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-100 text-gray-600'
+                      }`}>{log.status_at}</span>
                     )}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Other programs — placeholder */}
-        {otherPrograms.length > 0 && (
-          <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
-            <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-3">Other Programs</h2>
-            <div className="flex flex-wrap gap-2">
-              {otherPrograms.map((p) => (
-                <ProgramBadge key={p.program} program={p.program} size="md" />
+                </div>
               ))}
             </div>
-            <p className="text-ninja-muted font-ninja text-xs mt-3 italic">
-              Detailed progress for these programs coming soon.
-            </p>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Messages */}
         <div className="bg-white border border-ninja-border rounded-2xl shadow-sm flex flex-col">

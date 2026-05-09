@@ -97,16 +97,14 @@ router.get('/students/:id', requireParent, async (req, res) => {
     if (!rows[0]) return res.status(404).json({ error: 'Student not found' });
 
     const { rows: logs } = await pool.query(`
-      SELECT pl.session_date, pl.notes, pl.belt_level_at, pl.belt_sublevel_at, pl.project_at, pl.status_at,
-        u.display_name AS sensei_name
+      SELECT pl.session_date, pl.program, pl.sub_program, pl.module_name, pl.lesson_name,
+        pl.belt_level_at, pl.belt_sublevel_at, pl.project_at, pl.status_at
       FROM progress_logs pl
-      LEFT JOIN users u ON pl.sensei_id = u.id
-      WHERE pl.student_id = $1 AND pl.program = 'CREATE'
+      WHERE pl.student_id = $1
       ORDER BY pl.session_date DESC, pl.created_at DESC
-      LIMIT 10
     `, [id]);
 
-    res.json({ ...rows[0], create_logs: logs });
+    res.json({ ...rows[0], session_logs: logs });
   } catch (err) {
     console.error('Parent student detail error:', err);
     res.status(500).json({ error: 'Failed to load student' });
