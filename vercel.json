@@ -2,13 +2,7 @@
   "version": 2,
   "buildCommand": "npm install --prefix server && npm install --include=dev --prefix client && npm --prefix client run build",
   "outputDirectory": "client/dist",
-  "build": {
-    "env": {
-      "VITE_SUPABASE_URL": "https://REDACTED.supabase.co",
-      "VITE_SUPABASE_ANON_KEY": "REDACTED_SUPABASE_ANON_KEY"
-    }
-  },
-  "rewrites": [
+"rewrites": [
     { "source": "/api/:path*", "destination": "/api/index" }
   ]
 }
