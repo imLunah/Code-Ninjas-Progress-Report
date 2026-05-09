@@ -109,9 +109,15 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-ninja-muted text-xs font-ninja text-center mt-6">
-            Code Ninjas Dojo Management System
-          </p>
+          <div className="mt-6 pt-5 border-t border-ninja-border text-center">
+            <p className="text-ninja-muted text-sm font-ninja mb-2">A parent?</p>
+            <a
+              href="/parent/login"
+              className="inline-block w-full bg-ninja-bg hover:bg-ninja-border border border-ninja-border text-ninja-navy font-ninja font-semibold py-2.5 rounded-lg transition-colors text-sm"
+            >
+              Parent Portal →
+            </a>
+          </div>
         </div>
       </div>
     </div>
