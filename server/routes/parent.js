@@ -36,7 +36,6 @@ router.post('/login', async (req, res) => {
     req.session.parentEmail = email.trim().toLowerCase();
     req.session.role = 'parent';
     req.session.parentName = rows[0].parent_name || null;
-    delete req.session.userId;
 
     res.json({ email: req.session.parentEmail, role: 'parent', parentName: req.session.parentName });
   } catch (err) {
