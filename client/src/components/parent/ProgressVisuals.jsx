@@ -92,9 +92,9 @@ function BeltJourney({ enrollment }) {
     <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
       <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-5">CREATE Belt Journey</h2>
 
-      {/* Horizontal scroll on narrow screens; min-w keeps icons from compressing */}
-      <div className="overflow-x-auto -mx-1 px-1 pb-2">
-        <div className="relative flex justify-between min-w-[480px]">
+      {/* Padding must exceed the box-shadow spread (3px ring + 14px glow = 17px) so overflow doesn't clip it */}
+      <div className="overflow-x-auto -mx-5 pb-3" style={{ padding: '18px 20px 12px' }}>
+        <div className="relative flex justify-between min-w-[490px]">
           {/* Connecting line at vertical center of the 52px icons */}
           <div className="absolute left-6 right-6 h-px bg-ninja-border" style={{ top: '26px' }} />
 
