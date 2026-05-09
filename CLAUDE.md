@@ -51,7 +51,9 @@ Dependencies must be installed separately: `npm install` at root, then `cd serve
 
 The Express app (`server/index.js`) connects to Supabase PostgreSQL via a `pg` connection pool (`server/db/pool.js`), attaches it to `app` via `app.set('db', pool)`, and all routes pull the pool with `req.app.get('db')`. There is no ORM — all queries use `pg` directly with `await pool.query(sql, params)`. Parameters use `$1, $2, $3` placeholders (PostgreSQL style). Inserts use `RETURNING *` to get the created row back.
 
-Sessions are stored in Supabase via `connect-pg-simple` (auto-creates a `session` table). Session data (`userId`, `role`, `displayName`, `activeLocationId`, `homeLocationId`) is set on login and checked by middleware in `server/middleware/auth.js`. Four guards exist: `requireAuth`, `requireSensei` (sensei or manager), `requireManager` (manager only), `requireOwnLocation` (blocks writes when viewing another center).
+Sessions are stored in Supabase via `connect-pg-simple` (auto-creates a `session` table). Session data (`userId`, `role`, `displayName`, `activeLocationId`, `homeLocationId`) is set on login and checked by middleware in `server/middleware/auth.js`. Five guards exist: `requireAuth`, `requireSensei` (sensei or manager), `requireManager` (manager only), `requireOwnLocation` (blocks writes when viewing another center), `requireParent` (parent portal only, checks `req.session.parentEmail`).
+
+**Session isolation:** Staff and parent sessions are fully isolated. The staff session middleware (`connect.sid`) is skipped for all `/api/parent/*` routes to prevent corruption. The parent portal uses its own cookie (`parent.sid`) via a separate `session(...)` middleware instance applied only to `/api/parent`. Both staff and parent logins call `req.session.regenerate()` before writing session data to prevent stale role data from carrying over.
 
 The server exports `app` and only calls `app.listen()` when run directly (`require.main === module`), so Vercel can import it as a serverless function via `api/index.js`.
 
@@ -87,6 +89,7 @@ Hosted on **Supabase** (PostgreSQL). The schema lives in `supabase/schema.sql` a
 - **`students`** — all ninja profiles; `location_id` scopes them to a center; belt/project fields only populated for CREATE; `active=false` is a soft delete
 - **`daily_assignments`** — date-scoped To Do board; `UNIQUE(student_id, session_date)` prevents duplicates; `sensei_id` nullable; `completed` flips to `true` when a progress log is submitted
 - **`progress_logs`** — immutable session notes with snapshots (`belt_level_at`, `belt_sublevel_at`, `project_at`, `status_at`) capturing student state at the time of logging
+- **`messages`** — parent ↔ staff messaging per student; `sender_type` CHECK ('parent' | 'staff'), `sender_id` nullable (null = parent, references `users.id` for staff), `student_id` FK, `body` text, `created_at`
 
 Schema changes require updating `supabase/schema.sql` and running the new DDL in the Supabase SQL editor (or via `mcp__supabase__apply_migration`). There is no longer a local init/migration script — all migrations are applied directly to Supabase.
 
@@ -97,6 +100,8 @@ The Vite dev server proxies `/api/*` to `localhost:3001` (configured in `client/
 All fetch calls go through `client/src/api/client.js` which handles JSON serialization, credentials, and throws on non-OK responses.
 
 Auth state is managed by `client/src/context/AuthContext.jsx`. On mount it calls `GET /api/auth/me` to restore the session. Role-based routing uses `client/src/components/layout/ProtectedRoute.jsx` — managers also pass sensei-role checks.
+
+Parent auth state is managed by `client/src/context/ParentAuthContext.jsx` (separate context, calls `GET /api/parent/me`). The app root wraps `<ParentAuthProvider>` outside `<AuthProvider>` so both can coexist — staff and parents can be logged in simultaneously in different browser tabs without interference.
 
 ### Belt Config — Single Source of Truth
 
@@ -115,6 +120,25 @@ The student roster (`/manager/students`) and student profile (`/manager/students
 
 Programs: `CREATE`, `Robotics Academy`, `AI Academy`, `JR`. Only CREATE students have belt/project tracking. The other programs currently use only the daily To Do board and notes.
 
+### Parent Portal
+
+Parents log in at `/parent/login` with their email address only (no password). The server looks up students by `parent_email` (case-insensitive). All parent API routes live in `server/routes/parent.js` under `/api/parent`.
+
+Parent portal routes:
+- `GET /api/parent/me` — restore session
+- `POST /api/parent/login` — email-only auth, sets `req.session.parentEmail`
+- `POST /api/parent/logout`
+- `GET /api/parent/students` — all children linked to the parent's email
+- `GET /api/parent/students/:id` — child profile (belt, project, recent sessions — **no instructor notes**)
+- `GET /api/parent/students/:id/messages` — message thread
+- `POST /api/parent/students/:id/messages` — parent sends a message
+
+Client pages: `client/src/pages/parent/ParentLogin.jsx`, `ParentDashboard.jsx`, `ParentStudentProfile.jsx`. Layout: `client/src/components/layout/ParentLayout.jsx`. Protected by `<ParentRoute>` in `App.jsx`.
+
+Staff can view and reply to parent messages from the student profile page (`/manager/students/:id`) in the "Parent Messages" panel. Instructor notes in `progress_logs` are intentionally excluded from the parent-facing API response.
+
+**Sibling email sync:** When a student's `parent_email` is updated via `PATCH /api/students/:id`, all other active students at the same location sharing the old email are updated to the new email/name/phone in the same transaction.
+
 ### Student Data
 
 Students have a `birthday` (DATE) field stored in the DB. Age is calculated client-side from the birthday and displayed on the student profile.
@@ -122,12 +146,19 @@ Students have a `birthday` (DATE) field stored in the DB. Age is calculated clie
 ### Logos & Assets
 
 All source images live in `Images/` at the project root. They must be copied to `client/public/` to be served by Vite:
-- `client/public/CodeNinjasLogoH.svg` — horizontal wordmark, used in navbar and login page
-- `client/public/CodeNinjasLogoF.png` — square icon, used as the browser tab favicon
+- `client/public/DojoLinkLogoH.png` — horizontal DojoLink wordmark (PNG, 2100×1102); used in Navbar, ParentLayout, LoginPage, ParentLogin
+- `client/public/CodeNinjasIcon.svg` — square ninja icon, used as the browser tab favicon
+- `client/public/DojoLinkPreview.png` — OG link preview image (1200×630); referenced in `index.html` `<meta og:image>`
 - `client/public/CodeNinjasLaptop.png` — used in the manager's empty session board state
 - `client/public/CodeNinjasCelebrate.webp` — used in the sensei's empty dashboard state
 
+Source files in `Images/`: `DojoLinkH.png` (horizontal logo master), `DojoLinkPreview.png` (preview master), `DojoLinkLogoV.png` (vertical logo), `CodeNinjasLaptop.png`, `CodeNinjasCelebrate.webp`, `CodeNinjasIcon.svg`.
+
+OG image must be exactly 1200×630. To resize: `sips -z 630 1200 source.png --out client/public/DojoLinkPreview.png`.
+
 When adding new images, copy from `Images/` to `client/public/` and reference them as `/filename.ext` in JSX. No import needed — Vite serves `public/` as the root.
+
+**Do not use SVG files with embedded PNG bitmaps** (Canva exports these). Export as PNG at 800px+ width instead — SVGs from Canva appear blurry on mobile because they contain a low-res raster bitmap, not true vectors.
 
 ### Theming
 
@@ -147,7 +178,7 @@ Font: **Nunito** (Google Fonts, weights 400/600/700/800/900), loaded in `client/
 
 The app is deployed on **Vercel** (frontend + serverless API) with **Supabase** as the database.
 
-- **Vercel project**: connected to `imLunah/ninja-tracker` on GitHub — every push to `main` auto-deploys
+- **Vercel project**: connected to `imLunah/dojolink` on GitHub — every push to `main` auto-deploys
 - **Supabase project**: `hatlannivniuauafptzk` — Transaction pooler on `aws-1-us-west-1`
 - **`vercel.json`**: sets `buildCommand` (builds the React client), `outputDirectory` (`client/dist`), and rewrites all `/api/*` requests to `api/index.js`
 - **`api/index.js`**: Vercel serverless entry point — just re-exports the Express app
