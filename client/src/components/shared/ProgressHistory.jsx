@@ -158,9 +158,7 @@ export default function ProgressHistory({ logs = [], onLogUpdated }) {
                 {allComments.map((c) => <LogComment key={c.id} comment={c} />)}
               </div>
             )}
-            {isManager && (
-              <CommentBox logId={log.id} onAdded={(c) => handleCommentAdded(log.id, c)} />
-            )}
+            <CommentBox logId={log.id} onAdded={(c) => handleCommentAdded(log.id, c)} />
           </div>
         );
       })}

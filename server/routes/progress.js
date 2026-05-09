@@ -94,8 +94,8 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
   }
 });
 
-// POST /api/progress/:id/comments — manager adds a comment to a log entry
-router.post('/:id/comments', requireManager, async (req, res) => {
+// POST /api/progress/:id/comments — any staff member can comment on a log entry
+router.post('/:id/comments', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
   const { body } = req.body;
   if (!body?.trim()) return res.status(400).json({ error: 'Comment cannot be empty' });
