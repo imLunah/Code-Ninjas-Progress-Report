@@ -51,9 +51,20 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
           </div>
 
           {someCompleted && (
-            <p className="text-yellow-600 font-ninja text-xs mt-1 font-semibold">
-              {assignments.filter((a) => a.completed).length}/{assignments.length} programs logged
-            </p>
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {assignments.map((a) => (
+                <span
+                  key={a.program}
+                  className={`text-xs font-ninja font-semibold px-2 py-0.5 rounded-md border ${
+                    a.completed
+                      ? 'bg-green-50 text-green-700 border-green-300 line-through opacity-60'
+                      : 'bg-yellow-50 text-yellow-700 border-yellow-300'
+                  }`}
+                >
+                  {a.completed ? '✓ ' : ''}{a.program}
+                </span>
+              ))}
+            </div>
           )}
 
           {student.current_project && (
