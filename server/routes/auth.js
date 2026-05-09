@@ -25,6 +25,10 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
+    await new Promise((resolve, reject) => {
+      req.session.regenerate((err) => (err ? reject(err) : resolve()));
+    });
+
     req.session.userId = user.id;
     req.session.role = user.role;
     req.session.displayName = user.display_name;
