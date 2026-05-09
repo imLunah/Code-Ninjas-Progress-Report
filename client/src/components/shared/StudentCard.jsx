@@ -19,7 +19,7 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
   return (
     <div
       className={`bg-white border rounded-xl p-4 transition-all shadow-sm ${
-        allCompleted ? 'border-green-400' : isOverdue ? 'border-orange-400 bg-orange-50' : someCompleted ? 'border-yellow-300' : 'border-ninja-border'
+        allCompleted ? 'border-green-400' : isOverdue ? 'border-red-400' : 'border-yellow-300'
       } ${onClick ? 'cursor-pointer hover:border-ninja-blue' : ''}`}
       onClick={onClick}
     >
@@ -33,7 +33,7 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
               <span className="text-green-500 text-lg" title="All done">✓</span>
             )}
             {isOverdue && (
-              <span className="text-orange-600 font-ninja font-semibold text-xs px-2 py-0.5 bg-orange-100 border border-orange-300 rounded-md">Overdue</span>
+              <span className="text-red-600 font-ninja font-semibold text-xs px-2 py-0.5 bg-red-50 border border-red-300 rounded-md">Overdue</span>
             )}
           </div>
 
@@ -55,6 +55,11 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
               {assignments.filter((a) => a.completed).length}/{assignments.length} programs logged
             </p>
           )}
+          {!allCompleted && !someCompleted && (
+            <p className={`font-ninja text-xs mt-1 font-semibold ${isOverdue ? 'text-red-600' : 'text-yellow-600'}`}>
+              {isOverdue ? 'Overdue' : 'Not logged yet'}
+            </p>
+          )}
 
           {student.current_project && (
             <p className="text-ninja-muted text-sm font-ninja mt-1">
@@ -70,7 +75,7 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
         </div>
         <div
           className={`w-3 h-3 rounded-full mt-1 flex-shrink-0 ${
-            allCompleted ? 'bg-green-500' : isOverdue ? 'bg-orange-400' : someCompleted ? 'bg-yellow-400' : 'bg-ninja-border'
+            allCompleted ? 'bg-green-500' : isOverdue ? 'bg-red-400' : 'bg-yellow-400'
           }`}
         />
       </div>
