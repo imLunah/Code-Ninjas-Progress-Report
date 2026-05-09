@@ -18,28 +18,76 @@ const COLOR_OPTIONS = [
   { key: 'yellow', label: 'Yellow' },
 ];
 
-function ClubCard({ club, onClick }) {
+function ClubCard({ club, onClick, onDelete, canDelete }) {
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const c = COLOR_SETS[club.color_key] || COLOR_SETS.blue;
+
+  const handleDelete = async (e) => {
+    e.stopPropagation();
+    setDeleting(true);
+    try {
+      await onDelete(club.id);
+    } finally {
+      setDeleting(false);
+      setConfirming(false);
+    }
+  };
+
   return (
-    <button
-      onClick={onClick}
-      className="bg-white border border-ninja-border rounded-2xl p-6 shadow-sm text-left hover:border-ninja-blue hover:shadow-md transition-all group"
-    >
-      <div className="mb-4">
-        <span className={`inline-block text-sm font-ninja font-bold px-3 py-1 rounded-full border ${c.bg} ${c.text} ${c.border}`}>
-          {club.name}
-        </span>
-        {club.location_id && (
-          <span className="ml-2 text-ninja-muted font-ninja text-xs">Custom</span>
-        )}
-      </div>
-      <p className="text-ninja-muted font-ninja text-sm leading-relaxed">
-        {club.description || 'No description yet.'}
-      </p>
-      <p className="text-ninja-blue font-ninja font-semibold text-sm mt-4 group-hover:underline">
-        View Club →
-      </p>
-    </button>
+    <div className="relative bg-white border border-ninja-border rounded-2xl shadow-sm hover:border-ninja-blue hover:shadow-md transition-all group">
+      <button
+        onClick={onClick}
+        className="w-full p-6 text-left"
+      >
+        <div className="mb-4">
+          <span className={`inline-block text-sm font-ninja font-bold px-3 py-1 rounded-full border ${c.bg} ${c.text} ${c.border}`}>
+            {club.name}
+          </span>
+          {club.location_id && (
+            <span className="ml-2 text-ninja-muted font-ninja text-xs">Custom</span>
+          )}
+        </div>
+        <p className="text-ninja-muted font-ninja text-sm leading-relaxed">
+          {club.description || 'No description yet.'}
+        </p>
+        <p className="text-ninja-blue font-ninja font-semibold text-sm mt-4 group-hover:underline">
+          View Club →
+        </p>
+      </button>
+
+      {canDelete && (
+        <div className="absolute top-3 right-3" onClick={(e) => e.stopPropagation()}>
+          {confirming ? (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="text-xs font-ninja font-semibold text-white bg-ninja-red px-2 py-1 rounded-lg disabled:opacity-50"
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+              <button
+                onClick={() => setConfirming(false)}
+                className="text-xs font-ninja font-semibold text-ninja-muted bg-ninja-bg border border-ninja-border px-2 py-1 rounded-lg"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirming(true)}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-ninja-muted hover:text-ninja-red p-1 rounded"
+              title="Delete club"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -156,6 +204,11 @@ export default function ClubsPage() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
 
+  const handleDeleteClub = async (id) => {
+    await api.delete(`/clubs/definitions/${id}`);
+    setClubs((prev) => prev.filter((c) => c.id !== id));
+  };
+
   useEffect(() => {
     api.get('/clubs/definitions')
       .then(setClubs)
@@ -189,6 +242,8 @@ export default function ClubsPage() {
                 key={club.id}
                 club={club}
                 onClick={() => navigate(`/clubs/${club.slug}`)}
+                canDelete={isManager && !isReadOnly && !!club.location_id}
+                onDelete={handleDeleteClub}
               />
             ))}
           </div>
