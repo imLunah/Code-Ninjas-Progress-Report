@@ -146,3 +146,22 @@ CREATE TABLE IF NOT EXISTS club_resources (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS club_resources_club_location_idx ON club_resources(club_name, location_id);
+
+-- Club definitions: global (location_id = NULL) and per-center (location_id set)
+CREATE TABLE IF NOT EXISTS club_definitions (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  description TEXT,
+  color_key TEXT NOT NULL DEFAULT 'blue',
+  location_id INTEGER REFERENCES locations(id),
+  created_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS club_definitions_global_name ON club_definitions (name) WHERE location_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS club_definitions_local_name ON club_definitions (name, location_id) WHERE location_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS club_definitions_global_slug ON club_definitions (slug) WHERE location_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS club_definitions_local_slug ON club_definitions (slug, location_id) WHERE location_id IS NOT NULL;
+
+-- Supabase Storage: club-resources bucket (public, 50 MB limit)
+-- Applied via migration; bucket created in storage.buckets
