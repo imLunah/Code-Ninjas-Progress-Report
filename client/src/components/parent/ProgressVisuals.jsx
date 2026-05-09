@@ -1,6 +1,18 @@
 import { BELTS } from '../../utils/beltConfig';
 import { SUB_PROGRAMS, CURRICULUM } from '../../utils/progressData';
 
+const BELT_IMAGES = {
+  White:  '/belts/belt-white.png',
+  Yellow: '/belts/belt-yellow.png',
+  Orange: '/belts/belt-orange.png',
+  Green:  '/belts/belt-green.png',
+  Blue:   '/belts/belt-blue.png',
+  Purple: '/belts/belt-purple.png',
+  Brown:  '/belts/belt-brown.png',
+  Red:    '/belts/belt-red.png',
+  Black:  '/belts/belt-black.png',
+};
+
 function abbrevModule(name) {
   return name
     .replace(/^Module (\d+)$/, 'M$1')
@@ -80,41 +92,47 @@ function BeltJourney({ enrollment }) {
     <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
       <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-5">CREATE Belt Journey</h2>
 
-      <div className="relative flex items-center">
-        {/* Connecting line behind circles */}
-        <div className="absolute left-5 right-5 top-5 h-0.5 bg-ninja-border" />
+      <div className="relative flex items-end justify-between gap-1 overflow-x-auto pb-1">
+        {/* Connecting line sits at mid-icon height */}
+        <div className="absolute left-6 right-6 h-0.5 bg-ninja-border" style={{ top: '28px' }} />
 
-        <div className="relative flex justify-between w-full">
-          {BELTS.map((belt, i) => {
-            const reached = currentIndex >= 0 && i <= currentIndex;
-            const isCurrent = i === currentIndex;
-            const future = !reached;
+        {BELTS.map((belt, i) => {
+          const reached = currentIndex >= 0 && i <= currentIndex;
+          const isCurrent = i === currentIndex;
 
-            return (
-              <div key={belt.name} className="flex flex-col items-center gap-1.5">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center font-ninja font-bold text-sm border-2 relative z-10"
-                  style={{
-                    backgroundColor: future ? '#f8fafc' : belt.color,
-                    borderColor: isCurrent ? '#006ADD' : future ? '#e2e8f0' : belt.color,
-                    color: future ? '#cbd5e1' : belt.textColor,
-                    boxShadow: isCurrent ? '0 0 0 4px #006ADD30' : undefined,
-                    transform: isCurrent ? 'scale(1.15)' : undefined,
-                  }}
-                  title={belt.name}
-                >
-                  {belt.name[0]}
-                </div>
-                <span
-                  className="text-xs font-ninja leading-none"
-                  style={{ color: isCurrent ? '#1a2e4a' : '#94a3b8', fontWeight: isCurrent ? 700 : 400 }}
-                >
-                  {belt.name.slice(0, 3)}
-                </span>
+          return (
+            <div key={belt.name} className="flex flex-col items-center gap-1 flex-shrink-0 relative z-10">
+              <div
+                className="rounded-full transition-all duration-300"
+                style={{
+                  width: isCurrent ? '64px' : '48px',
+                  height: isCurrent ? '64px' : '48px',
+                  opacity: reached ? 1 : 0.25,
+                  filter: reached ? 'none' : 'grayscale(100%)',
+                  boxShadow: isCurrent ? '0 0 0 3px #006ADD, 0 0 16px #006ADD50' : undefined,
+                  borderRadius: '50%',
+                }}
+                title={belt.name}
+              >
+                <img
+                  src={BELT_IMAGES[belt.name]}
+                  alt={belt.name}
+                  className="w-full h-full object-contain"
+                  draggable={false}
+                />
               </div>
-            );
-          })}
-        </div>
+              <span
+                className="text-xs font-ninja leading-none"
+                style={{
+                  color: isCurrent ? '#1a2e4a' : reached ? '#506690' : '#cbd5e1',
+                  fontWeight: isCurrent ? 700 : 400,
+                }}
+              >
+                {belt.name.slice(0, 3)}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       {progress !== null && (
