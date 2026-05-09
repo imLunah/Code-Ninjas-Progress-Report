@@ -32,7 +32,7 @@ export default function ParentLogin() {
     <div className="min-h-screen bg-ninja-bg flex items-center justify-center p-4">
       <div className="w-full max-w-sm sm:max-w-md">
         <div className="text-center mb-8">
-          <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-14 mx-auto mb-4" />
+          <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-28 mx-auto mb-4" />
           <h1 className="text-2xl font-bold font-ninja text-ninja-navy">Parent Portal</h1>
           <p className="text-ninja-muted font-ninja text-sm mt-1">
             Enter the email address on your child's account

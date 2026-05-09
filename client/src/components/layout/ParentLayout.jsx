@@ -12,9 +12,9 @@ export default function ParentLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-ninja-bg">
-      <nav className="bg-white border-b border-ninja-border h-16 flex items-center justify-between px-4 sm:px-6">
+      <nav className="bg-white border-b border-ninja-border h-20 flex items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-3">
-          <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-8" />
+          <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-14" />
           <span className="text-ninja-muted font-ninja text-sm hidden sm:inline">Parent Portal</span>
         </div>
         <div className="flex items-center gap-3">
