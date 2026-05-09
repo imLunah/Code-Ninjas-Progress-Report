@@ -104,7 +104,15 @@ router.get('/students/:id', requireParent, async (req, res) => {
       ORDER BY pl.session_date DESC, pl.created_at DESC
     `, [id]);
 
-    res.json({ ...rows[0], session_logs: logs });
+    const { rows: clubs } = await pool.query(`
+      SELECT cs.club_name, cs.session_date
+      FROM club_attendees ca
+      JOIN club_sessions cs ON ca.club_session_id = cs.id
+      WHERE ca.student_id = $1
+      ORDER BY cs.session_date DESC
+    `, [id]);
+
+    res.json({ ...rows[0], session_logs: logs, club_attendance: clubs });
   } catch (err) {
     console.error('Parent student detail error:', err);
     res.status(500).json({ error: 'Failed to load student' });

@@ -84,3 +84,23 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 
 CREATE INDEX IF NOT EXISTS messages_student_id_idx ON messages(student_id);
+
+CREATE TABLE IF NOT EXISTS club_sessions (
+  id SERIAL PRIMARY KEY,
+  club_name TEXT NOT NULL CHECK (club_name IN ('3D Design Club', 'Minecraft Club', 'Roblox Club')),
+  session_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  location_id INTEGER NOT NULL REFERENCES locations(id),
+  sensei_id INTEGER REFERENCES users(id),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS club_attendees (
+  id SERIAL PRIMARY KEY,
+  club_session_id INTEGER NOT NULL REFERENCES club_sessions(id) ON DELETE CASCADE,
+  student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  UNIQUE(club_session_id, student_id)
+);
+
+CREATE INDEX IF NOT EXISTS club_sessions_location_date_idx ON club_sessions(location_id, session_date DESC);
+CREATE INDEX IF NOT EXISTS club_attendees_student_idx ON club_attendees(student_id);

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/layout/Layout';
 import TodayBoard from '../../components/manager/TodayBoard';
 import AddStudentToday from '../../components/manager/AddStudentToday';
+import ClubSessionsPanel from '../../components/shared/ClubSessionsPanel';
 import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
@@ -13,6 +14,7 @@ export default function ManagerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [clubSessions, setClubSessions] = useState([]);
 
   const todayStr = today();
 
@@ -29,6 +31,7 @@ export default function ManagerDashboard() {
 
   useEffect(() => {
     fetchAssignments();
+    api.get('/clubs').then(setClubSessions).catch(() => {});
   }, [fetchAssignments]);
 
   const handleAdded = (newAssignment) => {
@@ -105,6 +108,12 @@ export default function ManagerDashboard() {
             />
           )}
         </div>
+
+        {/* Clubs */}
+        <ClubSessionsPanel
+          sessions={clubSessions}
+          onDeleted={(id) => setClubSessions((prev) => prev.filter((s) => s.id !== id))}
+        />
       </div>
 
       <AddStudentToday

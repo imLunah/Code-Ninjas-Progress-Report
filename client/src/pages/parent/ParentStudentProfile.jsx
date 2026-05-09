@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
 import { formatDate } from '../../utils/dateUtils';
 import ProgressVisuals from '../../components/parent/ProgressVisuals';
+import { ClubBadge } from '../../components/shared/ClubSessionsPanel';
 
 function formatTimestamp(ts) {
   return new Date(ts).toLocaleString('en-US', {
@@ -168,6 +169,21 @@ export default function ParentStudentProfile() {
             </div>
           )}
         </div>
+
+        {/* Club attendance */}
+        {(student.club_attendance || []).length > 0 && (
+          <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
+            <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-4">Club Attendance</h2>
+            <div className="space-y-2">
+              {student.club_attendance.map((c, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <ClubBadge name={c.club_name} />
+                  <span className="text-ninja-muted font-ninja text-xs">{formatDate(c.session_date)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Messages */}
         <div className="bg-white border border-ninja-border rounded-2xl shadow-sm flex flex-col">

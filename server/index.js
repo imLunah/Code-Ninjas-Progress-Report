@@ -49,6 +49,7 @@ app.use('/api/parent', parentSession, require('./routes/parent'));
 app.use('/api/students', require('./routes/students'));
 app.use('/api/daily', require('./routes/daily'));
 app.use('/api/progress', require('./routes/progress'));
+app.use('/api/clubs', require('./routes/clubs'));
 app.use('/api/users', require('./routes/users'));
 
 if (process.env.NODE_ENV === 'production') {
