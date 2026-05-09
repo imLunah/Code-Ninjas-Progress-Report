@@ -7,8 +7,6 @@ import { ClubBadge } from '../../components/shared/ClubSessionsPanel';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 
-const CLUBS = ['3D Design Club', 'Minecraft Club', 'Roblox Club'];
-
 export default function LogClubPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -16,6 +14,7 @@ export default function LogClubPage() {
   const [students, setStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [recentSessions, setRecentSessions] = useState([]);
+  const [clubs, setClubs] = useState([]);
 
   const [clubName, setClubName] = useState(searchParams.get('club') || '');
   const [sessionDate, setSessionDate] = useState(today());
@@ -32,6 +31,7 @@ export default function LogClubPage() {
       .finally(() => setLoadingStudents(false));
 
     api.get('/clubs').then(setRecentSessions).catch(() => {});
+    api.get('/clubs/definitions').then(setClubs).catch(() => {});
   }, []);
 
   // Filter recent sessions for selected club
@@ -89,18 +89,18 @@ export default function LogClubPage() {
               Which club?
             </label>
             <div className="flex flex-wrap gap-2">
-              {CLUBS.map((c) => (
+              {clubs.map((c) => (
                 <button
-                  key={c}
+                  key={c.id}
                   type="button"
-                  onClick={() => setClubName(c)}
+                  onClick={() => setClubName(c.name)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-ninja font-semibold transition-colors ${
-                    clubName === c
+                    clubName === c.name
                       ? 'bg-ninja-blue text-white'
                       : 'bg-ninja-bg border border-ninja-border text-ninja-navy hover:border-ninja-blue'
                   }`}
                 >
-                  {c}
+                  {c.name}
                 </button>
               ))}
             </div>

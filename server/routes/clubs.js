@@ -2,7 +2,17 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth, requireSensei, requireManager, requireOwnLocation } = require('../middleware/auth');
 
-const CLUB_NAMES = ['3D Design Club', 'Minecraft Club', 'Roblox Club'];
+function toSlug(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+async function getValidClubNames(pool, locationId) {
+  const { rows } = await pool.query(
+    'SELECT name FROM club_definitions WHERE location_id = $1 OR location_id IS NULL',
+    [locationId]
+  );
+  return new Set(rows.map((r) => r.name));
+}
 
 const SESSION_SELECT = `
   SELECT
@@ -22,6 +32,68 @@ const SESSION_SELECT = `
   FROM club_sessions cs
   LEFT JOIN users u ON cs.sensei_id = u.id
 `;
+
+// ─── Club definitions ─────────────────────────────────────────────────────────
+
+// GET /api/clubs/definitions — all clubs available at this location
+router.get('/definitions', requireAuth, async (req, res) => {
+  const pool = req.app.get('db');
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, name, slug, description, color_key, location_id, created_at
+       FROM club_definitions
+       WHERE location_id = $1 OR location_id IS NULL
+       ORDER BY location_id NULLS FIRST, created_at ASC`,
+      [req.session.activeLocationId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Club definitions fetch error:', err);
+    res.status(500).json({ error: 'Failed to load clubs' });
+  }
+});
+
+// POST /api/clubs/definitions — manager creates a new club
+router.post('/definitions', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { name, description, color_key } = req.body;
+  if (!name?.trim()) return res.status(400).json({ error: 'Club name is required' });
+
+  const slug = toSlug(name.trim());
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO club_definitions (name, slug, description, color_key, location_id, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [name.trim(), slug, description?.trim() || null, color_key || 'blue', req.session.activeLocationId, req.session.userId]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'A club with that name already exists' });
+    console.error('Club definition create error:', err);
+    res.status(500).json({ error: 'Failed to create club' });
+  }
+});
+
+// DELETE /api/clubs/definitions/:id — manager deletes a custom club
+router.delete('/definitions/:id', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, location_id FROM club_definitions WHERE id = $1',
+      [req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Club not found' });
+    if (rows[0].location_id === null) return res.status(403).json({ error: 'Cannot delete a built-in club' });
+    if (rows[0].location_id !== req.session.activeLocationId) return res.status(403).json({ error: 'Forbidden' });
+    await pool.query('DELETE FROM club_definitions WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Club definition delete error:', err);
+    res.status(500).json({ error: 'Failed to delete club' });
+  }
+});
+
+// ─── Session list / create ────────────────────────────────────────────────────
 
 // GET /api/clubs — all sessions for this location (optional ?club= filter)
 router.get('/', requireAuth, async (req, res) => {
@@ -47,12 +119,13 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { club_name, session_date, notes, student_ids } = req.body;
 
-  if (!club_name || !CLUB_NAMES.includes(club_name)) {
-    return res.status(400).json({ error: 'Invalid club name' });
-  }
+  if (!club_name) return res.status(400).json({ error: 'Club name is required' });
   if (!Array.isArray(student_ids) || student_ids.length === 0) {
     return res.status(400).json({ error: 'At least one student is required' });
   }
+
+  const validClubs = await getValidClubNames(pool, req.session.activeLocationId);
+  if (!validClubs.has(club_name)) return res.status(400).json({ error: 'Invalid club name' });
 
   const date = session_date || new Date().toISOString().split('T')[0];
   const client = await pool.connect();
@@ -83,11 +156,13 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
 
 // ─── Club profile routes (must come before /:id routes) ──────────────────────
 
-// GET /api/clubs/profile/:clubName — pinned note + resources for a club
+// GET /api/clubs/profile/:clubName
 router.get('/profile/:clubName', requireAuth, async (req, res) => {
   const pool = req.app.get('db');
   const clubName = decodeURIComponent(req.params.clubName);
-  if (!CLUB_NAMES.includes(clubName)) return res.status(400).json({ error: 'Invalid club' });
+
+  const validClubs = await getValidClubNames(pool, req.session.activeLocationId);
+  if (!validClubs.has(clubName)) return res.status(400).json({ error: 'Invalid club' });
 
   try {
     const { rows: profileRows } = await pool.query(
@@ -110,7 +185,9 @@ router.patch('/profile/:clubName/pinned-note', requireSensei, requireOwnLocation
   const pool = req.app.get('db');
   const clubName = decodeURIComponent(req.params.clubName);
   const { note } = req.body;
-  if (!CLUB_NAMES.includes(clubName)) return res.status(400).json({ error: 'Invalid club' });
+
+  const validClubs = await getValidClubNames(pool, req.session.activeLocationId);
+  if (!validClubs.has(clubName)) return res.status(400).json({ error: 'Invalid club' });
 
   try {
     await pool.query(
@@ -131,15 +208,18 @@ router.patch('/profile/:clubName/pinned-note', requireSensei, requireOwnLocation
 router.post('/profile/:clubName/resources', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const clubName = decodeURIComponent(req.params.clubName);
-  const { title, url } = req.body;
-  if (!CLUB_NAMES.includes(clubName)) return res.status(400).json({ error: 'Invalid club' });
+  const { title, url, resource_type, file_name } = req.body;
+
+  const validClubs = await getValidClubNames(pool, req.session.activeLocationId);
+  if (!validClubs.has(clubName)) return res.status(400).json({ error: 'Invalid club' });
   if (!title?.trim() || !url?.trim()) return res.status(400).json({ error: 'Title and URL are required' });
 
   try {
     const { rows } = await pool.query(
-      `INSERT INTO club_resources (club_name, location_id, title, url, added_by)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [clubName, req.session.activeLocationId, title.trim(), url.trim(), req.session.displayName]
+      `INSERT INTO club_resources (club_name, location_id, title, url, added_by, resource_type, file_name)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [clubName, req.session.activeLocationId, title.trim(), url.trim(), req.session.displayName,
+       resource_type || 'url', file_name?.trim() || null]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -152,18 +232,18 @@ router.post('/profile/:clubName/resources', requireSensei, requireOwnLocation, a
 router.delete('/resources/:id', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   try {
-    await pool.query(
-      'DELETE FROM club_resources WHERE id = $1 AND location_id = $2',
+    const { rows } = await pool.query(
+      'DELETE FROM club_resources WHERE id = $1 AND location_id = $2 RETURNING url, resource_type',
       [req.params.id, req.session.activeLocationId]
     );
-    res.json({ ok: true });
+    res.json({ ok: true, deleted: rows[0] || null });
   } catch (err) {
     console.error('Club resource delete error:', err);
     res.status(500).json({ error: 'Failed to delete resource' });
   }
 });
 
-// GET /api/clubs/sessions/:id — single session detail
+// GET /api/clubs/sessions/:id
 router.get('/sessions/:id', requireAuth, async (req, res) => {
   const pool = req.app.get('db');
   try {

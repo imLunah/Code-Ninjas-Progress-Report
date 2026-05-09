@@ -1,27 +1,34 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
+import EmojiButton from '../components/ui/EmojiButton';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/dateUtils';
-import { CLUB_SLUG_TO_NAME, CLUB_COLORS } from '../utils/clubUtils';
+import { COLOR_SETS, getClubColors } from '../utils/clubUtils';
 
-function ClubBadge({ name }) {
-  const c = CLUB_COLORS[name] || { bg: 'bg-ninja-bg', text: 'text-ninja-navy', border: 'border-ninja-border' };
-  return (
-    <span className={`text-sm font-ninja font-bold px-3 py-1 rounded-full border ${c.bg} ${c.text} ${c.border}`}>
-      {name}
-    </span>
-  );
-}
+const mdComponents = {
+  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+  strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+  em: ({ children }) => <em className="italic">{children}</em>,
+  ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-0.5">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-0.5">{children}</ol>,
+  li: ({ children }) => <li>{children}</li>,
+  a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-ninja-blue hover:underline">{children}</a>,
+  code: ({ children }) => <code className="bg-ninja-bg px-1 rounded font-mono text-xs">{children}</code>,
+};
 
 function Comment({ comment }) {
   return (
     <div className="flex gap-3">
       <div className="w-1 flex-shrink-0 bg-ninja-blue rounded-full" />
       <div className="flex-1 min-w-0">
-        <p className="text-ninja-navy font-ninja text-sm leading-relaxed">{comment.body}</p>
+        <div className="font-ninja text-sm text-ninja-navy leading-relaxed">
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{comment.body}</ReactMarkdown>
+        </div>
         <p className="text-ninja-muted font-ninja text-xs mt-1">
           {comment.user_name} · {formatDate(comment.created_at)}
         </p>
@@ -30,13 +37,25 @@ function Comment({ comment }) {
   );
 }
 
+function insertAtCursor(ref, current, emoji, setter) {
+  const el = ref.current;
+  if (!el) { setter(current + emoji); return; }
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  const next = current.slice(0, start) + emoji + current.slice(end);
+  setter(next);
+  requestAnimationFrame(() => {
+    el.selectionStart = el.selectionEnd = start + emoji.length;
+    el.focus();
+  });
+}
+
 export default function ClubSessionPage() {
   const { slug, id } = useParams();
   const navigate = useNavigate();
   const { user, isReadOnly } = useAuth();
 
-  const clubName = CLUB_SLUG_TO_NAME[slug];
-
+  const [clubDef, setClubDef] = useState(null);
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -44,7 +63,9 @@ export default function ClubSessionPage() {
   // Notes editing
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState('');
+  const [notesPreview, setNotesPreview] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
+  const notesRef = useRef(null);
 
   // Comments
   const [comments, setComments] = useState([]);
@@ -60,19 +81,22 @@ export default function ClubSessionPage() {
   const [savingAttendees, setSavingAttendees] = useState(false);
 
   useEffect(() => {
-    if (!clubName) return;
-    api.get(`/clubs/sessions/${id}`)
-      .then((data) => {
-        setSession(data);
-        setNotesDraft(data.notes || '');
-        setComments(data.comments || []);
-        setSelectedIds(new Set((data.attendees || []).map((a) => a.id)));
-      })
-      .catch((err) => {
-        if (err?.status === 404) setNotFound(true);
-      })
-      .finally(() => setLoading(false));
-  }, [id, clubName]);
+    // Resolve slug → club definition
+    api.get('/clubs/definitions').then((defs) => {
+      const def = defs.find((d) => d.slug === slug);
+      if (!def) { setNotFound(true); setLoading(false); return; }
+      setClubDef(def);
+      return api.get(`/clubs/sessions/${id}`);
+    }).then((data) => {
+      if (!data) return;
+      setSession(data);
+      setNotesDraft(data.notes || '');
+      setComments(data.comments || []);
+      setSelectedIds(new Set((data.attendees || []).map((a) => a.id)));
+    }).catch((err) => {
+      if (err?.status === 404) setNotFound(true);
+    }).finally(() => setLoading(false));
+  }, [id, slug]);
 
   const handleSaveNotes = async () => {
     setSavingNotes(true);
@@ -117,18 +141,10 @@ export default function ClubSessionPage() {
     setEditingAttendees(true);
   };
 
-  if (!clubName) {
-    return <Layout><p className="text-ninja-red font-ninja text-center py-12">Club not found.</p></Layout>;
-  }
+  if (notFound) return <Layout><p className="text-ninja-red font-ninja text-center py-12">Session not found.</p></Layout>;
+  if (loading || !clubDef) return <Layout><p className="text-ninja-muted font-ninja text-center py-12">Loading...</p></Layout>;
 
-  if (loading) {
-    return <Layout><p className="text-ninja-muted font-ninja text-center py-12">Loading...</p></Layout>;
-  }
-
-  if (notFound || !session) {
-    return <Layout><p className="text-ninja-red font-ninja text-center py-12">Session not found.</p></Layout>;
-  }
-
+  const c = getClubColors(clubDef);
   const filteredStudents = allStudents.filter((s) =>
     s.full_name.toLowerCase().includes(attendeeSearch.toLowerCase())
   );
@@ -140,22 +156,20 @@ export default function ClubSessionPage() {
           onClick={() => navigate(`/clubs/${slug}`)}
           className="text-ninja-muted hover:text-ninja-blue font-ninja text-sm flex items-center gap-1 transition-colors"
         >
-          ← Back to {clubName}
+          ← Back to {clubDef.name}
         </button>
 
         {/* Header */}
         <div className="bg-white border border-ninja-border rounded-xl p-5 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="flex flex-wrap items-center gap-3 mb-2">
-                <ClubBadge name={clubName} />
-                <h1 className="text-xl font-bold font-ninja text-ninja-navy">{formatDate(session.session_date)}</h1>
-              </div>
-              {session.sensei_name && (
-                <p className="text-ninja-muted font-ninja text-sm">Notes by {session.sensei_name}</p>
-              )}
-            </div>
+          <div className="flex flex-wrap items-center gap-3 mb-1">
+            <span className={`text-sm font-ninja font-bold px-3 py-1 rounded-full border ${c.bg} ${c.text} ${c.border}`}>
+              {clubDef.name}
+            </span>
+            <h1 className="text-xl font-bold font-ninja text-ninja-navy">{formatDate(session.session_date)}</h1>
           </div>
+          {session.sensei_name && (
+            <p className="text-ninja-muted font-ninja text-sm mt-1">Notes by {session.sensei_name}</p>
+          )}
         </div>
 
         {/* Attendees */}
@@ -165,8 +179,7 @@ export default function ClubSessionPage() {
               Attendees <span className="text-ninja-muted font-normal text-base">({session.attendees?.length ?? 0})</span>
             </h2>
             {user?.role === 'manager' && !isReadOnly && !editingAttendees && (
-              <button onClick={loadStudents}
-                className="text-ninja-blue font-ninja text-sm font-semibold hover:underline">
+              <button onClick={loadStudents} className="text-ninja-blue font-ninja text-sm font-semibold hover:underline">
                 Edit
               </button>
             )}
@@ -174,20 +187,14 @@ export default function ClubSessionPage() {
 
           {editingAttendees ? (
             <div className="space-y-3">
-              <input
-                type="text"
-                placeholder="Search ninjas..."
-                value={attendeeSearch}
+              <input type="text" placeholder="Search ninjas..." value={attendeeSearch}
                 onChange={(e) => setAttendeeSearch(e.target.value)}
-                className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
-              />
+                className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue" />
               <div className="space-y-1 max-h-56 overflow-y-auto border border-ninja-border rounded-lg p-2 bg-ninja-bg">
                 {filteredStudents.map((s) => {
                   const checked = selectedIds.has(s.id);
                   return (
-                    <button
-                      key={s.id}
-                      type="button"
+                    <button key={s.id} type="button"
                       onClick={() => setSelectedIds((prev) => {
                         const next = new Set(prev);
                         next.has(s.id) ? next.delete(s.id) : next.add(s.id);
@@ -237,10 +244,8 @@ export default function ClubSessionPage() {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-ninja-navy font-ninja font-bold text-lg">Session Notes</h2>
             {!isReadOnly && !editingNotes && (
-              <button
-                onClick={() => setEditingNotes(true)}
-                className="text-ninja-blue font-ninja text-sm font-semibold hover:underline"
-              >
+              <button onClick={() => { setEditingNotes(true); setNotesPreview(false); }}
+                className="text-ninja-blue font-ninja text-sm font-semibold hover:underline">
                 {session.notes ? 'Edit' : '+ Add Notes'}
               </button>
             )}
@@ -248,14 +253,43 @@ export default function ClubSessionPage() {
 
           {editingNotes ? (
             <div className="space-y-2">
-              <textarea
-                value={notesDraft}
-                onChange={(e) => setNotesDraft(e.target.value)}
-                rows={5}
-                placeholder="How did the session go? What did the group work on?"
-                className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
-                autoFocus
-              />
+              {/* Toolbar */}
+              <div className="flex items-center justify-between">
+                <div className="flex gap-1">
+                  {['Write', 'Preview'].map((tab) => {
+                    const active = tab === 'Preview' ? notesPreview : !notesPreview;
+                    return (
+                      <button key={tab} type="button" onClick={() => setNotesPreview(tab === 'Preview')}
+                        className={`text-xs font-ninja font-semibold px-2 py-1 rounded transition-colors ${
+                          active ? 'bg-ninja-bg text-ninja-navy border border-ninja-border' : 'text-ninja-muted hover:text-ninja-navy'
+                        }`}>
+                        {tab}
+                      </button>
+                    );
+                  })}
+                </div>
+                <EmojiButton onSelect={(emoji) => insertAtCursor(notesRef, notesDraft, emoji, setNotesDraft)} />
+              </div>
+
+              {notesPreview ? (
+                <div className="min-h-[100px] bg-ninja-bg border border-ninja-border rounded-lg px-3 py-2 font-ninja text-sm text-ninja-navy leading-relaxed">
+                  {notesDraft ? (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{notesDraft}</ReactMarkdown>
+                  ) : (
+                    <span className="text-ninja-muted italic">Nothing to preview.</span>
+                  )}
+                </div>
+              ) : (
+                <textarea
+                  ref={notesRef}
+                  value={notesDraft}
+                  onChange={(e) => setNotesDraft(e.target.value)}
+                  rows={5}
+                  placeholder="How did the session go? Supports **markdown**."
+                  className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
+                  autoFocus
+                />
+              )}
               <div className="flex gap-2">
                 <Button size="sm" onClick={handleSaveNotes} disabled={savingNotes}>
                   {savingNotes ? 'Saving...' : 'Save'}
@@ -266,9 +300,11 @@ export default function ClubSessionPage() {
               </div>
             </div>
           ) : (
-            <p className={`font-ninja text-sm leading-relaxed ${session.notes ? 'text-ninja-navy' : 'text-ninja-muted italic'}`}>
-              {session.notes || 'No notes added yet.'}
-            </p>
+            <div className={`font-ninja text-sm leading-relaxed ${session.notes ? 'text-ninja-navy' : 'text-ninja-muted italic'}`}>
+              {session.notes ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{session.notes}</ReactMarkdown>
+              ) : 'No notes added yet.'}
+            </div>
           )}
         </div>
 
@@ -288,19 +324,23 @@ export default function ClubSessionPage() {
 
           {!isReadOnly && (
             <div className="space-y-2 border-t border-ninja-border pt-4">
-              <textarea
-                ref={commentRef}
-                value={commentBody}
-                onChange={(e) => setCommentBody(e.target.value)}
-                rows={2}
-                placeholder="Add a comment..."
-                className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
-              />
-              <Button
-                size="sm"
-                onClick={handlePostComment}
-                disabled={postingComment || !commentBody.trim()}
-              >
+              <div className="relative">
+                <textarea
+                  ref={commentRef}
+                  value={commentBody}
+                  onChange={(e) => setCommentBody(e.target.value)}
+                  rows={2}
+                  placeholder="Add a comment... (supports **markdown**)"
+                  className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 pr-10 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
+                />
+                <div className="absolute top-2 right-2">
+                  <EmojiButton
+                    onSelect={(emoji) => insertAtCursor(commentRef, commentBody, emoji, setCommentBody)}
+                    position="top"
+                  />
+                </div>
+              </div>
+              <Button size="sm" onClick={handlePostComment} disabled={postingComment || !commentBody.trim()}>
                 {postingComment ? 'Posting...' : 'Post Comment'}
               </Button>
             </div>
