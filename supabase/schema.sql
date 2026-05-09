@@ -104,3 +104,13 @@ CREATE TABLE IF NOT EXISTS club_attendees (
 
 CREATE INDEX IF NOT EXISTS club_sessions_location_date_idx ON club_sessions(location_id, session_date DESC);
 CREATE INDEX IF NOT EXISTS club_attendees_student_idx ON club_attendees(student_id);
+
+CREATE TABLE IF NOT EXISTS progress_log_comments (
+  id SERIAL PRIMARY KEY,
+  log_id INTEGER NOT NULL REFERENCES progress_logs(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  user_name TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS progress_log_comments_log_id_idx ON progress_log_comments(log_id);

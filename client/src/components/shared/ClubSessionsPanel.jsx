@@ -22,7 +22,7 @@ function ClubBadge({ name }) {
 
 export { ClubBadge };
 
-export default function ClubSessionsPanel({ sessions, onDeleted, onNotesUpdated }) {
+export default function ClubSessionsPanel({ sessions, onDeleted, onNotesUpdated, onAttendeesUpdated }) {
   const navigate = useNavigate();
   const { user, isReadOnly } = useAuth();
   const isManager = user?.role === 'manager';
@@ -32,6 +32,53 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onNotesUpdated 
   const [editingId, setEditingId] = useState(null);
   const [draftNotes, setDraftNotes] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Attendee editing state (manager only)
+  const [editingAttendeesId, setEditingAttendeesId] = useState(null);
+  const [allStudents, setAllStudents] = useState([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+  const [attendeeSearch, setAttendeeSearch] = useState('');
+  const [draftAttendeeIds, setDraftAttendeeIds] = useState(new Set());
+  const [savingAttendees, setSavingAttendees] = useState(false);
+
+  const startEditAttendees = async (session) => {
+    setEditingAttendeesId(session.id);
+    setExpanded(session.id);
+    setDraftAttendeeIds(new Set((session.attendees || []).map((a) => a.id)));
+    setAttendeeSearch('');
+    if (allStudents.length === 0) {
+      setLoadingStudents(true);
+      try {
+        const data = await api.get('/students');
+        setAllStudents(data.filter((s) => s.active !== false));
+      } catch { /* ignore */ } finally {
+        setLoadingStudents(false);
+      }
+    }
+  };
+
+  const toggleAttendee = (id) => {
+    setDraftAttendeeIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const saveAttendees = async (session) => {
+    if (draftAttendeeIds.size === 0) return;
+    setSavingAttendees(true);
+    try {
+      await api.patch(`/clubs/${session.id}/attendees`, { student_ids: [...draftAttendeeIds] });
+      const updatedAttendees = allStudents
+        .filter((s) => draftAttendeeIds.has(s.id))
+        .map((s) => ({ id: s.id, full_name: s.full_name }));
+      onAttendeesUpdated && onAttendeesUpdated(session.id, updatedAttendees);
+      setEditingAttendeesId(null);
+    } catch { /* ignore */ } finally {
+      setSavingAttendees(false);
+    }
+  };
 
   const handleDelete = async (id) => {
     try {
@@ -86,6 +133,7 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onNotesUpdated 
           {sessions.map((s) => {
             const isOpen = expanded === s.id;
             const isEditing = editingId === s.id;
+            const isEditingAttendees = editingAttendeesId === s.id;
 
             return (
               <div key={s.id} className="bg-white border border-ninja-border rounded-xl shadow-sm p-4 flex flex-col gap-3">
@@ -107,14 +155,72 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onNotesUpdated 
                   {isOpen ? 'Hide attendees ▲' : 'View attendees ▼'}
                 </button>
 
-                {isOpen && s.attendees?.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {s.attendees.map((a) => (
-                      <span key={a.id} className="text-xs font-ninja bg-ninja-bg border border-ninja-border text-ninja-navy px-2 py-0.5 rounded-md">
-                        {a.full_name}
-                      </span>
-                    ))}
-                  </div>
+                {isOpen && (
+                  isEditingAttendees ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        placeholder="Search ninjas..."
+                        value={attendeeSearch}
+                        onChange={(e) => setAttendeeSearch(e.target.value)}
+                        className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
+                      />
+                      {loadingStudents ? (
+                        <p className="text-ninja-muted font-ninja text-xs">Loading...</p>
+                      ) : (
+                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                          {allStudents
+                            .filter((st) => st.full_name.toLowerCase().includes(attendeeSearch.toLowerCase()))
+                            .map((st) => {
+                              const checked = draftAttendeeIds.has(st.id);
+                              return (
+                                <button
+                                  key={st.id}
+                                  type="button"
+                                  onClick={() => toggleAttendee(st.id)}
+                                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors ${
+                                    checked ? 'bg-ninja-blue text-white' : 'bg-ninja-bg text-ninja-navy hover:bg-blue-50'
+                                  }`}
+                                >
+                                  <div className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center ${
+                                    checked ? 'bg-white border-white' : 'border-ninja-border bg-white'
+                                  }`}>
+                                    {checked && <span className="text-ninja-blue text-xs font-bold leading-none">✓</span>}
+                                  </div>
+                                  <span className="font-ninja text-xs">{st.full_name}</span>
+                                </button>
+                              );
+                            })}
+                        </div>
+                      )}
+                      <div className="flex gap-2 pt-1">
+                        <Button size="sm" onClick={() => saveAttendees(s)} disabled={savingAttendees || draftAttendeeIds.size === 0}>
+                          {savingAttendees ? 'Saving...' : `Save (${draftAttendeeIds.size})`}
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={() => setEditingAttendeesId(null)}>Cancel</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {s.attendees?.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {s.attendees.map((a) => (
+                            <span key={a.id} className="text-xs font-ninja bg-ninja-bg border border-ninja-border text-ninja-navy px-2 py-0.5 rounded-md">
+                              {a.full_name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {isManager && !isReadOnly && (
+                        <button
+                          onClick={() => startEditAttendees(s)}
+                          className="text-ninja-blue font-ninja text-xs hover:underline"
+                        >
+                          Edit attendees
+                        </button>
+                      )}
+                    </div>
+                  )
                 )}
 
                 {/* Notes */}

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { requireSensei, requireOwnLocation } = require('../middleware/auth');
+const { requireSensei, requireManager, requireOwnLocation } = require('../middleware/auth');
 
 // POST /api/progress
 router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
@@ -91,6 +91,33 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
   } catch (err) {
     console.error('Error creating progress log:', err);
     res.status(500).json({ error: 'Failed to create progress log' });
+  }
+});
+
+// POST /api/progress/:id/comments — manager adds a comment to a log entry
+router.post('/:id/comments', requireManager, async (req, res) => {
+  const pool = req.app.get('db');
+  const { body } = req.body;
+  if (!body?.trim()) return res.status(400).json({ error: 'Comment cannot be empty' });
+
+  try {
+    const { rows: logRows } = await pool.query(
+      `SELECT pl.id FROM progress_logs pl
+       JOIN students s ON pl.student_id = s.id
+       WHERE pl.id = $1 AND s.location_id = $2`,
+      [req.params.id, req.session.activeLocationId]
+    );
+    if (!logRows[0]) return res.status(404).json({ error: 'Log not found' });
+
+    const { rows } = await pool.query(
+      `INSERT INTO progress_log_comments (log_id, user_id, user_name, body)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [req.params.id, req.session.userId, req.session.displayName, body.trim()]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error('Progress log comment error:', err);
+    res.status(500).json({ error: 'Failed to save comment' });
   }
 });
 
