@@ -64,22 +64,25 @@ export default function AddStudentToday({ isOpen, onClose, onAdded, existingEntr
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Ninja to Today's Board">
-      <div className="space-y-4">
-        <input
-          type="text"
-          placeholder="Search by name..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-          autoFocus
-        />
+    <Modal isOpen={isOpen} onClose={onClose} title="Check In Ninja">
+      <div className="space-y-3">
+        {/* Sticky search — pins to top of the modal's scroll area on mobile */}
+        <div className="sticky top-0 bg-white pb-2 z-10">
+          <input
+            type="text"
+            placeholder="Search by name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+            autoFocus
+          />
+        </div>
 
         {error && (
           <p className="text-ninja-red text-sm font-ninja">{error}</p>
         )}
 
-        <div className="space-y-2 max-h-80 overflow-y-auto">
+        <div className="space-y-2 md:max-h-80 md:overflow-y-auto">
           {loading && (
             <p className="text-ninja-muted font-ninja text-center py-4">Searching...</p>
           )}
