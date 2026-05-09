@@ -294,7 +294,7 @@ router.patch('/:id/attendees', requireManager, requireOwnLocation, async (req, r
 });
 
 // PATCH /api/clubs/:id/notes — sensei adds/edits notes
-router.patch('/:id/notes', requireSensei, async (req, res) => {
+router.patch('/:id/notes', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { notes } = req.body;
   try {
