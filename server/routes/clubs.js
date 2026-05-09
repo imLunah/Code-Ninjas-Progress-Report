@@ -31,8 +31,8 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/clubs — log a club session
-router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
+// POST /api/clubs — create a club session (manager only)
+router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { club_name, session_date, notes, student_ids } = req.body;
 
@@ -71,6 +71,24 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     res.status(500).json({ error: 'Failed to log club session' });
   } finally {
     client.release();
+  }
+});
+
+// PATCH /api/clubs/:id/notes — sensei adds/edits notes on an existing session
+router.patch('/:id/notes', requireSensei, async (req, res) => {
+  const pool = req.app.get('db');
+  const { notes } = req.body;
+  try {
+    const { rows } = await pool.query(
+      `UPDATE club_sessions SET notes = $1, sensei_id = $2
+       WHERE id = $3 AND location_id = $4 RETURNING id`,
+      [notes?.trim() || null, req.session.userId, req.params.id, req.session.activeLocationId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Session not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Club notes update error:', err);
+    res.status(500).json({ error: 'Failed to save notes' });
   }
 });
 

@@ -106,6 +106,7 @@ export default function SenseiDashboard() {
         <ClubSessionsPanel
           sessions={clubSessions}
           onDeleted={(id) => setClubSessions((prev) => prev.filter((s) => s.id !== id))}
+          onNotesUpdated={(id, notes) => setClubSessions((prev) => prev.map((s) => s.id === id ? { ...s, notes } : s))}
         />
       </div>
     </Layout>
