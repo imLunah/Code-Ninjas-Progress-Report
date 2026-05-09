@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { today } from '../../utils/dateUtils';
 import BeltBadge from '../ui/BeltBadge';
 import ProgramBadge from '../ui/ProgramBadge';
 import Button from '../ui/Button';
@@ -32,11 +33,15 @@ export default function TodayBoard({ assignments, onRemove }) {
     );
   }
 
-  const renderRow = (a) => (
+  const todayStr = today();
+
+  const renderRow = (a) => {
+    const isOverdue = !a.completed && a.session_date && String(a.session_date).split('T')[0] < todayStr;
+    return (
     <div
       key={a.id}
       className={`flex flex-wrap items-center gap-3 p-3 rounded-xl border ${
-        a.completed ? 'bg-green-50 border-green-300' : 'bg-ninja-bg border-ninja-border'
+        a.completed ? 'bg-green-50 border-green-300' : isOverdue ? 'bg-orange-50 border-orange-300' : 'bg-ninja-bg border-ninja-border'
       }`}
     >
       {/* Completion indicator */}
@@ -65,9 +70,11 @@ export default function TodayBoard({ assignments, onRemove }) {
         )}
       </div>
 
-      {/* Completed badge */}
+      {/* Status */}
       {a.completed ? (
         <span className="text-green-600 font-ninja font-semibold text-sm">✓ Done</span>
+      ) : isOverdue ? (
+        <span className="text-orange-600 font-ninja font-semibold text-xs px-2 py-0.5 bg-orange-100 border border-orange-300 rounded-md">Overdue</span>
       ) : (
         <span className="text-ninja-muted font-ninja text-sm">Pending</span>
       )}
@@ -91,6 +98,7 @@ export default function TodayBoard({ assignments, onRemove }) {
       )}
     </div>
   );
+  };
 
   return (
     <div className="space-y-2">

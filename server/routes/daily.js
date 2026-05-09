@@ -27,15 +27,17 @@ const ASSIGNMENT_SELECT = `
 `;
 
 // GET /api/daily?date=YYYY-MM-DD
+// When fetching today (no date param), also includes incomplete assignments from past days.
 router.get('/', requireAuth, async (req, res) => {
   const pool = req.app.get('db');
   const date = req.query.date || todayDate();
+  const isToday = !req.query.date;
 
   try {
-    const { rows } = await pool.query(
-      ASSIGNMENT_SELECT + ' WHERE da.session_date = $1 AND s.location_id = $2 ORDER BY da.created_at ASC',
-      [date, req.session.activeLocationId]
-    );
+    const query = isToday
+      ? ASSIGNMENT_SELECT + ' WHERE (da.session_date = $1 OR (da.session_date < $1 AND da.completed = false)) AND s.location_id = $2 ORDER BY da.session_date ASC, da.created_at ASC'
+      : ASSIGNMENT_SELECT + ' WHERE da.session_date = $1 AND s.location_id = $2 ORDER BY da.created_at ASC';
+    const { rows } = await pool.query(query, [date, req.session.activeLocationId]);
     res.json(rows);
   } catch (err) {
     console.error('Error fetching daily assignments:', err);
