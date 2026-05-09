@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import ParentLayout from '../../components/layout/ParentLayout';
-import BeltBadge from '../../components/ui/BeltBadge';
 import ProgramBadge from '../../components/ui/ProgramBadge';
 import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
@@ -48,7 +47,6 @@ export default function ParentDashboard() {
         )}
 
         {!loading && students.map((s) => {
-          const create = (s.programs || []).find((p) => p.program === 'CREATE');
           return (
             <div
               key={s.id}
@@ -63,18 +61,6 @@ export default function ParentDashboard() {
                       <ProgramBadge key={p.program} program={p.program} size="sm" />
                     ))}
                   </div>
-
-                  {create?.belt_level && (
-                    <div className="flex items-center gap-2 mb-2">
-                      <BeltBadge belt={create.belt_level} sublevel={create.belt_sublevel} size="sm" />
-                      {create.current_project && (
-                        <span className="text-ninja-muted font-ninja text-sm">
-                          {create.current_project}
-                          {create.project_status && ` — ${create.project_status}`}
-                        </span>
-                      )}
-                    </div>
-                  )}
 
                   <p className="text-ninja-muted font-ninja text-xs">
                     {s.last_activity ? `Last session: ${formatDate(s.last_activity)}` : 'No sessions yet'}
