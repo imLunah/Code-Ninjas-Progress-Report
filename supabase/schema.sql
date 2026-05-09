@@ -114,3 +114,13 @@ CREATE TABLE IF NOT EXISTS progress_log_comments (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS progress_log_comments_log_id_idx ON progress_log_comments(log_id);
+
+CREATE TABLE IF NOT EXISTS club_session_comments (
+  id SERIAL PRIMARY KEY,
+  session_id INTEGER NOT NULL REFERENCES club_sessions(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  user_name TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS club_session_comments_session_id_idx ON club_session_comments(session_id);
