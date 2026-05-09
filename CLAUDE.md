@@ -59,8 +59,10 @@ The server exports `app` and only calls `app.listen()` when run directly (`requi
 
 Environment variables are read from `.env` at the project root (not inside `server/`):
 - `DATABASE_URL` — Supabase Transaction pooler connection string (required)
-- `SESSION_SECRET` — required for production
+- `SESSION_SECRET` — required for production (server throws at startup if missing when `NODE_ENV=production`)
 - `PORT` — default 3001
+
+**Security:** Session cookies use `sameSite: 'Lax'` for CSRF protection and `httpOnly: true`. The `SESSION_SECRET` guard (`throw new Error(...)` at startup) prevents silent failures in production.
 
 ### Multi-Location Support
 
@@ -82,7 +84,7 @@ The app supports 3 fully isolated centers: **Code Ninjas Yorba Linda**, **Code N
 
 ### Database
 
-Hosted on **Supabase** (PostgreSQL). The schema lives in `supabase/schema.sql` and was applied via the Supabase MCP. Five tables:
+Hosted on **Supabase** (PostgreSQL). The schema lives in `supabase/schema.sql` and was applied via the Supabase MCP.
 
 - **`locations`** — the 3 centers (Yorba Linda, Fullerton, Cerritos) with `name` and `slug`
 - **`users`** — manager and sensei accounts with bcryptjs password hashes; `location_id` references their home center
@@ -90,6 +92,12 @@ Hosted on **Supabase** (PostgreSQL). The schema lives in `supabase/schema.sql` a
 - **`daily_assignments`** — date-scoped To Do board; `UNIQUE(student_id, session_date)` prevents duplicates; `sensei_id` nullable; `completed` flips to `true` when a progress log is submitted
 - **`progress_logs`** — immutable session notes with snapshots (`belt_level_at`, `belt_sublevel_at`, `project_at`, `status_at`) capturing student state at the time of logging
 - **`messages`** — parent ↔ staff messaging per student; `sender_type` CHECK ('parent' | 'staff'), `sender_id` nullable (null = parent, references `users.id` for staff), `student_id` FK, `body` text, `created_at`
+- **`club_definitions`** — club types; global built-ins have `location_id = NULL`, custom location clubs have `location_id` set; partial unique indexes on `(name)` and `(slug)` separately for null vs. non-null `location_id`
+- **`club_sessions`** — logged sessions with `club_name`, `session_date`, `location_id`, `sensei_id`, `notes`
+- **`club_attendees`** — junction table: `club_session_id` + `student_id`
+- **`club_session_comments`** — staff comments on session threads
+- **`club_profiles`** — per-club pinned note (markdown) per location; upserted on save
+- **`club_resources`** — links and uploaded files attached to a club; `resource_type` is `'url'` or `'file'`; `file_name` stores the original filename for display
 
 Schema changes require updating `supabase/schema.sql` and running the new DDL in the Supabase SQL editor (or via `mcp__supabase__apply_migration`). There is no longer a local init/migration script — all migrations are applied directly to Supabase.
 
@@ -102,6 +110,49 @@ All fetch calls go through `client/src/api/client.js` which handles JSON seriali
 Auth state is managed by `client/src/context/AuthContext.jsx`. On mount it calls `GET /api/auth/me` to restore the session. Role-based routing uses `client/src/components/layout/ProtectedRoute.jsx` — managers also pass sensei-role checks.
 
 Parent auth state is managed by `client/src/context/ParentAuthContext.jsx` (separate context, calls `GET /api/parent/me`). The app root wraps `<ParentAuthProvider>` outside `<AuthProvider>` so both can coexist — staff and parents can be logged in simultaneously in different browser tabs without interference.
+
+### Clubs Architecture
+
+Clubs have three layers: **definitions** (what clubs exist), **profiles** (per-location pinned note + resources), and **sessions** (individual logged meetings with attendees and notes).
+
+**Server-side validation:** Club names are validated dynamically via `getValidClubNames(pool, locationId)` — an async helper that queries `club_definitions WHERE location_id = $1 OR location_id IS NULL`. This replaces the old hardcoded `CLUB_NAMES` array and supports manager-created custom clubs. The `club_sessions`, `club_profiles`, and `club_resources` tables have no CHECK constraint on `club_name` — validation is purely at the route layer.
+
+**Route order in `server/routes/clubs.js`:** Specific prefix routes (`/definitions`, `/profile/:clubName`, `/sessions/:id`) must come before wildcard `/:id` routes to avoid Express matching the wrong handler.
+
+**Client utilities (`client/src/utils/clubUtils.js`):**
+- `COLOR_SETS` — map from `color_key` string (purple, green, red, blue, orange, teal, pink, indigo, yellow) to Tailwind class objects `{ bg, text, border, badgeBg, badgeText, badgeBorder }`
+- `toSlug(name)` — generates URL-safe slugs: lowercase, non-alphanumeric → hyphen, trim leading/trailing hyphens
+- `getClubColors(clubDef)` — returns `COLOR_SETS[clubDef?.color_key] || COLOR_SETS.blue`
+- `CLUB_NAME_TO_SLUG` — legacy map for the 3 built-in clubs (still used in `ClubSessionsPanel`)
+
+**Club pages:**
+- `ClubsPage.jsx` — lists all clubs from `GET /api/clubs/definitions`; manager `CreateClubModal` with name, description, and color picker
+- `ClubProfilePage.jsx` — fetches definition by slug, shows pinned note (Write/Preview + emoji) and resources (link or file upload)
+- `ClubSessionPage.jsx` — session detail: attendee list (editable by managers), notes (Write/Preview + emoji), comment thread
+
+### Supabase Storage
+
+File uploads for club resources use **Supabase Storage** (bucket: `club-resources`, public). The client-side Supabase client lives in `client/src/lib/supabase.js`:
+
+```js
+import { createClient } from '@supabase/supabase-js';
+export const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
+```
+
+These `VITE_` env vars are baked into the client bundle at build time. They must be set in Vercel (Production + Preview) and in `client/.env.local` for local dev. The Supabase anon key is safe to expose — RLS policies are the security boundary.
+
+**Upload path pattern:** `{clubSlug}/{locationId}/{timestamp}-{sanitizedFileName}`. On resource delete, the client calls `supabase.storage.from('club-resources').remove([path])` to clean up storage, then calls the API delete endpoint.
+
+### Markdown and Emoji
+
+`react-markdown` + `remark-gfm` render markdown in pinned notes and club session notes. Always pass a `components` prop with Tailwind-styled elements (headings, paragraphs, lists, code, links) — the default renderer produces unstyled HTML.
+
+`EmojiButton` (`client/src/components/ui/EmojiButton.jsx`) is a reusable wrapper around `emoji-picker-react` v4:
+- `position` prop (`'top'` / `'bottom'`) controls popup direction
+- Click-outside closes the picker via `useRef` + `mousedown` listener
+- Emoji insertion uses `insertAtCursor(ref, currentValue, emoji, setter)` — reads `el.selectionStart`/`el.selectionEnd`, slices the string, sets value, then restores cursor position via `requestAnimationFrame`
+
+Picker config: `previewConfig={{ showPreview: false }}`, `skinTonesDisabled`, `height={350}`, `width="100%"`.
 
 ### Belt Config — Single Source of Truth
 
@@ -182,7 +233,7 @@ The app is deployed on **Vercel** (frontend + serverless API) with **Supabase** 
 - **Supabase project**: `hatlannivniuauafptzk` — Transaction pooler on `aws-1-us-west-1`
 - **`vercel.json`**: sets `buildCommand` (builds the React client), `outputDirectory` (`client/dist`), and rewrites all `/api/*` requests to `api/index.js`
 - **`api/index.js`**: Vercel serverless entry point — just re-exports the Express app
-- **Environment variables on Vercel**: `DATABASE_URL`, `SESSION_SECRET`, `NODE_ENV=production`
+- **Environment variables on Vercel**: `DATABASE_URL`, `SESSION_SECRET`, `NODE_ENV=production`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (baked into the client bundle at build time — must be set for both Production and Preview environments)
 
 To re-seed Supabase (wipes users and students, keeps schema): `npm run seed`
 
