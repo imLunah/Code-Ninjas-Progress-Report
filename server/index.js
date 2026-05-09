@@ -10,7 +10,10 @@ const pool = require('./db/pool');
 const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3001;
-const SESSION_SECRET = process.env.SESSION_SECRET || 'codeninjas-default-secret-change-me';
+if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+  throw new Error('SESSION_SECRET environment variable must be set in production');
+}
+const SESSION_SECRET = process.env.SESSION_SECRET || 'codeninjas-dev-secret-do-not-use-in-prod';
 
 app.set('db', pool);
 
@@ -30,6 +33,7 @@ const sessionConfig = {
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
+    sameSite: 'Lax',
     maxAge: 1000 * 60 * 60 * 24 * 7,
   },
 };
