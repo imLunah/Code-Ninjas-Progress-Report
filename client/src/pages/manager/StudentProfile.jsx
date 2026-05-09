@@ -292,21 +292,16 @@ export default function StudentProfile() {
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              {programs.length === 1 ? (
-                <Button onClick={() => navigate(`/sensei/student/${student.id}?program=${encodeURIComponent(programs[0].program)}`)}>
+              {programs.length > 0 && (
+                <Button
+                  onClick={() => {
+                    const programsStr = programs.map((p) => p.program).join(',');
+                    navigate(`/sensei/student/${student.id}?programs=${encodeURIComponent(programsStr)}`);
+                  }}
+                >
                   Log Progress
                 </Button>
-              ) : programs.length > 1 ? (
-                programs.map((p) => (
-                  <Button
-                    key={p.program}
-                    variant="secondary"
-                    onClick={() => navigate(`/sensei/student/${student.id}?program=${encodeURIComponent(p.program)}`)}
-                  >
-                    Log {p.program}
-                  </Button>
-                ))
-              ) : null}
+              )}
               {isManager && !isReadOnly && (
                 <>
                   <Button onClick={() => setShowEdit(true)} variant="secondary">
