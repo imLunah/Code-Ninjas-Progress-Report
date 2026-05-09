@@ -141,7 +141,16 @@ function BeltJourney({ enrollment }) {
               return (
                 <span key={belt.name} className="flex items-center gap-1">
                   {i > 0 && (
-                    <span className="text-ninja-border text-xs select-none">›</span>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        width: '14px',
+                        height: '3px',
+                        borderRadius: '2px',
+                        backgroundColor: reached ? '#006ADD' : '#e2e8f0',
+                        flexShrink: 0,
+                      }}
+                    />
                   )}
                   <span
                     className="font-ninja text-xs px-2 py-0.5 rounded-full"
