@@ -1,0 +1,94 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useParentAuth } from '../../context/ParentAuthContext';
+import ParentLayout from '../../components/layout/ParentLayout';
+import BeltBadge from '../../components/ui/BeltBadge';
+import ProgramBadge from '../../components/ui/ProgramBadge';
+import Button from '../../components/ui/Button';
+import { api } from '../../api/client';
+import { formatDate } from '../../utils/dateUtils';
+
+export default function ParentDashboard() {
+  const { parent } = useParentAuth();
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    api.get('/parent/students')
+      .then(setStudents)
+      .catch(() => setError('Failed to load your children\'s profiles.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <ParentLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold font-ninja text-ninja-navy">
+            {parent?.parentName ? `Welcome, ${parent.parentName}` : 'My Ninjas'}
+          </h1>
+          <p className="text-ninja-muted font-ninja mt-1 text-sm">
+            Track your child's progress at Code Ninjas
+          </p>
+        </div>
+
+        {loading && (
+          <p className="text-ninja-muted font-ninja text-center py-12">Loading...</p>
+        )}
+        {error && (
+          <p className="text-ninja-red font-ninja text-center py-12">{error}</p>
+        )}
+
+        {!loading && !error && students.length === 0 && (
+          <div className="bg-white border border-ninja-border rounded-2xl p-8 text-center shadow-sm">
+            <p className="text-ninja-muted font-ninja">No students found linked to your email.</p>
+          </div>
+        )}
+
+        {!loading && students.map((s) => {
+          const create = (s.programs || []).find((p) => p.program === 'CREATE');
+          return (
+            <div
+              key={s.id}
+              className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5 cursor-pointer hover:border-ninja-blue transition-colors"
+              onClick={() => navigate(`/parent/students/${s.id}`)}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <h2 className="text-xl font-bold font-ninja text-ninja-navy">{s.full_name}</h2>
+                    {(s.programs || []).map((p) => (
+                      <ProgramBadge key={p.program} program={p.program} size="sm" />
+                    ))}
+                  </div>
+
+                  {create?.belt_level && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <BeltBadge belt={create.belt_level} sublevel={create.belt_sublevel} size="sm" />
+                      {create.current_project && (
+                        <span className="text-ninja-muted font-ninja text-sm">
+                          {create.current_project}
+                          {create.project_status && ` — ${create.project_status}`}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  <p className="text-ninja-muted font-ninja text-xs">
+                    {s.last_activity ? `Last session: ${formatDate(s.last_activity)}` : 'No sessions yet'}
+                  </p>
+                </div>
+
+                <Button size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/parent/students/${s.id}`); }}>
+                  View Profile
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </ParentLayout>
+  );
+}

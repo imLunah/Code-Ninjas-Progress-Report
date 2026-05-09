@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ParentAuthProvider } from './context/ParentAuthContext';
 import ProtectedRoute from './components/layout/ProtectedRoute';
+import ParentRoute from './components/layout/ParentRoute';
 
 import LoginPage from './pages/LoginPage';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
@@ -10,6 +12,9 @@ import StudentProfile from './pages/manager/StudentProfile';
 import StaffPage from './pages/manager/StaffPage';
 import SenseiDashboard from './pages/sensei/SenseiDashboard';
 import LogProgressPage from './pages/sensei/LogProgressPage';
+import ParentLogin from './pages/parent/ParentLogin';
+import ParentDashboard from './pages/parent/ParentDashboard';
+import ParentStudentProfile from './pages/parent/ParentStudentProfile';
 
 function RoleRedirect() {
   const { user, loading } = useAuth();
@@ -30,6 +35,7 @@ function RoleRedirect() {
 export default function App() {
   return (
     <BrowserRouter>
+      <ParentAuthProvider>
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
@@ -95,10 +101,22 @@ export default function App() {
             }
           />
 
+          {/* Parent portal */}
+          <Route path="/parent/login" element={<ParentLogin />} />
+          <Route
+            path="/parent/dashboard"
+            element={<ParentRoute><ParentDashboard /></ParentRoute>}
+          />
+          <Route
+            path="/parent/students/:id"
+            element={<ParentRoute><ParentStudentProfile /></ParentRoute>}
+          />
+
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
+      </ParentAuthProvider>
     </BrowserRouter>
   );
 }
