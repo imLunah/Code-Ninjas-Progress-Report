@@ -14,6 +14,8 @@ import SenseiDashboard from './pages/sensei/SenseiDashboard';
 import LogProgressPage from './pages/sensei/LogProgressPage';
 import LogClubPage from './pages/sensei/LogClubPage';
 import ClubsPage from './pages/ClubsPage';
+import ClubProfilePage from './pages/ClubProfilePage';
+import ClubSessionPage from './pages/ClubSessionPage';
 import ParentLogin from './pages/parent/ParentLogin';
 import ParentDashboard from './pages/parent/ParentDashboard';
 import ParentStudentProfile from './pages/parent/ParentStudentProfile';
@@ -111,12 +113,28 @@ export default function App() {
             }
           />
 
-          {/* Parent portal */}
+          {/* Clubs */}
           <Route
             path="/clubs"
             element={
               <ProtectedRoute role="sensei">
                 <ClubsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/clubs/:slug"
+            element={
+              <ProtectedRoute role="sensei">
+                <ClubProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/clubs/:slug/sessions/:id"
+            element={
+              <ProtectedRoute role="sensei">
+                <ClubSessionPage />
               </ProtectedRoute>
             }
           />

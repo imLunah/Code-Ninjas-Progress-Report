@@ -124,3 +124,25 @@ CREATE TABLE IF NOT EXISTS club_session_comments (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS club_session_comments_session_id_idx ON club_session_comments(session_id);
+
+CREATE TABLE IF NOT EXISTS club_profiles (
+  id SERIAL PRIMARY KEY,
+  club_name TEXT NOT NULL CHECK (club_name IN ('3D Design Club', 'Minecraft Club', 'Roblox Club')),
+  location_id INTEGER NOT NULL REFERENCES locations(id),
+  pinned_note TEXT,
+  pinned_note_author TEXT,
+  pinned_note_updated_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(club_name, location_id)
+);
+
+CREATE TABLE IF NOT EXISTS club_resources (
+  id SERIAL PRIMARY KEY,
+  club_name TEXT NOT NULL CHECK (club_name IN ('3D Design Club', 'Minecraft Club', 'Roblox Club')),
+  location_id INTEGER NOT NULL REFERENCES locations(id),
+  title TEXT NOT NULL,
+  url TEXT NOT NULL,
+  added_by TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS club_resources_club_location_idx ON club_resources(club_name, location_id);
