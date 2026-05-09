@@ -7,6 +7,7 @@ import ProgramBadge from '../../components/ui/ProgramBadge';
 import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
 import { formatDate } from '../../utils/dateUtils';
+import ProgressVisuals from '../../components/parent/ProgressVisuals';
 
 function formatTimestamp(ts) {
   return new Date(ts).toLocaleString('en-US', {
@@ -139,6 +140,11 @@ export default function ParentStudentProfile() {
               )}
             </div>
           </div>
+        )}
+
+        {/* Progress visualizations */}
+        {programs.length > 0 && (student.session_logs || []).length > 0 && (
+          <ProgressVisuals programs={programs} sessionLogs={student.session_logs || []} />
         )}
 
         {/* Session history — all programs, no notes */}
