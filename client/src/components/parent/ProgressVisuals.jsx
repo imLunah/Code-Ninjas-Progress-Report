@@ -90,68 +90,85 @@ function BeltJourney({ enrollment }) {
 
   return (
     <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
-      <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-5">CREATE Belt Journey</h2>
+      <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-4">CREATE Belt Journey</h2>
 
-      {/* items-center keeps all icons' midpoints on the same axis as the line */}
-      <div className="overflow-x-auto pb-2" style={{ margin: '0 -4px', padding: '4px 4px 0' }}>
-        <div className="relative flex items-center justify-between" style={{ minWidth: '460px' }}>
-          {/* Line through the vertical midpoint of all icons */}
-          <div className="absolute h-px bg-ninja-border" style={{ left: '21px', right: '21px', top: '50%' }} />
-
-          {BELTS.map((belt, i) => {
-            const reached = currentIndex >= 0 && i <= currentIndex;
-            const isCurrent = i === currentIndex;
-            const size = isCurrent ? 60 : 42;
-
-            return (
-              <div key={belt.name} className="flex flex-col items-center gap-1.5 relative z-10">
-                <img
-                  src={BELT_IMAGES[belt.name]}
-                  alt={belt.name}
-                  draggable={false}
-                  style={{
-                    width: `${size}px`,
-                    height: `${size}px`,
-                    opacity: reached ? 1 : 0.2,
-                    filter: reached ? 'none' : 'grayscale(100%)',
-                    transition: 'width 0.2s, height 0.2s',
-                  }}
-                />
-                <span
-                  className="font-ninja leading-none text-center"
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: isCurrent ? 800 : 400,
-                    color: isCurrent ? '#006ADD' : reached ? '#506690' : '#cbd5e1',
-                  }}
-                >
-                  {belt.name}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {progress !== null && (
-        <div className="mt-5">
-          <div className="flex justify-between text-xs font-ninja mb-1.5">
-            <span className="text-ninja-muted">
-              {belt_level} Belt — Level {sublevel} of {maxLevel}
-            </span>
-            <span className="font-bold text-ninja-navy">{progress}%</span>
-          </div>
-          <div className="h-3 bg-ninja-bg rounded-full overflow-hidden border border-ninja-border">
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${progress}%`, backgroundColor: currentBelt?.color || '#006ADD' }}
+      {belt_level ? (
+        <>
+          {/* Current belt — large standalone image, no overflow needed */}
+          <div className="flex items-center gap-4 mb-5">
+            <img
+              src={BELT_IMAGES[belt_level]}
+              alt={belt_level}
+              draggable={false}
+              style={{ width: '80px', height: '80px', flexShrink: 0 }}
             />
+            <div>
+              <p className="text-ninja-navy font-ninja font-bold text-2xl">{belt_level} Belt</p>
+              {sublevel && maxLevel ? (
+                <p className="text-ninja-muted font-ninja text-sm mt-0.5">
+                  Level {sublevel} of {maxLevel}
+                </p>
+              ) : (
+                <p className="text-ninja-muted font-ninja text-sm mt-0.5">No sublevel yet</p>
+              )}
+            </div>
           </div>
-        </div>
-      )}
 
-      {!belt_level && (
-        <p className="text-ninja-muted font-ninja text-sm mt-3 italic text-center">
+          {/* Sublevel progress bar */}
+          {progress !== null && (
+            <div className="mb-5">
+              <div className="flex justify-between text-xs font-ninja text-ninja-muted mb-1.5">
+                <span>Sublevel progress</span>
+                <span className="font-bold text-ninja-navy">{progress}%</span>
+              </div>
+              <div className="h-3 bg-ninja-bg rounded-full overflow-hidden border border-ninja-border">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${progress}%`, backgroundColor: currentBelt?.color }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Belt path — colored text pills, no images, no overflow issues */}
+          <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-2">
+            Belt Path
+          </p>
+          <div className="flex flex-wrap items-center gap-1">
+            {BELTS.map((belt, i) => {
+              const reached = i <= currentIndex;
+              const isCurrent = i === currentIndex;
+              return (
+                <span key={belt.name} className="flex items-center gap-1">
+                  {i > 0 && (
+                    <span className="text-ninja-border text-xs select-none">›</span>
+                  )}
+                  <span
+                    className="font-ninja text-xs px-2 py-0.5 rounded-full"
+                    style={{
+                      backgroundColor: isCurrent
+                        ? belt.color
+                        : reached
+                        ? belt.color + '55'
+                        : '#f1f5f9',
+                      color: isCurrent
+                        ? belt.textColor
+                        : reached
+                        ? '#374151'
+                        : '#cbd5e1',
+                      fontWeight: isCurrent ? 700 : 400,
+                      border: belt.name === 'White' ? '1px solid #e2e8f0' : 'none',
+                    }}
+                  >
+                    {belt.name}
+                  </span>
+                </span>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <p className="text-ninja-muted font-ninja text-sm italic text-center py-4">
           Belt journey starting soon!
         </p>
       )}
