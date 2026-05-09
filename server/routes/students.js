@@ -74,7 +74,12 @@ router.get('/:id', requireAuth, async (req, res) => {
     if (!student) return res.status(404).json({ error: 'Student not found' });
 
     const { rows: progressLogs } = await pool.query(`
-      SELECT pl.*, u.display_name AS sensei_name
+      SELECT pl.*, u.display_name AS sensei_name,
+        COALESCE(
+          (SELECT json_agg(json_build_object('id', c.id, 'user_name', c.user_name, 'body', c.body, 'created_at', c.created_at) ORDER BY c.created_at ASC)
+           FROM progress_log_comments c WHERE c.log_id = pl.id),
+          '[]'::json
+        ) AS comments
       FROM progress_logs pl
       LEFT JOIN users u ON pl.sensei_id = u.id
       WHERE pl.student_id = $1

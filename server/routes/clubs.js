@@ -74,6 +74,41 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   }
 });
 
+// PATCH /api/clubs/:id/attendees — manager updates the attendee list
+router.patch('/:id/attendees', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { student_ids } = req.body;
+  if (!Array.isArray(student_ids) || student_ids.length === 0) {
+    return res.status(400).json({ error: 'At least one student is required' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'SELECT id FROM club_sessions WHERE id = $1 AND location_id = $2',
+      [req.params.id, req.session.activeLocationId]
+    );
+    if (!rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Session not found' }); }
+
+    await client.query('DELETE FROM club_attendees WHERE club_session_id = $1', [req.params.id]);
+    for (const sid of student_ids) {
+      await client.query(
+        'INSERT INTO club_attendees (club_session_id, student_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [req.params.id, sid]
+      );
+    }
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Club attendees update error:', err);
+    res.status(500).json({ error: 'Failed to update attendees' });
+  } finally {
+    client.release();
+  }
+});
+
 // PATCH /api/clubs/:id/notes — sensei adds/edits notes on an existing session
 router.patch('/:id/notes', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
