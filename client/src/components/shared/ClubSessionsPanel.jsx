@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { formatDate } from '../../utils/dateUtils';
+import { formatDate, today } from '../../utils/dateUtils';
 import { api } from '../../api/client';
 import Button from '../ui/Button';
 import { CLUB_NAME_TO_SLUG, CLUB_COLORS } from '../../utils/clubUtils';
@@ -99,9 +99,18 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpda
           {sessions.map((s) => {
             const isOpen = expanded === s.id;
             const isEditingAttendees = editingAttendeesId === s.id;
+            const todayStr = today();
+            const sessionDateStr = String(s.session_date).split('T')[0];
+            const isLogged = !!s.notes;
+            const isPast = sessionDateStr < todayStr;
+            const borderClass = isLogged
+              ? 'border-green-400'
+              : isPast
+              ? 'border-red-400'
+              : 'border-yellow-300';
 
             return (
-              <div key={s.id} className="bg-white border border-ninja-border rounded-xl shadow-sm p-4 flex flex-col gap-3">
+              <div key={s.id} className={`bg-white border ${borderClass} rounded-xl shadow-sm p-4 flex flex-col gap-3`}>
                 {/* Header */}
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-1">
@@ -194,13 +203,6 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpda
                 )}
                 {s.sensei_name && s.notes && (
                   <p className="text-ninja-muted font-ninja text-xs">Notes by {s.sensei_name}</p>
-                )}
-
-                {/* Comment count hint */}
-                {s.comments?.length > 0 && (
-                  <p className="text-ninja-muted font-ninja text-xs">
-                    {s.comments.length} comment{s.comments.length !== 1 ? 's' : ''}
-                  </p>
                 )}
 
                 {/* Log Progress — opens session detail with notes + comment thread */}
