@@ -121,69 +121,63 @@ export default function ParentStudentProfile() {
           <ProgressVisuals programs={programs} sessionLogs={student.session_logs || []} />
         )}
 
-        {/* Session history — all programs, no notes */}
+        {/* Session history — all programs + clubs, no notes */}
         <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
           <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-4">Session History</h2>
-          {(student.session_logs || []).length === 0 ? (
+          {(student.session_logs || []).length === 0 && (student.club_attendance || []).length === 0 ? (
             <p className="text-ninja-muted font-ninja text-sm italic">No sessions logged yet.</p>
           ) : (
             <div className="space-y-3">
-              {student.session_logs.map((log, i) => (
-                <div key={i} className="flex items-start gap-3 p-3 bg-ninja-bg border border-ninja-border rounded-xl">
-                  <div className="flex-shrink-0 w-20 text-ninja-muted font-ninja text-xs pt-0.5">
-                    {formatDate(log.session_date)}
+              {[
+                ...(student.session_logs || []).map((l) => ({ ...l, _type: 'session' })),
+                ...(student.club_attendance || []).map((c) => ({ ...c, _type: 'club' })),
+              ]
+                .sort((a, b) => String(b.session_date).localeCompare(String(a.session_date)))
+                .map((entry, i) => (
+                  <div key={i} className="flex items-start gap-3 p-3 bg-ninja-bg border border-ninja-border rounded-xl">
+                    <div className="flex-shrink-0 w-20 text-ninja-muted font-ninja text-xs pt-0.5">
+                      {formatDate(entry.session_date)}
+                    </div>
+                    <div className="flex-1 min-w-0 flex flex-wrap items-center gap-1.5">
+                      {entry._type === 'club' ? (
+                        <ClubBadge name={entry.club_name} />
+                      ) : (
+                        <>
+                          <ProgramBadge program={entry.program} size="xs" />
+                          {entry.sub_program && (
+                            <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-md font-ninja font-semibold">
+                              {entry.sub_program}
+                            </span>
+                          )}
+                          {entry.module_name && (
+                            <span className="text-xs bg-white border border-ninja-border text-ninja-navy px-2 py-0.5 rounded-md font-ninja">
+                              {entry.module_name}
+                            </span>
+                          )}
+                          {entry.lesson_name && (
+                            <span className="text-xs text-ninja-muted font-ninja">{entry.lesson_name}</span>
+                          )}
+                          {entry.belt_level_at && (
+                            <BeltBadge belt={entry.belt_level_at} sublevel={entry.belt_sublevel_at} size="xs" />
+                          )}
+                          {entry.project_at && (
+                            <span className="text-xs text-ninja-navy font-ninja font-semibold">{entry.project_at}</span>
+                          )}
+                          {entry.status_at && (
+                            <span className={`text-xs font-ninja font-semibold px-2 py-0.5 rounded-md ${
+                              entry.status_at === 'Completed' ? 'bg-green-100 text-green-700'
+                              : entry.status_at === 'Working On' ? 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-600'
+                            }`}>{entry.status_at}</span>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0 flex flex-wrap items-center gap-1.5">
-                    <ProgramBadge program={log.program} size="xs" />
-                    {log.sub_program && (
-                      <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-md font-ninja font-semibold">
-                        {log.sub_program}
-                      </span>
-                    )}
-                    {log.module_name && (
-                      <span className="text-xs bg-white border border-ninja-border text-ninja-navy px-2 py-0.5 rounded-md font-ninja">
-                        {log.module_name}
-                      </span>
-                    )}
-                    {log.lesson_name && (
-                      <span className="text-xs text-ninja-muted font-ninja">
-                        {log.lesson_name}
-                      </span>
-                    )}
-                    {log.belt_level_at && (
-                      <BeltBadge belt={log.belt_level_at} sublevel={log.belt_sublevel_at} size="xs" />
-                    )}
-                    {log.project_at && (
-                      <span className="text-xs text-ninja-navy font-ninja font-semibold">{log.project_at}</span>
-                    )}
-                    {log.status_at && (
-                      <span className={`text-xs font-ninja font-semibold px-2 py-0.5 rounded-md ${
-                        log.status_at === 'Completed' ? 'bg-green-100 text-green-700'
-                        : log.status_at === 'Working On' ? 'bg-blue-100 text-blue-700'
-                        : 'bg-gray-100 text-gray-600'
-                      }`}>{log.status_at}</span>
-                    )}
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
           )}
         </div>
-
-        {/* Club attendance */}
-        {(student.club_attendance || []).length > 0 && (
-          <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
-            <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-4">Club Attendance</h2>
-            <div className="space-y-2">
-              {student.club_attendance.map((c, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <ClubBadge name={c.club_name} />
-                  <span className="text-ninja-muted font-ninja text-xs">{formatDate(c.session_date)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Messages */}
         <div className="bg-white border border-ninja-border rounded-2xl shadow-sm flex flex-col">
