@@ -130,50 +130,57 @@ function BeltJourney({ enrollment }) {
             </div>
           )}
 
-          {/* Belt path — colored text pills, no images, no overflow issues */}
+          {/* Belt path — small images with connecting line */}
           <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-2">
             Belt Path
           </p>
-          <div className="flex flex-wrap items-center gap-1">
-            {BELTS.map((belt, i) => {
-              const reached = i <= currentIndex;
-              const isCurrent = i === currentIndex;
-              return (
-                <span key={belt.name} className="flex items-center gap-1">
-                  {i > 0 && (
-                    <span
-                      style={{
-                        display: 'inline-block',
-                        width: '14px',
-                        height: '3px',
-                        borderRadius: '2px',
-                        backgroundColor: reached ? '#006ADD' : '#e2e8f0',
-                        flexShrink: 0,
-                      }}
-                    />
-                  )}
-                  <span
-                    className="font-ninja text-xs px-2 py-0.5 rounded-full"
-                    style={{
-                      backgroundColor: isCurrent
-                        ? belt.color
-                        : reached
-                        ? belt.color + '55'
-                        : '#f1f5f9',
-                      color: isCurrent
-                        ? belt.textColor
-                        : reached
-                        ? '#374151'
-                        : '#cbd5e1',
-                      fontWeight: isCurrent ? 700 : 400,
-                      border: belt.name === 'White' ? '1px solid #e2e8f0' : 'none',
-                    }}
-                  >
-                    {belt.name}
-                  </span>
-                </span>
-              );
-            })}
+          <div className="overflow-x-auto" style={{ margin: '0 -4px', padding: '4px' }}>
+            <div className="flex items-start" style={{ minWidth: 'max-content' }}>
+              {BELTS.map((belt, i) => {
+                const reached = i <= currentIndex;
+                const isCurrent = i === currentIndex;
+                return (
+                  <div key={belt.name} className="flex items-start">
+                    {i > 0 && (
+                      <div
+                        style={{
+                          width: '14px',
+                          height: '3px',
+                          borderRadius: '2px',
+                          backgroundColor: reached ? '#006ADD' : '#e2e8f0',
+                          flexShrink: 0,
+                          marginTop: '17px',
+                        }}
+                      />
+                    )}
+                    <div className="flex flex-col items-center" style={{ gap: '5px' }}>
+                      <img
+                        src={BELT_IMAGES[belt.name]}
+                        alt={belt.name}
+                        draggable={false}
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          opacity: reached ? 1 : 0.2,
+                          filter: reached ? 'none' : 'grayscale(100%)',
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          fontFamily: 'Nunito, sans-serif',
+                          fontWeight: isCurrent ? 700 : 400,
+                          color: isCurrent ? '#006ADD' : reached ? '#506690' : '#cbd5e1',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {belt.name}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </>
       ) : (

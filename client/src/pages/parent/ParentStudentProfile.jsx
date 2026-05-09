@@ -84,7 +84,6 @@ export default function ParentStudentProfile() {
   }
 
   const programs = student.programs || [];
-  const create = programs.find((p) => p.program === 'CREATE');
 
   return (
     <ParentLayout>
@@ -115,32 +114,6 @@ export default function ParentStudentProfile() {
             Member since {new Date(student.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </p>
         </div>
-
-        {/* CREATE current status */}
-        {create && (
-          <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
-            <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-3">CREATE Status</h2>
-            <div className="flex flex-wrap items-center gap-3">
-              {create.belt_level ? (
-                <BeltBadge belt={create.belt_level} sublevel={create.belt_sublevel} size="md" />
-              ) : (
-                <span className="text-ninja-muted font-ninja text-sm italic">No belt assigned yet</span>
-              )}
-              {create.current_project && (
-                <div className="flex items-center gap-2">
-                  <span className="text-ninja-navy font-ninja font-semibold">{create.current_project}</span>
-                  {create.project_status && (
-                    <span className={`text-xs font-ninja font-semibold px-2 py-0.5 rounded-md ${
-                      create.project_status === 'Completed' ? 'bg-green-100 text-green-700'
-                      : create.project_status === 'Working On' ? 'bg-blue-100 text-blue-700'
-                      : 'bg-gray-100 text-gray-600'
-                    }`}>{create.project_status}</span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Progress visualizations */}
         {programs.length > 0 && (student.session_logs || []).length > 0 && (
