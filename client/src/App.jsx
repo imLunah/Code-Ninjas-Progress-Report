@@ -13,6 +13,7 @@ import StaffPage from './pages/manager/StaffPage';
 import SenseiDashboard from './pages/sensei/SenseiDashboard';
 import LogProgressPage from './pages/sensei/LogProgressPage';
 import LogClubPage from './pages/sensei/LogClubPage';
+import ClubsPage from './pages/ClubsPage';
 import ParentLogin from './pages/parent/ParentLogin';
 import ParentDashboard from './pages/parent/ParentDashboard';
 import ParentStudentProfile from './pages/parent/ParentStudentProfile';
@@ -106,6 +107,16 @@ export default function App() {
             element={
               <ProtectedRoute role="manager">
                 <LogClubPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Parent portal */}
+          <Route
+            path="/clubs"
+            element={
+              <ProtectedRoute role="sensei">
+                <ClubsPage />
               </ProtectedRoute>
             }
           />
