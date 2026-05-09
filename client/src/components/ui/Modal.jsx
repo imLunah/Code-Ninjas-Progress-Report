@@ -20,11 +20,11 @@ export default function Modal({ isOpen, onClose, title, children, width = 'max-w
       onClick={onClose}
     >
       <div
-        className={`bg-white border border-ninja-border rounded-xl shadow-xl w-full ${width} max-h-[90vh] overflow-y-auto`}
+        className={`bg-white border border-ninja-border rounded-xl shadow-xl w-full ${width} max-h-[90vh] flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-ninja-border">
+        {/* Header — never scrolls */}
+        <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-ninja-border">
           <h2 className="text-xl font-bold font-ninja text-ninja-navy">{title}</h2>
           <button
             onClick={onClose}
@@ -33,8 +33,8 @@ export default function Modal({ isOpen, onClose, title, children, width = 'max-w
             &times;
           </button>
         </div>
-        {/* Content */}
-        <div className="p-4">
+        {/* Content — scrolls */}
+        <div className="flex-1 overflow-y-auto p-4">
           {children}
         </div>
       </div>
