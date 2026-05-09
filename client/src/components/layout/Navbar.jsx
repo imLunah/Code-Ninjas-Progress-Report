@@ -25,7 +25,7 @@ export default function Navbar() {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <Link to="/">
-              <img src="/DojoLinkLogoH.svg" alt="Code Ninjas" className="h-20" />
+              <img src="/DojoLinkLogoH.png" alt="Code Ninjas" className="h-20" />
             </Link>
           </div>
 
