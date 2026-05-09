@@ -57,6 +57,7 @@ export default function Navbar() {
                 <>
                   <Link to="/manager/dashboard" className="text-ninja-muted hover:text-ninja-blue font-ninja font-semibold text-sm tracking-wide transition-colors">Dashboard</Link>
                   <Link to="/manager/students" className="text-ninja-muted hover:text-ninja-blue font-ninja font-semibold text-sm tracking-wide transition-colors">Ninjas</Link>
+                  <Link to="/clubs" className="text-ninja-muted hover:text-ninja-blue font-ninja font-semibold text-sm tracking-wide transition-colors">Clubs</Link>
                   <Link to="/manager/staff" className="text-ninja-muted hover:text-ninja-blue font-ninja font-semibold text-sm tracking-wide transition-colors">Senseis</Link>
                 </>
               )}
@@ -64,6 +65,7 @@ export default function Navbar() {
                 <>
                   <Link to="/sensei/dashboard" className="text-ninja-muted hover:text-ninja-blue font-ninja font-semibold text-sm tracking-wide transition-colors">Dashboard</Link>
                   <Link to="/manager/students" className="text-ninja-muted hover:text-ninja-blue font-ninja font-semibold text-sm tracking-wide transition-colors">Ninjas</Link>
+                  <Link to="/clubs" className="text-ninja-muted hover:text-ninja-blue font-ninja font-semibold text-sm tracking-wide transition-colors">Clubs</Link>
                   <Link to="/manager/staff" className="text-ninja-muted hover:text-ninja-blue font-ninja font-semibold text-sm tracking-wide transition-colors">Senseis</Link>
                 </>
               )}
@@ -138,28 +140,18 @@ export default function Navbar() {
             <div className="flex flex-col gap-1">
               {user.role === 'manager' && (
                 <>
-                  <Link to="/manager/dashboard" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">
-                    Dashboard
-                  </Link>
-                  <Link to="/manager/students" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">
-                    Ninjas
-                  </Link>
-                  <Link to="/manager/staff" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">
-                    Senseis
-                  </Link>
+                  <Link to="/manager/dashboard" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">Dashboard</Link>
+                  <Link to="/manager/students" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">Ninjas</Link>
+                  <Link to="/clubs" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">Clubs</Link>
+                  <Link to="/manager/staff" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">Senseis</Link>
                 </>
               )}
               {user.role === 'sensei' && (
                 <>
-                  <Link to="/sensei/dashboard" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">
-                    Dashboard
-                  </Link>
-                  <Link to="/manager/students" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">
-                    Ninjas
-                  </Link>
-                  <Link to="/manager/staff" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">
-                    Senseis
-                  </Link>
+                  <Link to="/sensei/dashboard" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">Dashboard</Link>
+                  <Link to="/manager/students" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">Ninjas</Link>
+                  <Link to="/clubs" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">Clubs</Link>
+                  <Link to="/manager/staff" onClick={closeMenu} className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors">Senseis</Link>
                 </>
               )}
             </div>
