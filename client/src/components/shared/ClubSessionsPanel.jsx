@@ -47,6 +47,7 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onNotesUpdated 
   const startEdit = (session) => {
     setEditingId(session.id);
     setDraftNotes(session.notes || '');
+    setExpanded(session.id);
   };
 
   const cancelEdit = () => {
@@ -81,98 +82,87 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onNotesUpdated 
       {sessions.length === 0 ? (
         <p className="text-ninja-muted font-ninja text-sm text-center py-6 italic">No club sessions logged yet.</p>
       ) : (
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {sessions.map((s) => {
             const isOpen = expanded === s.id;
             const isEditing = editingId === s.id;
 
             return (
-              <div key={s.id} className="border border-ninja-border rounded-xl overflow-hidden">
+              <div key={s.id} className="bg-white border border-ninja-border rounded-xl shadow-sm p-4 flex flex-col gap-3">
+                {/* Header */}
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <ClubBadge name={s.club_name} />
+                    <span className="text-ninja-muted font-ninja text-xs">{s.attendees?.length ?? 0} students</span>
+                  </div>
+                  <p className="text-ninja-muted font-ninja text-xs mt-1">{formatDate(s.session_date)}</p>
+                </div>
+
+                {/* Attendees toggle */}
                 <button
                   type="button"
-                  className="w-full flex items-center gap-3 p-3 text-left hover:bg-ninja-bg transition-colors"
                   onClick={() => setExpanded(isOpen ? null : s.id)}
+                  className="text-ninja-blue font-ninja text-xs font-semibold text-left hover:underline"
                 >
-                  <ClubBadge name={s.club_name} />
-                  <span className="text-ninja-muted font-ninja text-xs flex-shrink-0">{formatDate(s.session_date)}</span>
-                  {!s.notes && !isManager && (
-                    <span className="text-orange-500 font-ninja text-xs font-semibold">Notes needed</span>
-                  )}
-                  <span className="text-ninja-muted font-ninja text-xs ml-auto flex-shrink-0">
-                    {s.attendees?.length ?? 0} students {isOpen ? '▲' : '▼'}
-                  </span>
+                  {isOpen ? 'Hide attendees ▲' : 'View attendees ▼'}
                 </button>
 
-                {isOpen && (
-                  <div className="border-t border-ninja-border px-4 py-3 bg-ninja-bg space-y-3">
-                    {/* Attendees */}
-                    {s.attendees?.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {s.attendees.map((a) => (
-                          <span key={a.id} className="text-xs font-ninja bg-white border border-ninja-border text-ninja-navy px-2 py-0.5 rounded-md">
-                            {a.full_name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                {isOpen && s.attendees?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {s.attendees.map((a) => (
+                      <span key={a.id} className="text-xs font-ninja bg-ninja-bg border border-ninja-border text-ninja-navy px-2 py-0.5 rounded-md">
+                        {a.full_name}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
-                    {/* Notes — inline editing for senseis */}
-                    {isEditing ? (
-                      <div className="space-y-2">
-                        <textarea
-                          value={draftNotes}
-                          onChange={(e) => setDraftNotes(e.target.value)}
-                          placeholder="How did the session go? What did the group work on?"
-                          rows={4}
-                          className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
-                          autoFocus
-                        />
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => saveNotes(s.id)} disabled={saving}>
-                            {saving ? 'Saving...' : 'Save Notes'}
-                          </Button>
-                          <Button size="sm" variant="secondary" onClick={cancelEdit}>Cancel</Button>
-                        </div>
-                      </div>
-                    ) : s.notes ? (
-                      <div>
-                        <p className="text-ninja-navy font-ninja text-sm">{s.notes}</p>
-                        {!isManager && (
-                          <button
-                            onClick={() => startEdit(s)}
-                            className="text-ninja-blue font-ninja text-xs mt-1 hover:underline"
-                          >
-                            Edit notes
-                          </button>
-                        )}
-                      </div>
+                {/* Notes */}
+                {isEditing ? (
+                  <div className="space-y-2 flex-1">
+                    <textarea
+                      value={draftNotes}
+                      onChange={(e) => setDraftNotes(e.target.value)}
+                      placeholder="How did the session go? What did the group work on?"
+                      rows={3}
+                      className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => saveNotes(s.id)} disabled={saving}>
+                        {saving ? 'Saving...' : 'Save'}
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={cancelEdit}>Cancel</Button>
+                    </div>
+                  </div>
+                ) : s.notes ? (
+                  <p className="text-ninja-navy font-ninja text-sm flex-1">{s.notes}</p>
+                ) : null}
+
+                {s.sensei_name && s.notes && (
+                  <p className="text-ninja-muted font-ninja text-xs">Notes by {s.sensei_name}</p>
+                )}
+
+                {/* Sensei action button — Log Progress style */}
+                {!isManager && !isEditing && (
+                  <button
+                    onClick={() => startEdit(s)}
+                    className="w-full text-sm font-ninja font-bold text-ninja-blue border border-ninja-blue rounded-lg py-1.5 hover:bg-ninja-blue hover:text-white transition-colors"
+                  >
+                    {s.notes ? 'Edit Notes' : 'Write Notes'}
+                  </button>
+                )}
+
+                {/* Manager delete */}
+                {isManager && !isReadOnly && (
+                  <div className="flex items-center gap-2 mt-auto">
+                    {confirmId === s.id ? (
+                      <>
+                        <Button variant="danger" size="sm" onClick={() => handleDelete(s.id)}>Confirm</Button>
+                        <Button variant="secondary" size="sm" onClick={() => setConfirmId(null)}>Cancel</Button>
+                      </>
                     ) : (
-                      !isManager && (
-                        <button
-                          onClick={() => startEdit(s)}
-                          className="text-ninja-blue font-ninja text-sm font-semibold hover:underline"
-                        >
-                          + Add session notes
-                        </button>
-                      )
-                    )}
-
-                    {s.sensei_name && (
-                      <p className="text-ninja-muted font-ninja text-xs">Notes by {s.sensei_name}</p>
-                    )}
-
-                    {/* Manager actions */}
-                    {isManager && !isReadOnly && (
-                      <div className="flex items-center gap-2 pt-1">
-                        {confirmId === s.id ? (
-                          <>
-                            <Button variant="danger" size="sm" onClick={() => handleDelete(s.id)}>Confirm Delete</Button>
-                            <Button variant="secondary" size="sm" onClick={() => setConfirmId(null)}>Cancel</Button>
-                          </>
-                        ) : (
-                          <Button variant="danger" size="sm" onClick={() => setConfirmId(s.id)}>Delete Session</Button>
-                        )}
-                      </div>
+                      <Button variant="danger" size="sm" onClick={() => setConfirmId(s.id)}>Delete</Button>
                     )}
                   </div>
                 )}
