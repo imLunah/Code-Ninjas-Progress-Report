@@ -61,7 +61,7 @@ export default function ManagerDashboard() {
           </div>
           {!isReadOnly && (
             <Button onClick={() => setShowAddModal(true)} size="md">
-              + Add Ninja
+              + Check In Ninja
             </Button>
           )}
         </div>
