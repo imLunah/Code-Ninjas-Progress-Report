@@ -19,13 +19,24 @@ export default function LogProgressPage() {
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedProgram, setSelectedProgram] = useState(searchParams.get('program') || '');
+  const [selectedProgram, setSelectedProgram] = useState('');
+
+  // ?program=X pre-selects a single program; ?programs=X,Y lists programs available today
+  const singleProgramParam = searchParams.get('program');
+  const programsParam = searchParams.get('programs');
+  const todayPrograms = programsParam ? programsParam.split(',') : null;
 
   useEffect(() => {
     api.get(`/students/${id}`)
       .then((data) => {
         setStudent(data);
-        if (!selectedProgram && data.programs?.length > 0) {
+        if (singleProgramParam) {
+          setSelectedProgram(singleProgramParam);
+        } else if (todayPrograms) {
+          // Only auto-select if exactly one program is on today's board
+          const available = (data.programs || []).filter((p) => todayPrograms.includes(p.program));
+          if (available.length === 1) setSelectedProgram(available[0].program);
+        } else if (data.programs?.length === 1) {
           setSelectedProgram(data.programs[0].program);
         }
       })
@@ -56,7 +67,12 @@ export default function LogProgressPage() {
     );
   }
 
-  const enrollment = student.programs?.find((p) => p.program === selectedProgram);
+  // Show only today's programs if we came from the board; otherwise all enrolled
+  const availablePrograms = todayPrograms
+    ? (student.programs || []).filter((p) => todayPrograms.includes(p.program))
+    : (student.programs || []);
+
+  const enrollment = availablePrograms.find((p) => p.program === selectedProgram);
   const programLogs = (student.progress_logs || []).filter((l) => l.program === selectedProgram).slice(0, 3);
 
   return (
@@ -74,7 +90,7 @@ export default function LogProgressPage() {
             <div className="flex-1">
               <h1 className="text-2xl font-bold font-ninja text-ninja-navy">{student.full_name}</h1>
               <div className="flex flex-wrap items-center gap-2 mt-2">
-                {student.programs?.map((p) => (
+                {availablePrograms.map((p) => (
                   <ProgramBadge key={p.program} program={p.program} />
                 ))}
                 {enrollment?.program === 'CREATE' && enrollment.belt_level && (
@@ -89,13 +105,13 @@ export default function LogProgressPage() {
             </div>
           </div>
 
-          {student.programs?.length > 1 && (
+          {availablePrograms.length > 1 && (
             <div className="mt-4 pt-4 border-t border-ninja-border">
               <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-2">
-                Logging for Program
+                Which program are you logging?
               </label>
               <div className="flex flex-wrap gap-2">
-                {student.programs.map((p) => (
+                {availablePrograms.map((p) => (
                   <button
                     key={p.program}
                     onClick={() => setSelectedProgram(p.program)}

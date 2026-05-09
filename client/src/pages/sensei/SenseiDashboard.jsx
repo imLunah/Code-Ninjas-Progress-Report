@@ -21,12 +21,21 @@ export default function SenseiDashboard() {
       .finally(() => setLoading(false));
   }, [todayStr, user?.activeLocation?.id]);
 
-  const completedCount = assignments.filter((a) => a.completed).length;
+  // Group assignments by student so each student shows one card
+  const grouped = assignments.reduce((acc, a) => {
+    if (!acc[a.student_id]) {
+      acc[a.student_id] = { ...a, assignments: [] };
+    }
+    acc[a.student_id].assignments.push(a);
+    return acc;
+  }, {});
+  const groupedList = Object.values(grouped);
+
+  const completedCount = groupedList.filter((g) => g.assignments.every((a) => a.completed)).length;
 
   return (
     <Layout>
       <div className="space-y-6">
-        {/* Header */}
         <div>
           <h1 className="text-2xl sm:text-4xl font-bold font-ninja text-ninja-navy tracking-wide">
             Today's <span className="text-ninja-blue">Ninjas</span>
@@ -39,11 +48,10 @@ export default function SenseiDashboard() {
           )}
         </div>
 
-        {/* Stats */}
-        {assignments.length > 0 && (
+        {groupedList.length > 0 && (
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
-              <p className="text-3xl font-bold font-ninja text-ninja-blue">{assignments.length}</p>
+              <p className="text-3xl font-bold font-ninja text-ninja-blue">{groupedList.length}</p>
               <p className="text-ninja-muted font-ninja text-sm mt-1">Total</p>
             </div>
             <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
@@ -51,22 +59,16 @@ export default function SenseiDashboard() {
               <p className="text-ninja-muted font-ninja text-sm mt-1">Done</p>
             </div>
             <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
-              <p className="text-3xl font-bold font-ninja text-ninja-muted">{assignments.length - completedCount}</p>
+              <p className="text-3xl font-bold font-ninja text-ninja-muted">{groupedList.length - completedCount}</p>
               <p className="text-ninja-muted font-ninja text-sm mt-1">Remaining</p>
             </div>
           </div>
         )}
 
-        {/* Student Cards */}
-        {error && (
-          <p className="text-ninja-red font-ninja text-center py-8">{error}</p>
-        )}
+        {error && <p className="text-ninja-red font-ninja text-center py-8">{error}</p>}
+        {loading && <p className="text-ninja-muted font-ninja text-center py-8">Loading your ninjas...</p>}
 
-        {loading && (
-          <p className="text-ninja-muted font-ninja text-center py-8">Loading your ninjas...</p>
-        )}
-
-        {!loading && !error && assignments.length === 0 && (
+        {!loading && !error && groupedList.length === 0 && (
           <div className="bg-white border border-ninja-border rounded-xl p-12 text-center shadow-sm">
             <img src="/CodeNinjasCelebrate.webp" alt="Code Ninjas" className="h-24 mx-auto mb-4" />
             <h3 className="text-2xl font-bold font-ninja text-ninja-navy mb-2">No Ninjas Yet</h3>
@@ -79,16 +81,21 @@ export default function SenseiDashboard() {
           </div>
         )}
 
-        {!loading && !error && assignments.length > 0 && (
+        {!loading && !error && groupedList.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {assignments.map((a) => (
-              <StudentCard
-                key={a.id}
-                student={a}
-                onClick={() => navigate(`/manager/students/${a.student_id}`)}
-                onLogProgress={() => navigate(`/sensei/student/${a.student_id}?program=${encodeURIComponent(a.program)}`)}
-              />
-            ))}
+            {groupedList.map((group) => {
+              const programsStr = group.assignments.map((a) => a.program).join(',');
+              return (
+                <StudentCard
+                  key={group.student_id}
+                  student={group}
+                  onClick={() => navigate(`/manager/students/${group.student_id}`)}
+                  onLogProgress={() =>
+                    navigate(`/sensei/student/${group.student_id}?programs=${encodeURIComponent(programsStr)}`)
+                  }
+                />
+              );
+            })}
           </div>
         )}
       </div>
