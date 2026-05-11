@@ -44,9 +44,6 @@ function ClubCard({ club, onClick, onDelete, onEdit, canManage }) {
           <span className={`inline-block text-sm font-ninja font-bold px-3 py-1 rounded-full border ${c.bg} ${c.text} ${c.border}`}>
             {club.name}
           </span>
-          {club.location_id && (
-            <span className="ml-2 text-ninja-muted font-ninja text-xs">Custom</span>
-          )}
         </div>
         <p className="text-ninja-muted font-ninja text-sm leading-relaxed">
           {club.description || 'No description yet.'}
