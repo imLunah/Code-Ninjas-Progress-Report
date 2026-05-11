@@ -123,7 +123,7 @@ router.get('/:id', requireAuth, async (req, res) => {
       [id]
     );
     const pending_checkin_date = assignmentRows[0]
-      ? String(assignmentRows[0].session_date).split('T')[0]
+      ? new Date(assignmentRows[0].session_date).toISOString().split('T')[0]
       : null;
 
     res.json({ ...student, progress_logs: progressLogs, pending_checkin_date });
