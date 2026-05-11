@@ -172,6 +172,7 @@ export default function LogProgressPage() {
               program={selectedProgram}
               enrollment={enrollment}
               onLogged={handleLogged}
+              sessionDate={student.pending_checkin_date || undefined}
             />
           </div>
         ) : (
