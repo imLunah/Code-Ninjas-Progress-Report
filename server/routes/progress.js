@@ -33,7 +33,7 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     [student_id, program]
   );
   const date = assignmentRows[0]
-    ? String(assignmentRows[0].session_date).split('T')[0]
+    ? new Date(assignmentRows[0].session_date).toISOString().split('T')[0]
     : (session_date || new Date().toISOString().split('T')[0]);
   const senseiId = req.session.userId;
 
