@@ -165,20 +165,9 @@ export default function MessagesPage() {
                   </p>
                 </div>
 
-                {/* Actions — always visible */}
-                <div
-                  className="flex-shrink-0"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {thread.is_unread ? (
-                    <button
-                      onClick={(e) => handleMarkRead(e, thread.student_id)}
-                      disabled={toggling === thread.student_id}
-                      className="text-xs font-ninja font-semibold text-ninja-muted hover:text-ninja-blue border border-ninja-border hover:border-ninja-blue bg-white px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
-                    >
-                      Mark read
-                    </button>
-                  ) : (
+                {/* Mark unread — only shown for read threads */}
+                {!thread.is_unread && (
+                  <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={(e) => handleMarkUnread(e, thread.student_id)}
                       disabled={toggling === thread.student_id}
@@ -186,8 +175,8 @@ export default function MessagesPage() {
                     >
                       Mark unread
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
