@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Layout from '../../components/layout/Layout';
 import BeltBadge from '../../components/ui/BeltBadge';
@@ -110,6 +110,7 @@ function AddProgramForm({ studentId, existingPrograms, onAdded, onCancel }) {
 
 export default function StudentProfile() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, isReadOnly } = useAuth();
   const [student, setStudent] = useState(null);
@@ -125,6 +126,9 @@ export default function StudentProfile() {
   const [messages, setMessages] = useState([]);
   const [msgBody, setMsgBody] = useState('');
   const [sending, setSending] = useState(false);
+  const [threadUnread, setThreadUnread] = useState(null); // null = unknown
+  const [togglingRead, setTogglingRead] = useState(false);
+  const msgSectionRef = useRef(null);
   const msgBottomRef = useRef(null);
 
   const isManager = user?.role === 'manager';
@@ -135,23 +139,31 @@ export default function StudentProfile() {
       .catch(() => setError('Failed to load ninja'))
       .finally(() => setLoading(false));
 
-    api.get(`/students/${id}/messages`)
-      .then(setMessages)
-      .catch(() => {});
+    api.get(`/students/${id}/messages`).then(setMessages).catch(() => {});
+
+    // Load thread read status for the Mark read/unread button
+    api.get('/messages/threads').then((threads) => {
+      const match = threads.find((t) => t.student_id === Number(id));
+      if (match) setThreadUnread(match.is_unread);
+    }).catch(() => {});
   }, [id, user?.activeLocation?.id]);
 
-  // Poll messages every 30s so new parent replies show without a page refresh
-  // Also mark this student's messages as seen so the navbar badge clears
+  // Poll messages every 30s
   useEffect(() => {
-    localStorage.setItem(`msgs_seen_${id}`, Date.now().toString());
     const interval = setInterval(() => {
-      api.get(`/students/${id}/messages`).then((msgs) => {
-        setMessages(msgs);
-        localStorage.setItem(`msgs_seen_${id}`, Date.now().toString());
-      }).catch(() => {});
+      api.get(`/students/${id}/messages`).then(setMessages).catch(() => {});
     }, 30000);
     return () => clearInterval(interval);
   }, [id]);
+
+  // Scroll to messages section if ?scrollTo=messages
+  useEffect(() => {
+    if (searchParams.get('scrollTo') === 'messages' && msgSectionRef.current) {
+      setTimeout(() => {
+        msgSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
+    }
+  }, [searchParams, loading]);
 
   useEffect(() => {
     msgBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -165,11 +177,32 @@ export default function StudentProfile() {
       const msg = await api.post(`/students/${id}/messages`, { body: msgBody.trim() });
       setMessages((prev) => [...prev, msg]);
       setMsgBody('');
+      // Replying marks the thread as read
+      await api.post(`/messages/threads/${id}/read`).catch(() => {});
+      setThreadUnread(false);
     } catch {
       // silently fail
     } finally {
       setSending(false);
     }
+  };
+
+  const handleMarkRead = async () => {
+    setTogglingRead(true);
+    try {
+      await api.post(`/messages/threads/${id}/read`);
+      setThreadUnread(false);
+    } catch {}
+    setTogglingRead(false);
+  };
+
+  const handleMarkUnread = async () => {
+    setTogglingRead(true);
+    try {
+      await api.post(`/messages/threads/${id}/unread`);
+      setThreadUnread(true);
+    } catch {}
+    setTogglingRead(false);
   };
 
   const handleSaved = (updated) => {
@@ -444,13 +477,34 @@ export default function StudentProfile() {
         />
 
         {/* Parent Messages */}
-        <div className="bg-white border border-ninja-border rounded-xl shadow-sm flex flex-col">
-          <div className="px-6 py-4 border-b border-ninja-border">
-            <h2 className="text-xl font-bold font-ninja text-ninja-navy">
-              Parent <span className="text-ninja-blue">Messages</span>
-            </h2>
-            {student.parent_name && (
-              <p className="text-ninja-muted font-ninja text-sm mt-0.5">Conversation with {student.parent_name}</p>
+        <div ref={msgSectionRef} className="bg-white border border-ninja-border rounded-xl shadow-sm flex flex-col">
+          <div className="px-6 py-4 border-b border-ninja-border flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold font-ninja text-ninja-navy">
+                Parent <span className="text-ninja-blue">Messages</span>
+              </h2>
+              {student.parent_name && (
+                <p className="text-ninja-muted font-ninja text-sm mt-0.5">Conversation with {student.parent_name}</p>
+              )}
+            </div>
+            {messages.some((m) => m.sender_type === 'parent') && (
+              threadUnread === true ? (
+                <button
+                  onClick={handleMarkRead}
+                  disabled={togglingRead}
+                  className="text-xs font-ninja font-semibold text-ninja-muted hover:text-ninja-blue border border-ninja-border hover:border-ninja-blue px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
+                >
+                  Mark read
+                </button>
+              ) : (
+                <button
+                  onClick={handleMarkUnread}
+                  disabled={togglingRead}
+                  className="text-xs font-ninja font-semibold text-ninja-muted hover:text-ninja-blue border border-ninja-border hover:border-ninja-blue px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
+                >
+                  Mark unread
+                </button>
+              )
             )}
           </div>
 
