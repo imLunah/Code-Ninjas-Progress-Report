@@ -115,7 +115,18 @@ router.get('/:id', requireAuth, async (req, res) => {
       delete student.parent_phone;
     }
 
-    res.json({ ...student, progress_logs: progressLogs });
+    // Most recent pending check-in date — used by LogEntryForm to display the correct session date
+    const { rows: assignmentRows } = await pool.query(
+      `SELECT session_date FROM daily_assignments
+       WHERE student_id = $1 AND completed = false
+       ORDER BY session_date DESC LIMIT 1`,
+      [id]
+    );
+    const pending_checkin_date = assignmentRows[0]
+      ? String(assignmentRows[0].session_date).split('T')[0]
+      : null;
+
+    res.json({ ...student, progress_logs: progressLogs, pending_checkin_date });
   } catch (err) {
     console.error('Error fetching student:', err);
     res.status(500).json({ error: 'Failed to fetch student' });

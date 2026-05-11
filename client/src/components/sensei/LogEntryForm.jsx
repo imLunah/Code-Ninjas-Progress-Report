@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
-import { today } from '../../utils/dateUtils';
+import { today, formatDate } from '../../utils/dateUtils';
 import Button from '../ui/Button';
 import BeltProgressFields from './BeltProgressFields';
 import ProjectFields from './ProjectFields';
 import { SUB_PROGRAMS, getCurriculum } from '../../utils/progressData';
 
-export default function LogEntryForm({ student, program, enrollment, onLogged }) {
+export default function LogEntryForm({ student, program, enrollment, onLogged, sessionDate: sessionDateProp }) {
   const [notes, setNotes] = useState('');
   const [beltLevel, setBeltLevel] = useState(enrollment?.belt_level || '');
   const [beltSublevel, setBeltSublevel] = useState(enrollment?.belt_sublevel || '');
@@ -23,7 +23,7 @@ export default function LogEntryForm({ student, program, enrollment, onLogged })
   const [success, setSuccess] = useState(false);
 
   const isCreate = program === 'CREATE';
-  const sessionDate = today();
+  const sessionDate = sessionDateProp || today();
   const subProgramOptions = SUB_PROGRAMS[program] || null;
 
   // Reset sub-program/module/lesson when program changes
@@ -118,12 +118,19 @@ export default function LogEntryForm({ student, program, enrollment, onLogged })
         <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
           Session Date
         </label>
-        <input
-          type="text"
-          value={sessionDate}
-          readOnly
-          className="w-full bg-ninja-bg border border-ninja-border text-ninja-muted rounded-lg px-4 py-2 font-ninja cursor-not-allowed"
-        />
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={formatDate(sessionDate)}
+            readOnly
+            className="flex-1 bg-ninja-bg border border-ninja-border text-ninja-muted rounded-lg px-4 py-2 font-ninja cursor-not-allowed"
+          />
+          {sessionDate !== today() && (
+            <span className="text-xs font-ninja text-ninja-blue bg-blue-50 border border-blue-200 px-2 py-1 rounded-lg whitespace-nowrap">
+              Check-in date
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Sub-program selector for Robotics Academy and JR */}

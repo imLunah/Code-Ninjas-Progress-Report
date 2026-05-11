@@ -24,7 +24,17 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     return res.status(400).json({ error: 'student_id, program, and notes are required' });
   }
 
-  const date = session_date || new Date().toISOString().split('T')[0];
+  // Use the pending daily_assignment's session_date so the log matches the actual
+  // check-in date even if the sensei logs on a later day.
+  const { rows: assignmentRows } = await pool.query(
+    `SELECT session_date FROM daily_assignments
+     WHERE student_id = $1 AND program = $2 AND completed = false
+     ORDER BY session_date DESC LIMIT 1`,
+    [student_id, program]
+  );
+  const date = assignmentRows[0]
+    ? String(assignmentRows[0].session_date).split('T')[0]
+    : (session_date || new Date().toISOString().split('T')[0]);
   const senseiId = req.session.userId;
 
   try {
