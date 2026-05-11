@@ -10,7 +10,7 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
   const someCompleted = !allCompleted && assignments.some((a) => a.completed);
   const todayStr = today();
   const isOverdue = !allCompleted && assignments.some(
-    (a) => !a.completed && a.session_date && String(a.session_date).split('T')[0] < todayStr
+    (a) => !a.completed && a.session_date && new Date(a.session_date).toISOString().split('T')[0] < todayStr
   );
 
   // For CREATE badge details, pull from the primary assignment or the student object
