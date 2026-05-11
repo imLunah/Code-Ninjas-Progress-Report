@@ -86,11 +86,14 @@ router.get('/messages/recent-parent', requireSensei, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
   const pool = req.app.get('db');
   const { id } = req.params;
+  const isManager = req.session.role === 'manager';
 
   try {
+    const params = isManager ? [id] : [id, req.session.activeLocationId];
+    const locationClause = isManager ? '' : 'AND s.location_id = $2';
     const { rows } = await pool.query(
-      `SELECT s.*, ${PROGRAMS_SUBQUERY} FROM students s WHERE s.id = $1 AND s.active = true AND s.location_id = $2`,
-      [id, req.session.activeLocationId]
+      `SELECT s.*, ${PROGRAMS_SUBQUERY} FROM students s WHERE s.id = $1 AND s.active = true ${locationClause}`,
+      params
     );
     const student = rows[0];
     if (!student) return res.status(404).json({ error: 'Student not found' });
