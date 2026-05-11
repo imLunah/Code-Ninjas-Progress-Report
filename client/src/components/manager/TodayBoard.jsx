@@ -36,16 +36,22 @@ export default function TodayBoard({ assignments, onRemove }) {
   const todayStr = today();
 
   const renderRow = (a) => {
-    const isOverdue = !a.completed && a.session_date && String(a.session_date).split('T')[0] < todayStr;
+    const isOverdue = !a.completed && a.session_date && new Date(a.session_date).toISOString().split('T')[0] < todayStr;
     return (
     <div
       key={a.id}
       className={`flex flex-wrap items-center gap-3 p-3 rounded-xl border ${
-        a.completed ? 'bg-green-50 border-green-300' : isOverdue ? 'bg-orange-50 border-orange-300' : 'bg-ninja-bg border-ninja-border'
+        a.completed
+          ? 'bg-green-50 border-green-300'
+          : isOverdue
+          ? 'bg-red-50 border-red-300'
+          : 'bg-yellow-50 border-yellow-300'
       }`}
     >
       {/* Completion indicator */}
-      <div className={`w-3 h-3 rounded-full flex-shrink-0 ${a.completed ? 'bg-green-500' : 'bg-ninja-border'}`} />
+      <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
+        a.completed ? 'bg-green-500' : isOverdue ? 'bg-red-400' : 'bg-yellow-400'
+      }`} />
 
       {/* Name */}
       <div className="flex-1 min-w-[150px]">
@@ -74,9 +80,9 @@ export default function TodayBoard({ assignments, onRemove }) {
       {a.completed ? (
         <span className="text-green-600 font-ninja font-semibold text-sm">✓ Done</span>
       ) : isOverdue ? (
-        <span className="text-orange-600 font-ninja font-semibold text-xs px-2 py-0.5 bg-orange-100 border border-orange-300 rounded-md">Overdue</span>
+        <span className="text-red-600 font-ninja font-semibold text-xs px-2 py-0.5 bg-red-100 border border-red-300 rounded-md">Overdue</span>
       ) : (
-        <span className="text-ninja-muted font-ninja text-sm">Pending</span>
+        <span className="text-yellow-700 font-ninja font-semibold text-xs px-2 py-0.5 bg-yellow-100 border border-yellow-300 rounded-md">Not logged</span>
       )}
 
       {/* Remove */}
