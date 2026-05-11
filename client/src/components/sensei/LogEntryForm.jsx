@@ -12,7 +12,6 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
   const [beltSublevel, setBeltSublevel] = useState(enrollment?.belt_sublevel || '');
   const [project, setProject] = useState(enrollment?.current_project || '');
   const [status, setStatus] = useState(enrollment?.project_status || '');
-  const [updateStudent, setUpdateStudent] = useState(false);
 
   const [subProgram, setSubProgram] = useState('');
   const [moduleName, setModuleName] = useState('');
@@ -69,7 +68,7 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
         belt_sublevel_at: isCreate && beltSublevel ? parseInt(beltSublevel) : null,
         project_at: isCreate ? (project || null) : null,
         status_at: isCreate ? (status || null) : null,
-        update_student: updateStudent,
+        update_student: true,
         sub_program: subProgram || null,
         module_name: moduleName || null,
         lesson_name: lessonName || null,
@@ -83,7 +82,6 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
       setLessonName('');
       setProject(enrollment?.current_project || '');
       setStatus(enrollment?.project_status || '');
-      setUpdateStudent(false);
       onLogged && onLogged(log);
     } catch (err) {
       setError(err.message || 'Failed to save log');
@@ -266,18 +264,6 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
             status={status}
             setStatus={setStatus}
           />
-
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={updateStudent}
-              onChange={(e) => setUpdateStudent(e.target.checked)}
-              className="w-4 h-4 accent-ninja-blue"
-            />
-            <span className="text-ninja-navy font-ninja text-sm">
-              Update ninja profile with these values
-            </span>
-          </label>
         </div>
       )}
 
