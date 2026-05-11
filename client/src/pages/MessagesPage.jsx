@@ -60,6 +60,14 @@ export default function MessagesPage() {
   };
 
   const handleOpenConversation = (studentId) => {
+    // Mark as read immediately when opening a conversation
+    const thread = threads.find((t) => t.student_id === studentId);
+    if (thread?.is_unread) {
+      api.post(`/messages/threads/${studentId}/read`).catch(() => {});
+      setThreads((prev) => prev.map((t) =>
+        t.student_id === studentId ? { ...t, is_unread: false } : t
+      ));
+    }
     navigate(`/manager/students/${studentId}?scrollTo=messages`);
   };
 
@@ -157,9 +165,9 @@ export default function MessagesPage() {
                   </p>
                 </div>
 
-                {/* Actions */}
+                {/* Actions — always visible */}
                 <div
-                  className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="flex-shrink-0"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {thread.is_unread ? (
