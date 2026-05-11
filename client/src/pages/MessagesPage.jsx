@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -17,6 +18,8 @@ function timeAgo(dateStr) {
 
 export default function MessagesPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isManager = user?.role === 'manager';
   const [threads, setThreads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // 'all' | 'unread'
@@ -154,8 +157,13 @@ export default function MessagesPage() {
                       {timeAgo(thread.latest_parent_at)}
                     </span>
                   </div>
-                  {thread.parent_name && (
-                    <p className="text-ninja-muted font-ninja text-xs mb-1">{thread.parent_name}</p>
+                  {(thread.parent_name || (isManager && thread.location_name)) && (
+                    <p className="text-ninja-muted font-ninja text-xs mb-1">
+                      {thread.parent_name}
+                      {isManager && thread.location_name && (
+                        <span className="ml-1.5 text-ninja-blue font-semibold">· {thread.location_name}</span>
+                      )}
+                    </p>
                   )}
                   <p className={`font-ninja text-sm truncate ${thread.is_unread ? 'text-ninja-navy' : 'text-ninja-muted'}`}>
                     {thread.latest_sender_type === 'staff' && (
