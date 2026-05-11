@@ -100,9 +100,14 @@ export default function TodayBoard({ assignments, onRemove }) {
   );
   };
 
+  const sorted = [...assignments].sort((a, b) => {
+    if (a.completed === b.completed) return 0;
+    return a.completed ? 1 : -1;
+  });
+
   return (
     <div className="space-y-2">
-      {assignments.map(renderRow)}
+      {sorted.map(renderRow)}
     </div>
   );
 }

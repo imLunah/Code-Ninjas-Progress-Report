@@ -140,6 +140,19 @@ export default function StudentProfile() {
       .catch(() => {});
   }, [id, user?.activeLocation?.id]);
 
+  // Poll messages every 30s so new parent replies show without a page refresh
+  // Also mark this student's messages as seen so the navbar badge clears
+  useEffect(() => {
+    localStorage.setItem(`msgs_seen_${id}`, Date.now().toString());
+    const interval = setInterval(() => {
+      api.get(`/students/${id}/messages`).then((msgs) => {
+        setMessages(msgs);
+        localStorage.setItem(`msgs_seen_${id}`, Date.now().toString());
+      }).catch(() => {});
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [id]);
+
   useEffect(() => {
     msgBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
