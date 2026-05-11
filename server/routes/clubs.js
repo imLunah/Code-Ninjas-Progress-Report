@@ -74,6 +74,34 @@ router.post('/definitions', requireManager, requireOwnLocation, async (req, res)
   }
 });
 
+// PATCH /api/clubs/definitions/:id — manager edits a custom club
+router.patch('/definitions/:id', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { name, description, color_key } = req.body;
+  if (!name?.trim()) return res.status(400).json({ error: 'Club name is required' });
+  try {
+    const { rows: existing } = await pool.query(
+      'SELECT id, location_id FROM club_definitions WHERE id = $1',
+      [req.params.id]
+    );
+    if (!existing[0]) return res.status(404).json({ error: 'Club not found' });
+    if (existing[0].location_id === null) return res.status(403).json({ error: 'Cannot edit a built-in club' });
+    if (existing[0].location_id !== req.session.activeLocationId) return res.status(403).json({ error: 'Forbidden' });
+
+    const slug = toSlug(name.trim());
+    const { rows } = await pool.query(
+      `UPDATE club_definitions SET name = $1, slug = $2, description = $3, color_key = $4
+       WHERE id = $5 RETURNING *`,
+      [name.trim(), slug, description?.trim() || null, color_key || 'blue', req.params.id]
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'A club with that name already exists' });
+    console.error('Club definition update error:', err);
+    res.status(500).json({ error: 'Failed to update club' });
+  }
+});
+
 // DELETE /api/clubs/definitions/:id — manager deletes a custom club
 router.delete('/definitions/:id', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
