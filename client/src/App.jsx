@@ -14,7 +14,6 @@ import SenseiDashboard from './pages/sensei/SenseiDashboard';
 import LogProgressPage from './pages/sensei/LogProgressPage';
 import LogClubPage from './pages/sensei/LogClubPage';
 import ClubsPage from './pages/ClubsPage';
-import MessagesPage from './pages/MessagesPage';
 import ClubProfilePage from './pages/ClubProfilePage';
 import ClubSessionPage from './pages/ClubSessionPage';
 import ParentLogin from './pages/parent/ParentLogin';
@@ -136,16 +135,6 @@ export default function App() {
             element={
               <ProtectedRoute role="sensei">
                 <ClubSessionPage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Messages inbox */}
-          <Route
-            path="/messages"
-            element={
-              <ProtectedRoute role="sensei">
-                <MessagesPage />
               </ProtectedRoute>
             }
           />

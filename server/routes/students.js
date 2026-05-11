@@ -60,28 +60,6 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/students/messages/recent-parent — parent messages from last 7 days for this location
-router.get('/messages/recent-parent', requireSensei, async (req, res) => {
-  const pool = req.app.get('db');
-  try {
-    const { rows } = await pool.query(
-      `SELECT m.student_id, s.full_name AS student_name, MAX(m.created_at) AS latest_at
-       FROM messages m
-       JOIN students s ON m.student_id = s.id
-       WHERE m.sender_type = 'parent'
-         AND s.location_id = $1
-         AND m.created_at > NOW() - INTERVAL '7 days'
-       GROUP BY m.student_id, s.full_name
-       ORDER BY latest_at DESC`,
-      [req.session.activeLocationId]
-    );
-    res.json(rows);
-  } catch (err) {
-    console.error('Recent parent messages error:', err);
-    res.status(500).json({ error: 'Failed to load recent messages' });
-  }
-});
-
 // GET /api/students/:id
 router.get('/:id', requireAuth, async (req, res) => {
   const pool = req.app.get('db');
@@ -316,41 +294,6 @@ router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
   } catch (err) {
     console.error('Error deleting student:', err);
     res.status(500).json({ error: 'Failed to delete student' });
-  }
-});
-
-// GET /api/students/:id/messages — staff view parent thread
-router.get('/:id/messages', requireSensei, async (req, res) => {
-  const pool = req.app.get('db');
-  const { id } = req.params;
-  try {
-    const { rows } = await pool.query(
-      'SELECT * FROM messages WHERE student_id = $1 ORDER BY created_at ASC',
-      [id]
-    );
-    res.json(rows);
-  } catch (err) {
-    console.error('Staff messages error:', err);
-    res.status(500).json({ error: 'Failed to load messages' });
-  }
-});
-
-// POST /api/students/:id/messages — staff reply
-router.post('/:id/messages', requireSensei, async (req, res) => {
-  const pool = req.app.get('db');
-  const { id } = req.params;
-  const { body } = req.body;
-  if (!body?.trim()) return res.status(400).json({ error: 'Message cannot be empty' });
-
-  try {
-    const { rows } = await pool.query(
-      'INSERT INTO messages (student_id, sender_type, sender_id, sender_name, body) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [id, 'staff', req.session.userId, req.session.displayName, body.trim()]
-    );
-    res.status(201).json(rows[0]);
-  } catch (err) {
-    console.error('Staff send message error:', err);
-    res.status(500).json({ error: 'Failed to send message' });
   }
 });
 
