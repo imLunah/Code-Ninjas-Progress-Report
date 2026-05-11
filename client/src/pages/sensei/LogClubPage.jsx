@@ -5,10 +5,12 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { ClubBadge } from '../../components/shared/ClubSessionsPanel';
 import { api } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 import { today, formatDate } from '../../utils/dateUtils';
 
 export default function LogClubPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
 
   const [students, setStudents] = useState([]);
@@ -62,7 +64,7 @@ export default function LogClubPage() {
         notes: notes.trim() || undefined,
         student_ids: [...selectedIds],
       });
-      navigate('/clubs');
+      navigate(user?.role === 'manager' ? '/manager/dashboard' : '/sensei/dashboard');
     } catch {
       setError('Failed to save. Please try again.');
     } finally {
@@ -74,10 +76,10 @@ export default function LogClubPage() {
     <Layout>
       <div className="space-y-6 max-w-2xl mx-auto">
         <button
-          onClick={() => navigate('/clubs')}
+          onClick={() => navigate(-1)}
           className="text-ninja-muted hover:text-ninja-blue font-ninja text-sm flex items-center gap-1 transition-colors"
         >
-          ← Back to Clubs
+          ← Back
         </button>
 
         {/* Club selector card */}

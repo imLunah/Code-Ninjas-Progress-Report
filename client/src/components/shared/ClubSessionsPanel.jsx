@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { formatDate, today } from '../../utils/dateUtils';
 import { api } from '../../api/client';
 import Button from '../ui/Button';
-import { CLUB_NAME_TO_SLUG, CLUB_COLORS } from '../../utils/clubUtils';
+import { CLUB_COLORS, toSlug } from '../../utils/clubUtils';
 
 function ClubBadge({ name }) {
   const c = CLUB_COLORS[name] || { bg: 'bg-ninja-bg', text: 'text-ninja-navy', border: 'border-ninja-border' };
@@ -85,8 +85,8 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpda
     <div className="bg-white border border-ninja-border rounded-xl p-6 shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold font-ninja text-ninja-navy tracking-wide">Clubs</h2>
-        {isManager && !isReadOnly && (
-          <Button size="sm" onClick={() => navigate('/manager/clubs/log')}>
+        {!isReadOnly && (
+          <Button size="sm" onClick={() => navigate('/clubs/log')}>
             + Log Club Session
           </Button>
         )}
@@ -207,7 +207,7 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpda
 
                 {/* Log Progress — opens session detail with notes + comment thread */}
                 <button
-                  onClick={() => navigate(`/clubs/${CLUB_NAME_TO_SLUG[s.club_name]}/sessions/${s.id}`)}
+                  onClick={() => navigate(`/clubs/${toSlug(s.club_name)}/sessions/${s.id}`)}
                   className="w-full text-sm font-ninja font-bold text-ninja-blue border border-ninja-blue rounded-lg py-1.5 hover:bg-ninja-blue hover:text-white transition-colors"
                 >
                   Log Progress
