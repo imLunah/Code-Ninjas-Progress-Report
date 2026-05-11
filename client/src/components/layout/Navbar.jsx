@@ -1,34 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { api } from '../../api/client';
-
-function useUnreadCount(user) {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const check = async () => {
-      try {
-        const threads = await api.get('/messages/threads');
-        setCount(threads.filter((t) => t.is_unread).length);
-      } catch {}
-    };
-
-    check();
-    const interval = setInterval(check, 60000);
-    return () => clearInterval(interval);
-  }, [user]);
-
-  return count;
-}
 
 export default function Navbar() {
   const { user, logout, switchLocation } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-  const unreadCount = useUnreadCount(user);
 
   const handleLogout = async () => {
     try {
@@ -104,25 +81,9 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* Desktop: Bell + user + logout */}
+          {/* Desktop: user + logout */}
           {user && (
             <div className="hidden lg:flex items-center gap-4">
-              {/* Parent message bell */}
-              <Link
-                to="/messages"
-                className="relative p-2 text-ninja-muted hover:text-ninja-blue transition-colors"
-                aria-label="Parent messages"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3v-3z" />
-                </svg>
-                {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 bg-ninja-red text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </Link>
-
               <div className="text-right">
                 <p className="text-ninja-navy text-sm font-ninja font-semibold">{user.displayName}</p>
                 <p className="text-ninja-muted text-xs font-ninja capitalize">{user.role}</p>
@@ -140,7 +101,7 @@ export default function Navbar() {
           {user && (
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="lg:hidden p-2 text-ninja-navy rounded-lg hover:bg-ninja-bg transition-colors relative"
+              className="lg:hidden p-2 text-ninja-navy rounded-lg hover:bg-ninja-bg transition-colors"
               aria-label="Toggle menu"
             >
               {menuOpen ? (
@@ -148,16 +109,9 @@ export default function Navbar() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               ) : (
-                <>
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                  {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 bg-ninja-red text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
-                </>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
               )}
             </button>
           )}
@@ -203,18 +157,6 @@ export default function Navbar() {
                   {link.label}
                 </Link>
               ))}
-              <Link
-                to="/messages"
-                onClick={closeMenu}
-                className="text-ninja-navy hover:text-ninja-blue font-ninja font-semibold text-sm py-2 px-3 rounded-lg hover:bg-ninja-bg transition-colors flex items-center justify-between"
-              >
-                <span>Messages</span>
-                {unreadCount > 0 && (
-                  <span className="bg-ninja-red text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </Link>
             </div>
 
             {/* Logout */}

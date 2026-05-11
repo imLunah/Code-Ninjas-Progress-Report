@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import ParentLayout from '../../components/layout/ParentLayout';
@@ -9,13 +9,6 @@ import { api } from '../../api/client';
 import { formatDate } from '../../utils/dateUtils';
 import ProgressVisuals from '../../components/parent/ProgressVisuals';
 import { ClubBadge } from '../../components/shared/ClubSessionsPanel';
-
-function formatTimestamp(ts) {
-  return new Date(ts).toLocaleString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-    hour: 'numeric', minute: '2-digit',
-  });
-}
 
 function calcAge(birthday) {
   const dob = new Date(birthday.split('T')[0] + 'T00:00:00');
@@ -31,40 +24,35 @@ export default function ParentStudentProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const [messages, setMessages] = useState([]);
-  const [msgLoading, setMsgLoading] = useState(true);
-  const [msgBody, setMsgBody] = useState('');
-  const [sending, setSending] = useState(false);
-  const msgBottomRef = useRef(null);
+  const [instructions, setInstructions] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     api.get(`/parent/students/${id}`)
-      .then(setStudent)
+      .then((data) => {
+        setStudent(data);
+        setInstructions(data.special_instructions || '');
+        setDraft(data.special_instructions || '');
+      })
       .catch(() => setError('Could not load this profile.'))
       .finally(() => setLoading(false));
-
-    api.get(`/parent/students/${id}/messages`)
-      .then(setMessages)
-      .catch(() => {})
-      .finally(() => setMsgLoading(false));
   }, [id]);
 
-  useEffect(() => {
-    msgBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const handleSend = async (e) => {
-    e.preventDefault();
-    if (!msgBody.trim()) return;
-    setSending(true);
+  const handleSave = async () => {
+    setSaving(true);
     try {
-      const msg = await api.post(`/parent/students/${id}/messages`, { body: msgBody.trim() });
-      setMessages((prev) => [...prev, msg]);
-      setMsgBody('');
+      const result = await api.patch(`/parent/students/${id}/instructions`, {
+        special_instructions: draft,
+      });
+      setInstructions(result.special_instructions || '');
+      setDraft(result.special_instructions || '');
+      setEditing(false);
     } catch {
-      // silently fail — message stays in input
+      // silently fail — keep editing open
     } finally {
-      setSending(false);
+      setSaving(false);
     }
   };
 
@@ -121,7 +109,56 @@ export default function ParentStudentProfile() {
           <ProgressVisuals programs={programs} sessionLogs={student.session_logs || []} />
         )}
 
-        {/* Session history — all programs + clubs, no notes */}
+        {/* Special Instructions */}
+        <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div>
+              <h2 className="text-ninja-navy font-ninja font-bold text-lg">Special Instructions</h2>
+              <p className="text-ninja-muted font-ninja text-xs mt-0.5">
+                Notes for your child's instructors — allergies, sensitivities, pickup notes, etc.
+              </p>
+            </div>
+            {!editing && (
+              <button
+                onClick={() => { setDraft(instructions); setEditing(true); }}
+                className="text-ninja-blue font-ninja text-sm font-semibold hover:underline flex-shrink-0"
+              >
+                {instructions ? 'Edit' : '+ Add'}
+              </button>
+            )}
+          </div>
+
+          {editing ? (
+            <div className="space-y-3">
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                rows={4}
+                placeholder="e.g. Has a peanut allergy. Gets picked up by grandma on Tuesdays. Prefers written instructions."
+                autoFocus
+                className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-xl px-4 py-3 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
+              />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleSave} disabled={saving}>
+                  {saving ? 'Saving...' : 'Save'}
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => { setEditing(false); setDraft(instructions); }}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : instructions ? (
+            <p className="text-ninja-navy font-ninja text-sm leading-relaxed whitespace-pre-wrap bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              {instructions}
+            </p>
+          ) : (
+            <p className="text-ninja-muted font-ninja text-sm italic">
+              No instructions added yet.
+            </p>
+          )}
+        </div>
+
+        {/* Session history */}
         <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
           <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-4">Session History</h2>
           {(student.session_logs || []).length === 0 && (student.club_attendance || []).length === 0 ? (
@@ -177,60 +214,6 @@ export default function ParentStudentProfile() {
                 ))}
             </div>
           )}
-        </div>
-
-        {/* Messages */}
-        <div className="bg-white border border-ninja-border rounded-2xl shadow-sm flex flex-col">
-          <div className="px-5 py-4 border-b border-ninja-border">
-            <h2 className="text-ninja-navy font-ninja font-bold text-lg">Messages with Senseis</h2>
-            <p className="text-ninja-muted font-ninja text-xs mt-0.5">
-              Questions or notes for {student.full_name}'s instructors
-            </p>
-          </div>
-
-          {/* Thread */}
-          <div className="flex-1 px-5 py-4 space-y-3 max-h-80 overflow-y-auto">
-            {msgLoading && <p className="text-ninja-muted font-ninja text-sm text-center py-4">Loading...</p>}
-            {!msgLoading && messages.length === 0 && (
-              <p className="text-ninja-muted font-ninja text-sm text-center py-4 italic">
-                No messages yet. Send a note to your child's senseis!
-              </p>
-            )}
-            {messages.map((m) => {
-              const isParent = m.sender_type === 'parent';
-              return (
-                <div key={m.id} className={`flex flex-col ${isParent ? 'items-end' : 'items-start'}`}>
-                  <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm font-ninja ${
-                    isParent
-                      ? 'bg-ninja-blue text-white rounded-br-sm'
-                      : 'bg-ninja-bg border border-ninja-border text-ninja-navy rounded-bl-sm'
-                  }`}>
-                    {m.body}
-                  </div>
-                  <span className="text-ninja-muted font-ninja text-xs mt-1 px-1">
-                    {isParent ? 'You' : (m.sender_name || 'Sensei')} · {formatTimestamp(m.created_at)}
-                  </span>
-                </div>
-              );
-            })}
-            <div ref={msgBottomRef} />
-          </div>
-
-          {/* Input */}
-          <div className="px-5 py-4 border-t border-ninja-border">
-            <form onSubmit={handleSend} className="flex gap-2">
-              <input
-                type="text"
-                value={msgBody}
-                onChange={(e) => setMsgBody(e.target.value)}
-                placeholder="Write a message..."
-                className="flex-1 bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue transition-colors"
-              />
-              <Button type="submit" disabled={sending || !msgBody.trim()} size="sm">
-                {sending ? '...' : 'Send'}
-              </Button>
-            </form>
-          </div>
         </div>
       </div>
     </ParentLayout>

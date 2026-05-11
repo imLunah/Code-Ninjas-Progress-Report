@@ -88,7 +88,7 @@ router.get('/students/:id', requireParent, async (req, res) => {
   const { id } = req.params;
   try {
     const { rows } = await pool.query(`
-      SELECT s.id, s.full_name, s.birthday, s.created_at,
+      SELECT s.id, s.full_name, s.birthday, s.created_at, s.special_instructions,
         ${STUDENT_PROGRAMS_SUBQUERY}
       FROM students s
       WHERE s.id = $1 AND LOWER(s.parent_email) = LOWER($2) AND s.active = true
@@ -119,50 +119,22 @@ router.get('/students/:id', requireParent, async (req, res) => {
   }
 });
 
-// GET /api/parent/students/:id/messages
-router.get('/students/:id/messages', requireParent, async (req, res) => {
+// PATCH /api/parent/students/:id/instructions — parent saves special instructions for their child
+router.patch('/students/:id/instructions', requireParent, async (req, res) => {
   const pool = req.app.get('db');
   const { id } = req.params;
-  try {
-    const { rows: owner } = await pool.query(
-      'SELECT id FROM students WHERE id = $1 AND LOWER(parent_email) = LOWER($2) AND active = true',
-      [id, req.session.parentEmail]
-    );
-    if (!owner[0]) return res.status(403).json({ error: 'Forbidden' });
-
-    const { rows } = await pool.query(
-      'SELECT * FROM messages WHERE student_id = $1 ORDER BY created_at ASC',
-      [id]
-    );
-    res.json(rows);
-  } catch (err) {
-    console.error('Parent messages error:', err);
-    res.status(500).json({ error: 'Failed to load messages' });
-  }
-});
-
-// POST /api/parent/students/:id/messages
-router.post('/students/:id/messages', requireParent, async (req, res) => {
-  const pool = req.app.get('db');
-  const { id } = req.params;
-  const { body } = req.body;
-  if (!body?.trim()) return res.status(400).json({ error: 'Message cannot be empty' });
+  const { special_instructions } = req.body;
 
   try {
-    const { rows: owner } = await pool.query(
-      'SELECT parent_name FROM students WHERE id = $1 AND LOWER(parent_email) = LOWER($2) AND active = true',
-      [id, req.session.parentEmail]
-    );
-    if (!owner[0]) return res.status(403).json({ error: 'Forbidden' });
-
     const { rows } = await pool.query(
-      'INSERT INTO messages (student_id, sender_type, sender_name, body) VALUES ($1, $2, $3, $4) RETURNING *',
-      [id, 'parent', owner[0].parent_name || 'Parent', body.trim()]
+      'UPDATE students SET special_instructions = $1 WHERE id = $2 AND LOWER(parent_email) = LOWER($3) AND active = true RETURNING special_instructions',
+      [special_instructions?.trim() || null, id, req.session.parentEmail]
     );
-    res.status(201).json(rows[0]);
+    if (!rows[0]) return res.status(403).json({ error: 'Forbidden' });
+    res.json(rows[0]);
   } catch (err) {
-    console.error('Parent send message error:', err);
-    res.status(500).json({ error: 'Failed to send message' });
+    console.error('Special instructions error:', err);
+    res.status(500).json({ error: 'Failed to save instructions' });
   }
 });
 

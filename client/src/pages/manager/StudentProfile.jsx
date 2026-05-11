@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Layout from '../../components/layout/Layout';
 import BeltBadge from '../../components/ui/BeltBadge';
@@ -110,7 +110,6 @@ function AddProgramForm({ studentId, existingPrograms, onAdded, onCancel }) {
 
 export default function StudentProfile() {
   const { id } = useParams();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, isReadOnly } = useAuth();
   const [student, setStudent] = useState(null);
@@ -123,14 +122,6 @@ export default function StudentProfile() {
   const [editingEnrollment, setEditingEnrollment] = useState(null);
   const [showAddProgram, setShowAddProgram] = useState(false);
 
-  const [messages, setMessages] = useState([]);
-  const [msgBody, setMsgBody] = useState('');
-  const [sending, setSending] = useState(false);
-  const [threadUnread, setThreadUnread] = useState(null); // null = unknown
-  const [togglingRead, setTogglingRead] = useState(false);
-  const msgSectionRef = useRef(null);
-  const msgBottomRef = useRef(null);
-
   const isManager = user?.role === 'manager';
 
   useEffect(() => {
@@ -138,72 +129,7 @@ export default function StudentProfile() {
       .then(setStudent)
       .catch(() => setError('Failed to load ninja'))
       .finally(() => setLoading(false));
-
-    api.get(`/students/${id}/messages`).then(setMessages).catch(() => {});
-
-    // Load thread read status for the Mark read/unread button
-    api.get('/messages/threads').then((threads) => {
-      const match = threads.find((t) => t.student_id === Number(id));
-      if (match) setThreadUnread(match.is_unread);
-    }).catch(() => {});
   }, [id, user?.activeLocation?.id]);
-
-  // Poll messages every 30s
-  useEffect(() => {
-    const interval = setInterval(() => {
-      api.get(`/students/${id}/messages`).then(setMessages).catch(() => {});
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [id]);
-
-  // Scroll to messages section if ?scrollTo=messages
-  useEffect(() => {
-    if (searchParams.get('scrollTo') === 'messages' && msgSectionRef.current) {
-      setTimeout(() => {
-        msgSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 300);
-    }
-  }, [searchParams, loading]);
-
-  useEffect(() => {
-    msgBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!msgBody.trim()) return;
-    setSending(true);
-    try {
-      const msg = await api.post(`/students/${id}/messages`, { body: msgBody.trim() });
-      setMessages((prev) => [...prev, msg]);
-      setMsgBody('');
-      // Replying marks the thread as read
-      await api.post(`/messages/threads/${id}/read`).catch(() => {});
-      setThreadUnread(false);
-    } catch {
-      // silently fail
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handleMarkRead = async () => {
-    setTogglingRead(true);
-    try {
-      await api.post(`/messages/threads/${id}/read`);
-      setThreadUnread(false);
-    } catch {}
-    setTogglingRead(false);
-  };
-
-  const handleMarkUnread = async () => {
-    setTogglingRead(true);
-    try {
-      await api.post(`/messages/threads/${id}/unread`);
-      setThreadUnread(true);
-    } catch {}
-    setTogglingRead(false);
-  };
 
   const handleSaved = (updated) => {
     setStudent((prev) => ({ ...prev, ...updated }));
@@ -476,73 +402,17 @@ export default function StudentProfile() {
           onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
         />
 
-        {/* Parent Messages */}
-        <div ref={msgSectionRef} className="bg-white border border-ninja-border rounded-xl shadow-sm flex flex-col">
-          <div className="px-6 py-4 border-b border-ninja-border flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-bold font-ninja text-ninja-navy">
-                Parent <span className="text-ninja-blue">Messages</span>
-              </h2>
-              {student.parent_name && (
-                <p className="text-ninja-muted font-ninja text-sm mt-0.5">Conversation with {student.parent_name}</p>
-              )}
-            </div>
-            {messages.some((m) => m.sender_type === 'parent') && threadUnread === false && (
-              <button
-                onClick={handleMarkUnread}
-                disabled={togglingRead}
-                className="text-xs font-ninja font-semibold text-ninja-muted hover:text-ninja-blue border border-ninja-border hover:border-ninja-blue px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
-              >
-                Mark unread
-              </button>
-            )}
+        {/* Special Instructions from Parent */}
+        {student.special_instructions && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 shadow-sm">
+            <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-2 flex items-center gap-2">
+              <span className="text-amber-500">⚠</span> Special Instructions from Parent
+            </h2>
+            <p className="text-ninja-navy font-ninja text-sm leading-relaxed whitespace-pre-wrap">
+              {student.special_instructions}
+            </p>
           </div>
-
-          <div className="px-6 py-4 space-y-3 max-h-80 overflow-y-auto">
-            {messages.length === 0 && (
-              <p className="text-ninja-muted font-ninja text-sm text-center py-4 italic">
-                No messages yet.
-              </p>
-            )}
-            {messages.map((m) => {
-              const isParent = m.sender_type === 'parent';
-              return (
-                <div key={m.id} className={`flex flex-col ${isParent ? 'items-start' : 'items-end'}`}>
-                  <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm font-ninja ${
-                    isParent
-                      ? 'bg-ninja-bg border border-ninja-border text-ninja-navy rounded-bl-sm'
-                      : 'bg-ninja-blue text-white rounded-br-sm'
-                  }`}>
-                    {m.body}
-                  </div>
-                  <span className="text-ninja-muted font-ninja text-xs mt-1 px-1">
-                    {isParent ? (m.sender_name || 'Parent') : (m.sender_name || 'Staff')}
-                    {' · '}
-                    {new Date(m.created_at).toLocaleString('en-US', {
-                      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
-                    })}
-                  </span>
-                </div>
-              );
-            })}
-            <div ref={msgBottomRef} />
-          </div>
-
-          <div className="px-6 py-4 border-t border-ninja-border">
-            <form onSubmit={handleSendMessage} className="flex gap-2">
-              <input
-                type="text"
-                value={msgBody}
-                onChange={(e) => setMsgBody(e.target.value)}
-                placeholder="Reply to parent..."
-                className="flex-1 bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue transition-colors"
-              />
-              <Button type="submit" disabled={sending || !msgBody.trim()} size="sm">
-                {sending ? '...' : 'Send'}
-              </Button>
-            </form>
-          </div>
-        </div>
+        )}
 
         {/* Progress History */}
         <div className="bg-white border border-ninja-border rounded-xl p-6 shadow-sm">
