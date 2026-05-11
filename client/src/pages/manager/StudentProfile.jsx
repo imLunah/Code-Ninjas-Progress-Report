@@ -487,24 +487,14 @@ export default function StudentProfile() {
                 <p className="text-ninja-muted font-ninja text-sm mt-0.5">Conversation with {student.parent_name}</p>
               )}
             </div>
-            {messages.some((m) => m.sender_type === 'parent') && (
-              threadUnread === true ? (
-                <button
-                  onClick={handleMarkRead}
-                  disabled={togglingRead}
-                  className="text-xs font-ninja font-semibold text-ninja-muted hover:text-ninja-blue border border-ninja-border hover:border-ninja-blue px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
-                >
-                  Mark read
-                </button>
-              ) : (
-                <button
-                  onClick={handleMarkUnread}
-                  disabled={togglingRead}
-                  className="text-xs font-ninja font-semibold text-ninja-muted hover:text-ninja-blue border border-ninja-border hover:border-ninja-blue px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
-                >
-                  Mark unread
-                </button>
-              )
+            {messages.some((m) => m.sender_type === 'parent') && threadUnread === false && (
+              <button
+                onClick={handleMarkUnread}
+                disabled={togglingRead}
+                className="text-xs font-ninja font-semibold text-ninja-muted hover:text-ninja-blue border border-ninja-border hover:border-ninja-blue px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
+              >
+                Mark unread
+              </button>
             )}
           </div>
 
