@@ -81,6 +81,9 @@ export default function LogEntryForm({ student, program, enrollment, onLogged })
       setSubProgram('');
       setModuleName('');
       setLessonName('');
+      setProject(enrollment?.current_project || '');
+      setStatus(enrollment?.project_status || '');
+      setUpdateStudent(false);
       onLogged && onLogged(log);
     } catch (err) {
       setError(err.message || 'Failed to save log');
@@ -97,10 +100,19 @@ export default function LogEntryForm({ student, program, enrollment, onLogged })
         </div>
       )}
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg p-3 text-sm font-ninja">
-          Progress logged successfully!
+        <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg p-3 text-sm font-ninja flex items-center justify-between gap-3">
+          <span>Progress logged successfully!</span>
+          <button
+            type="button"
+            onClick={() => setSuccess(false)}
+            className="text-green-700 border border-green-400 hover:bg-green-100 font-ninja font-semibold text-xs px-3 py-1 rounded-lg transition-colors whitespace-nowrap"
+          >
+            + Log Another
+          </button>
         </div>
       )}
+
+      {!success && (<>
 
       <div>
         <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
@@ -265,6 +277,8 @@ export default function LogEntryForm({ student, program, enrollment, onLogged })
       <Button type="submit" disabled={loading} className="w-full">
         {loading ? 'Saving...' : 'Log Progress'}
       </Button>
+
+      </>)}
     </form>
   );
 }

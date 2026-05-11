@@ -32,7 +32,12 @@ export default function SenseiDashboard() {
     acc[a.student_id].assignments.push(a);
     return acc;
   }, {});
-  const groupedList = Object.values(grouped);
+  const groupedList = Object.values(grouped).sort((a, b) => {
+    const aDone = a.assignments.every((x) => x.completed);
+    const bDone = b.assignments.every((x) => x.completed);
+    if (aDone === bDone) return 0;
+    return aDone ? 1 : -1;
+  });
 
   const completedCount = groupedList.filter((g) => g.assignments.every((a) => a.completed)).length;
 
