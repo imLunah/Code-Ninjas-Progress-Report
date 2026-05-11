@@ -2,10 +2,14 @@ const express = require('express');
 const router = express.Router();
 const { requireSensei } = require('../middleware/auth');
 
-// GET /api/messages/threads — all parent conversations for this location with read/unread status
+// GET /api/messages/threads — all parent conversations with read/unread status
+// Managers see all locations; senseis see only their active location
 router.get('/threads', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
+  const isManager = req.session.role === 'manager';
   try {
+    const params = isManager ? [] : [req.session.activeLocationId];
+    const locationFilter = isManager ? '' : 'AND s.location_id = $1';
     const { rows } = await pool.query(
       `WITH thread_stats AS (
          SELECT
@@ -22,6 +26,7 @@ router.get('/threads', requireSensei, async (req, res) => {
          s.full_name AS student_name,
          s.parent_name,
          s.parent_email,
+         l.name AS location_name,
          ts.latest_parent_at,
          ts.latest_any_at,
          ts.latest_message,
@@ -30,13 +35,14 @@ router.get('/threads', requireSensei, async (req, res) => {
          (ptr.read_at IS NULL OR ts.latest_parent_at > ptr.read_at) AS is_unread
        FROM thread_stats ts
        JOIN students s ON s.id = ts.student_id
+       JOIN locations l ON l.id = s.location_id
        LEFT JOIN parent_thread_read ptr ON ptr.student_id = s.id
-       WHERE s.location_id = $1
-         AND s.active = true
+       WHERE s.active = true
          AND ts.latest_parent_at IS NOT NULL
+         ${locationFilter}
        ORDER BY (ptr.read_at IS NULL OR ts.latest_parent_at > ptr.read_at) DESC,
                 ts.latest_parent_at DESC`,
-      [req.session.activeLocationId]
+      params
     );
     res.json(rows);
   } catch (err) {
@@ -49,10 +55,13 @@ router.get('/threads', requireSensei, async (req, res) => {
 router.post('/threads/:studentId/read', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
   const { studentId } = req.params;
+  const isManager = req.session.role === 'manager';
   try {
+    const params = isManager ? [studentId] : [studentId, req.session.activeLocationId];
+    const locationClause = isManager ? '' : 'AND location_id = $2';
     const { rows } = await pool.query(
-      'SELECT id FROM students WHERE id = $1 AND location_id = $2 AND active = true',
-      [studentId, req.session.activeLocationId]
+      `SELECT id FROM students WHERE id = $1 AND active = true ${locationClause}`,
+      params
     );
     if (!rows[0]) return res.status(404).json({ error: 'Student not found' });
 
@@ -72,10 +81,13 @@ router.post('/threads/:studentId/read', requireSensei, async (req, res) => {
 router.post('/threads/:studentId/unread', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
   const { studentId } = req.params;
+  const isManager = req.session.role === 'manager';
   try {
+    const params = isManager ? [studentId] : [studentId, req.session.activeLocationId];
+    const locationClause = isManager ? '' : 'AND location_id = $2';
     const { rows } = await pool.query(
-      'SELECT id FROM students WHERE id = $1 AND location_id = $2 AND active = true',
-      [studentId, req.session.activeLocationId]
+      `SELECT id FROM students WHERE id = $1 AND active = true ${locationClause}`,
+      params
     );
     if (!rows[0]) return res.status(404).json({ error: 'Student not found' });
 
