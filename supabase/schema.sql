@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS students (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Per-program enrollment with belt/project tracking (CREATE only uses belt fields)
+-- Per-program enrollment with belt/project tracking (CREATE uses belt fields; all programs use last_* for latest session state)
 CREATE TABLE IF NOT EXISTS student_programs (
   id SERIAL PRIMARY KEY,
   student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
@@ -40,6 +40,10 @@ CREATE TABLE IF NOT EXISTS student_programs (
   belt_sublevel INTEGER,
   current_project TEXT CHECK(current_project IN ('Build 1','Build 2','Build 3','Solve 1','Solve 2','Solve 3','Adventure')),
   project_status TEXT CHECK(project_status IN ('Started','Working On','Completed')),
+  last_sub_program TEXT,
+  last_module_name TEXT,
+  last_lesson_name TEXT,
+  last_session_date DATE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(student_id, program)
 );

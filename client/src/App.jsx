@@ -10,6 +10,7 @@ import StudentRoster from './pages/manager/StudentRoster';
 import AddStudentPage from './pages/manager/AddStudentPage';
 import StudentProfile from './pages/manager/StudentProfile';
 import StaffPage from './pages/manager/StaffPage';
+import EmailPreviewPage from './pages/manager/EmailPreviewPage';
 import SenseiDashboard from './pages/sensei/SenseiDashboard';
 import LogProgressPage from './pages/sensei/LogProgressPage';
 import LogClubPage from './pages/sensei/LogClubPage';
@@ -88,6 +89,14 @@ export default function App() {
           />
 
           {/* Sensei routes */}
+          <Route
+            path="/manager/email-preview"
+            element={
+              <ProtectedRoute role="manager">
+                <EmailPreviewPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/sensei/dashboard"
             element={
