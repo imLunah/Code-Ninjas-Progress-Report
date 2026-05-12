@@ -107,7 +107,7 @@ export default function App() {
           <Route
             path="/clubs/log"
             element={
-              <ProtectedRoute role="sensei">
+              <ProtectedRoute role="manager">
                 <LogClubPage />
               </ProtectedRoute>
             }
