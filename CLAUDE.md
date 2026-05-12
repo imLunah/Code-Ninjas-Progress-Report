@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Security
+
+- Never print, repeat, or include database credentials, passwords, or secrets in conversation output or code comments
+- If a `.env` file is read, do not display its contents in chat — only use the values silently for context
+- If credentials are needed, ask the user to provide them directly in a tool input, not in chat
+
 ## Commands
 
 ```bash
