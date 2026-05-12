@@ -63,22 +63,45 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
       lesson_name || null,
     ]);
 
-    if (update_student) {
-      const { rows: enrollmentRows } = await pool.query(
-        'SELECT * FROM student_programs WHERE student_id = $1 AND program = $2',
-        [student_id, program]
-      );
-      const enrollment = enrollmentRows[0];
-      if (enrollment) {
+    // Always update last_sub_program, last_module_name, last_lesson_name, last_session_date
+    // so each program row tracks its own "where they left off" independently.
+    const { rows: enrollmentRows } = await pool.query(
+      'SELECT * FROM student_programs WHERE student_id = $1 AND program = $2',
+      [student_id, program]
+    );
+    const enrollment = enrollmentRows[0];
+    if (enrollment) {
+      if (update_student) {
         await pool.query(`
           UPDATE student_programs
-          SET belt_level = $1, belt_sublevel = $2, current_project = $3, project_status = $4
-          WHERE student_id = $5 AND program = $6
+          SET belt_level = $1, belt_sublevel = $2, current_project = $3, project_status = $4,
+              last_sub_program = $5, last_module_name = $6, last_lesson_name = $7, last_session_date = $8
+          WHERE student_id = $9 AND program = $10
         `, [
           belt_level_at !== undefined ? belt_level_at : enrollment.belt_level,
           belt_sublevel_at !== undefined ? belt_sublevel_at : enrollment.belt_sublevel,
           project_at !== undefined ? project_at : enrollment.current_project,
           status_at !== undefined ? status_at : enrollment.project_status,
+          sub_program || enrollment.last_sub_program,
+          module_name || enrollment.last_module_name,
+          lesson_name || enrollment.last_lesson_name,
+          date,
+          student_id,
+          program,
+        ]);
+      } else {
+        await pool.query(`
+          UPDATE student_programs
+          SET last_sub_program = COALESCE($1, last_sub_program),
+              last_module_name = COALESCE($2, last_module_name),
+              last_lesson_name = COALESCE($3, last_lesson_name),
+              last_session_date = $4
+          WHERE student_id = $5 AND program = $6
+        `, [
+          sub_program || null,
+          module_name || null,
+          lesson_name || null,
+          date,
           student_id,
           program,
         ]);
