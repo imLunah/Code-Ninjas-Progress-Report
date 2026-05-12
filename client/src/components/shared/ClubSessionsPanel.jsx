@@ -85,7 +85,7 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpda
     <div className="bg-white border border-ninja-border rounded-xl p-6 shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold font-ninja text-ninja-navy tracking-wide">Clubs</h2>
-        {!isReadOnly && (
+        {isManager && !isReadOnly && (
           <Button size="sm" onClick={() => navigate('/clubs/log')}>
             + Log Club Session
           </Button>

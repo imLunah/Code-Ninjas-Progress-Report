@@ -142,8 +142,8 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/clubs — create a club session (any sensei or manager)
-router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
+// POST /api/clubs — create a club session (manager only)
+router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { club_name, session_date, notes, student_ids } = req.body;
 
