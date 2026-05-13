@@ -109,58 +109,66 @@ export default function ParentStudentProfile() {
           <ProgressVisuals programs={programs} sessionLogs={student.session_logs || []} />
         )}
 
-        {/* Special Instructions */}
-        <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div>
-              <h2 className="text-ninja-navy font-ninja font-bold text-lg">Special Instructions</h2>
-              <p className="text-ninja-muted font-ninja text-xs mt-0.5">
-                Notes for your child's instructors — allergies, sensitivities, pickup notes, etc.
-              </p>
+        {/* Note for senseis — pinned note style */}
+        <div className="rounded-2xl overflow-hidden" style={{ background: '#fffbeb', border: '1.5px dashed #fcd34d' }}>
+          <div className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-base">📌</span>
+                <h2 className="font-ninja font-bold text-sm" style={{ color: '#92400e' }}>Note for Senseis</h2>
+              </div>
+              {!editing && (
+                <button
+                  onClick={() => { setDraft(instructions); setEditing(true); }}
+                  className="font-ninja text-sm font-semibold hover:underline flex-shrink-0"
+                  style={{ color: '#92400e', opacity: 0.7 }}
+                >
+                  {instructions ? 'Edit' : '+ Add'}
+                </button>
+              )}
             </div>
-            {!editing && (
-              <button
-                onClick={() => { setDraft(instructions); setEditing(true); }}
-                className="text-ninja-blue font-ninja text-sm font-semibold hover:underline flex-shrink-0"
-              >
-                {instructions ? 'Edit' : '+ Add'}
-              </button>
+
+            {editing ? (
+              <div className="space-y-3">
+                <textarea
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  rows={4}
+                  placeholder="e.g. Has a peanut allergy. Gets picked up by grandma on Tuesdays. Prefers written instructions."
+                  autoFocus
+                  className="w-full border rounded-xl px-4 py-3 font-ninja text-sm focus:outline-none resize-none"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.7)', borderColor: '#fcd34d', color: '#78350f' }}
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleSave} disabled={saving}>
+                    {saving ? 'Saving...' : 'Save'}
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => { setEditing(false); setDraft(instructions); }}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : instructions ? (
+              <p className="font-ninja text-sm leading-relaxed whitespace-pre-wrap" style={{ color: '#78350f' }}>
+                {instructions}
+              </p>
+            ) : (
+              <p className="font-ninja text-sm italic" style={{ color: '#a16207' }}>
+                Tap Edit to leave a note for your child's senseis — allergies, pickup notes, etc.
+              </p>
             )}
           </div>
-
-          {editing ? (
-            <div className="space-y-3">
-              <textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                rows={4}
-                placeholder="e.g. Has a peanut allergy. Gets picked up by grandma on Tuesdays. Prefers written instructions."
-                autoFocus
-                className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-xl px-4 py-3 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
-              />
-              <div className="flex gap-2">
-                <Button size="sm" onClick={handleSave} disabled={saving}>
-                  {saving ? 'Saving...' : 'Save'}
-                </Button>
-                <Button size="sm" variant="secondary" onClick={() => { setEditing(false); setDraft(instructions); }}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          ) : instructions ? (
-            <p className="text-ninja-navy font-ninja text-sm leading-relaxed whitespace-pre-wrap bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-              {instructions}
-            </p>
-          ) : (
-            <p className="text-ninja-muted font-ninja text-sm italic">
-              No instructions added yet.
-            </p>
-          )}
         </div>
 
         {/* Session history */}
         <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
-          <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-4">Session History</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-ninja-navy font-ninja font-bold text-lg">Session History</h2>
+            <div className="flex items-center gap-1 font-ninja font-bold px-2 py-1 rounded-full text-xs" style={{ background: '#eff6ff', color: '#006ADD' }}>
+              <span>📧</span>
+              <span>Monthly recap</span>
+            </div>
+          </div>
           {(student.session_logs || []).length === 0 && (student.club_attendance || []).length === 0 ? (
             <p className="text-ninja-muted font-ninja text-sm italic">No sessions logged yet.</p>
           ) : (

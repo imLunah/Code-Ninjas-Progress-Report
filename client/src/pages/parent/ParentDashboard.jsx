@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import ParentLayout from '../../components/layout/ParentLayout';
 import ProgramBadge from '../../components/ui/ProgramBadge';
+import BeltBadge from '../../components/ui/BeltBadge';
 import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
 import { formatDate } from '../../utils/dateUtils';
@@ -47,29 +48,40 @@ export default function ParentDashboard() {
         )}
 
         {!loading && students.map((s) => {
+          const createEnrollment = (s.programs || []).find((p) => p.program === 'CREATE');
           return (
             <div
               key={s.id}
-              className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5 cursor-pointer hover:border-ninja-blue transition-colors"
+              className="bg-white border border-ninja-border rounded-2xl shadow-sm overflow-hidden cursor-pointer hover:border-ninja-blue transition-colors"
               onClick={() => navigate(`/parent/students/${s.id}`)}
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <h2 className="text-xl font-bold font-ninja text-ninja-navy">{s.full_name}</h2>
-                    {(s.programs || []).map((p) => (
-                      <ProgramBadge key={p.program} program={p.program} size="sm" />
-                    ))}
+              {/* Thin colored top bar for CREATE students */}
+              {createEnrollment?.belt_level && (
+                <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, #006ADD 0%, #004fa8 100%)' }} />
+              )}
+              <div className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-xl font-bold font-ninja text-ninja-navy mb-2">{s.full_name}</h2>
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      {(s.programs || []).map((p) => (
+                        <ProgramBadge key={p.program} program={p.program} size="sm" />
+                      ))}
+                      {createEnrollment?.belt_level && (
+                        <BeltBadge belt={createEnrollment.belt_level} sublevel={createEnrollment.belt_sublevel} size="xs" />
+                      )}
+                    </div>
+                    <p className="text-ninja-muted font-ninja text-xs">
+                      {s.last_activity ? `Last session: ${formatDate(s.last_activity)}` : 'No sessions yet'}
+                    </p>
                   </div>
 
-                  <p className="text-ninja-muted font-ninja text-xs">
-                    {s.last_activity ? `Last session: ${formatDate(s.last_activity)}` : 'No sessions yet'}
-                  </p>
+                  <div className="flex flex-col items-end gap-2">
+                    <Button size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/parent/students/${s.id}`); }}>
+                      View →
+                    </Button>
+                  </div>
                 </div>
-
-                <Button size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/parent/students/${s.id}`); }}>
-                  View Profile
-                </Button>
               </div>
             </div>
           );
