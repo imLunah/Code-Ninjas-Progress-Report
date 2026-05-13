@@ -11,7 +11,9 @@ const STUDENT_PROGRAMS_SUBQUERY = `
         'belt_level', sp.belt_level,
         'belt_sublevel', sp.belt_sublevel,
         'current_project', sp.current_project,
-        'project_status', sp.project_status
+        'project_status', sp.project_status,
+        'last_session_date', sp.last_session_date,
+        'percent_complete', sp.percent_complete
       ) ORDER BY sp.created_at
     ) FROM student_programs sp WHERE sp.student_id = s.id),
     '[]'::json
