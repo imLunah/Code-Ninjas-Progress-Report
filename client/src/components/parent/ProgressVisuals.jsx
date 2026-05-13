@@ -1,5 +1,12 @@
 import { BELTS } from '../../utils/beltConfig';
 import { SUB_PROGRAMS, CURRICULUM } from '../../utils/progressData';
+import { formatDate } from '../../utils/dateUtils';
+
+const PROGRAM_BAR_COLORS = {
+  'Robotics Academy': '#7c3aed',
+  'AI Academy': '#4338ca',
+  'JR': '#16a34a',
+};
 
 const BELT_IMAGES = {
   White:  '/belts/belt-white.png',
@@ -81,7 +88,7 @@ function ActivityChart({ logs }) {
 // ─── Belt journey (CREATE only) ───────────────────────────────────────────────
 
 function BeltJourney({ enrollment }) {
-  const { belt_level, belt_sublevel } = enrollment;
+  const { belt_level, belt_sublevel, last_session_date } = enrollment;
   const currentIndex = belt_level ? BELTS.findIndex((b) => b.name === belt_level) : -1;
   const currentBelt = currentIndex >= 0 ? BELTS[currentIndex] : null;
   const maxLevel = currentBelt?.levels ?? null;
@@ -90,7 +97,12 @@ function BeltJourney({ enrollment }) {
 
   return (
     <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
-      <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-4">CREATE Belt Journey</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-ninja-navy font-ninja font-bold text-lg">CREATE Belt Journey</h2>
+        {last_session_date && (
+          <span className="text-ninja-muted font-ninja text-xs">Last: {formatDate(last_session_date)}</span>
+        )}
+      </div>
 
       {belt_level ? (
         <>
@@ -225,18 +237,36 @@ function ModuleGrid({ modules, visited }) {
   );
 }
 
-function ModuleProgress({ program, logs }) {
+function ModuleProgress({ program, enrollment, logs }) {
   const subProgramList = SUB_PROGRAMS[program];
   const totalSessions = logs.length;
+  const pct = enrollment?.percent_complete ?? 0;
+  const barColor = PROGRAM_BAR_COLORS[program] || '#006ADD';
+  const lastDate = enrollment?.last_session_date;
 
   if (!subProgramList) {
     const modules = CURRICULUM[program] || [];
     const visited = new Set(logs.map((l) => l.module_name).filter(Boolean));
     return (
       <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-1">
           <h2 className="text-ninja-navy font-ninja font-bold text-lg">{program}</h2>
           <span className="text-ninja-muted font-ninja text-sm">{totalSessions} sessions</span>
+        </div>
+        {lastDate && (
+          <p className="text-ninja-muted font-ninja text-xs mb-3">Last: {formatDate(lastDate)}</p>
+        )}
+        <div className="mb-4">
+          <div className="flex justify-between text-xs font-ninja text-ninja-muted mb-1.5">
+            <span>Progress</span>
+            <span className="font-bold text-ninja-navy">{pct}%</span>
+          </div>
+          <div className="h-3 bg-ninja-bg rounded-full overflow-hidden border border-ninja-border">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${pct}%`, backgroundColor: barColor }}
+            />
+          </div>
         </div>
         <ModuleGrid modules={modules} visited={visited} />
       </div>
@@ -245,9 +275,24 @@ function ModuleProgress({ program, logs }) {
 
   return (
     <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-1">
         <h2 className="text-ninja-navy font-ninja font-bold text-lg">{program}</h2>
         <span className="text-ninja-muted font-ninja text-sm">{totalSessions} sessions</span>
+      </div>
+      {lastDate && (
+        <p className="text-ninja-muted font-ninja text-xs mb-3">Last: {formatDate(lastDate)}</p>
+      )}
+      <div className="mb-4">
+        <div className="flex justify-between text-xs font-ninja text-ninja-muted mb-1.5">
+          <span>Progress</span>
+          <span className="font-bold text-ninja-navy">{pct}%</span>
+        </div>
+        <div className="h-3 bg-ninja-bg rounded-full overflow-hidden border border-ninja-border">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${pct}%`, backgroundColor: barColor }}
+          />
+        </div>
       </div>
       <div className="space-y-4">
         {subProgramList.map((sp) => {
@@ -285,6 +330,7 @@ export default function ProgressVisuals({ programs, sessionLogs }) {
         <ModuleProgress
           key={p.program}
           program={p.program}
+          enrollment={p}
           logs={sessionLogs.filter((l) => l.program === p.program)}
         />
       ))}

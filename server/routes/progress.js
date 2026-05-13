@@ -2,6 +2,16 @@ const express = require('express');
 const router = express.Router();
 const { requireSensei, requireManager, requireOwnLocation } = require('../middleware/auth');
 
+const CURRICULUM_MODULE_COUNTS = {
+  'AI Academy': 9,
+  'JR Coding': 10,
+  'Snap Circuits': 1,
+  'Ozobot Evo': 2,
+  'LEGO Spike Essentials': 8,
+  'LEGO Spike Prime': 4,
+  'VEX GO': 4,
+};
+
 // POST /api/progress
 router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
@@ -112,6 +122,24 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
       'UPDATE daily_assignments SET completed = true WHERE student_id = $1 AND program = $2 AND session_date = $3',
       [student_id, program, date]
     );
+
+    // Auto-compute percent_complete for non-CREATE programs based on distinct modules visited
+    if (program !== 'CREATE' && module_name) {
+      const lookupKey = sub_program || program;
+      const totalModules = CURRICULUM_MODULE_COUNTS[lookupKey];
+      if (totalModules) {
+        const cntSql = sub_program
+          ? 'SELECT COUNT(DISTINCT module_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND sub_program = $3 AND module_name IS NOT NULL'
+          : 'SELECT COUNT(DISTINCT module_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name IS NOT NULL';
+        const cntParams = sub_program ? [student_id, program, sub_program] : [student_id, program];
+        const { rows: cntRows } = await pool.query(cntSql, cntParams);
+        const pct = Math.min(100, Math.round((parseInt(cntRows[0].cnt) / totalModules) * 100));
+        await pool.query(
+          'UPDATE student_programs SET percent_complete = $1 WHERE student_id = $2 AND program = $3',
+          [pct, student_id, program]
+        );
+      }
+    }
 
     const { rows } = await pool.query(`
       SELECT pl.*, u.display_name as sensei_name
