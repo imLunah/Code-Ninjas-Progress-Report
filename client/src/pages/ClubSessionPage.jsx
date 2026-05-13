@@ -309,8 +309,13 @@ export default function ClubSessionPage() {
           )}
         </div>
 
-        {/* Comments */}
-        <div className="bg-white border border-ninja-border rounded-xl p-5 shadow-sm">
+        {/* Comments — only available once session notes have been written */}
+        {!session.notes && (
+          <div className="bg-white border border-ninja-border rounded-xl p-5 shadow-sm text-center">
+            <p className="text-ninja-muted font-ninja text-sm italic">Comments will be available once session notes are added.</p>
+          </div>
+        )}
+        {session.notes && <div className="bg-white border border-ninja-border rounded-xl p-5 shadow-sm">
           <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-4">
             Comments {comments.length > 0 && <span className="text-ninja-muted font-normal text-base">({comments.length})</span>}
           </h2>
@@ -346,7 +351,7 @@ export default function ClubSessionPage() {
               </Button>
             </div>
           )}
-        </div>
+        </div>}
       </div>
     </Layout>
   );
