@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/layout/Layout';
 import TodayBoard from '../../components/manager/TodayBoard';
 import AddStudentToday from '../../components/manager/AddStudentToday';
+import CheckInClubModal from '../../components/manager/CheckInClubModal';
 import ClubSessionsPanel from '../../components/shared/ClubSessionsPanel';
 import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
@@ -14,6 +15,7 @@ export default function ManagerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showCheckInClub, setShowCheckInClub] = useState(false);
   const [clubSessions, setClubSessions] = useState([]);
 
   const todayStr = today();
@@ -108,6 +110,7 @@ export default function ManagerDashboard() {
           sessions={clubSessions}
           onDeleted={(id) => setClubSessions((prev) => prev.filter((s) => s.id !== id))}
           onAttendeesUpdated={(id, attendees) => setClubSessions((prev) => prev.map((s) => s.id === id ? { ...s, attendees } : s))}
+          onCheckIn={() => setShowCheckInClub(true)}
         />
       </div>
 
@@ -116,6 +119,14 @@ export default function ManagerDashboard() {
         onClose={() => setShowAddModal(false)}
         onAdded={handleAdded}
         existingEntries={existingEntries}
+      />
+
+      <CheckInClubModal
+        isOpen={showCheckInClub}
+        onClose={() => setShowCheckInClub(false)}
+        onCheckedIn={(newSession) => {
+          api.get('/clubs').then(setClubSessions).catch(() => {});
+        }}
       />
     </Layout>
   );

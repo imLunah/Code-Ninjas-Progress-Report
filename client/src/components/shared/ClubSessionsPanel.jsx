@@ -17,7 +17,7 @@ function ClubBadge({ name }) {
 
 export { ClubBadge };
 
-export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpdated }) {
+export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpdated, onCheckIn }) {
   const navigate = useNavigate();
   const { user, isReadOnly } = useAuth();
   const isManager = user?.role === 'manager';
@@ -86,8 +86,8 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpda
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold font-ninja text-ninja-navy tracking-wide">Clubs</h2>
         {isManager && !isReadOnly && (
-          <Button size="sm" onClick={() => navigate('/clubs/log')}>
-            + Log Club Session
+          <Button size="sm" onClick={onCheckIn ?? (() => navigate('/clubs/log'))}>
+            + Check In Club
           </Button>
         )}
       </div>
@@ -185,7 +185,7 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpda
                           ))}
                         </div>
                       )}
-                      {isManager && !isReadOnly && (
+                      {!isReadOnly && (
                         <button
                           onClick={() => startEditAttendees(s)}
                           className="text-ninja-blue font-ninja text-xs hover:underline"

@@ -1,247 +1,79 @@
-# CLAUDE.md
+# DojoLink — Handoff Summary
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+### 1. Project Overview
 
-## Security
+**DojoLink** is a full-stack studio management app for Code Ninjas franchise locations. It runs as a React (Vite) + Express + Supabase (PostgreSQL) monorepo. The live site is at `dojolink-neon.vercel.app`, auto-deployed from `imLunah/dojolink` on every push to `main`. Three locations are supported: Yorba Linda, Fullerton, Cerritos. Roles: Center Director (manager), Sensei, Parent.
 
-- Never print, repeat, or include database credentials, passwords, or secrets in conversation output or code comments
-- If a `.env` file is read, do not display its contents in chat — only use the values silently for context
-- If credentials are needed, ask the user to provide them directly in a tool input, not in chat
+**Primary recent objective:** Build a parent-facing progress display and a manager email-preview page that feeds into a future Zapier automation for monthly parent email reports.
 
-## Commands
+---
 
-```bash
-# Start both servers (client :5173, server :3001)
-npm run dev
+### 2. Key Design & Development Decisions
 
-# Server only
-npm run server
+- **Per-program progress tracking** is stored in `student_programs` (one row per student per program). New columns: `last_sub_program`, `last_module_name`, `last_lesson_name`, `last_session_date`, `percent_complete`. Written on every progress log submission via `server/routes/progress.js`.
 
-# Client only
-npm run client
+- **`percent_complete` semantics differ by program:**
+  - **Robotics Academy / JR** — distinct modules visited ÷ curriculum total for the active sub-program (kit/track).
+  - **AI Academy** — lessons completed within the *current module* (mirrors CREATE belt sublevel tracking), not overall module count. This is intentionally lesson-within-module, not cumulative.
+  - **JR** — progress bar was removed entirely (only last session date + module grids remain in the parent portal).
 
-# Build client for production
-npm run build
+- **Parent portal program cards** (`ProgressVisuals.jsx`) are program-specific:
+  - **CREATE** — belt image, belt level, sublevel, belt progress bar + sublevel bar, current project.
+  - **Robotics Academy** — current kit shown as "belt equivalent", Kit Path (numbered circles), Module Path grid for visited modules, progress bar.
+  - **AI Academy** — current module name + "Lesson X of Y" subtitle, indigo progress bar.
+  - **JR** — module grids only; no bar.
 
-# Re-seed the database (resets users + sample students)
-npm run seed
+- **Email preview page** (`/manager/email-preview`) queries the `student_monthly_summary` DB view and renders a visual mock of what each parent's monthly email would look like, so staff can review before Zapier sends.
 
-# If ports are stuck, clear them first
-lsof -ti:3001 | xargs kill -9; lsof -ti:5173 | xargs kill -9
-```
+- **Club session logging** restricted to managers only (senseis removed as of `c54b6c7`).
 
-### Multi-location dev credentials
+---
 
-| Role | Username | Password | Location |
-|------|----------|----------|----------|
-| Center Director | `cd_yorbalinda` | `ninja123` | Yorba Linda |
-| Center Director | `cd_fullerton` | `ninja123` | Fullerton |
-| Center Director | `cd_cerritos` | `ninja123` | Cerritos |
-| Sensei | `sensei_yl1` | `ninja123` | Yorba Linda |
-| Sensei | `sensei_yl2` | `ninja123` | Yorba Linda |
-| Sensei | `sensei_fl1` | `ninja123` | Fullerton |
-| Sensei | `sensei_fl2` | `ninja123` | Fullerton |
-| Sensei | `sensei_cr1` | `ninja123` | Cerritos |
-| Sensei | `sensei_cr2` | `ninja123` | Cerritos |
+### 3. Notable Code Changes (Last 5 Commits)
 
-## Architecture
+| Commit | Files Changed | Summary |
+|--------|--------------|---------|
+| `9c26bc7` | `ProgressVisuals.jsx`, `parent.js` | Robotics Academy card: Kit Path circles + Module Path grid; API returns `last_sub_program` |
+| `e40dee6` | `ProgressVisuals.jsx`, `parent.js`, `progress.js` | AI Academy uses lesson-within-module for bar; JR bar removed; API returns `last_module_name` |
+| `0e3cc8d` | `ProgressVisuals.jsx`, `parent.js`, `progress.js`, `schema.sql` | Added `percent_complete` column; auto-compute on log save; progress bar + last session date on all non-CREATE cards |
+| `ed7f713` | `App.jsx`, `Navbar.jsx`, `EmailPreviewPage.jsx`, `emailPreview.js`, `progress.js`, `schema.sql` | `student_monthly_summary` view refactored; per-program columns backfilled; email preview page + API route added |
+| `c54b6c7` | `App.jsx`, `ClubSessionsPanel.jsx`, `clubs.js` | Club session log/create restricted to managers |
 
-This is a monorepo with two independent packages:
+---
 
-- **`server/`** — Node.js + Express + PostgreSQL via Supabase (CommonJS, `require`)
-- **`client/`** — React + Vite + Tailwind CSS (ESM, `import`)
+### 4. Issues Encountered & Resolutions
 
-Dependencies must be installed separately: `npm install` at root, then `cd server && npm install`, then `cd client && npm install`.
+- **UTC date bug** (`0ebd8d2`): `today()` was returning UTC date, causing sessions to appear on the wrong day for West Coast users. Fixed by computing local date using timezone offset.
+- **Zapier-writable `percent_complete`**: The column was designed to be writable by Zapier in the future (overridable), so AI Academy's `percent_complete` stores lesson-within-module percentage rather than overall completion — this is the Zapier hook point.
 
-### Server
+---
 
-The Express app (`server/index.js`) connects to Supabase PostgreSQL via a `pg` connection pool (`server/db/pool.js`), attaches it to `app` via `app.set('db', pool)`, and all routes pull the pool with `req.app.get('db')`. There is no ORM — all queries use `pg` directly with `await pool.query(sql, params)`. Parameters use `$1, $2, $3` placeholders (PostgreSQL style). Inserts use `RETURNING *` to get the created row back.
+### 5. Open Questions / Next Steps
 
-Sessions are stored in Supabase via `connect-pg-simple` (auto-creates a `session` table). Session data (`userId`, `role`, `displayName`, `activeLocationId`, `homeLocationId`) is set on login and checked by middleware in `server/middleware/auth.js`. Five guards exist: `requireAuth`, `requireSensei` (sensei or manager), `requireManager` (manager only), `requireOwnLocation` (blocks writes when viewing another center), `requireParent` (parent portal only, checks `req.session.parentEmail`).
+- **Zapier integration**: The `student_monthly_summary` view and `email-preview` page exist as the data source. The actual Zapier zap (reading the view → sending emails) has not been built yet.
+- **`percent_complete` for Zapier override**: Currently auto-computed server-side. Future plan may allow Zapier to write back to this column directly via Supabase REST.
+- **JR progress bar**: Deliberately removed — but if the product direction changes, the DB column (`percent_complete`) is already populated.
+- **Kit detection for Robotics Academy**: `last_sub_program` now returned in the parent API, but the Kit Path / Module Path visuals depend on matching this string exactly to `SUB_PROGRAMS` keys. Any curriculum naming changes need to stay in sync between `progressData.js` and the DB.
 
-**Session isolation:** Staff and parent sessions are fully isolated. The staff session middleware (`connect.sid`) is skipped for all `/api/parent/*` routes to prevent corruption. The parent portal uses its own cookie (`parent.sid`) via a separate `session(...)` middleware instance applied only to `/api/parent`. Both staff and parent logins call `req.session.regenerate()` before writing session data to prevent stale role data from carrying over.
+---
 
-The server exports `app` and only calls `app.listen()` when run directly (`require.main === module`), so Vercel can import it as a serverless function via `api/index.js`.
+### 6. Immediate Context — Where We Left Off
 
-Environment variables are read from `.env` at the project root (not inside `server/`):
-- `DATABASE_URL` — Supabase Transaction pooler connection string (required)
-- `SESSION_SECRET` — required for production (server throws at startup if missing when `NODE_ENV=production`)
-- `PORT` — default 3001
+The last completed task was **`9c26bc7`**: Robotics Academy now shows a Kit Path (numbered circles with connecting line in sequential order) and Module Path grid in the parent portal, matching the visual pattern of the CREATE belt display. The parent API was updated to return `last_sub_program` so the current kit is known client-side.
 
-**Security:** Session cookies use `sameSite: 'Lax'` for CSRF protection and `httpOnly: true`. The `SESSION_SECRET` guard (`throw new Error(...)` at startup) prevents silent failures in production.
+No in-progress or incomplete tasks were left mid-session. The codebase is clean and deployed.
 
-### Multi-Location Support
+---
 
-The app supports 3 fully isolated centers: **Code Ninjas Yorba Linda**, **Code Ninjas Fullerton**, and **Code Ninjas Cerritos**. Each center has its own senseis and students. Data isolation is enforced server-side via `req.session.activeLocationId` — no location param is passed on individual API calls.
+### Files to Read to Get Up to Speed
 
-**Session fields:**
-- `activeLocationId` — the center currently being viewed (changes on switch)
-- `homeLocationId` — the center the user belongs to (set at login, never changes)
-
-**`requireOwnLocation` middleware** (`server/middleware/auth.js`) blocks all write operations (`POST`, `PATCH`, `DELETE`) when `activeLocationId !== homeLocationId`. This means Center Directors can view any center but can only make changes at their home center.
-
-**`isReadOnly`** is computed in `AuthContext.jsx`: `user.role === 'manager' && user.activeLocation?.id !== user.homeLocationId`. Frontend components use this to hide edit buttons (Add Student, Edit, Remove) when a director is viewing another center.
-
-**Navbar location switcher:**
-- Center Directors see a `<select>` dropdown populated from `user.availableLocations` (all 3 centers). Selecting one calls `POST /api/auth/switch-location` and all page data re-fetches.
-- Senseis see a static `<span>` with their center name — no switcher.
-
-**`daily_assignments` and `progress_logs` do not have a `location_id` column** — they inherit location scope through the `student_id → students.location_id` join, avoiding denormalization.
-
-### Database
-
-Hosted on **Supabase** (PostgreSQL). The schema lives in `supabase/schema.sql` and was applied via the Supabase MCP.
-
-- **`locations`** — the 3 centers (Yorba Linda, Fullerton, Cerritos) with `name` and `slug`
-- **`users`** — manager and sensei accounts with bcryptjs password hashes; `location_id` references their home center
-- **`students`** — all ninja profiles; `location_id` scopes them to a center; belt/project fields only populated for CREATE; `active=false` is a soft delete
-- **`daily_assignments`** — date-scoped To Do board; `UNIQUE(student_id, session_date)` prevents duplicates; `sensei_id` nullable; `completed` flips to `true` when a progress log is submitted
-- **`progress_logs`** — immutable session notes with snapshots (`belt_level_at`, `belt_sublevel_at`, `project_at`, `status_at`) capturing student state at the time of logging
-- **`messages`** — parent ↔ staff messaging per student; `sender_type` CHECK ('parent' | 'staff'), `sender_id` nullable (null = parent, references `users.id` for staff), `student_id` FK, `body` text, `created_at`
-- **`club_definitions`** — club types; global built-ins have `location_id = NULL`, custom location clubs have `location_id` set; partial unique indexes on `(name)` and `(slug)` separately for null vs. non-null `location_id`
-- **`club_sessions`** — logged sessions with `club_name`, `session_date`, `location_id`, `sensei_id`, `notes`
-- **`club_attendees`** — junction table: `club_session_id` + `student_id`
-- **`club_session_comments`** — staff comments on session threads
-- **`club_profiles`** — per-club pinned note (markdown) per location; upserted on save
-- **`club_resources`** — links and uploaded files attached to a club; `resource_type` is `'url'` or `'file'`; `file_name` stores the original filename for display
-
-Schema changes require updating `supabase/schema.sql` and running the new DDL in the Supabase SQL editor (or via `mcp__supabase__apply_migration`). There is no longer a local init/migration script — all migrations are applied directly to Supabase.
-
-### Client
-
-The Vite dev server proxies `/api/*` to `localhost:3001` (configured in `client/vite.config.js`), so all API calls use relative paths like `/api/students`.
-
-All fetch calls go through `client/src/api/client.js` which handles JSON serialization, credentials, and throws on non-OK responses.
-
-Auth state is managed by `client/src/context/AuthContext.jsx`. On mount it calls `GET /api/auth/me` to restore the session. Role-based routing uses `client/src/components/layout/ProtectedRoute.jsx` — managers also pass sensei-role checks.
-
-Parent auth state is managed by `client/src/context/ParentAuthContext.jsx` (separate context, calls `GET /api/parent/me`). The app root wraps `<ParentAuthProvider>` outside `<AuthProvider>` so both can coexist — staff and parents can be logged in simultaneously in different browser tabs without interference.
-
-### Clubs Architecture
-
-Clubs have three layers: **definitions** (what clubs exist), **profiles** (per-location pinned note + resources), and **sessions** (individual logged meetings with attendees and notes).
-
-**Server-side validation:** Club names are validated dynamically via `getValidClubNames(pool, locationId)` — an async helper that queries `club_definitions WHERE location_id = $1 OR location_id IS NULL`. This replaces the old hardcoded `CLUB_NAMES` array and supports manager-created custom clubs. The `club_sessions`, `club_profiles`, and `club_resources` tables have no CHECK constraint on `club_name` — validation is purely at the route layer.
-
-**Route order in `server/routes/clubs.js`:** Specific prefix routes (`/definitions`, `/profile/:clubName`, `/sessions/:id`) must come before wildcard `/:id` routes to avoid Express matching the wrong handler.
-
-**Client utilities (`client/src/utils/clubUtils.js`):**
-- `COLOR_SETS` — map from `color_key` string (purple, green, red, blue, orange, teal, pink, indigo, yellow) to Tailwind class objects `{ bg, text, border, badgeBg, badgeText, badgeBorder }`
-- `toSlug(name)` — generates URL-safe slugs: lowercase, non-alphanumeric → hyphen, trim leading/trailing hyphens
-- `getClubColors(clubDef)` — returns `COLOR_SETS[clubDef?.color_key] || COLOR_SETS.blue`
-- `CLUB_NAME_TO_SLUG` — legacy map for the 3 built-in clubs (still used in `ClubSessionsPanel`)
-
-**Club pages:**
-- `ClubsPage.jsx` — lists all clubs from `GET /api/clubs/definitions`; manager `CreateClubModal` with name, description, and color picker
-- `ClubProfilePage.jsx` — fetches definition by slug, shows pinned note (Write/Preview + emoji) and resources (link or file upload)
-- `ClubSessionPage.jsx` — session detail: attendee list (editable by managers), notes (Write/Preview + emoji), comment thread
-
-### Supabase Storage
-
-File uploads for club resources use **Supabase Storage** (bucket: `club-resources`, public). The client-side Supabase client lives in `client/src/lib/supabase.js`:
-
-```js
-import { createClient } from '@supabase/supabase-js';
-export const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
-```
-
-These `VITE_` env vars are baked into the client bundle at build time. They must be set in Vercel (Production + Preview) and in `client/.env.local` for local dev. The Supabase anon key is safe to expose — RLS policies are the security boundary.
-
-**Upload path pattern:** `{clubSlug}/{locationId}/{timestamp}-{sanitizedFileName}`. On resource delete, the client calls `supabase.storage.from('club-resources').remove([path])` to clean up storage, then calls the API delete endpoint.
-
-### Markdown and Emoji
-
-`react-markdown` + `remark-gfm` render markdown in pinned notes and club session notes. Always pass a `components` prop with Tailwind-styled elements (headings, paragraphs, lists, code, links) — the default renderer produces unstyled HTML.
-
-`EmojiButton` (`client/src/components/ui/EmojiButton.jsx`) is a reusable wrapper around `emoji-picker-react` v4:
-- `position` prop (`'top'` / `'bottom'`) controls popup direction
-- Click-outside closes the picker via `useRef` + `mousedown` listener
-- Emoji insertion uses `insertAtCursor(ref, currentValue, emoji, setter)` — reads `el.selectionStart`/`el.selectionEnd`, slices the string, sets value, then restores cursor position via `requestAnimationFrame`
-
-Picker config: `previewConfig={{ showPreview: false }}`, `skinTonesDisabled`, `height={350}`, `width="100%"`.
-
-### Belt Config — Single Source of Truth
-
-`client/src/utils/beltConfig.js` defines all belt names, level caps per belt, and display colors. Both the frontend form validation and the server-side API routes mirror these constraints. When adding or changing belt rules, update this file and the corresponding server-side validation in `server/routes/students.js` and `server/routes/progress.js`.
-
-Belt level caps: White (8), Yellow (10), Orange (12), Green (10), Blue (3). Purple/Brown/Red/Black have no sublevel tracking (`levels: null`).
-
-### Roles & Programs
-
-- **Manager**: full access — builds the daily session board, edits/removes student profiles, adds new students
-- **Sensei**: sees all of today's students (no pre-assignment), logs session notes for any student, can advance belt/project for CREATE students, and can view (read-only) the full student roster and profiles
-
-The session board is open — any sensei can log progress for any student added to the board that day. A student is marked complete once any sensei submits a progress log. There is no sensei pre-assignment.
-
-The student roster (`/manager/students`) and student profile (`/manager/students/:id`) routes are accessible to both roles. The "Add Student", "Edit", and "Remove" buttons are conditionally rendered only for managers (`user?.role === 'manager'`). Clicking a student name on the session board or a student card navigates to their full profile; senseis also have a separate "Log Progress" button on each card.
-
-Programs: `CREATE`, `Robotics Academy`, `AI Academy`, `JR`. Only CREATE students have belt/project tracking. The other programs currently use only the daily To Do board and notes.
-
-### Parent Portal
-
-Parents log in at `/parent/login` with their email address only (no password). The server looks up students by `parent_email` (case-insensitive). All parent API routes live in `server/routes/parent.js` under `/api/parent`.
-
-Parent portal routes:
-- `GET /api/parent/me` — restore session
-- `POST /api/parent/login` — email-only auth, sets `req.session.parentEmail`
-- `POST /api/parent/logout`
-- `GET /api/parent/students` — all children linked to the parent's email
-- `GET /api/parent/students/:id` — child profile (belt, project, recent sessions — **no instructor notes**)
-- `GET /api/parent/students/:id/messages` — message thread
-- `POST /api/parent/students/:id/messages` — parent sends a message
-
-Client pages: `client/src/pages/parent/ParentLogin.jsx`, `ParentDashboard.jsx`, `ParentStudentProfile.jsx`. Layout: `client/src/components/layout/ParentLayout.jsx`. Protected by `<ParentRoute>` in `App.jsx`.
-
-Staff can view and reply to parent messages from the student profile page (`/manager/students/:id`) in the "Parent Messages" panel. Instructor notes in `progress_logs` are intentionally excluded from the parent-facing API response.
-
-**Sibling email sync:** When a student's `parent_email` is updated via `PATCH /api/students/:id`, all other active students at the same location sharing the old email are updated to the new email/name/phone in the same transaction.
-
-### Student Data
-
-Students have a `birthday` (DATE) field stored in the DB. Age is calculated client-side from the birthday and displayed on the student profile.
-
-### Logos & Assets
-
-All source images live in `Images/` at the project root. They must be copied to `client/public/` to be served by Vite:
-- `client/public/DojoLinkLogoH.png` — horizontal DojoLink wordmark (PNG, 2100×1102); used in Navbar, ParentLayout, LoginPage, ParentLogin
-- `client/public/CodeNinjasIcon.svg` — square ninja icon, used as the browser tab favicon
-- `client/public/DojoLinkPreview.png` — OG link preview image (1200×630); referenced in `index.html` `<meta og:image>`
-- `client/public/CodeNinjasLaptop.png` — used in the manager's empty session board state
-- `client/public/CodeNinjasCelebrate.webp` — used in the sensei's empty dashboard state
-
-Source files in `Images/`: `DojoLinkH.png` (horizontal logo master), `DojoLinkPreview.png` (preview master), `DojoLinkLogoV.png` (vertical logo), `CodeNinjasLaptop.png`, `CodeNinjasCelebrate.webp`, `CodeNinjasIcon.svg`.
-
-OG image must be exactly 1200×630. To resize: `sips -z 630 1200 source.png --out client/public/DojoLinkPreview.png`.
-
-When adding new images, copy from `Images/` to `client/public/` and reference them as `/filename.ext` in JSX. No import needed — Vite serves `public/` as the root.
-
-**Do not use SVG files with embedded PNG bitmaps** (Canva exports these). Export as PNG at 800px+ width instead — SVGs from Canva appear blurry on mobile because they contain a low-res raster bitmap, not true vectors.
-
-### Theming
-
-The UI matches the Code Ninjas brand (based on codeninjas.com). Tailwind theme tokens are defined in `client/tailwind.config.js`:
-- `bg-ninja-bg` (#f5f7fa) — page background
-- `bg-ninja-card` / `bg-white` — card backgrounds
-- `border-ninja-border` (#e2e8f0) — card borders
-- `text-ninja-blue` / `bg-ninja-blue` (#006ADD) — primary accent (buttons, links, highlights)
-- `bg-ninja-blue-hover` (#0058b8) — button hover state
-- `text-ninja-navy` (#1a2e4a) — headings and body text
-- `text-ninja-muted` (#506690) — secondary/label text
-- `text-ninja-red` (#e51520) — errors and alerts only
-
-Font: **Nunito** (Google Fonts, weights 400/600/700/800/900), loaded in `client/index.html`.
-
-## Deployment
-
-The app is deployed on **Vercel** (frontend + serverless API) with **Supabase** as the database.
-
-- **Vercel project**: connected to `imLunah/dojolink` on GitHub — every push to `main` auto-deploys
-- **Supabase project**: `hatlannivniuauafptzk` — Transaction pooler on `aws-1-us-west-1`
-- **`vercel.json`**: sets `buildCommand` (builds the React client), `outputDirectory` (`client/dist`), and rewrites all `/api/*` requests to `api/index.js`
-- **`api/index.js`**: Vercel serverless entry point — just re-exports the Express app
-- **Environment variables on Vercel**: `DATABASE_URL`, `SESSION_SECRET`, `NODE_ENV=production`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (baked into the client bundle at build time — must be set for both Production and Preview environments)
-
-To re-seed Supabase (wipes users and students, keeps schema): `npm run seed`
-
-Schema changes: update `supabase/schema.sql` and apply via Supabase SQL editor or the MCP tool.
-
+| File | Purpose |
+|------|---------|
+| `client/src/components/parent/ProgressVisuals.jsx` | All parent portal progress card UIs (CREATE, Robotics, AI, JR) |
+| `client/src/utils/progressData.js` | `SUB_PROGRAMS` and full `CURRICULUM` — the authoritative lesson/module data |
+| `server/routes/progress.js` | Progress log submission + `percent_complete` / tracking column writes |
+| `server/routes/parent.js` | Parent API — `STUDENT_PROGRAMS_SUBQUERY`, what fields are exposed |
+| `client/src/pages/manager/EmailPreviewPage.jsx` | Email preview UI — data shape used for rendering |
+| `server/routes/emailPreview.js` | Email preview API route (queries `student_monthly_summary`) |
+| `supabase/schema.sql` | Current DB schema including `student_programs` columns and `student_monthly_summary` view |
+| `client/src/utils/beltConfig.js` | Belt names, level caps, colors (CREATE program only) |
