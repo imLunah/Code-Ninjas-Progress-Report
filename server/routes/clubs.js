@@ -17,6 +17,7 @@ async function getValidClubNames(pool, locationId) {
 const SESSION_SELECT = `
   SELECT
     cs.id, cs.club_name, cs.session_date, cs.notes, cs.created_at,
+    cs.sensei_id,
     u.display_name AS sensei_name,
     COALESCE(
       (SELECT json_agg(json_build_object('id', s.id, 'full_name', s.full_name) ORDER BY s.full_name)
@@ -159,8 +160,8 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
     await client.query('BEGIN');
     const { rows } = await client.query(
       `INSERT INTO club_sessions (club_name, session_date, location_id, sensei_id, notes)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [club_name, date, req.session.activeLocationId, req.session.userId, notes?.trim() || null]
+       VALUES ($1, $2, $3, NULL, $4) RETURNING id`,
+      [club_name, date, req.session.activeLocationId, notes?.trim() || null]
     );
     const sessionId = rows[0].id;
     for (const sid of ids) {
@@ -319,16 +320,25 @@ router.patch('/:id/attendees', requireSensei, requireOwnLocation, async (req, re
   }
 });
 
-// PATCH /api/clubs/:id/notes — sensei adds/edits notes
+// PATCH /api/clubs/:id/notes — managers edit any session; senseis edit only unclaimed or their own
 router.patch('/:id/notes', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { notes } = req.body;
+  const isManager = req.session.role === 'manager';
   try {
+    const ownershipClause = isManager ? '' : 'AND (sensei_id IS NULL OR sensei_id = $3)';
+    const params = isManager
+      ? [notes?.trim() || null, req.session.userId, req.params.id, req.session.activeLocationId]
+      : [notes?.trim() || null, req.session.userId, req.session.userId, req.params.id, req.session.activeLocationId];
+
     const { rows } = await pool.query(
-      `UPDATE club_sessions SET notes = $1, sensei_id = $2 WHERE id = $3 AND location_id = $4 RETURNING id`,
-      [notes?.trim() || null, req.session.userId, req.params.id, req.session.activeLocationId]
+      `UPDATE club_sessions SET notes = $1, sensei_id = $2
+       WHERE id = $${isManager ? 3 : 4} AND location_id = $${isManager ? 4 : 5}
+       ${ownershipClause}
+       RETURNING id`,
+      params
     );
-    if (!rows[0]) return res.status(404).json({ error: 'Session not found' });
+    if (!rows[0]) return res.status(404).json({ error: 'Session not found or not yours' });
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to save notes' });
