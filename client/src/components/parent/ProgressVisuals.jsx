@@ -88,117 +88,120 @@ function ActivityChart({ logs }) {
 // ─── Belt journey (CREATE only) ───────────────────────────────────────────────
 
 function BeltJourney({ enrollment }) {
-  const { belt_level, belt_sublevel, last_session_date } = enrollment;
+  const { belt_level, belt_sublevel, last_session_date, current_project, project_status } = enrollment;
   const currentIndex = belt_level ? BELTS.findIndex((b) => b.name === belt_level) : -1;
   const currentBelt = currentIndex >= 0 ? BELTS[currentIndex] : null;
   const maxLevel = currentBelt?.levels ?? null;
   const sublevel = belt_sublevel != null ? parseInt(belt_sublevel) : null;
   const progress = maxLevel && sublevel ? Math.round((sublevel / maxLevel) * 100) : null;
 
-  return (
-    <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-ninja-navy font-ninja font-bold text-lg">CREATE Belt Journey</h2>
-        {last_session_date && (
-          <span className="text-ninja-muted font-ninja text-xs">Last: {formatDate(last_session_date)}</span>
-        )}
-      </div>
-
-      {belt_level ? (
-        <>
-          {/* Current belt — large standalone image, no overflow needed */}
-          <div className="flex items-center gap-4 mb-5">
-            <img
-              src={BELT_IMAGES[belt_level]}
-              alt={belt_level}
-              draggable={false}
-              style={{ width: '80px', height: '80px', flexShrink: 0 }}
-            />
-            <div>
-              <p className="text-ninja-navy font-ninja font-bold text-2xl">{belt_level} Belt</p>
-              {sublevel && maxLevel ? (
-                <p className="text-ninja-muted font-ninja text-sm mt-0.5">
-                  Level {sublevel} of {maxLevel}
-                </p>
-              ) : (
-                <p className="text-ninja-muted font-ninja text-sm mt-0.5">No sublevel yet</p>
-              )}
-            </div>
-          </div>
-
-          {/* Sublevel progress bar */}
-          {progress !== null && (
-            <div className="mb-5">
-              <div className="flex justify-between text-xs font-ninja text-ninja-muted mb-1.5">
-                <span>Sublevel progress</span>
-                <span className="font-bold text-ninja-navy">{progress}%</span>
-              </div>
-              <div className="h-3 bg-ninja-bg rounded-full overflow-hidden border border-ninja-border">
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{ width: `${progress}%`, backgroundColor: currentBelt?.color }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Belt path — small images with connecting line */}
-          <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-2">
-            Belt Path
-          </p>
-          <div className="overflow-x-auto" style={{ margin: '0 -4px', padding: '4px' }}>
-            <div className="flex items-start" style={{ minWidth: 'max-content' }}>
-              {BELTS.map((belt, i) => {
-                const reached = i <= currentIndex;
-                const isCurrent = i === currentIndex;
-                return (
-                  <div key={belt.name} className="flex items-start">
-                    {i > 0 && (
-                      <div
-                        style={{
-                          width: '14px',
-                          height: '3px',
-                          borderRadius: '2px',
-                          backgroundColor: reached ? '#006ADD' : '#e2e8f0',
-                          flexShrink: 0,
-                          marginTop: '17px',
-                        }}
-                      />
-                    )}
-                    <div className="flex flex-col items-center" style={{ gap: '5px' }}>
-                      <img
-                        src={BELT_IMAGES[belt.name]}
-                        alt={belt.name}
-                        draggable={false}
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          opacity: reached ? 1 : 0.2,
-                          filter: reached ? 'none' : 'grayscale(100%)',
-                        }}
-                      />
-                      <span
-                        style={{
-                          fontSize: '10px',
-                          fontFamily: 'Nunito, sans-serif',
-                          fontWeight: isCurrent ? 700 : 400,
-                          color: isCurrent ? '#006ADD' : reached ? '#506690' : '#cbd5e1',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {belt.name}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </>
-      ) : (
+  if (!belt_level) {
+    return (
+      <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
+        <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-1">CREATE</h2>
         <p className="text-ninja-muted font-ninja text-sm italic text-center py-4">
           Belt journey starting soon!
         </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl shadow-lg overflow-hidden" style={{ background: 'linear-gradient(135deg, #006ADD 0%, #004fa8 100%)' }}>
+      <div className="p-5 relative overflow-hidden">
+        {/* watermark belt image */}
+        <div className="absolute right-4 top-3 pointer-events-none" style={{ opacity: 0.15 }}>
+          <img src={BELT_IMAGES[belt_level]} alt="" draggable={false} style={{ width: 80, height: 80 }} />
+        </div>
+
+        {/* Label */}
+        <p className="font-ninja text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.75)' }}>
+          Current Belt
+        </p>
+
+        {/* Belt name + sublevel */}
+        <div className="flex items-baseline gap-2 mb-1">
+          <p className="text-white font-ninja font-black" style={{ fontSize: '28px', lineHeight: 1 }}>{belt_level}</p>
+          {sublevel && <p className="font-ninja font-bold text-xl" style={{ color: 'rgba(255,255,255,0.85)' }}>#{sublevel}</p>}
+        </div>
+
+        {(current_project || last_session_date) && (
+          <p className="font-ninja text-xs mb-5" style={{ color: 'rgba(255,255,255,0.65)' }}>
+            {current_project ? `${current_project}${project_status ? ` · ${project_status}` : ''}` : ''}
+            {current_project && last_session_date ? ' · ' : ''}
+            {last_session_date ? `Last: ${formatDate(last_session_date)}` : ''}
+          </p>
+        )}
+        {!current_project && !last_session_date && <div className="mb-5" />}
+
+        {/* Belt path */}
+        <div className="overflow-x-auto" style={{ margin: '0 -4px', padding: '4px' }}>
+          <div className="flex items-center" style={{ minWidth: 'max-content' }}>
+            {BELTS.map((belt, i) => {
+              const reached = i <= currentIndex;
+              const isCurrent = i === currentIndex;
+              const imgSize = isCurrent ? 42 : 26;
+              return (
+                <div key={belt.name} className="flex items-center">
+                  {i > 0 && (
+                    <div style={{
+                      width: '12px',
+                      height: '2px',
+                      flexShrink: 0,
+                      backgroundColor: reached ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.22)',
+                    }} />
+                  )}
+                  <div className="flex flex-col items-center" style={{ gap: '4px' }}>
+                    <img
+                      src={BELT_IMAGES[belt.name]}
+                      alt={belt.name}
+                      draggable={false}
+                      style={{
+                        width: imgSize,
+                        height: imgSize,
+                        opacity: reached ? 1 : 0.45,
+                        filter: isCurrent
+                          ? 'drop-shadow(0 0 6px rgba(255,255,255,0.55))'
+                          : reached ? 'none' : 'grayscale(100%)',
+                        transition: 'all 0.2s',
+                      }}
+                    />
+                    <span style={{
+                      fontSize: '9px',
+                      fontFamily: 'Nunito, sans-serif',
+                      fontWeight: isCurrent ? 700 : 400,
+                      color: reached ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {belt.name}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Sublevel progress bar */}
+      {progress !== null && (
+        <div className="px-5 pb-5">
+          <div className="flex justify-between font-ninja mb-1.5" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>
+            <span>Sublevel progress</span>
+            <span className="font-bold" style={{ color: 'rgba(255,255,255,0.9)' }}>{progress}%</span>
+          </div>
+          <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+            <div
+              className="h-full rounded-full"
+              style={{ width: `${progress}%`, backgroundColor: 'rgba(255,255,255,0.8)' }}
+            />
+          </div>
+          {maxLevel && sublevel && (
+            <p className="font-ninja mt-1" style={{ fontSize: '10px', color: 'rgba(255,255,255,0.55)' }}>
+              Level {sublevel} of {maxLevel}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
