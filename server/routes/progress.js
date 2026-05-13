@@ -2,14 +2,27 @@ const express = require('express');
 const router = express.Router();
 const { requireSensei, requireManager, requireOwnLocation } = require('../middleware/auth');
 
+// For Robotics/JR: distinct modules visited vs total in that sub-program
 const CURRICULUM_MODULE_COUNTS = {
-  'AI Academy': 9,
   'JR Coding': 10,
   'Snap Circuits': 1,
   'Ozobot Evo': 2,
   'LEGO Spike Essentials': 8,
   'LEGO Spike Prime': 4,
   'VEX GO': 4,
+};
+
+// For AI Academy: lessons visited within the current module
+const AI_MODULE_LESSON_COUNTS = {
+  'Module 1': 6,
+  'Module 2': 8,
+  'Module 3': 8,
+  'Module 4': 8,
+  'Module 5': 8,
+  'Module 6': 8,
+  'Module 7': 9,
+  'Module 8': 8,
+  'Module 9': 8,
 };
 
 // POST /api/progress
@@ -123,8 +136,22 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
       [student_id, program, date]
     );
 
-    // Auto-compute percent_complete for non-CREATE programs based on distinct modules visited
-    if (program !== 'CREATE' && module_name) {
+    // Auto-compute percent_complete — AI Academy tracks lesson progress within the current module;
+    // Robotics/JR track distinct modules visited within the current sub-program.
+    if (program === 'AI Academy' && module_name) {
+      const totalLessons = AI_MODULE_LESSON_COUNTS[module_name];
+      if (totalLessons) {
+        const { rows: cntRows } = await pool.query(
+          'SELECT COUNT(DISTINCT lesson_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name = $3 AND lesson_name IS NOT NULL',
+          [student_id, program, module_name]
+        );
+        const pct = Math.min(100, Math.round((parseInt(cntRows[0].cnt) / totalLessons) * 100));
+        await pool.query(
+          'UPDATE student_programs SET percent_complete = $1 WHERE student_id = $2 AND program = $3',
+          [pct, student_id, program]
+        );
+      }
+    } else if (program !== 'CREATE' && program !== 'AI Academy' && module_name) {
       const lookupKey = sub_program || program;
       const totalModules = CURRICULUM_MODULE_COUNTS[lookupKey];
       if (totalModules) {
