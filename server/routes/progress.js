@@ -182,20 +182,28 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
   }
 });
 
-// PATCH /api/progress/:id — manager edits notes on a progress log
-router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
+// PATCH /api/progress/:id — managers edit any log; senseis edit only their own
+router.patch('/:id', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { notes } = req.body;
   if (!notes?.trim()) return res.status(400).json({ error: 'Notes are required' });
+
+  const isManager = req.session.role === 'manager';
   try {
+    const ownershipClause = isManager ? '' : 'AND progress_logs.sensei_id = $4';
+    const params = isManager
+      ? [notes.trim(), req.params.id, req.session.activeLocationId]
+      : [notes.trim(), req.params.id, req.session.activeLocationId, req.session.userId];
+
     const { rows } = await pool.query(
       `UPDATE progress_logs SET notes = $1
        FROM students s
        WHERE progress_logs.id = $2 AND progress_logs.student_id = s.id AND s.location_id = $3
+       ${ownershipClause}
        RETURNING progress_logs.id`,
-      [notes.trim(), req.params.id, req.session.activeLocationId]
+      params
     );
-    if (!rows[0]) return res.status(404).json({ error: 'Log not found' });
+    if (!rows[0]) return res.status(404).json({ error: 'Log not found or not yours' });
     res.json({ ok: true });
   } catch (err) {
     console.error('Progress log update error:', err);
