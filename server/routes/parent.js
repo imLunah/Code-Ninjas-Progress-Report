@@ -13,6 +13,7 @@ const STUDENT_PROGRAMS_SUBQUERY = `
         'current_project', sp.current_project,
         'project_status', sp.project_status,
         'last_session_date', sp.last_session_date,
+        'last_sub_program', sp.last_sub_program,
         'last_module_name', sp.last_module_name,
         'percent_complete', sp.percent_complete
       ) ORDER BY sp.created_at
