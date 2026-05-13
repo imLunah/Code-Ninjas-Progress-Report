@@ -243,7 +243,8 @@ export default function ClubSessionPage() {
         <div className="bg-white border border-ninja-border rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-ninja-navy font-ninja font-bold text-lg">Session Notes</h2>
-            {!isReadOnly && !editingNotes && (
+            {!isReadOnly && !editingNotes &&
+              (user?.role === 'manager' || session.sensei_id === null || session.sensei_id === user?.id) && (
               <button onClick={() => { setEditingNotes(true); setNotesPreview(false); }}
                 className="text-ninja-blue font-ninja text-sm font-semibold hover:underline">
                 {session.notes ? 'Edit' : '+ Add Notes'}
