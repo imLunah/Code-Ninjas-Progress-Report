@@ -24,7 +24,7 @@ export default function Navbar() {
         { to: '/manager/students', label: 'Ninjas' },
         { to: '/clubs', label: 'Clubs' },
         { to: '/manager/staff', label: 'Senseis' },
-        { to: '/manager/email-preview', label: 'Email Preview' },
+
       ]
     : user?.role === 'sensei'
     ? [
