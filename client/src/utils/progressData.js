@@ -3,8 +3,8 @@
 export const SUB_PROGRAMS = {
   'CREATE': null,
   'AI Academy': null,
-  'Robotics Academy': ['LEGO Spike Essentials', 'LEGO Spike Prime', 'VEX GO'],
-  'JR': ['JR Coding', 'Snap Circuits', 'Ozobot Evo'],
+  'Robotics Academy': ['LEGO Spike Essentials', 'LEGO Spike Prime', 'VEX GO', 'Ozobot Evo'],
+  'JR': ['JR Coding', 'Snap Circuits'],
 };
 
 // Curriculum indexed by sub-program name (or program name for programs with no sub-programs).
