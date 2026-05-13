@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DojoLink Feature Graphics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,800;1,900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background:
+        radial-gradient(circle at 20% 0%, #e0eaf5 0%, transparent 50%),
+        radial-gradient(circle at 80% 100%, #dde7f5 0%, transparent 50%),
+        #eef2f7;
+      min-height: 100vh;
+      font-family: 'Nunito', sans-serif;
+      color: #0b1220;
+    }
+    body { padding: 60px 60px 160px; }
+    .page-header {
+      max-width: 1920px;
+      margin: 0 auto 50px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+    .page-title {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: 56px;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      margin: 0;
+      color: #0b1220;
+    }
+    .page-sub {
+      font-family: 'Nunito', sans-serif;
+      font-size: 19px;
+      color: #506690;
+      margin: 14px 0 0;
+      max-width: 760px;
+      line-height: 1.5;
+    }
+    .meta {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12px;
+      color: #64748b;
+      background: rgba(255,255,255,0.7);
+      border: 1px solid #cbd5e1;
+      padding: 14px 18px;
+      border-radius: 12px;
+      max-width: 360px;
+      line-height: 1.7;
+    }
+    .meta b { color: #0b1220; }
+    .section-label {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: 14px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #506690;
+      margin: 50px auto 28px;
+      max-width: 1920px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .section-label::before,
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #cbd5e1;
+    }
+    .canvas {
+      max-width: 1920px;
+      margin: 0 auto;
+    }
+    em { font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">DojoLink feature graphics</h1>
+      <p class="page-sub">A full marketing section for the website: a hero, six feature blocks, a screens grid, and three social cards. Phone mocks rendered from the React component patterns in <code>client/src</code>. Open the Tweaks panel (toolbar toggle, bottom right) to recolor and try variants live.</p>
+    </div>
+    <div class="meta">
+      <b>Brand:</b> DojoLink<br/>
+      <b>Font:</b> Nunito (matches app)<br/>
+      <b>Accent:</b> <span id="accent-readout">#006ADD</span><br/>
+      <b>Outputs:</b> 1920×1080, 1440×760, 1200×630, 1080×1080, 1080×1920
+    </div>
+  </header>
+
+  <div id="app-root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="phone.jsx"></script>
+  <script type="text/babel" src="screens.jsx"></script>
+  <script type="text/babel" src="sections.jsx"></script>
+
+  <script type="text/babel">
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "accent": "#006ADD",
+      "density": "normal",
+      "dark": false,
+      "copyVariant": "hybrid"
+    }/*EDITMODE-END*/;
+
+    function Label({ children }) {
+      return <div className="section-label">{children}</div>;
+    }
+
+    function App() {
+      const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+      React.useEffect(() => {
+        const el = document.getElementById('accent-readout');
+        if (el) el.textContent = t.accent;
+      }, [t.accent]);
+
+      return (
+        <>
+          <Label>Hero banner · 1920 × 1080</Label>
+          <div className="canvas">
+            <HeroBanner {...t} />
+          </div>
+
+          <Label>Feature blocks · 1440 × 760 each</Label>
+          <div className="canvas">
+            {FEATURES.map((f, i) => (
+              <FeatureBlock key={f.Screen} feature={f} idx={i} {...t} />
+            ))}
+          </div>
+
+          <Label>Screens grid · 1920 × 1080</Label>
+          <div className="canvas">
+            <ScreensGrid {...t} />
+          </div>
+
+          <Label>Social share cards</Label>
+          <div className="canvas" style={{ display: 'flex', flexWrap: 'wrap', gap: 60, justifyContent: 'flex-start' }}>
+            <SocialOG {...t} />
+            <SocialSquare {...t} />
+            <SocialStory {...t} />
+          </div>
+
+          <TweaksPanel>
+            <TweakSection label="Brand" />
+            <TweakColor
+              label="Accent"
+              value={t.accent}
+              options={['#006ADD', '#7c3aed', '#16a34a', '#ea580c', '#0ea5e9']}
+              onChange={(v) => setTweak('accent', v)}
+            />
+            <TweakToggle
+              label="Dark canvas"
+              value={t.dark}
+              onChange={(v) => setTweak('dark', v)}
+            />
+            <TweakSection label="Energy" />
+            <TweakRadio
+              label="Ninja motif"
+              value={t.density}
+              options={['subtle', 'normal', 'extra']}
+              onChange={(v) => setTweak('density', v)}
+            />
+            <TweakSection label="Copy" />
+            <TweakSelect
+              label="Hero headline"
+              value={t.copyVariant}
+              options={[
+                { value: 'hybrid', label: 'Run the dojo (default)' },
+                { value: 'parent', label: 'For parents' },
+                { value: 'staff',  label: 'For staff' },
+              ]}
+              onChange={(v) => setTweak('copyVariant', v)}
+            />
+          </TweaksPanel>
+        </>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('app-root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
