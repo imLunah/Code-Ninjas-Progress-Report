@@ -336,35 +336,117 @@ function ModuleProgress({ program, enrollment, logs }) {
     );
   }
 
-  // ── Robotics Academy (and any other programs): progress bar + module grids ───
-  const pct = enrollment?.percent_complete ?? 0;
-  const barColor = PROGRAM_BAR_COLORS[program] || '#006ADD';
+  // ── Robotics Academy: module-level progress within current kit ──────────────
+  if (program === 'Robotics Academy') {
+    const KIT_ORDER = ['LEGO Spike Essentials', 'LEGO Spike Prime', 'VEX GO'];
+    const KIT_SHORT  = { 'LEGO Spike Essentials': 'Essentials', 'LEGO Spike Prime': 'Prime', 'VEX GO': 'VEX GO' };
+    const KIT_TOTALS = { 'LEGO Spike Essentials': 8, 'LEGO Spike Prime': 4, 'VEX GO': 4 };
 
-  if (!subProgramList) {
-    const modules = CURRICULUM[program] || [];
-    const visited = new Set(logs.map((l) => l.module_name).filter(Boolean));
+    const currentKit = enrollment?.last_sub_program;
+    const currentKitIndex = currentKit ? KIT_ORDER.indexOf(currentKit) : -1;
+    const totalModules = currentKit ? (KIT_TOTALS[currentKit] ?? 0) : 0;
+    const visitedModules = currentKit
+      ? new Set(logs.filter((l) => l.sub_program === currentKit).map((l) => l.module_name).filter(Boolean)).size
+      : 0;
+    const pct = totalModules > 0 ? Math.round((visitedModules / totalModules) * 100) : 0;
+    const currentKitModules = currentKit ? (CURRICULUM[currentKit] || []) : [];
+    const visitedModuleNames = currentKit
+      ? new Set(logs.filter((l) => l.sub_program === currentKit).map((l) => l.module_name).filter(Boolean))
+      : new Set();
+
     return (
       <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-ninja-navy font-ninja font-bold text-lg">{program}</h2>
-          <span className="text-ninja-muted font-ninja text-sm">{totalSessions} sessions</span>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-ninja-navy font-ninja font-bold text-lg">Robotics Academy</h2>
+          {lastDate && (
+            <span className="text-ninja-muted font-ninja text-xs">Last: {formatDate(lastDate)}</span>
+          )}
         </div>
-        {lastDate && (
-          <p className="text-ninja-muted font-ninja text-xs mb-3">Last: {formatDate(lastDate)}</p>
+
+        {currentKit ? (
+          <>
+            <div className="mb-4">
+              <p className="text-ninja-navy font-ninja font-bold text-xl">{currentKit}</p>
+              <p className="text-ninja-muted font-ninja text-sm mt-0.5">
+                Module {visitedModules} of {totalModules}
+              </p>
+            </div>
+            <div className="mb-5">
+              <div className="flex justify-between text-xs font-ninja text-ninja-muted mb-1.5">
+                <span>Kit progress</span>
+                <span className="font-bold text-ninja-navy">{pct}%</span>
+              </div>
+              <div className="h-3 bg-ninja-bg rounded-full overflow-hidden border border-ninja-border">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${pct}%`, backgroundColor: '#7c3aed' }}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <p className="text-ninja-muted font-ninja text-sm italic mb-4">No kit started yet.</p>
         )}
-        <div className="mb-4">
-          <div className="flex justify-between text-xs font-ninja text-ninja-muted mb-1.5">
-            <span>Progress</span>
-            <span className="font-bold text-ninja-navy">{pct}%</span>
-          </div>
-          <div className="h-3 bg-ninja-bg rounded-full overflow-hidden border border-ninja-border">
-            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: barColor }} />
+
+        <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-2">
+          Kit Path
+        </p>
+        <div className="overflow-x-auto mb-5" style={{ margin: '0 -4px 20px', padding: '4px' }}>
+          <div className="flex items-start" style={{ minWidth: 'max-content' }}>
+            {KIT_ORDER.map((kit, i) => {
+              const reached = i <= currentKitIndex;
+              const isCurrent = i === currentKitIndex;
+              return (
+                <div key={kit} className="flex items-start">
+                  {i > 0 && (
+                    <div style={{
+                      width: '24px', height: '3px', borderRadius: '2px',
+                      backgroundColor: reached ? '#7c3aed' : '#e2e8f0',
+                      flexShrink: 0, marginTop: '13px',
+                    }} />
+                  )}
+                  <div className="flex flex-col items-center" style={{ gap: '5px' }}>
+                    <div style={{
+                      width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
+                      backgroundColor: isCurrent ? '#7c3aed' : reached ? '#c4b5fd' : '#e2e8f0',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <span style={{ color: reached ? 'white' : '#cbd5e1', fontSize: '11px', fontWeight: 700 }}>
+                        {i + 1}
+                      </span>
+                    </div>
+                    <span style={{
+                      fontSize: '10px', fontFamily: 'Nunito, sans-serif',
+                      fontWeight: isCurrent ? 700 : 400,
+                      color: isCurrent ? '#7c3aed' : reached ? '#506690' : '#cbd5e1',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {KIT_SHORT[kit]}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-        <ModuleGrid modules={modules} visited={visited} />
+
+        {currentKit && (
+          <>
+            <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-2">
+              Module Path
+            </p>
+            <ModuleGrid modules={currentKitModules} visited={visitedModuleNames} />
+          </>
+        )}
       </div>
     );
   }
+
+  // ── Fallback (any future programs) ───────────────────────────────────────────
+  const pct = enrollment?.percent_complete ?? 0;
+  const barColor = PROGRAM_BAR_COLORS[program] || '#006ADD';
+  const modules = CURRICULUM[program] || [];
+  const visited = new Set(logs.map((l) => l.module_name).filter(Boolean));
 
   return (
     <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
@@ -384,24 +466,7 @@ function ModuleProgress({ program, enrollment, logs }) {
           <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: barColor }} />
         </div>
       </div>
-      <div className="space-y-4">
-        {subProgramList.map((sp) => {
-          const spLogs = logs.filter((l) => l.sub_program === sp);
-          const modules = CURRICULUM[sp] || [];
-          const visited = new Set(spLogs.map((l) => l.module_name).filter(Boolean));
-          return (
-            <div key={sp}>
-              <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-2">
-                {sp}
-                {spLogs.length > 0 && (
-                  <span className="ml-2 text-ninja-blue font-bold">{spLogs.length} sessions</span>
-                )}
-              </p>
-              <ModuleGrid modules={modules} visited={visited} />
-            </div>
-          );
-        })}
-      </div>
+      <ModuleGrid modules={modules} visited={visited} />
     </div>
   );
 }
