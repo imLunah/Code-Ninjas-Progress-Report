@@ -240,9 +240,105 @@ function ModuleGrid({ modules, visited }) {
 function ModuleProgress({ program, enrollment, logs }) {
   const subProgramList = SUB_PROGRAMS[program];
   const totalSessions = logs.length;
+  const lastDate = enrollment?.last_session_date;
+
+  // ── AI Academy: lesson-level progress within current module ──────────────────
+  if (program === 'AI Academy') {
+    const currentModule = enrollment?.last_module_name;
+    const aiCurriculum = CURRICULUM['AI Academy'] || [];
+    const moduleEntry = aiCurriculum.find((m) => m.module === currentModule);
+    const totalLessons = moduleEntry?.lessons.length ?? 0;
+    const visitedLessons = currentModule
+      ? new Set(
+          logs
+            .filter((l) => l.module_name === currentModule)
+            .map((l) => l.lesson_name)
+            .filter(Boolean)
+        ).size
+      : 0;
+    const pct = totalLessons > 0 ? Math.round((visitedLessons / totalLessons) * 100) : 0;
+    const visitedModules = new Set(logs.map((l) => l.module_name).filter(Boolean));
+
+    return (
+      <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-ninja-navy font-ninja font-bold text-lg">AI Academy</h2>
+          {lastDate && (
+            <span className="text-ninja-muted font-ninja text-xs">Last: {formatDate(lastDate)}</span>
+          )}
+        </div>
+
+        {currentModule ? (
+          <>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-ninja-navy font-ninja font-bold text-xl">{currentModule}</p>
+                <p className="text-ninja-muted font-ninja text-sm mt-0.5">
+                  Lesson {visitedLessons} of {totalLessons}
+                </p>
+              </div>
+            </div>
+            <div className="mb-5">
+              <div className="flex justify-between text-xs font-ninja text-ninja-muted mb-1.5">
+                <span>Module progress</span>
+                <span className="font-bold text-ninja-navy">{pct}%</span>
+              </div>
+              <div className="h-3 bg-ninja-bg rounded-full overflow-hidden border border-ninja-border">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${pct}%`, backgroundColor: '#4338ca' }}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <p className="text-ninja-muted font-ninja text-sm italic mb-4">No modules started yet.</p>
+        )}
+
+        <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-2">
+          Module Path
+        </p>
+        <ModuleGrid modules={aiCurriculum} visited={visitedModules} />
+      </div>
+    );
+  }
+
+  // ── JR: no progress bar, just last session + sub-program module grids ────────
+  if (program === 'JR') {
+    return (
+      <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-ninja-navy font-ninja font-bold text-lg">JR</h2>
+          <span className="text-ninja-muted font-ninja text-sm">{totalSessions} sessions</span>
+        </div>
+        {lastDate && (
+          <p className="text-ninja-muted font-ninja text-xs mb-3">Last: {formatDate(lastDate)}</p>
+        )}
+        <div className="space-y-4">
+          {(subProgramList || []).map((sp) => {
+            const spLogs = logs.filter((l) => l.sub_program === sp);
+            const modules = CURRICULUM[sp] || [];
+            const visited = new Set(spLogs.map((l) => l.module_name).filter(Boolean));
+            return (
+              <div key={sp}>
+                <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-2">
+                  {sp}
+                  {spLogs.length > 0 && (
+                    <span className="ml-2 text-ninja-blue font-bold">{spLogs.length} sessions</span>
+                  )}
+                </p>
+                <ModuleGrid modules={modules} visited={visited} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Robotics Academy (and any other programs): progress bar + module grids ───
   const pct = enrollment?.percent_complete ?? 0;
   const barColor = PROGRAM_BAR_COLORS[program] || '#006ADD';
-  const lastDate = enrollment?.last_session_date;
 
   if (!subProgramList) {
     const modules = CURRICULUM[program] || [];
@@ -262,10 +358,7 @@ function ModuleProgress({ program, enrollment, logs }) {
             <span className="font-bold text-ninja-navy">{pct}%</span>
           </div>
           <div className="h-3 bg-ninja-bg rounded-full overflow-hidden border border-ninja-border">
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${pct}%`, backgroundColor: barColor }}
-            />
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: barColor }} />
           </div>
         </div>
         <ModuleGrid modules={modules} visited={visited} />
@@ -288,10 +381,7 @@ function ModuleProgress({ program, enrollment, logs }) {
           <span className="font-bold text-ninja-navy">{pct}%</span>
         </div>
         <div className="h-3 bg-ninja-bg rounded-full overflow-hidden border border-ninja-border">
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{ width: `${pct}%`, backgroundColor: barColor }}
-          />
+          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: barColor }} />
         </div>
       </div>
       <div className="space-y-4">
