@@ -419,7 +419,21 @@ export default function StudentProfile() {
           <h2 className="text-xl font-bold font-ninja text-ninja-navy mb-4">
             Progress <span className="text-ninja-blue">History</span>
           </h2>
-          <ProgressHistory logs={student.progress_logs || []} />
+          <ProgressHistory
+            logs={student.progress_logs || []}
+            onLogUpdated={(logId, changes) =>
+              setStudent((prev) => ({
+                ...prev,
+                progress_logs: prev.progress_logs.map((l) => l.id === logId ? { ...l, ...changes } : l),
+              }))
+            }
+            onLogDeleted={(logId) =>
+              setStudent((prev) => ({
+                ...prev,
+                progress_logs: prev.progress_logs.filter((l) => l.id !== logId),
+              }))
+            }
+          />
         </div>
       </div>
 

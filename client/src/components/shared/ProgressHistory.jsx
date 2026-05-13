@@ -55,7 +55,7 @@ function CommentBox({ logId, onAdded }) {
   );
 }
 
-export default function ProgressHistory({ logs = [], onLogUpdated }) {
+export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted }) {
   const { user } = useAuth();
   const isManager = user?.role === 'manager';
 
@@ -64,6 +64,12 @@ export default function ProgressHistory({ logs = [], onLogUpdated }) {
   const [filter, setFilter] = useState('');
   const [localComments, setLocalComments] = useState({});
 
+  const [editingId, setEditingId] = useState(null);
+  const [editDraft, setEditDraft] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
   const visible = filter ? logs.filter((l) => l.program === filter) : logs;
 
   const handleCommentAdded = (logId, comment) => {
@@ -71,6 +77,39 @@ export default function ProgressHistory({ logs = [], onLogUpdated }) {
       ...prev,
       [logId]: [...(prev[logId] || []), comment],
     }));
+  };
+
+  const startEdit = (log) => {
+    setEditingId(log.id);
+    setEditDraft(log.notes || '');
+    setConfirmDeleteId(null);
+  };
+
+  const saveEdit = async (logId) => {
+    if (!editDraft.trim()) return;
+    setSavingEdit(true);
+    try {
+      await api.patch(`/progress/${logId}`, { notes: editDraft.trim() });
+      onLogUpdated && onLogUpdated(logId, { notes: editDraft.trim() });
+      setEditingId(null);
+    } catch {
+      // ignore
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDelete = async (logId) => {
+    setDeleting(true);
+    try {
+      await api.delete(`/progress/${logId}`);
+      onLogDeleted && onLogDeleted(logId);
+      setConfirmDeleteId(null);
+    } catch {
+      // ignore
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (logs.length === 0) {
@@ -113,6 +152,9 @@ export default function ProgressHistory({ logs = [], onLogUpdated }) {
 
       {visible.map((log) => {
         const allComments = [...(log.comments || []), ...(localComments[log.id] || [])];
+        const isEditing = editingId === log.id;
+        const isConfirmingDelete = confirmDeleteId === log.id;
+
         return (
           <div key={log.id} className="bg-ninja-bg border border-ninja-border rounded-xl p-4">
             <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
@@ -133,6 +175,31 @@ export default function ProgressHistory({ logs = [], onLogUpdated }) {
                     : 'bg-gray-100 text-gray-600'
                   }`}>{log.status_at}</span>
                 )}
+                {isManager && !isEditing && (
+                  <div className="flex items-center gap-1.5 ml-1">
+                    <button
+                      onClick={() => startEdit(log)}
+                      className="text-ninja-muted hover:text-ninja-blue font-ninja text-xs font-semibold transition-colors"
+                    >
+                      Edit
+                    </button>
+                    {isConfirmingDelete ? (
+                      <>
+                        <Button variant="danger" size="sm" onClick={() => handleDelete(log.id)} disabled={deleting}>
+                          {deleting ? '...' : 'Confirm'}
+                        </Button>
+                        <Button variant="secondary" size="sm" onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => { setConfirmDeleteId(log.id); setEditingId(null); }}
+                        className="text-ninja-muted hover:text-ninja-red font-ninja text-xs font-semibold transition-colors"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -150,9 +217,27 @@ export default function ProgressHistory({ logs = [], onLogUpdated }) {
               </div>
             )}
 
-            <p className="text-ninja-navy font-ninja text-sm leading-relaxed">{log.notes}</p>
+            {isEditing ? (
+              <div className="space-y-2 mt-1">
+                <textarea
+                  value={editDraft}
+                  onChange={(e) => setEditDraft(e.target.value)}
+                  rows={4}
+                  className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => saveEdit(log.id)} disabled={savingEdit || !editDraft.trim()}>
+                    {savingEdit ? 'Saving...' : 'Save'}
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-ninja-navy font-ninja text-sm leading-relaxed">{log.notes}</p>
+            )}
 
-            {/* Manager comments */}
+            {/* Comments */}
             {allComments.length > 0 && (
               <div className="mt-3 space-y-1 border-t border-ninja-border pt-3">
                 {allComments.map((c) => <LogComment key={c.id} comment={c} />)}
