@@ -111,7 +111,7 @@ function BeltJourney({ enrollment }) {
       <div className="p-5 relative overflow-hidden">
         {/* belt image — dead space top-right */}
         <div className="absolute pointer-events-none" style={{ right: -8, top: -8, opacity: 0.38 }}>
-          <img src={BELT_IMAGES[belt_level]} alt="" draggable={false} style={{ width: 80, height: 80 }} />
+          <img src={BELT_IMAGES[belt_level]} alt="" draggable={false} style={{ width: 110, height: 110 }} />
         </div>
 
         {/* Label */}
