@@ -110,8 +110,8 @@ function BeltJourney({ enrollment }) {
     <div className="rounded-2xl shadow-lg overflow-hidden" style={{ background: 'linear-gradient(135deg, #006ADD 0%, #004fa8 100%)' }}>
       <div className="p-5 relative overflow-hidden">
         {/* belt image — dead space top-right */}
-        <div className="absolute pointer-events-none" style={{ right: -8, top: -8, opacity: 0.55 }}>
-          <img src={BELT_IMAGES[belt_level]} alt="" draggable={false} style={{ width: 120, height: 120 }} />
+        <div className="absolute pointer-events-none" style={{ right: -8, top: -8, opacity: 0.38 }}>
+          <img src={BELT_IMAGES[belt_level]} alt="" draggable={false} style={{ width: 80, height: 80 }} />
         </div>
 
         {/* Label */}
