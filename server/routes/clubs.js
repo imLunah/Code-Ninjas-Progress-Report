@@ -142,20 +142,18 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/clubs — create a club session (manager only)
+// POST /api/clubs — check in a club session (manager only); attendees/notes filled in later by senseis
 router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { club_name, session_date, notes, student_ids } = req.body;
 
   if (!club_name) return res.status(400).json({ error: 'Club name is required' });
-  if (!Array.isArray(student_ids) || student_ids.length === 0) {
-    return res.status(400).json({ error: 'At least one student is required' });
-  }
 
   const validClubs = await getValidClubNames(pool, req.session.activeLocationId);
   if (!validClubs.has(club_name)) return res.status(400).json({ error: 'Invalid club name' });
 
   const date = session_date || new Date().toISOString().split('T')[0];
+  const ids = Array.isArray(student_ids) ? student_ids : [];
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -165,7 +163,7 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
       [club_name, date, req.session.activeLocationId, req.session.userId, notes?.trim() || null]
     );
     const sessionId = rows[0].id;
-    for (const sid of student_ids) {
+    for (const sid of ids) {
       await client.query(
         'INSERT INTO club_attendees (club_session_id, student_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
         [sessionId, sid]
@@ -289,8 +287,8 @@ router.get('/sessions/:id', requireAuth, async (req, res) => {
 
 // ─── Session-scoped routes ────────────────────────────────────────────────────
 
-// PATCH /api/clubs/:id/attendees — manager updates attendee list
-router.patch('/:id/attendees', requireManager, requireOwnLocation, async (req, res) => {
+// PATCH /api/clubs/:id/attendees — any staff can update the attendee list
+router.patch('/:id/attendees', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { student_ids } = req.body;
   if (!Array.isArray(student_ids) || student_ids.length === 0) {
