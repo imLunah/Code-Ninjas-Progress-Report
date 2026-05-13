@@ -182,6 +182,46 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
   }
 });
 
+// PATCH /api/progress/:id — manager edits notes on a progress log
+router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { notes } = req.body;
+  if (!notes?.trim()) return res.status(400).json({ error: 'Notes are required' });
+  try {
+    const { rows } = await pool.query(
+      `UPDATE progress_logs SET notes = $1
+       FROM students s
+       WHERE progress_logs.id = $2 AND progress_logs.student_id = s.id AND s.location_id = $3
+       RETURNING progress_logs.id`,
+      [notes.trim(), req.params.id, req.session.activeLocationId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Log not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Progress log update error:', err);
+    res.status(500).json({ error: 'Failed to update log' });
+  }
+});
+
+// DELETE /api/progress/:id — manager deletes a progress log
+router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  try {
+    const { rows } = await pool.query(
+      `DELETE FROM progress_logs
+       USING students s
+       WHERE progress_logs.id = $1 AND progress_logs.student_id = s.id AND s.location_id = $2
+       RETURNING progress_logs.id`,
+      [req.params.id, req.session.activeLocationId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Log not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Progress log delete error:', err);
+    res.status(500).json({ error: 'Failed to delete log' });
+  }
+});
+
 // POST /api/progress/:id/comments — any staff member can comment on a log entry
 router.post('/:id/comments', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
