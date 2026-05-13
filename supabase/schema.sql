@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS student_programs (
   last_module_name TEXT,
   last_lesson_name TEXT,
   last_session_date DATE,
+  percent_complete INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(student_id, program)
 );
