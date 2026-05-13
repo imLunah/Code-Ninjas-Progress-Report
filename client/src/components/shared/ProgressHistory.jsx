@@ -175,7 +175,7 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                     : 'bg-gray-100 text-gray-600'
                   }`}>{log.status_at}</span>
                 )}
-                {isManager && !isEditing && (
+                {(isManager || log.sensei_id === user?.id) && !isEditing && (
                   <div className="flex items-center gap-1.5 ml-1">
                     <button
                       onClick={() => startEdit(log)}
@@ -183,20 +183,22 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                     >
                       Edit
                     </button>
-                    {isConfirmingDelete ? (
-                      <>
-                        <Button variant="danger" size="sm" onClick={() => handleDelete(log.id)} disabled={deleting}>
-                          {deleting ? '...' : 'Confirm'}
-                        </Button>
-                        <Button variant="secondary" size="sm" onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => { setConfirmDeleteId(log.id); setEditingId(null); }}
-                        className="text-ninja-muted hover:text-ninja-red font-ninja text-xs font-semibold transition-colors"
-                      >
-                        Delete
-                      </button>
+                    {isManager && (
+                      isConfirmingDelete ? (
+                        <>
+                          <Button variant="danger" size="sm" onClick={() => handleDelete(log.id)} disabled={deleting}>
+                            {deleting ? '...' : 'Confirm'}
+                          </Button>
+                          <Button variant="secondary" size="sm" onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => { setConfirmDeleteId(log.id); setEditingId(null); }}
+                          className="text-ninja-muted hover:text-ninja-red font-ninja text-xs font-semibold transition-colors"
+                        >
+                          Delete
+                        </button>
+                      )
                     )}
                   </div>
                 )}
