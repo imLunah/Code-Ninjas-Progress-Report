@@ -178,7 +178,7 @@ export default function ClubSessionPage() {
             <h2 className="text-ninja-navy font-ninja font-bold text-lg">
               Attendees <span className="text-ninja-muted font-normal text-base">({session.attendees?.length ?? 0})</span>
             </h2>
-            {user?.role === 'manager' && !isReadOnly && !editingAttendees && (
+            {!isReadOnly && !editingAttendees && (
               <button onClick={loadStudents} className="text-ninja-blue font-ninja text-sm font-semibold hover:underline">
                 Edit
               </button>
