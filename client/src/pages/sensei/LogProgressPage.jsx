@@ -5,7 +5,6 @@ import BeltBadge from '../../components/ui/BeltBadge';
 import ProgramBadge from '../../components/ui/ProgramBadge';
 import Card from '../../components/ui/Card';
 import LogEntryForm from '../../components/sensei/LogEntryForm';
-import ProgressHistory from '../../components/shared/ProgressHistory';
 import PinnedNote from '../../components/shared/PinnedNote';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -78,7 +77,6 @@ export default function LogProgressPage() {
     : (student.programs || []);
 
   const enrollment = availablePrograms.find((p) => p.program === selectedProgram);
-  const programLogs = (student.progress_logs || []).filter((l) => l.program === selectedProgram).slice(0, 3);
 
   return (
     <Layout>
@@ -153,16 +151,7 @@ export default function LogProgressPage() {
           onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
         />
 
-        {programLogs.length > 0 && (
-          <div className="bg-white border border-ninja-border rounded-xl p-4 shadow-sm">
-            <h2 className="text-lg font-bold font-ninja text-ninja-navy mb-3">
-              Recent <span className="text-ninja-blue">Sessions</span>
-            </h2>
-            <ProgressHistory logs={programLogs} />
-          </div>
-        )}
-
-        {isReadOnly ? (
+{isReadOnly ? (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 shadow-sm text-center">
             <p className="text-amber-700 font-ninja font-semibold">
               You can only log progress at your home center.
