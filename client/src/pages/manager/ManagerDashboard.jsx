@@ -70,6 +70,26 @@ export default function ManagerDashboard() {
           )}
         </div>
 
+{/* Desktop stat strip */}
+        {!loading && !error && (
+          <div className="hidden lg:grid grid-cols-4 gap-4">
+            {[
+              { label: 'Logged today',  value: assignments.filter(a => a.completed).length, color: '#22c55e' },
+              { label: 'Pending',       value: assignments.filter(a => !a.completed && !(a.session_date && String(a.session_date).split('T')[0] < todayStr)).length, color: '#eab308' },
+              { label: 'Overdue',       value: assignments.filter(a => !a.completed && a.session_date && String(a.session_date).split('T')[0] < todayStr).length, color: '#ef4444' },
+              { label: 'Total today',   value: assignments.length, color: '#006ADD' },
+            ].map((s) => (
+              <div key={s.label} className="bg-white border border-ninja-border rounded-xl p-4 shadow-sm">
+                <p className="font-ninja font-bold text-xs text-ninja-muted uppercase tracking-wide">{s.label}</p>
+                <div className="flex items-baseline gap-2 mt-1.5">
+                  <span className="font-ninja font-black text-3xl text-ninja-navy leading-none">{s.value}</span>
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
 {/* Board */}
         {error && <p className="text-ninja-red font-ninja text-center py-4">{error}</p>}
 
