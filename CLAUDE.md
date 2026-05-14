@@ -102,6 +102,14 @@
 
 ### 4. RECENT WORK — WHAT JUST HAPPENED
 
+- **What was worked on (Session 3 — 14 May 2026):**
+  1. **Profile pic visibility fix:** `GET /api/users` (role=sensei) and `GET /api/users/:id` were not selecting `profile_pic_url` — added to both queries so other accounts can see uploaded photos
+  2. **Staff list avatars:** Each row on StaffPage now shows a circular profile pic (or initials fallback) before the sensei name
+  3. **Staff page Framer animations:** Stat cards and sensei rows now animate in with staggered fade-up (60ms per row)
+  4. **Inline buttons removed from StaffPage rows:** "Edit Login" and "Remove" buttons fully removed from the sensei list rows on all screen sizes
+  5. **Modal buttons always visible:** SenseiProfileModal manager actions (Edit Login + Remove) were `sm:hidden` (mobile only) — removed that restriction so they always appear at the bottom of the profile sheet
+  6. **"Add Again" for check-ins:** `AddStudentToday` was disabling the Add button once a student/program was already on the board — changed to show "Add Again" and stay enabled for multiple check-ins
+
 - **What was worked on (Session 2 — 14 May 2026):**
   1. **Multiple check-ins per day:** Dropped unique constraint `daily_assignments_student_program_date_key` on `(student_id, program, session_date)` — managers can now check a ninja into the same program multiple times in one day (makeup classes, double sessions)
   2. **Session number badges:** Today's Board shows a purple "Session 2 / Session 3" badge on cards that are the 2nd+ check-in for the same student/program/day
@@ -132,6 +140,10 @@
   - **Backward-compatible API:** `lesson_entries` array is optional; single-lesson submissions still work unchanged
 
 - **What changed in the system:**
+  - `server/routes/users.js`: both `GET /` (role=sensei) and `GET /:id` now select `profile_pic_url`
+  - `client/src/pages/manager/StaffPage.jsx`: avatar in rows, Framer stagger, inline buttons removed, `confirmRemoveId` state removed
+  - `client/src/components/manager/SenseiProfileModal.jsx`: removed `sm:hidden` from manager action buttons
+  - `client/src/components/manager/AddStudentToday.jsx`: Add button always enabled; shows "Add Again" if already checked in
   - DB: dropped `daily_assignments_student_program_date_key` unique constraint
   - `server/routes/daily.js`: added `session_number` correlated subquery to `ASSIGNMENT_SELECT`; removed 409 guard
   - `server/routes/progress.js`: multi-lesson support via `lesson_entries` array; assignment completion targets specific `id`
