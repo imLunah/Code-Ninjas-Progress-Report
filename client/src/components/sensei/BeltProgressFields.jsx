@@ -10,9 +10,11 @@ export default function BeltProgressFields({ beltLevel, setBeltLevel, beltSublev
   };
 
   const handleSublevelChange = (e) => {
-    const val = parseInt(e.target.value);
-    if (maxLevel && val > maxLevel) return;
-    setBeltSublevel(e.target.value);
+    const raw = e.target.value;
+    if (raw === '') { setBeltSublevel(''); setProject?.(''); return; }
+    const val = parseInt(raw);
+    if (!val || val < 1 || (maxLevel && val > maxLevel)) return;
+    setBeltSublevel(raw);
     setProject?.('');
   };
 
