@@ -58,14 +58,13 @@ export default function SenseiProfileModal({
     touchStartY.current = null;
   };
 
-  if (!isOpen || !sensei) return null;
-
-  const joinYear = sensei.created_at
+  const joinYear = sensei?.created_at
     ? new Date(sensei.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
     : '—';
 
   return (
     <AnimatePresence>
+      {isOpen && sensei && (
       <motion.div
         key="overlay"
         initial={{ opacity: 0 }}
@@ -79,7 +78,7 @@ export default function SenseiProfileModal({
           key="panel"
           initial={{ opacity: 0, y: 60 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 60 }}
+          exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 28, stiffness: 300 }}
           className="w-full sm:max-w-md bg-ninja-bg rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col"
           style={{ maxHeight: '90vh' }}
@@ -200,6 +199,7 @@ export default function SenseiProfileModal({
           </div>
         </motion.div>
       </motion.div>
+      )}
     </AnimatePresence>
   );
 }
