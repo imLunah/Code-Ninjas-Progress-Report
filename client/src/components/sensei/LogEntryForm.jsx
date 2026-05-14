@@ -274,6 +274,7 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
             setBeltLevel={setBeltLevel}
             beltSublevel={beltSublevel}
             setBeltSublevel={setBeltSublevel}
+            setProject={setProject}
           />
 
           <ProjectFields
@@ -281,6 +282,8 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
             setProject={setProject}
             status={status}
             setStatus={setStatus}
+            beltLevel={beltLevel}
+            beltSublevel={beltSublevel}
           />
         </div>
       )}

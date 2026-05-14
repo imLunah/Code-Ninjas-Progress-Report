@@ -1,17 +1,19 @@
 import { BELTS, getMaxLevel } from '../../utils/beltConfig';
 
-export default function BeltProgressFields({ beltLevel, setBeltLevel, beltSublevel, setBeltSublevel }) {
+export default function BeltProgressFields({ beltLevel, setBeltLevel, beltSublevel, setBeltSublevel, setProject }) {
   const maxLevel = getMaxLevel(beltLevel);
 
   const handleBeltChange = (e) => {
     setBeltLevel(e.target.value);
     setBeltSublevel('');
+    setProject?.('');
   };
 
   const handleSublevelChange = (e) => {
     const val = parseInt(e.target.value);
     if (maxLevel && val > maxLevel) return;
     setBeltSublevel(e.target.value);
+    setProject?.('');
   };
 
   return (
