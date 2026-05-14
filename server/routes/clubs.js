@@ -41,7 +41,7 @@ router.get('/definitions', requireAuth, async (req, res) => {
   const pool = req.app.get('db');
   try {
     const { rows } = await pool.query(
-      `SELECT cd.id, cd.name, cd.slug, cd.description, cd.color_key, cd.location_id, cd.created_at, cd.schedule,
+      `SELECT cd.id, cd.name, cd.slug, cd.description, cd.color_key, cd.location_id, cd.created_at, cd.schedule, cd.cover_image_url,
               u.display_name AS creator_name
        FROM club_definitions cd
        LEFT JOIN users u ON cd.created_by = u.id
@@ -103,6 +103,29 @@ router.patch('/definitions/:id', requireManager, requireOwnLocation, async (req,
     if (err.code === '23505') return res.status(409).json({ error: 'A club with that name already exists' });
     console.error('Club definition update error:', err);
     res.status(500).json({ error: 'Failed to update club' });
+  }
+});
+
+// PATCH /api/clubs/definitions/:id/cover-image — manager updates club cover photo
+router.patch('/definitions/:id/cover-image', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { cover_image_url } = req.body;
+  try {
+    const { rows: existing } = await pool.query(
+      'SELECT id, location_id FROM club_definitions WHERE id = $1',
+      [req.params.id]
+    );
+    if (!existing[0]) return res.status(404).json({ error: 'Club not found' });
+    if (existing[0].location_id === null) return res.status(403).json({ error: 'Cannot edit a built-in club' });
+    if (existing[0].location_id !== req.session.activeLocationId) return res.status(403).json({ error: 'Forbidden' });
+    const { rows } = await pool.query(
+      'UPDATE club_definitions SET cover_image_url = $1 WHERE id = $2 RETURNING cover_image_url',
+      [cover_image_url || null, req.params.id]
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Club cover image error:', err);
+    res.status(500).json({ error: 'Failed to update cover image' });
   }
 });
 

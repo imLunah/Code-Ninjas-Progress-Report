@@ -36,7 +36,12 @@ function ClubCard({ club, onClick, onDelete, onEdit, canManage }) {
   };
 
   return (
-    <div className="relative bg-white border border-ninja-border rounded-2xl shadow-sm hover:border-ninja-blue hover:shadow-md transition-all group">
+    <div className="relative bg-white border border-ninja-border rounded-2xl shadow-sm hover:border-ninja-blue hover:shadow-md transition-all group overflow-hidden">
+      {club.cover_image_url && (
+        <div className="h-28 w-full overflow-hidden bg-ninja-bg">
+          <img src={club.cover_image_url} alt={club.name} className="w-full h-full object-cover" />
+        </div>
+      )}
       <button
         onClick={onClick}
         className="w-full p-6 text-left"
