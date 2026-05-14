@@ -53,6 +53,7 @@ router.post('/login', async (req, res) => {
       displayName: user.display_name,
       role: user.role,
       homeLocationId: user.location_id,
+      profilePicUrl: user.profile_pic_url || null,
       activeLocation,
       availableLocations,
     });
@@ -103,7 +104,7 @@ router.get('/me', async (req, res) => {
   try {
     const pool = req.app.get('db');
     const { rows } = await pool.query(
-      'SELECT id, username, display_name, role, location_id FROM users WHERE id = $1',
+      'SELECT id, username, display_name, role, location_id, profile_pic_url FROM users WHERE id = $1',
       [req.session.userId]
     );
     const user = rows[0];
@@ -126,6 +127,7 @@ router.get('/me', async (req, res) => {
       displayName: user.display_name,
       role: user.role,
       homeLocationId: user.location_id,
+      profilePicUrl: user.profile_pic_url || null,
       activeLocation,
       availableLocations,
     });

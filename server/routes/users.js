@@ -112,6 +112,19 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   }
 });
 
+// PATCH /api/users/me/avatar — save profile picture URL
+router.patch('/me/avatar', requireSensei, async (req, res) => {
+  const pool = req.app.get('db');
+  const { profile_pic_url } = req.body;
+  try {
+    await pool.query('UPDATE users SET profile_pic_url = $1 WHERE id = $2', [profile_pic_url || null, req.session.userId]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Avatar update error:', err);
+    res.status(500).json({ error: 'Failed to update avatar' });
+  }
+});
+
 // PATCH /api/users/me — any staff can update their own username/password
 router.patch('/me', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
