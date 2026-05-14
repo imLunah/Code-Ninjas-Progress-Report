@@ -7,6 +7,22 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
+const BASE = 'https://hatlannivniuauafptzk.supabase.co/storage/v1/object/public/profile-pics/avatars';
+const NINJA_AVATARS = [
+  { id: 'ninja-cheer', url: `${BASE}/ninja-cheer.png` },
+  { id: 'ninja-cheer2', url: `${BASE}/ninja-cheer2.png` },
+  { id: 'ninja-cheer3', url: `${BASE}/ninja-cheer3.png` },
+  { id: 'ninjas', url: `${BASE}/ninjas.png` },
+  { id: 'ninjas-working', url: `${BASE}/ninjas-working.png` },
+  { id: 'ninjas-working2', url: `${BASE}/ninjas-working2.png` },
+  { id: 'ninjas-working3', url: `${BASE}/ninjas-working3.png` },
+  { id: 'ninjas-working4', url: `${BASE}/ninjas-working4.png` },
+  { id: 'ninjas-working5', url: `${BASE}/ninjas-working5.png` },
+  { id: 'ninjas-working6', url: `${BASE}/ninjas-working6.png` },
+  { id: 'ninja-wave', url: `${BASE}/ninja-wave.png` },
+  { id: 'ninja-welcome', url: `${BASE}/ninja-welcome.png` },
+];
+
 export default function AccountPage() {
   const { user, setUser, logout } = useAuth();
   const navigate = useNavigate();
@@ -22,6 +38,7 @@ export default function AccountPage() {
   const [uploadingPic, setUploadingPic] = useState(false);
   const [picError, setPicError] = useState('');
   const [cropSrc, setCropSrc] = useState(null);
+  const [applyingAvatar, setApplyingAvatar] = useState(null);
 
   const initials = user?.displayName?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || '?';
 
@@ -55,6 +72,19 @@ export default function AccountPage() {
       setPicError('Upload failed. Try again.');
     } finally {
       setUploadingPic(false);
+    }
+  };
+
+  const handleAvatarSelect = async (avatarUrl) => {
+    setApplyingAvatar(avatarUrl);
+    setPicError('');
+    try {
+      await api.patch('/users/me/avatar', { profile_pic_url: avatarUrl });
+      setUser((prev) => ({ ...prev, profilePicUrl: avatarUrl }));
+    } catch {
+      setPicError('Failed to apply avatar. Try again.');
+    } finally {
+      setApplyingAvatar(null);
     }
   };
 
@@ -140,12 +170,53 @@ export default function AccountPage() {
           )}
         </motion.div>
 
+        {/* Ninja Avatar Picker */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08, duration: 0.3 }}
+          className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm"
+        >
+          <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">Choose Ninja Avatar</p>
+          <div className="grid grid-cols-4 gap-2">
+            {NINJA_AVATARS.map((avatar) => {
+              const isSelected = user?.profilePicUrl?.includes(avatar.id);
+              const isLoading = applyingAvatar === avatar.url;
+              return (
+                <button
+                  key={avatar.id}
+                  type="button"
+                  onClick={() => handleAvatarSelect(avatar.url)}
+                  disabled={!!applyingAvatar || uploadingPic}
+                  className={`relative rounded-xl overflow-hidden aspect-square flex items-center justify-center p-1 transition-all ${
+                    isSelected
+                      ? 'ring-2 ring-ninja-blue bg-ninja-blue/10'
+                      : 'bg-ninja-bg hover:bg-blue-50 hover:ring-2 hover:ring-ninja-blue/30'
+                  } disabled:opacity-60`}
+                >
+                  <img src={avatar.url} alt={avatar.id} className="w-full h-full object-contain" />
+                  {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-xl">
+                      <div className="w-4 h-4 border-2 border-ninja-blue border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                  {isSelected && !isLoading && (
+                    <div className="absolute top-1 right-1 w-4 h-4 bg-ninja-blue rounded-full flex items-center justify-center">
+                      <span className="text-white text-[9px] font-bold leading-none">✓</span>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </motion.div>
+
         {/* Username + Password */}
         <motion.form
           onSubmit={handleSave}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.3 }}
+          transition={{ delay: 0.15, duration: 0.3 }}
           className="bg-white border border-ninja-border rounded-2xl p-6 shadow-sm space-y-5"
         >
           <div>
@@ -199,7 +270,7 @@ export default function AccountPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.3 }}
+          transition={{ delay: 0.25, duration: 0.3 }}
         >
           <button
             onClick={async () => { try { await logout(); } catch {} navigate('/login'); }}
