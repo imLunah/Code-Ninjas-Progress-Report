@@ -187,7 +187,7 @@ export default function StudentRoster() {
 
   return (
     <Layout>
-      <div className="space-y-4">
+      <div className="space-y-4 lg:h-[calc(100dvh-64px)] lg:flex lg:flex-col lg:space-y-0 lg:gap-4">
 
         {/* ── Header ── */}
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -313,7 +313,7 @@ export default function StudentRoster() {
         </div>
 
         {/* ── Desktop table ── */}
-        <div className="hidden lg:block space-y-3">
+        <div className="hidden lg:flex lg:flex-col lg:flex-1 lg:min-h-0 lg:gap-3">
           {/* Filter + sort bar */}
           <div className="flex items-center gap-3 flex-wrap">
             {/* Search */}
@@ -367,13 +367,13 @@ export default function StudentRoster() {
           </div>
 
           {/* Table card */}
-          <div className="bg-white border border-ninja-border rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-white border border-ninja-border rounded-2xl overflow-hidden shadow-sm flex flex-col flex-1 min-h-0">
             {error && <p className="text-ninja-red font-ninja text-center py-8">{error}</p>}
             {loading && <p className="text-ninja-muted font-ninja text-center py-8">Loading ninjas...</p>}
             {!loading && !error && (
               <>
-                {/* Table head */}
-                <div className={`grid gap-4 px-5 py-3.5 border-b border-ninja-border bg-ninja-bg font-ninja font-bold text-xs text-ninja-muted uppercase tracking-widest ${isManager && !isLogMode ? 'grid-cols-[28px_2fr_1.5fr_1.4fr_1fr_80px]' : 'grid-cols-[2fr_1.5fr_1.4fr_1fr_80px]'}`}>
+                {/* Table head — stays pinned, rows scroll below */}
+                <div className={`flex-shrink-0 grid gap-4 px-5 py-3.5 border-b border-ninja-border bg-ninja-bg font-ninja font-bold text-xs text-ninja-muted uppercase tracking-widest ${isManager && !isLogMode ? 'grid-cols-[28px_2fr_1.5fr_1.4fr_1fr_80px]' : 'grid-cols-[2fr_1.5fr_1.4fr_1fr_80px]'}`}>
                   {isManager && !isLogMode && (
                     <div>
                       <input
@@ -391,7 +391,8 @@ export default function StudentRoster() {
                   <div />
                 </div>
 
-                {/* Rows */}
+                {/* Rows — scrollable */}
+                <div className="overflow-y-auto flex-1">
                 {sorted.length === 0 && (
                   <p className="text-center text-ninja-muted font-ninja py-12">No ninjas found</p>
                 )}
@@ -467,6 +468,7 @@ export default function StudentRoster() {
                     </div>
                   );
                 })}
+                </div>
               </>
             )}
           </div>
