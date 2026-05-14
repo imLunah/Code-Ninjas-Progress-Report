@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import Layout from '../../components/layout/Layout';
 import BeltBadge from '../../components/ui/BeltBadge';
@@ -11,6 +12,16 @@ import EditStudentModal from '../../components/manager/EditStudentModal';
 import EnrollmentEditModal from '../../components/manager/EnrollmentEditModal';
 import { api } from '../../api/client';
 import { PROGRAMS, BELTS, PROJECTS, STATUSES, getMaxLevel, getBelt } from '../../utils/beltConfig';
+
+// ── Animation variants ────────────────────────────────────────────────────────
+const fadeUp = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+};
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
+};
 
 // ── Avatar helpers ────────────────────────────────────────────────────────────
 const AVATAR_COLORS = [
@@ -105,7 +116,13 @@ function MobileBeltJourney({ enrollment }) {
       {progress !== null && (
         <div className="mt-3">
           <div className="h-2.5 rounded-full overflow-hidden bg-gray-100">
-            <div className="h-full rounded-full" style={{ width: `${progress}%`, backgroundColor: belt?.color || '#006ADD' }} />
+            <motion.div
+              className="h-full rounded-full"
+              style={{ backgroundColor: belt?.color || '#006ADD' }}
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
+            />
           </div>
           <div className="flex items-center justify-between mt-1.5">
             <span className="text-ninja-muted font-ninja text-xs">
@@ -147,7 +164,13 @@ function MobileProgramCard({ enrollment }) {
       {percent_complete != null && (
         <div className="mt-2.5">
           <div className="h-2.5 rounded-full overflow-hidden bg-gray-100">
-            <div className="h-full rounded-full" style={{ width: `${percent_complete}%`, backgroundColor: barColor }} />
+            <motion.div
+              className="h-full rounded-full"
+              style={{ backgroundColor: barColor }}
+              initial={{ width: 0 }}
+              animate={{ width: `${percent_complete}%` }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
+            />
           </div>
           <p className="text-right text-xs font-ninja font-bold text-ninja-navy mt-1">{Math.round(percent_complete)}%</p>
         </div>
@@ -179,12 +202,14 @@ function MobileActivityChart({ logs }) {
 
   return (
     <div className="flex items-end gap-2">
-      {months.map((m) => (
+      {months.map((m, i) => (
         <div key={`${m.year}-${m.month}`} className="flex-1 flex flex-col items-center gap-1.5">
           <div className="w-full flex flex-col justify-end" style={{ height: BAR_HEIGHT }}>
-            <div
+            <motion.div
               className="w-full rounded-t-md bg-ninja-blue"
-              style={{ height: m.count > 0 ? `${Math.max(6, Math.round((m.count / max) * BAR_HEIGHT))}px` : 0 }}
+              initial={{ height: 0 }}
+              animate={{ height: m.count > 0 ? `${Math.max(6, Math.round((m.count / max) * BAR_HEIGHT))}px` : 0 }}
+              transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: i * 0.06 + 0.25 }}
             />
           </div>
           <span className="text-ninja-muted font-ninja text-xs">{m.label}</span>
@@ -259,9 +284,12 @@ function DesktopBeltJourney({ enrollment }) {
       {progress !== null && (
         <div className="mt-5">
           <div className="h-2.5 rounded-full overflow-hidden bg-gray-100">
-            <div
+            <motion.div
               className="h-full rounded-full"
-              style={{ width: `${progress}%`, backgroundColor: belt?.color || '#006ADD' }}
+              style={{ backgroundColor: belt?.color || '#006ADD' }}
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.35 }}
             />
           </div>
           <div className="flex items-center justify-between mt-2">
@@ -295,20 +323,21 @@ function DesktopActivityChart({ logs }) {
 
   return (
     <div className="flex items-end gap-3">
-      {months.map((m) => {
+      {months.map((m, i) => {
         const isCurrent = m.month === now.getMonth() && m.year === now.getFullYear();
+        const barH = m.count > 0 ? Math.max(8, Math.round((m.count / max) * BAR_HEIGHT)) : 0;
         return (
           <div key={`${m.year}-${m.month}`} className="flex-1 flex flex-col items-center gap-1.5">
             {m.count > 0 && (
               <span className="text-ninja-muted font-ninja text-xs font-bold">{m.count}</span>
             )}
             <div className="w-full flex flex-col justify-end" style={{ height: BAR_HEIGHT }}>
-              <div
+              <motion.div
                 className="w-full rounded-t-md"
-                style={{
-                  height: m.count > 0 ? `${Math.max(8, Math.round((m.count / max) * BAR_HEIGHT))}px` : 0,
-                  backgroundColor: isCurrent ? '#006ADD' : '#93c5fd',
-                }}
+                style={{ backgroundColor: isCurrent ? '#006ADD' : '#93c5fd' }}
+                initial={{ height: 0 }}
+                animate={{ height: barH > 0 ? `${barH}px` : 0 }}
+                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: i * 0.07 + 0.2 }}
               />
             </div>
             <span className="text-ninja-muted font-ninja text-xs">{m.label}</span>
@@ -487,25 +516,35 @@ export default function StudentProfile() {
   return (
     <Layout>
       <div>
-        <button
+        <motion.button
           onClick={() => navigate('/manager/students')}
           className="text-ninja-muted hover:text-ninja-blue font-ninja text-sm flex items-center gap-1 transition-colors mb-4"
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
         >
           ← Back to Roster
-        </button>
+        </motion.button>
 
         {/* ── Mobile layout ───────────────────────────────────────────────── */}
-        <div className="lg:hidden space-y-4">
-
+        <motion.div
+          className="lg:hidden space-y-4"
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+        >
           {/* Compact header */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
+          <motion.div variants={fadeUp} className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
             <div className="flex items-center gap-3">
-              <div
+              <motion.div
                 className="w-14 h-14 rounded-full flex items-center justify-center text-white font-ninja font-bold text-lg flex-shrink-0"
                 style={{ backgroundColor: getAvatarColor(student.full_name) }}
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', damping: 14, stiffness: 260, delay: 0.15 }}
               >
                 {getInitials(student.full_name)}
-              </div>
+              </motion.div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
                   <h1 className="text-xl font-bold font-ninja text-ninja-navy leading-tight">{student.full_name}</h1>
@@ -527,51 +566,65 @@ export default function StudentProfile() {
                 </p>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Special Instructions */}
           {student.special_instructions && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm">
+            <motion.div variants={fadeUp} className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm">
               <h2 className="text-ninja-navy font-ninja font-bold text-sm mb-1.5 flex items-center gap-2">
                 <span className="text-amber-500">⚠</span> Special Instructions from Parent
               </h2>
               <p className="text-ninja-navy font-ninja text-sm leading-relaxed whitespace-pre-wrap">{student.special_instructions}</p>
-            </div>
+            </motion.div>
           )}
 
           {/* Pinned Note */}
-          <PinnedNote
-            studentId={student.id}
-            initialNote={student.pinned_note}
-            onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
-          />
+          <motion.div variants={fadeUp}>
+            <PinnedNote
+              studentId={student.id}
+              initialNote={student.pinned_note}
+              onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
+            />
+          </motion.div>
 
           {/* Belt Journey (CREATE) */}
-          {createEnrollment?.belt_level && <MobileBeltJourney enrollment={createEnrollment} />}
+          {createEnrollment?.belt_level && (
+            <motion.div variants={fadeUp}>
+              <MobileBeltJourney enrollment={createEnrollment} />
+            </motion.div>
+          )}
 
           {/* Other program cards */}
           {nonCreatePrograms.map((enrollment) => (
-            <MobileProgramCard key={enrollment.program} enrollment={enrollment} />
+            <motion.div key={enrollment.program} variants={fadeUp}>
+              <MobileProgramCard enrollment={enrollment} />
+            </motion.div>
           ))}
 
           {/* Activity chart */}
           {logs.length > 0 && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
+            <motion.div variants={fadeUp} className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-ninja font-bold text-ninja-navy">Activity</h2>
                 <span className="text-ninja-blue font-ninja font-bold text-sm">{logs.length} sessions</span>
               </div>
               <MobileActivityChart logs={logs} />
-            </div>
+            </motion.div>
           )}
 
           {/* Recent Progress */}
           {logs.length > 0 && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
+            <motion.div variants={fadeUp} className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
               <h2 className="font-ninja font-bold text-ninja-navy mb-3">Recent Progress</h2>
               <div className="space-y-4">
-                {logs.slice(0, 5).map((log) => (
-                  <div key={log.id} className="flex gap-3">
+                {logs.slice(0, 5).map((log, i) => (
+                  <motion.div
+                    key={log.id}
+                    className="flex gap-3"
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, ease: 'easeOut', delay: i * 0.05 + 0.3 }}
+                  >
                     <div className="w-1 rounded-full bg-ninja-blue flex-shrink-0 self-stretch" />
                     <div className="min-w-0">
                       <p className="font-ninja font-bold text-ninja-navy text-sm leading-snug">
@@ -584,34 +637,40 @@ export default function StudentProfile() {
                         <p className="text-ninja-muted font-ninja text-sm mt-0.5 leading-snug">{log.notes}</p>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           )}
 
           {logs.length === 0 && (
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-ninja-border text-center">
+            <motion.div variants={fadeUp} className="bg-white rounded-2xl p-8 shadow-sm border border-ninja-border text-center">
               <p className="text-ninja-muted font-ninja text-sm italic">No sessions logged yet.</p>
-            </div>
+            </motion.div>
           )}
 
           {/* Log Progress CTA */}
           {!isReadOnly && programs.length > 0 && (
-            <button
+            <motion.button
+              variants={fadeUp}
               onClick={() => navigate(`/sensei/student/${student.id}?programs=${encodeURIComponent(programs.map(p => p.program).join(','))}`)}
               className="w-full bg-ninja-blue text-white font-ninja font-bold py-3.5 rounded-2xl shadow-sm"
             >
               Log Progress
-            </button>
+            </motion.button>
           )}
-        </div>
+        </motion.div>
 
         {/* ── Desktop layout (lg+) ── */}
         <div className="hidden lg:block">
 
           {/* Page header */}
-          <div className="flex items-start justify-between gap-4 mb-6">
+          <motion.div
+            className="flex items-start justify-between gap-4 mb-6"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          >
             <div>
               <h1 className="text-2xl font-bold font-ninja text-ninja-navy leading-tight">{student.full_name}</h1>
               <p className="text-ninja-muted font-ninja text-sm mt-1">
@@ -641,24 +700,34 @@ export default function StudentProfile() {
                 </button>
               )}
             </div>
-          </div>
+          </motion.div>
 
           {/* Two-column layout */}
           <div className="flex gap-6 items-start">
 
             {/* Left column */}
-            <div className="flex-1 min-w-0 space-y-5">
-
+            <motion.div
+              className="flex-1 min-w-0 space-y-5"
+              variants={stagger}
+              initial="hidden"
+              animate="show"
+            >
               {/* Belt Journey */}
-              {createEnrollment?.belt_level && <DesktopBeltJourney enrollment={createEnrollment} />}
+              {createEnrollment?.belt_level && (
+                <motion.div variants={fadeUp}>
+                  <DesktopBeltJourney enrollment={createEnrollment} />
+                </motion.div>
+              )}
 
               {/* Non-CREATE programs */}
               {nonCreatePrograms.map((enrollment) => (
-                <MobileProgramCard key={enrollment.program} enrollment={enrollment} />
+                <motion.div key={enrollment.program} variants={fadeUp}>
+                  <MobileProgramCard enrollment={enrollment} />
+                </motion.div>
               ))}
 
               {/* Activity */}
-              <div className="bg-white rounded-2xl p-5 border border-ninja-border shadow-sm">
+              <motion.div variants={fadeUp} className="bg-white rounded-2xl p-5 border border-ninja-border shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="font-ninja font-bold text-ninja-navy">Activity</h2>
                   <span className="text-ninja-blue font-ninja font-bold text-sm">
@@ -666,15 +735,21 @@ export default function StudentProfile() {
                   </span>
                 </div>
                 <DesktopActivityChart logs={logs} />
-              </div>
+              </motion.div>
 
               {/* Recent Progress */}
               {logs.length > 0 && (
-                <div className="bg-white rounded-2xl p-5 border border-ninja-border shadow-sm">
+                <motion.div variants={fadeUp} className="bg-white rounded-2xl p-5 border border-ninja-border shadow-sm">
                   <h2 className="font-ninja font-bold text-ninja-navy mb-1">Recent Progress</h2>
                   <div>
-                    {sortedLogs.slice(0, 6).map((log) => (
-                      <div key={log.id} className="flex gap-3 py-3 border-t border-ninja-border/60 first:border-t-0 first:pt-0">
+                    {sortedLogs.slice(0, 6).map((log, i) => (
+                      <motion.div
+                        key={log.id}
+                        className="flex gap-3 py-3 border-t border-ninja-border/60 first:border-t-0 first:pt-0"
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeOut', delay: i * 0.05 + 0.3 }}
+                      >
                         <div className="w-0.5 rounded-full bg-ninja-blue flex-shrink-0 self-stretch min-h-[1rem]" />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap mb-0.5">
@@ -690,15 +765,15 @@ export default function StudentProfile() {
                             <p className="text-ninja-muted font-ninja text-sm leading-snug">{log.notes}</p>
                           )}
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {/* Enrollments management */}
               {isManager && !isReadOnly && (
-                <div className="bg-white rounded-2xl p-5 border border-ninja-border shadow-sm">
+                <motion.div variants={fadeUp} className="bg-white rounded-2xl p-5 border border-ninja-border shadow-sm">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="font-ninja font-bold text-ninja-navy">Enrollments</h2>
                     {!showAddProgram && (
@@ -748,22 +823,29 @@ export default function StudentProfile() {
                       />
                     )}
                   </div>
-                </div>
+                </motion.div>
               )}
-            </div>
+            </motion.div>
 
             {/* Right column */}
-            <div className="w-72 flex-shrink-0 space-y-4">
-
+            <motion.div
+              className="w-72 flex-shrink-0 space-y-4"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.12 }}
+            >
               {/* Student info card */}
               <div className="bg-white rounded-2xl p-5 border border-ninja-border shadow-sm">
                 <div className="flex flex-col items-center text-center mb-4">
-                  <div
+                  <motion.div
                     className="w-16 h-16 rounded-full flex items-center justify-center text-white font-ninja font-bold text-xl mb-3 flex-shrink-0"
                     style={{ backgroundColor: getAvatarColor(student.full_name) }}
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', damping: 14, stiffness: 260, delay: 0.22 }}
                   >
                     {getInitials(student.full_name)}
-                  </div>
+                  </motion.div>
                   <h2 className="font-ninja font-bold text-ninja-navy text-lg leading-tight">{student.full_name}</h2>
                   <p className="text-ninja-muted font-ninja text-sm mt-0.5">
                     {student.birthday
@@ -783,11 +865,17 @@ export default function StudentProfile() {
                     { label: 'This month', value: logsThisMonth },
                     { label: 'Current belt', value: createEnrollment?.belt_level || '—' },
                     { label: 'Last session', value: lastSessionStr },
-                  ].map((s) => (
-                    <div key={s.label} className="bg-ninja-bg rounded-xl p-3">
+                  ].map((s, i) => (
+                    <motion.div
+                      key={s.label}
+                      className="bg-ninja-bg rounded-xl p-3"
+                      initial={{ opacity: 0, scale: 0.92 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3, ease: 'easeOut', delay: i * 0.06 + 0.3 }}
+                    >
                       <p className="text-ninja-muted font-ninja text-xs">{s.label}</p>
                       <p className="font-ninja font-black text-ninja-navy text-lg leading-tight mt-0.5 truncate">{s.value}</p>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
 
@@ -848,7 +936,7 @@ export default function StudentProfile() {
                   )}
                 </div>
               )}
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>
