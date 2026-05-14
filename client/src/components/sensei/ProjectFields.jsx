@@ -1,22 +1,30 @@
-import { PROJECTS, STATUSES } from '../../utils/beltConfig';
+import { PROJECTS, STATUSES, getLevelProjects } from '../../utils/beltConfig';
 
-export default function ProjectFields({ project, setProject, status, setStatus }) {
+export default function ProjectFields({ project, setProject, status, setStatus, beltLevel, beltSublevel }) {
+  const levelProjects = getLevelProjects(beltLevel, beltSublevel);
+  const projectOptions = levelProjects ?? PROJECTS;
+  const needsSublevel = ['Purple', 'Brown', 'Red'].includes(beltLevel) && !beltSublevel;
+
   return (
     <div className="space-y-3">
       <div>
         <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
           Project
         </label>
-        <select
-          value={project}
-          onChange={(e) => setProject(e.target.value)}
-          className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-        >
-          <option value="">Select project...</option>
-          {PROJECTS.map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
+        {needsSublevel ? (
+          <p className="text-ninja-muted font-ninja text-sm italic">Select a sublevel above to see projects.</p>
+        ) : (
+          <select
+            value={project}
+            onChange={(e) => setProject(e.target.value)}
+            className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+          >
+            <option value="">Select project...</option>
+            {projectOptions.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div>
