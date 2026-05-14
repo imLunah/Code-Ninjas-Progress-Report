@@ -7,5 +7,18 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:3001'
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'motion': ['framer-motion'],
+          'supabase': ['@supabase/supabase-js'],
+          'emoji': ['emoji-picker-react'],
+          'markdown': ['react-markdown', 'remark-gfm'],
+        }
+      }
+    }
   }
 })
