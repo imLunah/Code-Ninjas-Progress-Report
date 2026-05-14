@@ -34,8 +34,6 @@ function MobileBeltJourney({ enrollment }) {
   const maxLevel = getMaxLevel(belt_level);
   const progress = maxLevel ? Math.round((belt_sublevel / maxLevel) * 100) : null;
   const beltIdx = BELTS.findIndex(b => b.name === belt_level);
-  const start = Math.max(0, Math.min(beltIdx - 2, BELTS.length - 5));
-  const visible = BELTS.slice(start, start + 5);
 
   return (
     <div className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
@@ -48,28 +46,32 @@ function MobileBeltJourney({ enrollment }) {
         )}
       </div>
 
-      {/* Belt icons — overflow-x-auto prevents clipping */}
-      <div className="overflow-x-auto -mx-1 px-1">
-        <div className="flex items-center py-1" style={{ minWidth: 'max-content' }}>
-          {visible.map((b, i) => {
-            const idx = BELTS.findIndex(x => x.name === b.name);
-            const isCurrent = idx === beltIdx;
-            const isPast = idx < beltIdx;
-            const size = isCurrent ? 56 : 40;
+      {/* All belts, scrollable */}
+      <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
+        <div className="flex items-center py-1" style={{ minWidth: 'max-content', gap: 0 }}>
+          {BELTS.map((b, i) => {
+            const isCurrent = i === beltIdx;
+            const isPast = i < beltIdx;
+            const size = isCurrent ? 52 : 36;
             return (
               <React.Fragment key={b.name}>
                 {i > 0 && (
-                  <div className="flex-1 h-0.5" style={{ width: 24, backgroundColor: idx <= beltIdx ? '#006ADD' : '#e2e8f0' }} />
+                  <div className="h-0.5 flex-shrink-0" style={{ width: 16, backgroundColor: i <= beltIdx ? '#006ADD' : '#e2e8f0' }} />
                 )}
-                <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
-                  <img
-                    src={`/belts/belt-${b.name.toLowerCase()}.png`}
-                    alt={b.name}
-                    className={`w-full h-full object-contain ${!isPast && !isCurrent ? 'opacity-25 grayscale' : ''}`}
-                  />
-                  {isCurrent && belt?.color && (
-                    <div className="absolute inset-0 rounded-full border-[3px]" style={{ borderColor: belt.color }} />
-                  )}
+                <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                  <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+                    <img
+                      src={`/belts/belt-${b.name.toLowerCase()}.png`}
+                      alt={b.name}
+                      className={`w-full h-full object-contain ${!isPast && !isCurrent ? 'opacity-25 grayscale' : ''}`}
+                    />
+                    {isCurrent && belt?.color && (
+                      <div className="absolute inset-0 rounded-full border-[3px]" style={{ borderColor: belt.color }} />
+                    )}
+                  </div>
+                  <span className={`font-ninja text-[10px] leading-none ${isCurrent ? 'font-bold text-ninja-navy' : 'text-ninja-muted'}`}>
+                    {b.name}
+                  </span>
                 </div>
               </React.Fragment>
             );
