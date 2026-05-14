@@ -1,5 +1,8 @@
 import { useEffect } from 'react';
 
+const isSafari = typeof navigator !== 'undefined' &&
+  /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
 export default function Modal({ isOpen, onClose, title, children, subheader, width = 'max-w-lg' }) {
   useEffect(() => {
     if (isOpen) {
@@ -16,11 +19,11 @@ export default function Modal({ isOpen, onClose, title, children, subheader, wid
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-ninja-navy/50 sm:flex sm:items-center sm:justify-center sm:p-4"
+      className={`fixed inset-0 z-[100] bg-ninja-navy/50 ${isSafari ? '' : 'flex items-center justify-center p-4'}`}
       onClick={onClose}
     >
       <div
-        className={`fixed bottom-0 left-0 right-0 sm:static bg-white border border-ninja-border rounded-t-2xl sm:rounded-xl shadow-xl w-full ${width} max-h-[90vh] flex flex-col`}
+        className={`${isSafari ? 'fixed bottom-0 left-0 right-0 rounded-t-2xl' : 'relative rounded-xl'} bg-white border border-ninja-border shadow-xl w-full ${width} max-h-[90vh] flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header — never scrolls */}
