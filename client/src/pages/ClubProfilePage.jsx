@@ -215,28 +215,88 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
   );
 }
 
-function ClubInfoCard({ clubDef, colors }) {
+function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef(null);
+
   const initials = clubDef.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
   const createdYear = clubDef.created_at
     ? new Date(clubDef.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
     : null;
+  const canEditCover = isManager && !isReadOnly && clubDef.location_id !== null;
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError('');
+    try {
+      const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : '';
+      const path = `covers/${clubDef.id}/${Date.now()}${ext}`;
+      const { data, error } = await supabase.storage.from('club-resources').upload(path, file, { cacheControl: '3600', upsert: false });
+      if (error) throw new Error(error.message);
+      const { data: { publicUrl } } = supabase.storage.from('club-resources').getPublicUrl(data.path);
+      await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { cover_image_url: publicUrl });
+      onCoverUpdated(publicUrl);
+    } catch {
+      setUploadError('Upload failed. Try again.');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
 
   return (
-    <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
-      <div className="flex items-start gap-3 mb-4">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-ninja font-bold text-base flex-shrink-0 ${colors.bg} ${colors.text}`}>
-          {initials}
+    <div className="bg-white border border-ninja-border rounded-2xl shadow-sm overflow-hidden">
+      {/* Cover image / color banner */}
+      <div className="relative h-28 w-full overflow-hidden">
+        {clubDef.cover_image_url ? (
+          <img src={clubDef.cover_image_url} alt={clubDef.name} className="w-full h-full object-cover" />
+        ) : (
+          <div className={`w-full h-full flex items-center justify-center ${colors.bg}`}>
+            <span className={`font-ninja font-black text-4xl opacity-30 ${colors.text}`}>{initials}</span>
+          </div>
+        )}
+        {canEditCover && (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70 disabled:opacity-50 text-white text-xs font-ninja font-semibold px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            {uploading ? 'Uploading…' : clubDef.cover_image_url ? 'Change photo' : 'Add photo'}
+          </button>
+        )}
+        {canEditCover && (
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+        )}
+      </div>
+
+      {uploadError && <p className="text-ninja-red font-ninja text-xs px-4 pt-2">{uploadError}</p>}
+
+      <div className="p-4">
+        <div className="flex items-start gap-3">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-ninja font-bold text-sm flex-shrink-0 ${colors.bg} ${colors.text}`}>
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-ninja font-bold text-ninja-navy text-base leading-tight">{clubDef.name}</p>
+            {(createdYear || clubDef.creator_name) && (
+              <p className="text-ninja-muted font-ninja text-xs mt-0.5">
+                {createdYear && `Created ${createdYear}`}
+                {createdYear && clubDef.creator_name && ' · '}
+                {clubDef.creator_name}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-ninja font-bold text-ninja-navy text-base leading-tight">{clubDef.name}</p>
-          {(createdYear || clubDef.creator_name) && (
-            <p className="text-ninja-muted font-ninja text-xs mt-0.5">
-              {createdYear && `Created ${createdYear}`}
-              {createdYear && clubDef.creator_name && ' · '}
-              {clubDef.creator_name}
-            </p>
-          )}
-        </div>
+        {clubDef.description && (
+          <p className="text-ninja-muted font-ninja text-sm mt-3 leading-relaxed">{clubDef.description}</p>
+        )}
       </div>
     </div>
   );
@@ -480,6 +540,9 @@ export default function ClubProfilePage() {
             <ClubInfoCard
               clubDef={clubDef}
               colors={colors}
+              isManager={isManager}
+              isReadOnly={isReadOnly}
+              onCoverUpdated={(url) => setClubDef((prev) => ({ ...prev, cover_image_url: url }))}
             />
             <ResourcesSection
               clubName={clubDef.name}
