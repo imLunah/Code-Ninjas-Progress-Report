@@ -56,7 +56,6 @@ export default function SenseiProfileModal({ isOpen, onClose, sensei, logs = [],
             </div>
           )}
         </div>
-      </div>
 
         {isManager && !isReadOnly && (
           <div className="sm:hidden pt-4 border-t border-ninja-border flex gap-2">
