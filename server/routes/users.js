@@ -14,7 +14,7 @@ router.get('/', requireSensei, async (req, res) => {
     if (role === 'sensei') {
       const { rows } = await pool.query(`
         SELECT u.id, u.username, u.display_name, u.role, u.location_id, u.created_at,
-               COUNT(pl.id)::int AS progress_log_count
+               u.profile_pic_url, COUNT(pl.id)::int AS progress_log_count
         FROM users u
         LEFT JOIN progress_logs pl ON pl.sensei_id = u.id
         WHERE u.role = 'sensei' AND u.location_id = $1 AND u.active = true
@@ -53,7 +53,7 @@ router.get('/:id', requireSensei, async (req, res) => {
 
   try {
     const { rows: userRows } = await pool.query(
-      'SELECT id, username, display_name, role, location_id, created_at FROM users WHERE id = $1 AND active = true AND location_id = $2',
+      'SELECT id, username, display_name, role, location_id, created_at, profile_pic_url FROM users WHERE id = $1 AND active = true AND location_id = $2',
       [id, req.session.activeLocationId]
     );
     const user = userRows[0];

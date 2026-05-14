@@ -207,7 +207,18 @@ export default function StaffPage() {
                     className="grid grid-cols-3 items-center px-5 py-4 gap-2 hover:bg-ninja-bg cursor-pointer transition-colors"
                     onClick={() => handleRowClick(s)}
                   >
-                    <p className="font-ninja font-bold text-ninja-navy">{s.display_name}</p>
+                    <div className="flex items-center gap-3 min-w-0">
+                      {s.profile_pic_url ? (
+                        <img src={s.profile_pic_url} alt={s.display_name} className="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-ninja-border" />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-ninja-blue flex-shrink-0 flex items-center justify-center border border-ninja-border">
+                          <span className="text-white font-ninja font-bold text-sm leading-none">
+                            {s.display_name?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <p className="font-ninja font-bold text-ninja-navy truncate">{s.display_name}</p>
+                    </div>
                     <p className="font-ninja text-sm text-ninja-muted">@{s.username}</p>
                     <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                       <span className={`text-lg font-bold font-ninja ${s.progress_log_count > 0 ? 'text-ninja-blue' : 'text-ninja-border'}`}>
