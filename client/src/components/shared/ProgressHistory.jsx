@@ -56,7 +56,7 @@ function CommentBox({ logId, onAdded }) {
 }
 
 export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted }) {
-  const { user } = useAuth();
+  const { user, isReadOnly } = useAuth();
   const isManager = user?.role === 'manager';
 
   const programs = [...new Set(logs.map((l) => l.program).filter(Boolean))];
@@ -175,7 +175,7 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                     : 'bg-gray-100 text-gray-600'
                   }`}>{log.status_at}</span>
                 )}
-                {(isManager || log.sensei_id === user?.id) && !isEditing && (
+                {!isReadOnly && (isManager || log.sensei_id === user?.id) && !isEditing && (
                   <div className="flex items-center gap-1.5 ml-1">
                     <button
                       onClick={() => startEdit(log)}
@@ -245,7 +245,7 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                 {allComments.map((c) => <LogComment key={c.id} comment={c} />)}
               </div>
             )}
-            <CommentBox logId={log.id} onAdded={(c) => handleCommentAdded(log.id, c)} />
+            {!isReadOnly && <CommentBox logId={log.id} onAdded={(c) => handleCommentAdded(log.id, c)} />}
           </div>
         );
       })}
