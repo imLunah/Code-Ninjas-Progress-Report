@@ -2,78 +2,82 @@
 
 ### 1. Project Overview
 
-**DojoLink** is a full-stack studio management app for Code Ninjas franchise locations. It runs as a React (Vite) + Express + Supabase (PostgreSQL) monorepo. The live site is at `dojolink-neon.vercel.app`, auto-deployed from `imLunah/dojolink` on every push to `main`. Three locations are supported: Yorba Linda, Fullerton, Cerritos. Roles: Center Director (manager), Sensei, Parent.
-
-**Primary recent objective:** Build a parent-facing progress display and a manager email-preview page that feeds into a future Zapier automation for monthly parent email reports.
+**DojoLink** is a full-stack studio management app for Code Ninjas franchise locations. It runs as a React (Vite) + Express + Supabase (PostgreSQL) monorepo. The live site is at `dojolink-neon.vercel.app`, auto-deployed from `imLunah/dojolink` on every push to `main`. Three locations: Yorba Linda, Fullerton, Cerritos. Roles: Center Director (manager), Sensei, Parent.
 
 ---
 
 ### 2. Key Design & Development Decisions
 
-- **Per-program progress tracking** is stored in `student_programs` (one row per student per program). New columns: `last_sub_program`, `last_module_name`, `last_lesson_name`, `last_session_date`, `percent_complete`. Written on every progress log submission via `server/routes/progress.js`.
+- **Per-program progress tracking** stored in `student_programs` (one row per student per program). Columns: `last_sub_program`, `last_module_name`, `last_lesson_name`, `last_session_date`, `percent_complete`. Written on every log via `server/routes/progress.js`.
 
 - **`percent_complete` semantics differ by program:**
-  - **Robotics Academy / JR** — distinct modules visited ÷ curriculum total for the active sub-program (kit/track).
-  - **AI Academy** — lessons completed within the *current module* (mirrors CREATE belt sublevel tracking), not overall module count. This is intentionally lesson-within-module, not cumulative.
-  - **JR** — progress bar was removed entirely (only last session date + module grids remain in the parent portal).
+  - **CREATE** — belt sublevel / max sublevels for current belt.
+  - **Robotics Academy / JR** — distinct modules visited ÷ curriculum total for the active sub-program.
+  - **AI Academy** — lessons completed within the *current module* (lesson-within-module, not cumulative).
+  - **JR** — progress bar removed in parent portal; DB column still populated.
 
-- **Parent portal program cards** (`ProgressVisuals.jsx`) are program-specific:
-  - **CREATE** — belt image, belt level, sublevel, belt progress bar + sublevel bar, current project.
-  - **Robotics Academy** — current kit shown as "belt equivalent", Kit Path (numbered circles), Module Path grid for visited modules, progress bar.
-  - **AI Academy** — current module name + "Lesson X of Y" subtitle, indigo progress bar.
-  - **JR** — module grids only; no bar.
+- **Parent portal program cards** (`ProgressVisuals.jsx`) are program-specific (CREATE belt journey, Robotics kit/module paths, AI Academy lesson progress, JR module grid).
 
-- **Email preview page** (`/manager/email-preview`) queries the `student_monthly_summary` DB view and renders a visual mock of what each parent's monthly email would look like, so staff can review before Zapier sends.
+- **Club session logging** restricted to managers only; senseis can add/edit notes on any session.
 
-- **Club session logging** restricted to managers only (senseis removed as of `c54b6c7`).
+- **Club members** auto-populated from session attendees (`club_members` table, upserted on `PATCH /clubs/:id/attendees`).
+
+- **Location names** stored as short city names (Yorba Linda, Fullerton, Cerritos) — "Code Ninjas " prefix removed from DB.
+
+- **Navbar removed** — mobile uses no top nav bar; sidebar is desktop-only (`hidden lg:flex`).
+
+- **Log Progress nav link removed** from sidebar. Sidebar links: Today's Board, Ninjas, Clubs, Senseis (manager) / Today's Board, Ninjas, Clubs (sensei).
+
+- **Staff credentials**: Any staff can change their own username/password at `/account` (linked from sidebar user card). Managers can reset any sensei's credentials via "Edit Login" on the Senseis page.
+
+- **Profile photos**: Staff can upload a profile photo on `/account`. Stored in Supabase `profile-pics` bucket. Shown in sidebar user card; falls back to initials.
 
 ---
 
-### 3. Notable Code Changes (Last 5 Commits)
+### 3. Recent Notable Changes
 
-| Commit | Files Changed | Summary |
-|--------|--------------|---------|
-| `9c26bc7` | `ProgressVisuals.jsx`, `parent.js` | Robotics Academy card: Kit Path circles + Module Path grid; API returns `last_sub_program` |
-| `e40dee6` | `ProgressVisuals.jsx`, `parent.js`, `progress.js` | AI Academy uses lesson-within-module for bar; JR bar removed; API returns `last_module_name` |
-| `0e3cc8d` | `ProgressVisuals.jsx`, `parent.js`, `progress.js`, `schema.sql` | Added `percent_complete` column; auto-compute on log save; progress bar + last session date on all non-CREATE cards |
-| `ed7f713` | `App.jsx`, `Navbar.jsx`, `EmailPreviewPage.jsx`, `emailPreview.js`, `progress.js`, `schema.sql` | `student_monthly_summary` view refactored; per-program columns backfilled; email preview page + API route added |
-| `c54b6c7` | `App.jsx`, `ClubSessionsPanel.jsx`, `clubs.js` | Club session log/create restricted to managers |
+| Area | What changed |
+|------|-------------|
+| Sidebar | Logo taller (`h-14`), Roster renamed → Ninjas, Log Progress removed, Navbar removed, user card links to `/account` with profile pic |
+| Today's Board | Overdue sorted first, completed ninjas hidden (stat strip shows all), "All done" state |
+| Belt Journey | Line centered with icons (`flex items-center` + separate label row), ring shadow removed |
+| Club Profile | Two-column layout (pinned note + sessions left; club info + resources right), member count in subtitle, schedule field |
+| Club Sessions | Any sensei can add/edit notes (ownership check removed) |
+| Account Page | `/account` — change username, password, upload profile photo |
+| Staff Page | Manager "Edit Login" button per sensei row (username + password reset) |
+| DB | Added `schedule` to `club_definitions`, `club_members` table, `profile_pic_url` to `users`, `profile-pics` storage bucket |
 
 ---
 
 ### 4. Issues Encountered & Resolutions
 
-- **UTC date bug** (`0ebd8d2`): `today()` was returning UTC date, causing sessions to appear on the wrong day for West Coast users. Fixed by computing local date using timezone offset.
-- **Zapier-writable `percent_complete`**: The column was designed to be writable by Zapier in the future (overridable), so AI Academy's `percent_complete` stores lesson-within-module percentage rather than overall completion — this is the Zapier hook point.
+- **TDZ ReferenceError** (`b18566d`): `TodayBoard.jsx` used `sorted`/`completedCount` before declaration — moved declarations before early returns.
+- **UTC date bug** (`0ebd8d2`): `today()` was returning UTC date for West Coast users — fixed with timezone offset.
 
 ---
 
 ### 5. Open Questions / Next Steps
 
-- **Zapier integration**: The `student_monthly_summary` view and `email-preview` page exist as the data source. The actual Zapier zap (reading the view → sending emails) has not been built yet.
-- **`percent_complete` for Zapier override**: Currently auto-computed server-side. Future plan may allow Zapier to write back to this column directly via Supabase REST.
-- **JR progress bar**: Deliberately removed — but if the product direction changes, the DB column (`percent_complete`) is already populated.
-- **Kit detection for Robotics Academy**: `last_sub_program` now returned in the parent API, but the Kit Path / Module Path visuals depend on matching this string exactly to `SUB_PROGRAMS` keys. Any curriculum naming changes need to stay in sync between `progressData.js` and the DB.
+- **Parent portal**: Email-based login (no password). "Ninja username/password" for student accounts not yet built — students have no login credentials in current schema.
+- **Zapier integration**: `student_monthly_summary` view exists as data source. Zap not built yet.
+- **Mobile navigation**: Navbar removed — mobile users have no nav. May need a bottom tab bar.
 
 ---
 
-### 6. Immediate Context — Where We Left Off
-
-The last completed task was **`9c26bc7`**: Robotics Academy now shows a Kit Path (numbered circles with connecting line in sequential order) and Module Path grid in the parent portal, matching the visual pattern of the CREATE belt display. The parent API was updated to return `last_sub_program` so the current kit is known client-side.
-
-No in-progress or incomplete tasks were left mid-session. The codebase is clean and deployed.
-
----
-
-### Files to Read to Get Up to Speed
+### 6. Files to Read to Get Up to Speed
 
 | File | Purpose |
 |------|---------|
-| `client/src/components/parent/ProgressVisuals.jsx` | All parent portal progress card UIs (CREATE, Robotics, AI, JR) |
-| `client/src/utils/progressData.js` | `SUB_PROGRAMS` and full `CURRICULUM` — the authoritative lesson/module data |
-| `server/routes/progress.js` | Progress log submission + `percent_complete` / tracking column writes |
-| `server/routes/parent.js` | Parent API — `STUDENT_PROGRAMS_SUBQUERY`, what fields are exposed |
-| `client/src/pages/manager/EmailPreviewPage.jsx` | Email preview UI — data shape used for rendering |
-| `server/routes/emailPreview.js` | Email preview API route (queries `student_monthly_summary`) |
-| `supabase/schema.sql` | Current DB schema including `student_programs` columns and `student_monthly_summary` view |
-| `client/src/utils/beltConfig.js` | Belt names, level caps, colors (CREATE program only) |
+| `client/src/components/layout/Sidebar.jsx` | Desktop nav, location switcher, user card with profile pic |
+| `client/src/pages/AccountPage.jsx` | Self-service credential + photo management |
+| `client/src/pages/manager/StaffPage.jsx` | Sensei list + Edit Login modal |
+| `client/src/pages/ClubProfilePage.jsx` | Club detail — two-column layout, sessions, resources |
+| `client/src/pages/ClubSessionPage.jsx` | Session detail — notes, attendees, comments |
+| `client/src/components/manager/TodayBoard.jsx` | Today's board card grid |
+| `client/src/pages/manager/StudentProfile.jsx` | Student detail — belt journey, activity chart, stats |
+| `client/src/components/parent/ProgressVisuals.jsx` | Parent portal progress card UIs |
+| `client/src/utils/progressData.js` | `SUB_PROGRAMS` and full `CURRICULUM` data |
+| `server/routes/clubs.js` | Club sessions, members, profile, resources API |
+| `server/routes/users.js` | User CRUD + self/manager credential update endpoints |
+| `server/routes/auth.js` | Login, logout, me, switch-location |
+| `server/routes/progress.js` | Progress log submission + `percent_complete` writes |
