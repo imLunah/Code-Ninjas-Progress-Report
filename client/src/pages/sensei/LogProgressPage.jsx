@@ -80,101 +80,109 @@ export default function LogProgressPage() {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto lg:max-w-none">
         <button
           onClick={() => navigate(dashboardPath)}
-          className="text-ninja-muted hover:text-ninja-blue font-ninja text-sm flex items-center gap-1 transition-colors"
+          className="text-ninja-muted hover:text-ninja-blue font-ninja text-sm flex items-center gap-1 transition-colors mb-6"
         >
           ← Back to Dashboard
         </button>
 
-        <Card>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold font-ninja text-ninja-navy">{student.full_name}</h1>
-              <div className="flex flex-wrap items-center gap-2 mt-2">
-                {availablePrograms.map((p) => (
-                  <ProgramBadge key={p.program} program={p.program} />
-                ))}
-                {enrollment?.program === 'CREATE' && enrollment.belt_level && (
-                  <BeltBadge belt={enrollment.belt_level} sublevel={enrollment.belt_sublevel} />
-                )}
-                {enrollment?.current_project && (
-                  <span className="text-ninja-muted font-ninja text-sm">
-                    {enrollment.current_project} — {enrollment.project_status}
-                  </span>
-                )}
+        <div className="lg:flex lg:gap-8 lg:items-start space-y-6 lg:space-y-0">
+          {/* Left panel: student info + program selector + pinned note */}
+          <div className="lg:w-80 lg:flex-shrink-0 space-y-4">
+            <Card>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex-1">
+                  <h1 className="text-2xl font-bold font-ninja text-ninja-navy">{student.full_name}</h1>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    {availablePrograms.map((p) => (
+                      <ProgramBadge key={p.program} program={p.program} />
+                    ))}
+                    {enrollment?.program === 'CREATE' && enrollment.belt_level && (
+                      <BeltBadge belt={enrollment.belt_level} sublevel={enrollment.belt_sublevel} />
+                    )}
+                    {enrollment?.current_project && (
+                      <span className="text-ninja-muted font-ninja text-sm">
+                        {enrollment.current_project} — {enrollment.project_status}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {availablePrograms.length > 1 && (
-            <div className="mt-4 pt-4 border-t border-ninja-border">
-              <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-2">
-                Which program are you logging?
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {availablePrograms.map((p) => {
-                  const isDone = donePrograms.has(p.program);
-                  const isSelected = selectedProgram === p.program;
-                  return (
-                    <button
-                      key={p.program}
-                      onClick={() => setSelectedProgram(p.program)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-ninja font-semibold transition-colors flex items-center gap-1.5 ${
-                        isSelected
-                          ? 'bg-ninja-blue text-white'
-                          : isDone
-                          ? 'bg-green-50 border border-green-300 text-green-700 hover:border-green-500'
-                          : 'bg-ninja-bg border border-ninja-border text-ninja-navy hover:border-ninja-blue'
-                      }`}
-                    >
-                      {isDone && !isSelected && <span className="text-green-600">✓</span>}
-                      {p.program}
-                      {isDone && !isSelected && <span className="text-xs font-normal opacity-75">logged</span>}
-                    </button>
-                  );
-                })}
-              </div>
-              {donePrograms.size > 0 && donePrograms.size < availablePrograms.length && (
-                <p className="text-ninja-muted font-ninja text-xs mt-2">
-                  {donePrograms.size}/{availablePrograms.length} programs already logged today.
-                </p>
+              {availablePrograms.length > 1 && (
+                <div className="mt-4 pt-4 border-t border-ninja-border">
+                  <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-2">
+                    Which program are you logging?
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {availablePrograms.map((p) => {
+                      const isDone = donePrograms.has(p.program);
+                      const isSelected = selectedProgram === p.program;
+                      return (
+                        <button
+                          key={p.program}
+                          onClick={() => setSelectedProgram(p.program)}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-ninja font-semibold transition-colors flex items-center gap-1.5 ${
+                            isSelected
+                              ? 'bg-ninja-blue text-white'
+                              : isDone
+                              ? 'bg-green-50 border border-green-300 text-green-700 hover:border-green-500'
+                              : 'bg-ninja-bg border border-ninja-border text-ninja-navy hover:border-ninja-blue'
+                          }`}
+                        >
+                          {isDone && !isSelected && <span className="text-green-600">✓</span>}
+                          {p.program}
+                          {isDone && !isSelected && <span className="text-xs font-normal opacity-75">logged</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {donePrograms.size > 0 && donePrograms.size < availablePrograms.length && (
+                    <p className="text-ninja-muted font-ninja text-xs mt-2">
+                      {donePrograms.size}/{availablePrograms.length} programs already logged today.
+                    </p>
+                  )}
+                </div>
               )}
-            </div>
-          )}
-        </Card>
+            </Card>
 
-        <PinnedNote
-          studentId={student.id}
-          initialNote={student.pinned_note}
-          onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
-        />
-
-{isReadOnly ? (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 shadow-sm text-center">
-            <p className="text-amber-700 font-ninja font-semibold">
-              You can only log progress at your home center.
-            </p>
-          </div>
-        ) : selectedProgram ? (
-          <div className="bg-white border border-ninja-border rounded-xl p-6 shadow-sm">
-            <h2 className="text-xl font-bold font-ninja text-ninja-navy mb-4">
-              Log Today's <span className="text-ninja-blue">Session</span>
-            </h2>
-            <LogEntryForm
-              student={student}
-              program={selectedProgram}
-              enrollment={enrollment}
-              onLogged={handleLogged}
-              sessionDate={student.pending_checkin_date || undefined}
+            <PinnedNote
+              studentId={student.id}
+              initialNote={student.pinned_note}
+              onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
             />
           </div>
-        ) : (
-          <div className="bg-white border border-ninja-border rounded-xl p-6 shadow-sm text-center">
-            <p className="text-ninja-muted font-ninja">Select a program above to log a session.</p>
+
+          {/* Right panel: log form */}
+          <div className="lg:flex-1 min-w-0">
+            {isReadOnly ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 shadow-sm text-center">
+                <p className="text-amber-700 font-ninja font-semibold">
+                  You can only log progress at your home center.
+                </p>
+              </div>
+            ) : selectedProgram ? (
+              <div className="bg-white border border-ninja-border rounded-xl p-6 shadow-sm">
+                <h2 className="text-xl font-bold font-ninja text-ninja-navy mb-4">
+                  Log Today's <span className="text-ninja-blue">Session</span>
+                </h2>
+                <LogEntryForm
+                  student={student}
+                  program={selectedProgram}
+                  enrollment={enrollment}
+                  onLogged={handleLogged}
+                  sessionDate={student.pending_checkin_date || undefined}
+                />
+              </div>
+            ) : (
+              <div className="bg-white border border-ninja-border rounded-xl p-6 shadow-sm text-center">
+                <p className="text-ninja-muted font-ninja">Select a program above to log a session.</p>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </Layout>
   );
