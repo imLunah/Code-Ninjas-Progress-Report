@@ -215,7 +215,7 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
   );
 }
 
-function ClubInfoCard({ clubDef, memberCount, sessionCount, colors }) {
+function ClubInfoCard({ clubDef, colors }) {
   const initials = clubDef.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
   const createdYear = clubDef.created_at
     ? new Date(clubDef.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
@@ -236,18 +236,6 @@ function ClubInfoCard({ clubDef, memberCount, sessionCount, colors }) {
               {clubDef.creator_name}
             </p>
           )}
-        </div>
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm">👥</span>
-          <span className="font-ninja font-semibold text-ninja-navy text-sm">{memberCount}</span>
-          <span className="text-ninja-muted font-ninja text-xs">members</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm">📅</span>
-          <span className="font-ninja font-semibold text-ninja-navy text-sm">{sessionCount}</span>
-          <span className="text-ninja-muted font-ninja text-xs">sessions</span>
         </div>
       </div>
     </div>
@@ -491,8 +479,6 @@ export default function ClubProfilePage() {
           <div className="lg:w-72 lg:flex-shrink-0 space-y-4">
             <ClubInfoCard
               clubDef={clubDef}
-              memberCount={memberCount}
-              sessionCount={sessions.length}
               colors={colors}
             />
             <ResourcesSection
