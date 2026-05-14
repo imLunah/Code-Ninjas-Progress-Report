@@ -193,7 +193,7 @@ export default function StudentRoster() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold font-ninja text-ninja-navy leading-tight">
-              {isLogMode ? 'Log Progress' : 'Roster'}
+              {isLogMode ? 'Log Progress' : 'Ninjas'}
             </h1>
             <p className="text-ninja-muted font-ninja text-sm mt-0.5">
               {isLogMode
