@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
 import EmojiButton from '../components/ui/EmojiButton';
+import CropModal from '../components/ui/CropModal';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { formatDate, today } from '../utils/dateUtils';
@@ -218,6 +219,7 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
 function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [cropSrc, setCropSrc] = useState(null);
   const fileInputRef = useRef(null);
 
   const initials = clubDef.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -226,15 +228,33 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
     : null;
   const canEditCover = isManager && !isReadOnly && clubDef.location_id !== null;
 
-  const handleFileChange = async (e) => {
+  const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please select an image file.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('Image must be under 10 MB.');
+      return;
+    }
+    setUploadError('');
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(reader.result);
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleCropConfirm = async (blob) => {
+    setCropSrc(null);
     setUploading(true);
     setUploadError('');
     try {
-      const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : '';
-      const path = `covers/${clubDef.id}/${Date.now()}${ext}`;
-      const { data, error } = await supabase.storage.from('club-resources').upload(path, file, { cacheControl: '3600', upsert: false });
+      const path = `covers/${clubDef.id}/${Date.now()}.jpg`;
+      const { data, error } = await supabase.storage
+        .from('club-resources')
+        .upload(path, blob, { cacheControl: '3600', upsert: false, contentType: 'image/jpeg' });
       if (error) throw new Error(error.message);
       const { data: { publicUrl } } = supabase.storage.from('club-resources').getPublicUrl(data.path);
       await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { cover_image_url: publicUrl });
@@ -243,7 +263,6 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
       setUploadError('Upload failed. Try again.');
     } finally {
       setUploading(false);
-      e.target.value = '';
     }
   };
 
@@ -273,6 +292,15 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
         )}
         {canEditCover && (
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+        )}
+        {cropSrc && (
+          <CropModal
+            imageSrc={cropSrc}
+            aspect={16 / 9}
+            cropShape="rect"
+            onConfirm={handleCropConfirm}
+            onCancel={() => setCropSrc(null)}
+          />
         )}
       </div>
 
