@@ -110,6 +110,7 @@ export default function AddStudentPage() {
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [birthday, setBirthday] = useState('');
+  const [showBirthday, setShowBirthday] = useState(false);
   const [enrollments, setEnrollments] = useState([{ ...EMPTY_ENROLLMENT }]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -208,12 +209,31 @@ export default function AddStudentPage() {
               <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
                 Birthday
               </label>
-              <input
-                type="date"
-                value={birthday}
-                onChange={(e) => setBirthday(e.target.value)}
-                className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-              />
+              {showBirthday ? (
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="date"
+                    value={birthday}
+                    onChange={(e) => setBirthday(e.target.value)}
+                    className="flex-1 bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setShowBirthday(false); setBirthday(''); }}
+                    className="text-ninja-muted hover:text-ninja-red font-ninja text-sm transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowBirthday(true)}
+                  className="text-ninja-blue font-ninja text-sm hover:underline"
+                >
+                  + Add birthday
+                </button>
+              )}
             </div>
 
             <div className="border-t border-ninja-border pt-4">
