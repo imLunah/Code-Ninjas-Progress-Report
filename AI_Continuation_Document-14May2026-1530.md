@@ -190,12 +190,12 @@
 
 ### 8. CONFIDENCE & FRESHNESS
 
-- **Section 1 (Project Identity):** HIGH CONFIDENCE — verified against codebase this session
+- **Section 1 (Project Identity):** HIGH CONFIDENCE — verified against CLAUDE.md and codebase this session
 - **Section 2 (Current State):** HIGH CONFIDENCE — built/fixed directly this session
 - **Section 3 (Architecture):** HIGH CONFIDENCE — verified files and routes this session
 - **Section 4 (Recent Work):** HIGH CONFIDENCE — all work done this session with successful builds and pushes
 - **Section 5 (What Could Go Wrong):** MEDIUM — edge cases inferred from code review, not exhaustively tested
-- **Section 6 (How to Think):** MEDIUM — based on session observations, not full historical codebase audit
+- **Section 6 (How to Think):** MEDIUM — based on session observations and CLAUDE.md, not full historical codebase audit
 - **Section 7 (Do Not Touch):** HIGH CONFIDENCE — derived from explicit user feedback and memory files
 
 ---
