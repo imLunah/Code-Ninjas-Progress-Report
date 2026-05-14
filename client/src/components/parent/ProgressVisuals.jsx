@@ -1,3 +1,4 @@
+import React from 'react';
 import { BELTS } from '../../utils/beltConfig';
 import { SUB_PROGRAMS, CURRICULUM } from '../../utils/progressData';
 import { formatDate } from '../../utils/dateUtils';
@@ -135,48 +136,59 @@ function BeltJourney({ enrollment }) {
         {!current_project && !last_session_date && <div className="mb-5" />}
 
         {/* Belt path */}
+        {/* Belt path — images and labels in separate rows so lines stay centered */}
         <div className="overflow-x-auto" style={{ margin: '0 -4px', padding: '4px' }}>
+          {/* Row 1: images + connecting lines, all vertically centered */}
           <div className="flex items-center" style={{ minWidth: 'max-content' }}>
             {BELTS.map((belt, i) => {
               const reached = i <= currentIndex;
               const isCurrent = i === currentIndex;
-              const imgSize = isCurrent ? 42 : 26;
+              const imgSize = isCurrent ? 34 : 26;
               return (
-                <div key={belt.name} className="flex items-center">
+                <React.Fragment key={belt.name}>
                   {i > 0 && (
                     <div style={{
-                      width: '12px',
-                      height: '2px',
-                      flexShrink: 0,
+                      width: '12px', height: '2px', flexShrink: 0,
                       backgroundColor: reached ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.22)',
                     }} />
                   )}
-                  <div className="flex flex-col items-center" style={{ gap: '4px' }}>
-                    <img
-                      src={BELT_IMAGES[belt.name]}
-                      alt={belt.name}
-                      draggable={false}
-                      style={{
-                        width: imgSize,
-                        height: imgSize,
-                        opacity: reached ? 1 : 0.45,
-                        filter: isCurrent
-                          ? 'drop-shadow(0 0 6px rgba(255,255,255,0.55))'
-                          : reached ? 'none' : 'grayscale(100%)',
-                        transition: 'all 0.2s',
-                      }}
-                    />
+                  <img
+                    src={BELT_IMAGES[belt.name]}
+                    alt={belt.name}
+                    draggable={false}
+                    style={{
+                      width: imgSize, height: imgSize, display: 'block',
+                      opacity: reached ? 1 : 0.45,
+                      filter: isCurrent
+                        ? 'drop-shadow(0 0 6px rgba(255,255,255,0.55))'
+                        : reached ? 'none' : 'grayscale(100%)',
+                      transition: 'all 0.2s',
+                    }}
+                  />
+                </React.Fragment>
+              );
+            })}
+          </div>
+          {/* Row 2: labels, widths match image widths so they stay aligned */}
+          <div className="flex" style={{ minWidth: 'max-content', marginTop: '5px' }}>
+            {BELTS.map((belt, i) => {
+              const reached = i <= currentIndex;
+              const isCurrent = i === currentIndex;
+              const imgSize = isCurrent ? 34 : 26;
+              return (
+                <React.Fragment key={belt.name}>
+                  {i > 0 && <div style={{ width: '12px', flexShrink: 0 }} />}
+                  <div style={{ width: imgSize, textAlign: 'center' }}>
                     <span style={{
-                      fontSize: '9px',
-                      fontFamily: 'Nunito, sans-serif',
+                      fontSize: '9px', fontFamily: 'Nunito, sans-serif',
                       fontWeight: isCurrent ? 700 : 400,
                       color: reached ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)',
-                      whiteSpace: 'nowrap',
+                      whiteSpace: 'nowrap', display: 'block',
                     }}>
                       {belt.name}
                     </span>
                   </div>
-                </div>
+                </React.Fragment>
               );
             })}
           </div>
