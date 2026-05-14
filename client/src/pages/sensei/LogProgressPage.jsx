@@ -14,7 +14,7 @@ export default function LogProgressPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, isReadOnly } = useAuth();
   const dashboardPath = user?.role === 'manager' ? '/manager/dashboard' : '/sensei/dashboard';
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -162,7 +162,13 @@ export default function LogProgressPage() {
           </div>
         )}
 
-        {selectedProgram ? (
+        {isReadOnly ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 shadow-sm text-center">
+            <p className="text-amber-700 font-ninja font-semibold">
+              You can only log progress at your home center.
+            </p>
+          </div>
+        ) : selectedProgram ? (
           <div className="bg-white border border-ninja-border rounded-xl p-6 shadow-sm">
             <h2 className="text-xl font-bold font-ninja text-ninja-navy mb-4">
               Log Today's <span className="text-ninja-blue">Session</span>
