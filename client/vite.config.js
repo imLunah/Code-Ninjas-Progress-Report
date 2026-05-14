@@ -19,6 +19,7 @@ export default defineConfig({
           'emoji': ['emoji-picker-react'],
           'markdown': ['react-markdown', 'remark-gfm'],
           'csv': ['papaparse'],
+          'crop': ['react-easy-crop'],
         }
       }
     }

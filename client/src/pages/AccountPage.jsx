@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Layout from '../components/layout/Layout';
+import CropModal from '../components/ui/CropModal';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -18,36 +19,40 @@ export default function AccountPage() {
 
   const [uploadingPic, setUploadingPic] = useState(false);
   const [picError, setPicError] = useState('');
+  const [cropSrc, setCropSrc] = useState(null);
 
   const initials = user?.displayName?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || '?';
 
-  const handlePicChange = async (e) => {
+  const handlePicChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) return setPicError('Please select an image file.');
     if (file.size > 5 * 1024 * 1024) return setPicError('Image must be under 5 MB.');
-
     setPicError('');
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(reader.result);
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleCropConfirm = async (blob) => {
+    setCropSrc(null);
     setUploadingPic(true);
     try {
-      const ext = file.name.split('.').pop();
-      const path = `users/${user.id}/avatar.${ext}`;
+      const path = `users/${user.id}/avatar.jpg`;
       const { data, error: uploadErr } = await supabase.storage
         .from('profile-pics')
-        .upload(path, file, { upsert: true, cacheControl: '3600' });
+        .upload(path, blob, { upsert: true, cacheControl: '3600', contentType: 'image/jpeg' });
       if (uploadErr) throw new Error(uploadErr.message);
 
       const { data: { publicUrl } } = supabase.storage.from('profile-pics').getPublicUrl(data.path);
-      // Bust cache by appending timestamp
       const bustedUrl = `${publicUrl}?t=${Date.now()}`;
-
       await api.patch('/users/me/avatar', { profile_pic_url: publicUrl });
       setUser((prev) => ({ ...prev, profilePicUrl: bustedUrl }));
     } catch (err) {
       setPicError('Upload failed. Try again.');
     } finally {
       setUploadingPic(false);
-      e.target.value = '';
     }
   };
 
@@ -119,11 +124,18 @@ export default function AccountPage() {
               disabled={uploadingPic}
               className="flex-shrink-0 text-xs font-ninja font-semibold text-white/80 border border-white/20 rounded-xl px-3 py-1.5 hover:bg-white/10 transition-colors disabled:opacity-50"
             >
-              {uploadingPic ? '...' : 'Edit Photo'}
+              {uploadingPic ? 'Uploading…' : 'Edit Photo'}
             </button>
           </div>
           {picError && <p className="text-red-300 font-ninja text-xs mt-2 relative z-10">{picError}</p>}
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePicChange} />
+          {cropSrc && (
+            <CropModal
+              imageSrc={cropSrc}
+              onConfirm={handleCropConfirm}
+              onCancel={() => { setCropSrc(null); }}
+            />
+          )}
         </motion.div>
 
         {/* Username + Password */}
