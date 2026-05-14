@@ -122,7 +122,7 @@ export default function SenseiProfileModal({
                 <p className="text-white font-ninja font-bold text-xl leading-tight">{sensei.display_name}</p>
                 <p className="text-white/60 font-ninja text-sm mt-0.5">@{sensei.username}</p>
                 <span className="inline-block mt-2 px-2.5 py-0.5 bg-ninja-blue/30 border border-ninja-blue/40 rounded-full text-ninja-blue text-[10px] font-ninja font-bold uppercase tracking-wider">
-                  Sensei
+                  {sensei.role === 'manager' ? 'Center Director' : 'Sensei'}
                 </span>
               </motion.div>
             </div>

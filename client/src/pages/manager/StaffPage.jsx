@@ -108,9 +108,9 @@ export default function StaffPage() {
 
   useEffect(() => {
     setLoading(true);
-    api.get('/users?role=sensei')
+    api.get('/users?role=staff')
       .then(setSenseis)
-      .catch(() => setError('Failed to load senseis'))
+      .catch(() => setError('Failed to load staff'))
       .finally(() => setLoading(false));
   }, [user?.activeLocation?.id]);
 
@@ -152,12 +152,12 @@ export default function StaffPage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-4xl font-bold font-ninja text-ninja-navy tracking-wide">
-              Sensei <span className="text-ninja-blue">Staff</span>
+              Center <span className="text-ninja-blue">Staff</span>
             </h1>
             <p className="text-ninja-muted font-ninja mt-1">{user?.activeLocation?.name}</p>
           </div>
           {isManager && !isReadOnly && (
-            <Button onClick={() => setShowAddModal(true)}>+ Add Sensei</Button>
+            <Button onClick={() => setShowAddModal(true)}>+ Add Staff</Button>
           )}
         </div>
 
@@ -165,7 +165,7 @@ export default function StaffPage() {
         {!loading && !error && senseis.length > 0 && (
           <div className="grid grid-cols-2 gap-4">
             {[
-              { value: senseis.length, label: 'Senseis', color: 'text-ninja-blue' },
+              { value: senseis.length, label: 'Staff Members', color: 'text-ninja-blue' },
               { value: totalLogs, label: 'Total Progress Logs', color: 'text-ninja-navy' },
             ].map((s, i) => (
               <motion.div
@@ -192,10 +192,10 @@ export default function StaffPage() {
           )}
           {!loading && !error && senseis.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-ninja-muted font-ninja">No senseis at this location yet.</p>
+              <p className="text-ninja-muted font-ninja">No staff at this location yet.</p>
               {isManager && !isReadOnly && (
                 <p className="text-ninja-muted font-ninja text-sm mt-1">
-                  Use "+ Add Sensei" to create an account.
+                  Use "+ Add Staff" to create an account.
                 </p>
               )}
             </div>
@@ -227,7 +227,12 @@ export default function StaffPage() {
                           </span>
                         </div>
                       )}
-                      <p className="font-ninja font-bold text-ninja-navy truncate">{s.display_name}</p>
+                        <div className="min-w-0 flex-1">
+                        <p className="font-ninja font-bold text-ninja-navy truncate">{s.display_name}</p>
+                        {s.role === 'manager' && (
+                          <span className="text-[10px] font-ninja font-bold text-ninja-blue uppercase tracking-wide">Director</span>
+                        )}
+                      </div>
                     </div>
                     <p className="font-ninja text-sm text-ninja-muted">@{s.username}</p>
                     <div className="flex items-center justify-end">
