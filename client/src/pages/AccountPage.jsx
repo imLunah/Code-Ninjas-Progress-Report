@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import CropModal from '../components/ui/CropModal';
@@ -7,7 +8,8 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
 export default function AccountPage() {
-  const { user, setUser } = useAuth();
+  const { user, setUser, logout } = useAuth();
+  const navigate = useNavigate();
   const fileRef = useRef(null);
 
   const [username, setUsername] = useState(user?.username || '');
@@ -193,6 +195,19 @@ export default function AccountPage() {
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </motion.form>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.3 }}
+        >
+          <button
+            onClick={async () => { try { await logout(); } catch {} navigate('/login'); }}
+            className="w-full border border-ninja-red text-ninja-red font-ninja font-semibold text-sm py-2.5 rounded-xl hover:bg-red-50 transition-colors"
+          >
+            Sign Out
+          </button>
+        </motion.div>
       </div>
     </Layout>
   );
