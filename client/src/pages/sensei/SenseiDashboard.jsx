@@ -47,7 +47,13 @@ export default function SenseiDashboard() {
           <p className="text-ninja-muted font-ninja mt-1">{formatDate(todayStr)}</p>
           {user && (
             <p className="text-ninja-navy font-ninja mt-1 font-semibold">
-              Welcome, {user.displayName}
+              Welcome {user.role === 'manager' ? 'Director' : 'Sensei'}{' '}
+              {(() => {
+                const name = user.role === 'sensei' && user.displayName?.toLowerCase().startsWith('sensei ')
+                  ? user.displayName.slice(7)
+                  : user.displayName;
+                return name?.split(' ')[0];
+              })()}
             </p>
           )}
         </div>
