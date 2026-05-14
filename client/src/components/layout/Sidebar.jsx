@@ -37,14 +37,14 @@ export default function Sidebar() {
   const navLinks = user?.role === 'manager'
     ? [
         { to: '/manager/dashboard', label: "Today's Board", icon: 'today' },
-        { to: '/manager/students', label: 'Ninjas', icon: 'ninjas' },
+        { to: '/manager/students', label: 'Roster', icon: 'ninjas' },
         { to: '/clubs', label: 'Clubs', icon: 'clubs' },
         { to: '/manager/staff', label: 'Senseis', icon: 'senseis' },
       ]
     : user?.role === 'sensei'
     ? [
         { to: '/sensei/dashboard', label: "Today's Board", icon: 'today' },
-        { to: '/manager/students', label: 'Ninjas', icon: 'ninjas' },
+        { to: '/manager/students', label: 'Roster', icon: 'ninjas' },
         { to: '/clubs', label: 'Clubs', icon: 'clubs' },
         { to: '/manager/staff', label: 'Senseis', icon: 'senseis' },
       ]
