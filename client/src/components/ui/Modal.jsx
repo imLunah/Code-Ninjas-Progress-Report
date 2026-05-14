@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-export default function Modal({ isOpen, onClose, title, children, width = 'max-w-lg' }) {
+export default function Modal({ isOpen, onClose, title, children, subheader, width = 'max-w-lg' }) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -16,7 +16,7 @@ export default function Modal({ isOpen, onClose, title, children, width = 'max-w
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-ninja-navy/50"
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-ninja-navy/50"
       onClick={onClose}
     >
       <div
@@ -33,8 +33,14 @@ export default function Modal({ isOpen, onClose, title, children, width = 'max-w
             &times;
           </button>
         </div>
+        {/* Optional non-scrolling subheader (e.g. search bar) */}
+        {subheader && (
+          <div className="flex-shrink-0 px-4 pt-3 pb-2">
+            {subheader}
+          </div>
+        )}
         {/* Content — scrolls */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 pt-2">
           {children}
         </div>
       </div>
