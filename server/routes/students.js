@@ -263,6 +263,24 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
   }
 });
 
+// PATCH /api/students/:id/parent-note
+router.patch('/:id/parent-note', requireSensei, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+  const { parent_note } = req.body;
+  try {
+    const { rows } = await pool.query(
+      'UPDATE students SET parent_note = $1 WHERE id = $2 AND active = true AND location_id = $3 RETURNING parent_note',
+      [parent_note || null, id, req.session.activeLocationId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Student not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Error updating parent note:', err);
+    res.status(500).json({ error: 'Failed to update note' });
+  }
+});
+
 // PATCH /api/students/:id/note
 router.patch('/:id/note', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
