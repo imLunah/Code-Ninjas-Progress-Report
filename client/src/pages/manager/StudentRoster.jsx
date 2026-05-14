@@ -6,7 +6,7 @@ import BeltBadge from '../../components/ui/BeltBadge';
 import ProgramBadge from '../../components/ui/ProgramBadge';
 import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
-import { PROGRAMS } from '../../utils/beltConfig';
+import { PROGRAMS, BELTS, getBelt } from '../../utils/beltConfig';
 import { formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 
@@ -18,6 +18,30 @@ function parseProgram(membership) {
   if (membership.includes('AI')) return 'AI Academy';
   return null;
 }
+
+const AVATAR_COLORS = [
+  '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6',
+  '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1', '#f59e0b',
+];
+
+function getAvatarColor(name) {
+  const sum = [...name].reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return AVATAR_COLORS[sum % AVATAR_COLORS.length];
+}
+
+function getInitials(name) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+const MOBILE_CHIPS = [
+  { label: 'All', value: '' },
+  { label: 'CREATE', value: 'CREATE' },
+  { label: 'Robotics', value: 'Robotics Academy' },
+  { label: 'AI', value: 'AI Academy' },
+  { label: 'JR', value: 'JR' },
+];
 
 export default function StudentRoster() {
   const [students, setStudents] = useState([]);
@@ -192,19 +216,50 @@ export default function StudentRoster() {
           )}
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
+        {/* Mobile filters: search + chips */}
+        <div className="md:hidden space-y-2.5">
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ninja-muted pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search ninjas..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-white border border-ninja-border text-ninja-navy rounded-xl pl-9 pr-4 py-2.5 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+            />
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar">
+            {MOBILE_CHIPS.map((chip) => (
+              <button
+                key={chip.value}
+                onClick={() => setProgramFilter(chip.value)}
+                className={`flex-shrink-0 text-sm font-ninja font-semibold px-4 py-1.5 rounded-full border transition-colors ${
+                  programFilter === chip.value
+                    ? 'bg-ninja-blue text-white border-ninja-blue'
+                    : 'bg-white text-ninja-navy border-ninja-border hover:border-ninja-blue'
+                }`}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Desktop filters */}
+        <div className="hidden md:flex gap-3">
           <input
             type="text"
             placeholder="Search by name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:flex-1 bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+            className="flex-1 bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
           />
           <select
             value={programFilter}
             onChange={(e) => setProgramFilter(e.target.value)}
-            className="w-full sm:w-auto bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+            className="bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
           >
             <option value="">All Programs</option>
             {PROGRAMS.map((p) => (
@@ -214,7 +269,7 @@ export default function StudentRoster() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="w-full sm:w-auto bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+            className="bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
           >
             <option value="name">Name (A–Z)</option>
             <option value="last_active">Last Active</option>
@@ -230,40 +285,54 @@ export default function StudentRoster() {
           {loading && <p className="text-ninja-muted font-ninja text-center py-8">Loading ninjas...</p>}
           {!loading && !error && (
             <>
-              {/* Mobile card list */}
+              {/* Mobile list */}
               <div className="md:hidden divide-y divide-ninja-border/50">
                 {sorted.length === 0 && (
                   <p className="text-center text-ninja-muted font-ninja py-12">No ninjas found</p>
                 )}
                 {sorted.map((s) => {
                   const create = (s.programs || []).find((p) => p.program === 'CREATE');
+                  const belt = create?.belt_level ? getBelt(create.belt_level) : null;
+                  const initials = getInitials(s.full_name);
+                  const avatarBg = getAvatarColor(s.full_name);
+
                   return (
                     <div
                       key={s.id}
-                      className={`flex items-center gap-3 px-4 py-3 transition-colors ${selected.has(s.id) ? 'bg-blue-50' : 'hover:bg-ninja-bg'}`}
+                      className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-ninja-bg transition-colors"
+                      onClick={() => navigate(`/manager/students/${s.id}`)}
                     >
-                      {isManager && (
-                        <input
-                          type="checkbox"
-                          checked={selected.has(s.id)}
-                          onChange={() => toggleSelect(s.id)}
-                          className="rounded border-ninja-border accent-ninja-blue cursor-pointer flex-shrink-0"
-                        />
-                      )}
-                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
+                      {/* Avatar */}
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-white font-ninja font-bold text-sm"
+                        style={{ backgroundColor: avatarBg }}
+                      >
+                        {initials}
+                      </div>
+
+                      {/* Name + badges */}
+                      <div className="flex-1 min-w-0">
                         <p className="font-ninja font-bold text-ninja-navy truncate">{s.full_name}</p>
-                        <div className="flex flex-wrap items-center gap-1 mt-1">
+                        <div className="flex flex-wrap items-center gap-1 mt-0.5">
                           {(s.programs || []).map((p) => (
                             <ProgramBadge key={p.program} program={p.program} size="xs" />
                           ))}
-                          {create?.belt_level && (
-                            <BeltBadge belt={create.belt_level} sublevel={create.belt_sublevel} size="xs" />
-                          )}
                         </div>
                       </div>
-                      <span className="text-ninja-muted font-ninja text-xs flex-shrink-0">
-                        {s.last_activity ? formatDate(s.last_activity) : 'Never'}
-                      </span>
+
+                      {/* Belt pill (CREATE only) */}
+                      {belt && (
+                        <span
+                          className="flex-shrink-0 text-xs font-ninja font-bold px-3 py-1 rounded-full"
+                          style={{
+                            backgroundColor: belt.color,
+                            color: belt.textColor,
+                            border: belt.name === 'White' ? '1.5px solid #d1d5db' : 'none',
+                          }}
+                        >
+                          {belt.name} #{create.belt_sublevel}
+                        </span>
+                      )}
                     </div>
                   );
                 })}
