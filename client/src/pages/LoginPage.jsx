@@ -3,30 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
-const STARS = [
-  { w: 220, top: '-6%',  left: '-5%',  opacity: 0.05, dur: 40 },
-  { w: 100, top: '12%',  right: '6%',  opacity: 0.07, dur: 25 },
-  { w:  70, top: '55%',  left: '5%',   opacity: 0.06, dur: 30 },
-  { w: 150, bottom: '-5%', right: '-3%', opacity: 0.04, dur: 50 },
-  { w:  50, top: '40%',  right: '20%', opacity: 0.05, dur: 20 },
-];
-
-function FloatingStar({ w, dur, opacity, ...pos }) {
-  return (
-    <motion.img
-      src="/CodeNinjasIcon.svg"
-      alt=""
-      className="absolute pointer-events-none select-none"
-      style={{ width: w, height: w, opacity, ...pos }}
-      animate={{ rotate: 360 }}
-      transition={{ duration: dur, repeat: Infinity, ease: 'linear' }}
-    />
-  );
-}
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 10 },
-  show:   { opacity: 1, y:  0 },
+const stagger = {
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.25 } },
+};
+const item = {
+  hidden: { opacity: 0, y: 8 },
+  show:   { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } },
 };
 
 export default function LoginPage() {
@@ -53,43 +35,71 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-ninja-navy flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Floating CN stars */}
-      {STARS.map((s, i) => <FloatingStar key={i} {...s} />)}
+    <div className="min-h-screen bg-ninja-bg flex items-center justify-center p-4 relative overflow-hidden">
 
-      {/* Subtle grid overlay */}
+      {/* Soft radial glow behind the card */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-[0.03]"
-        style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '48px 48px' }}
+        className="absolute pointer-events-none"
+        style={{
+          width: 600, height: 600,
+          top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          background: 'radial-gradient(circle, rgba(0,106,221,0.07) 0%, transparent 70%)',
+        }}
       />
 
-      {/* Alpha notice */}
+      {/* Very subtle floating CN stars in background */}
+      {[
+        { size: 180, top: '8%',   left: '-3%',  opacity: 0.04, dur: 45 },
+        { size:  90, bottom: '10%', right: '-2%', opacity: 0.05, dur: 30 },
+        { size:  55, top: '60%',  left: '8%',   opacity: 0.04, dur: 35 },
+      ].map((s, i) => (
+        <motion.img
+          key={i}
+          src="/CodeNinjasIcon.svg"
+          alt=""
+          className="absolute pointer-events-none select-none"
+          style={{ width: s.size, height: s.size, top: s.top, bottom: s.bottom, left: s.left, right: s.right, opacity: s.opacity }}
+          animate={{ rotate: 360 }}
+          transition={{ duration: s.dur, repeat: Infinity, ease: 'linear' }}
+        />
+      ))}
+
+      {/* Alpha notice modal */}
       <AnimatePresence>
         {!alphaDismissed && (
           <motion.div
-            key="alpha-overlay"
+            key="overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
           >
             <motion.div
-              initial={{ scale: 0.92, opacity: 0, y: 16 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.92, opacity: 0 }}
-              transition={{ type: 'spring', damping: 24, stiffness: 280 }}
-              className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center"
+              initial={{ scale: 0.94, opacity: 0, y: 12 }}
+              animate={{ scale: 1,    opacity: 1, y:  0 }}
+              exit={{    scale: 0.94, opacity: 0, y: 12 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 300 }}
+              className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center"
             >
-              <img src="/CodeNinjasIcon.svg" alt="" className="w-10 h-10 mx-auto mb-3 opacity-80" />
+              <motion.div
+                initial={{ rotate: -15, scale: 0.8 }}
+                animate={{ rotate: 0,   scale: 1    }}
+                transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.1 }}
+                className="text-3xl mb-3"
+              >
+                🚧
+              </motion.div>
               <h2 className="text-lg font-bold font-ninja text-ninja-navy mb-2">Early Alpha</h2>
               <p className="text-ninja-muted font-ninja text-sm leading-relaxed mb-5">
                 DojoLink is still in early development. Expect bugs, missing features, and changes as we continue building. John is working very long hours on this. Thanks for your patience!
               </p>
               <button
                 onClick={() => setAlphaDismissed(true)}
-                className="w-full bg-ninja-blue hover:bg-ninja-blue-hover text-white font-ninja font-bold py-2.5 rounded-xl transition-colors"
+                className="w-full bg-ninja-blue hover:bg-ninja-blue-hover text-white font-ninja font-bold py-2.5 rounded-lg transition-colors"
               >
-                Got it, let's go →
+                Got it
               </button>
             </motion.div>
           </motion.div>
@@ -98,115 +108,125 @@ export default function LoginPage() {
 
       {/* Login card */}
       <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: 'spring', damping: 24, stiffness: 240, delay: 0.05 }}
-        className="w-full max-w-sm"
+        className="w-full max-w-md"
+        initial={{ opacity: 0, y: 28, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0,  scale: 1    }}
+        transition={{ type: 'spring', damping: 22, stiffness: 220, delay: 0.05 }}
       >
-        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-          {/* Navy header with logo */}
-          <div className="relative bg-ninja-navy px-8 pt-8 pb-7 text-center overflow-hidden">
-            <img src="/CodeNinjasIcon.svg" alt="" className="absolute right-3 top-3 w-14 opacity-[0.08] pointer-events-none" />
-            <img src="/CodeNinjasIcon.svg" alt="" className="absolute left-2 bottom-2 w-10 opacity-[0.06] pointer-events-none" />
+        <div className="bg-white rounded-2xl shadow-lg p-8">
+
+          {/* Branding */}
+          <div className="text-center mb-8">
             <motion.img
               src="/DojoLinkLogoH.png"
               alt="DojoLink"
-              className="h-14 mx-auto relative z-10"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.15, duration: 0.4 }}
+              className="h-48 mx-auto mb-3"
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1    }}
+              transition={{ type: 'spring', damping: 18, stiffness: 200, delay: 0.12 }}
             />
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.25 }}
-              className="text-white/50 font-ninja text-xs mt-2 uppercase tracking-widest"
-            >
-              Staff Portal
-            </motion.p>
+            <motion.div
+              className="h-0.5 bg-gradient-to-r from-transparent via-ninja-blue to-transparent"
+              initial={{ scaleX: 0, opacity: 0 }}
+              animate={{ scaleX: 1, opacity: 1 }}
+              transition={{ duration: 0.6, ease: 'easeOut', delay: 0.3 }}
+            />
           </div>
 
           {/* Form */}
-          <motion.div
-            className="px-8 py-7 space-y-4"
-            variants={{ show: { transition: { staggerChildren: 0.07, delayChildren: 0.2 } } }}
-            initial="hidden"
-            animate="show"
-          >
-            <AnimatePresence>
+          <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-4">
+
+            <motion.h2 variants={item} className="text-xl font-bold font-ninja text-ninja-navy mb-2 text-center">
+              Sign In
+            </motion.h2>
+
+            <AnimatePresence mode="wait">
               {error && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="bg-red-50 border border-red-200 text-ninja-red rounded-xl p-3 font-ninja text-sm"
+                  key="error"
+                  initial={{ opacity: 0, y: -6, height: 0 }}
+                  animate={{ opacity: 1, y:  0, height: 'auto' }}
+                  exit={{    opacity: 0, y: -6, height: 0 }}
+                  transition={{ duration: 0.22 }}
+                  className="bg-red-50 border border-red-200 text-ninja-red rounded-lg p-3 font-ninja text-sm"
                 >
                   {error}
                 </motion.div>
               )}
             </AnimatePresence>
 
-            <motion.div variants={itemVariants}>
-              <label className="block text-ninja-muted text-xs font-ninja font-semibold mb-1.5 uppercase tracking-wide">
+            <motion.div variants={item}>
+              <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 tracking-wide uppercase">
                 Username
               </label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-xl px-4 py-3 font-ninja focus:outline-none focus:border-ninja-blue focus:ring-2 focus:ring-ninja-blue/10 transition-all"
+                className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-3 font-ninja focus:outline-none focus:border-ninja-blue focus:ring-2 focus:ring-ninja-blue/10 transition-all"
                 placeholder="Enter username"
                 required
                 autoFocus
               />
             </motion.div>
 
-            <motion.div variants={itemVariants}>
-              <label className="block text-ninja-muted text-xs font-ninja font-semibold mb-1.5 uppercase tracking-wide">
+            <motion.div variants={item}>
+              <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 tracking-wide uppercase">
                 Password
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-xl px-4 py-3 font-ninja focus:outline-none focus:border-ninja-blue focus:ring-2 focus:ring-ninja-blue/10 transition-all"
+                className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-3 font-ninja focus:outline-none focus:border-ninja-blue focus:ring-2 focus:ring-ninja-blue/10 transition-all"
                 placeholder="Enter password"
                 required
               />
             </motion.div>
 
-            <motion.div variants={itemVariants} className="pt-1">
-              <button
+            <motion.div variants={item} className="pt-1">
+              <motion.button
                 type="submit"
-                form="login-form"
                 disabled={loading}
                 onClick={handleSubmit}
-                className="w-full bg-ninja-blue hover:bg-ninja-blue-hover text-white font-ninja font-bold text-base py-3.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-ninja-blue/20"
+                whileTap={{ scale: 0.98 }}
+                className="relative w-full bg-ninja-blue text-white font-ninja font-bold text-lg py-3 rounded-lg transition-colors mt-2 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+                style={{ boxShadow: loading ? 'none' : '0 4px 24px rgba(0,106,221,0.25)' }}
               >
-                {loading ? 'Signing in…' : 'Enter the Dojo →'}
-              </button>
+                {/* Shimmer on hover */}
+                <motion.span
+                  className="absolute inset-0 bg-white/10"
+                  initial={{ x: '-100%' }}
+                  whileHover={{ x: '100%' }}
+                  transition={{ duration: 0.4, ease: 'easeInOut' }}
+                />
+                <span className="relative">
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <motion.span
+                        className="w-4 h-4 border-2 border-white border-t-transparent rounded-full inline-block"
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 0.7, repeat: Infinity, ease: 'linear' }}
+                      />
+                      Signing In…
+                    </span>
+                  ) : 'Enter the Dojo'}
+                </span>
+              </motion.button>
             </motion.div>
 
-            <motion.div variants={itemVariants} className="pt-2 border-t border-ninja-border text-center">
-              <p className="text-ninja-muted text-xs font-ninja mb-2">Signing in as a parent?</p>
+            <motion.div variants={item} className="mt-6 pt-5 border-t border-ninja-border text-center">
+              <p className="text-ninja-muted text-sm font-ninja mb-2">Signing in as a parent?</p>
               <a
                 href="/parent/login"
-                className="inline-block w-full bg-ninja-bg hover:bg-ninja-border border border-ninja-border text-ninja-navy font-ninja font-semibold py-2.5 rounded-xl transition-colors text-sm"
+                className="inline-block w-full bg-ninja-bg hover:bg-ninja-border border border-ninja-border text-ninja-navy font-ninja font-semibold py-2.5 rounded-lg transition-colors text-sm"
               >
                 Parent Portal →
               </a>
             </motion.div>
+
           </motion.div>
         </div>
-
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-center text-white/30 font-ninja text-xs mt-4"
-        >
-          Code Ninjas · DojoLink
-        </motion.p>
       </motion.div>
     </div>
   );
