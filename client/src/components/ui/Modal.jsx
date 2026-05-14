@@ -20,7 +20,7 @@ export default function Modal({ isOpen, onClose, title, children, subheader, wid
       onClick={onClose}
     >
       <div
-        className={`bg-white border border-ninja-border rounded-t-2xl sm:rounded-xl shadow-xl w-full ${width} max-h-[85vh] flex flex-col`}
+        className={`bg-white border border-ninja-border rounded-t-2xl sm:rounded-xl shadow-xl w-full ${width} max-h-[60vh] sm:max-h-[85vh] flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header — never scrolls */}
