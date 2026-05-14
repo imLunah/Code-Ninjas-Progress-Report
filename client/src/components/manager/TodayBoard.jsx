@@ -219,7 +219,7 @@ export default function TodayBoard({ assignments, onRemove }) {
               )}
 
               {/* Log Progress button */}
-              {!a.completed && (
+              {!a.completed && !isReadOnly && (
                 <button
                   onClick={() => navigate(`/sensei/student/${a.student_id}?programs=${encodeURIComponent(a.program)}`)}
                   className="mt-auto w-full text-sm font-ninja font-bold text-ninja-blue border-2 border-ninja-blue rounded-xl py-2 hover:bg-ninja-blue hover:text-white transition-colors"
