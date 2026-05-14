@@ -161,9 +161,9 @@ export default function SenseiProfileModal({
             )}
           </div>
 
-          {/* Manager actions (mobile: always; desktop: sm:hidden) */}
+          {/* Manager actions */}
           {isManager && !isReadOnly && (
-            <div className="sm:hidden px-5 pb-6 pt-2 border-t border-ninja-border flex gap-2">
+            <div className="px-5 pb-6 pt-2 border-t border-ninja-border flex gap-2">
               <Button variant="secondary" className="flex-1" onClick={() => { handleClose(); onEditLogin(); }}>
                 Edit Login
               </Button>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import Button from '../../components/ui/Button';
 import AddSenseiModal from '../../components/manager/AddSenseiModal';
@@ -97,7 +98,6 @@ export default function StaffPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [confirmRemoveId, setConfirmRemoveId] = useState(null);
   const [selectedSensei, setSelectedSensei] = useState(null);
   const [profileLogs, setProfileLogs] = useState([]);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -164,14 +164,21 @@ export default function StaffPage() {
         {/* Stats */}
         {!loading && !error && senseis.length > 0 && (
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
-              <p className="text-3xl font-bold font-ninja text-ninja-blue">{senseis.length}</p>
-              <p className="text-ninja-muted font-ninja text-sm mt-1">Senseis</p>
-            </div>
-            <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
-              <p className="text-3xl font-bold font-ninja text-ninja-navy">{totalLogs}</p>
-              <p className="text-ninja-muted font-ninja text-sm mt-1">Total Progress Logs</p>
-            </div>
+            {[
+              { value: senseis.length, label: 'Senseis', color: 'text-ninja-blue' },
+              { value: totalLogs, label: 'Total Progress Logs', color: 'text-ninja-navy' },
+            ].map((s, i) => (
+              <motion.div
+                key={s.label}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.07, duration: 0.3, ease: 'easeOut' }}
+                className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm"
+              >
+                <p className={`text-3xl font-bold font-ninja ${s.color}`}>{s.value}</p>
+                <p className="text-ninja-muted font-ninja text-sm mt-1">{s.label}</p>
+              </motion.div>
+            ))}
           </div>
         )}
 
@@ -201,9 +208,12 @@ export default function StaffPage() {
                 <span className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest text-right">Progress Logs</span>
               </div>
               <div className="divide-y divide-ninja-border">
-                {senseis.map((s) => (
-                  <div
+                {senseis.map((s, i) => (
+                  <motion.div
                     key={s.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.06, duration: 0.25, ease: 'easeOut' }}
                     className="grid grid-cols-3 items-center px-5 py-4 gap-2 hover:bg-ninja-bg cursor-pointer transition-colors"
                     onClick={() => handleRowClick(s)}
                   >
@@ -220,25 +230,12 @@ export default function StaffPage() {
                       <p className="font-ninja font-bold text-ninja-navy truncate">{s.display_name}</p>
                     </div>
                     <p className="font-ninja text-sm text-ninja-muted">@{s.username}</p>
-                    <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end">
                       <span className={`text-lg font-bold font-ninja ${s.progress_log_count > 0 ? 'text-ninja-blue' : 'text-ninja-border'}`}>
                         {s.progress_log_count || 0}
                       </span>
-                      {isManager && !isReadOnly && (
-                        <div className="hidden sm:flex items-center gap-2">
-                          <Button variant="secondary" size="sm" onClick={() => setEditCredentialsSensei(s)}>Edit Login</Button>
-                          {confirmRemoveId === s.id ? (
-                            <div className="flex items-center gap-1">
-                              <Button variant="danger" size="sm" onClick={() => handleRemove(s.id)}>Confirm</Button>
-                              <Button variant="secondary" size="sm" onClick={() => setConfirmRemoveId(null)}>Cancel</Button>
-                            </div>
-                          ) : (
-                            <Button variant="danger" size="sm" onClick={() => setConfirmRemoveId(s.id)}>Remove</Button>
-                          )}
-                        </div>
-                      )}
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </>
