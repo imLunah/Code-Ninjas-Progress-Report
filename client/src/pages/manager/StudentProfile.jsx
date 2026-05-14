@@ -46,9 +46,10 @@ function MobileBeltJourney({ enrollment }) {
         )}
       </div>
 
-      {/* All belts, scrollable */}
+      {/* All belts, scrollable — icons row + labels row kept separate so lines align with icon centers */}
       <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
-        <div className="flex items-center py-1" style={{ minWidth: 'max-content', gap: 0 }}>
+        {/* Icons + connecting lines */}
+        <div className="flex items-center" style={{ minWidth: 'max-content' }}>
           {BELTS.map((b, i) => {
             const isCurrent = i === beltIdx;
             const isPast = i < beltIdx;
@@ -58,17 +59,26 @@ function MobileBeltJourney({ enrollment }) {
                 {i > 0 && (
                   <div className="h-0.5 flex-shrink-0" style={{ width: 16, backgroundColor: i <= beltIdx ? '#006ADD' : '#e2e8f0' }} />
                 )}
-                <div className="flex flex-col items-center gap-1 flex-shrink-0">
-                  <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
-                    <img
-                      src={`/belts/belt-${b.name.toLowerCase()}.png`}
-                      alt={b.name}
-                      className={`w-full h-full object-contain ${!isPast && !isCurrent ? 'opacity-25 grayscale' : ''}`}
-                    />
-                    {isCurrent && belt?.color && (
-                      <div className="absolute inset-0 rounded-full border-[3px]" style={{ borderColor: belt.color }} />
-                    )}
-                  </div>
+                <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+                  <img
+                    src={`/belts/belt-${b.name.toLowerCase()}.png`}
+                    alt={b.name}
+                    className={`w-full h-full object-contain ${!isPast && !isCurrent ? 'opacity-25 grayscale' : ''}`}
+                  />
+                </div>
+              </React.Fragment>
+            );
+          })}
+        </div>
+        {/* Labels row — spacers match line widths so labels stay under icons */}
+        <div className="flex mt-1" style={{ minWidth: 'max-content' }}>
+          {BELTS.map((b, i) => {
+            const isCurrent = i === beltIdx;
+            const size = isCurrent ? 52 : 36;
+            return (
+              <React.Fragment key={b.name}>
+                {i > 0 && <div className="flex-shrink-0" style={{ width: 16 }} />}
+                <div className="flex justify-center flex-shrink-0" style={{ width: size }}>
                   <span className={`font-ninja text-[10px] leading-none ${isCurrent ? 'font-bold text-ninja-navy' : 'text-ninja-muted'}`}>
                     {b.name}
                   </span>
