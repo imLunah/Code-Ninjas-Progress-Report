@@ -9,6 +9,7 @@ export default defineConfig({
     }
   },
   build: {
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -17,6 +18,7 @@ export default defineConfig({
           'supabase': ['@supabase/supabase-js'],
           'emoji': ['emoji-picker-react'],
           'markdown': ['react-markdown', 'remark-gfm'],
+          'csv': ['papaparse'],
         }
       }
     }
