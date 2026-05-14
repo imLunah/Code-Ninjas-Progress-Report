@@ -50,7 +50,7 @@ export default function LoginPage() {
         await parentLogin(parentEmail.trim());
         navigate('/parent/dashboard');
       } else {
-        const user = await login(username, password);
+        const user = await login(username, password, keepSignedIn);
         navigate(user.role === 'manager' ? '/manager/dashboard' : '/sensei/dashboard');
       }
     } catch (err) {

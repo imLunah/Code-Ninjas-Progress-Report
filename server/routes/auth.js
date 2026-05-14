@@ -5,7 +5,7 @@ const { requireManager } = require('../middleware/auth');
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, keep_signed_in } = req.body;
 
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password are required' });
@@ -34,6 +34,9 @@ router.post('/login', async (req, res) => {
     req.session.displayName = user.display_name;
     req.session.activeLocationId = user.location_id;
     req.session.homeLocationId = user.location_id;
+    req.session.cookie.maxAge = keep_signed_in
+      ? 30 * 24 * 60 * 60 * 1000  // 30 days
+      : null;                       // session cookie — expires when browser closes
 
     await new Promise((resolve, reject) => {
       req.session.save((err) => (err ? reject(err) : resolve()));
