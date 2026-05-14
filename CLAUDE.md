@@ -1,5 +1,5 @@
 # PROJECT CONTINUATION DOCUMENT
-## Session 1 — 14 May 2026
+## Session 4 — 14 May 2026
 
 ---
 
@@ -36,6 +36,7 @@
   - Framer Motion animations across login, dashboard, boards, clubs, account, sensei profile modal
   - Code Ninjas branded assets used as decorative elements (CN star watermark, celebrate/laptop images)
   - Supabase `profile-pics` storage bucket with correct RLS policies (anon insert/update/select)
+  - Club cover photo upload with **crop modal** (16:9 aspect, rect crop) — manager only, uploads to `club-resources` bucket
 
 - **Partially built:**
   - "Keep me signed in" checkbox on login — UI only, not functional server-side
@@ -102,6 +103,13 @@
 
 ### 4. RECENT WORK — WHAT JUST HAPPENED
 
+- **What was worked on (Session 4 — 14 May 2026):**
+  1. **Club cover photo crop:** `ClubInfoCard` in `ClubProfilePage.jsx` now reads the selected file as a DataURL → opens `CropModal` with `aspect={16/9}` and `cropShape="rect"` → uploads cropped JPEG blob to Supabase `club-resources` bucket at path `covers/{clubDef.id}/{timestamp}.jpg`
+  2. **CropModal now accepts props:** Added `aspect` (default `1`) and `cropShape` (default `'round'`) props — AccountPage uses defaults (no change needed), ClubInfoCard passes 16/9 rect
+  3. **CropModal mobile layout fix:** Restructured to `flex flex-col overflow-hidden max-h-[88vh]` — header (`flex-shrink-0`), crop area (`flex-shrink-0`, 240px), sliders (`flex-1 min-h-0 overflow-y-auto`), buttons (`flex-shrink-0` pinned to bottom). Buttons are now always visible regardless of screen height.
+  4. **MobileNav z-index fix:** Changed `MobileNav` from `z-50` → `z-40`. Root cause: both MobileNav and all modals were `z-50`; since MobileNav renders later in the DOM it was winning the tie, painting the LocationBar ("Yorba Linda" select) on top of modal buttons and hiding them entirely.
+  5. **SenseiProfileModal scrollable + swipe-dismiss:** Added `max-height: 90vh` with `flex flex-col overflow-hidden`; hero header is `flex-shrink-0`; content area (logs + manager actions) is `overflow-y-auto flex-1 min-h-0`. Removed Framer Motion `drag` (was applying `touch-action: none` which blocked all child scrolling). Replaced with raw `onTouchStart`/`onTouchEnd` on the hero header — swipe down 80px closes the sheet. Drag handle pill is now a full-width `h-8` tap button (much easier to hit than old `h-1`).
+
 - **What was worked on (Session 3 — 14 May 2026):**
   1. **Profile pic visibility fix:** `GET /api/users` (role=sensei) and `GET /api/users/:id` were not selecting `profile_pic_url` — added to both queries so other accounts can see uploaded photos
   2. **Staff list avatars:** Each row on StaffPage now shows a circular profile pic (or initials fallback) before the sensei name
@@ -139,7 +147,13 @@
   - **CREATE excluded from multi-lesson UI:** CREATE tracks belt/project snapshots, not lesson lists — the multi-lesson row UI only appears for programs with curriculum (Robotics, AI Academy, JR)
   - **Backward-compatible API:** `lesson_entries` array is optional; single-lesson submissions still work unchanged
 
-- **What changed in the system:**
+- **What changed in the system (Session 4):**
+  - `client/src/components/ui/CropModal.jsx`: added `aspect`/`cropShape` props; flex-col layout with pinned buttons; crop area 240px; `overflow-hidden` on container
+  - `client/src/pages/ClubProfilePage.jsx` (`ClubInfoCard`): added `cropSrc` state; `handleFileChange` now reads DataURL → CropModal; `handleCropConfirm` uploads blob; uses `aspect={16/9} cropShape="rect"`; imports `CropModal`
+  - `client/src/components/layout/MobileNav.jsx`: `z-50` → `z-40`
+  - `client/src/components/manager/SenseiProfileModal.jsx`: removed Framer `drag`/`useDragControls`; added `useRef` touch tracking; hero header has `onTouchStart`/`onTouchEnd` for swipe-dismiss; content div is `overflow-y-auto flex-1 min-h-0`; safe-area padding on manager actions
+
+- **What changed in the system (Sessions 1–3):**
   - `server/routes/users.js`: both `GET /` (role=sensei) and `GET /:id` now select `profile_pic_url`
   - `client/src/pages/manager/StaffPage.jsx`: avatar in rows, Framer stagger, inline buttons removed, `confirmRemoveId` state removed
   - `client/src/components/manager/SenseiProfileModal.jsx`: removed `sm:hidden` from manager action buttons
@@ -158,6 +172,7 @@
 - **Open threads:**
   - Old `/parent/login` page (`ParentLogin.jsx`) still exists and is routed — could be cleaned up
   - Mobile responsiveness was focused on login + staff pages; other pages may still have mobile layout issues
+  - Club cover photos upload to `club-resources` bucket without cache-busting on update — if a cover is replaced, the old URL's CDN cache may serve the stale image briefly
 
 ---
 
@@ -179,6 +194,7 @@
   - `react-easy-crop` CSS may need to be imported explicitly in some setups — it's included via the npm package automatically but worth verifying.
   - The `cropImage.js` canvas approach uses `maxSize = Math.max(width, height)` for rotation — for very large images this creates a large canvas but it's fine for typical photo sizes.
   - `progressData.js` is ~11KB of hardcoded curriculum data — not in DB. If curriculum changes, this file must be updated manually.
+  - Club cover photos are stored as new files on each upload (timestamp path) — old files in the `club-resources` bucket are never cleaned up automatically.
 
 - **Assumptions that could be wrong:**
   - Assumes `user.id` is always available when uploading profile pic — if session expires mid-upload, the path would be `users/undefined/avatar.jpg`.
@@ -195,6 +211,10 @@
 
 3. **What looks like it should be refactored but shouldn't be:** The `progressData.js` file looks like it should live in the database — it's a large hardcoded curriculum object. It's intentionally kept client-side because it's static reference data that never changes during a session and would add unnecessary DB queries on every log. The per-program `percent_complete` semantics are also intentionally different per program (CREATE uses belt sublevels, Robotics uses module counts, AI Academy uses lesson-within-module) — don't try to unify this logic.
 
+4. **Z-index layering rule:** MobileNav is `z-40`. All modals/overlays are `z-50`. This is intentional — MobileNav must be lower so modals cover it. Do NOT raise MobileNav back to `z-50`.
+
+5. **Framer Motion `drag` blocks child scroll:** Never put `drag` on a container that has `overflow-y-auto` children. Framer Motion applies `touch-action: none` to draggable elements, which the browser interprets as "I'm handling all touch events" — scrolling inside child elements stops working. For swipe-to-dismiss on bottom sheets, use raw `onTouchStart`/`onTouchEnd` on the header area instead.
+
 ---
 
 ### 7. DO NOT TOUCH LIST
@@ -210,6 +230,8 @@
 - Ask before installing new npm packages (user is aware of bundle size implications).
 - Preserve all existing Tailwind color token names (`ninja-*`) — they're used everywhere.
 - The old `/parent/login` route still exists — do not delete it without checking if any external links point to it.
+- Do NOT raise `MobileNav` back to `z-50` — it must stay at `z-40` so modals cover it.
+- Do NOT use Framer Motion `drag` on any container that has scrollable children — use `onTouchStart`/`onTouchEnd` for swipe gestures instead.
 
 ---
 
@@ -220,7 +242,7 @@
 - **Section 3 (Architecture):** HIGH CONFIDENCE — verified files and routes this session
 - **Section 4 (Recent Work):** HIGH CONFIDENCE — all work done this session with successful builds and pushes
 - **Section 5 (What Could Go Wrong):** MEDIUM — edge cases inferred from code review, not exhaustively tested
-- **Section 6 (How to Think):** MEDIUM — based on session observations, not full historical codebase audit
+- **Section 6 (How to Think):** HIGH CONFIDENCE — points 4 and 5 confirmed by debugging this session
 - **Section 7 (Do Not Touch):** HIGH CONFIDENCE — derived from explicit user feedback and memory files
 
 ---
