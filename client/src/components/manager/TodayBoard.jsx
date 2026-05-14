@@ -41,7 +41,7 @@ export default function TodayBoard({ assignments, onRemove }) {
       const aOver = a.session_date && String(a.session_date).split('T')[0] < todayStr;
       const bOver = b.session_date && String(b.session_date).split('T')[0] < todayStr;
       if (aOver === bOver) return 0;
-      return aOver ? 1 : -1; // overdue at the end
+      return aOver ? -1 : 1; // overdue first
     });
 
   if (sorted.length === 0) {
