@@ -229,9 +229,9 @@ export default function StaffPage() {
                       )}
                         <div className="min-w-0 flex-1">
                         <p className="font-ninja font-bold text-ninja-navy truncate">{s.display_name}</p>
-                        {s.role === 'manager' && (
-                          <span className="text-[10px] font-ninja font-bold text-ninja-blue uppercase tracking-wide">Director</span>
-                        )}
+                        <span className={`text-[10px] font-ninja font-bold uppercase tracking-wide ${s.role === 'manager' ? 'text-ninja-blue' : 'text-ninja-muted'}`}>
+                          {s.role === 'manager' ? 'Director' : 'Sensei'}
+                        </span>
                       </div>
                     </div>
                     <p className="font-ninja text-sm text-ninja-muted">@{s.username}</p>
