@@ -74,7 +74,6 @@ export default function AddStudentToday({ isOpen, onClose, onAdded, existingEntr
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-            autoFocus
           />
         </div>
 
