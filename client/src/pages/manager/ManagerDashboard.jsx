@@ -51,7 +51,6 @@ export default function ManagerDashboard() {
   };
 
   const existingEntries = assignments.map((a) => ({ student_id: a.student_id, program: a.program }));
-  const completedCount = assignments.filter((a) => a.completed).length;
 
   return (
     <Layout>
@@ -71,29 +70,7 @@ export default function ManagerDashboard() {
           )}
         </div>
 
-        {/* Stats */}
-        {assignments.length > 0 && (
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
-              <p className="text-3xl font-bold font-ninja text-ninja-blue">{assignments.length}</p>
-              <p className="text-ninja-muted font-ninja text-sm mt-1">Total Ninjas</p>
-            </div>
-            <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
-              <p className={`text-3xl font-bold font-ninja ${completedCount > 0 ? 'text-green-500' : 'text-ninja-border'}`}>
-                {completedCount}
-              </p>
-              <p className="text-ninja-muted font-ninja text-sm mt-1">Completed</p>
-            </div>
-            <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
-              <p className={`text-3xl font-bold font-ninja ${assignments.length - completedCount > 0 ? 'text-ninja-muted' : 'text-ninja-border'}`}>
-                {assignments.length - completedCount}
-              </p>
-              <p className="text-ninja-muted font-ninja text-sm mt-1">Remaining</p>
-            </div>
-          </div>
-        )}
-
-        {/* Board */}
+{/* Board */}
         {error && <p className="text-ninja-red font-ninja text-center py-4">{error}</p>}
 
         {loading ? (
