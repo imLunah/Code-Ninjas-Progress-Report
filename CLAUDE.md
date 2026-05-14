@@ -1,5 +1,5 @@
 # PROJECT CONTINUATION DOCUMENT
-## Session 4 — 14 May 2026
+## Session 5 — 14 May 2026
 
 ---
 
@@ -37,6 +37,13 @@
   - Code Ninjas branded assets used as decorative elements (CN star watermark, celebrate/laptop images)
   - Supabase `profile-pics` storage bucket with correct RLS policies (anon insert/update/select)
   - Club cover photo upload with **crop modal** (16:9 aspect, rect crop) — manager only, uploads to `club-resources` bucket
+  - Add Staff modal with role toggle (Sensei / Center Director) — CDs can create new manager accounts; sensei names auto-prefixed with "Sensei "
+  - Staff page shows role label under every staff member ("Sensei" in muted gray, "Director" in blue)
+  - Senseis can view the Staff page (Senseis link added to sensei nav in Sidebar and already in MobileNav)
+  - Location isolation: managers viewing another location are blocked from writing — `LogClubPage` now shows a blocked state when `isReadOnly`; club comments route (`POST /:id/comments`) now has `requireOwnLocation`
+  - Mobile logout: Account page now has a "Sign Out" button visible on all screen sizes
+  - Parent "Note for Senseis" (`special_instructions`) displayed read-only on LogProgressPage so senseis can see parent notes while logging
+  - Parent note from sensei feature removed (was `ParentNote.jsx` + `parent_note` DB field usage) — concept scrapped, component deleted
 
 - **Partially built:**
   - "Keep me signed in" checkbox on login — UI only, not functional server-side
@@ -103,6 +110,16 @@
 
 ### 4. RECENT WORK — WHAT JUST HAPPENED
 
+- **What was worked on (Session 5 — 14 May 2026):**
+  1. **Add Staff / role toggle:** `AddSenseiModal` renamed concept to "Add Staff"; added two-button role toggle (Sensei / Center Director); sensei display names auto-prefixed with "Sensei " on submit if not already prefixed; live preview hint shown while typing; button label updates to "Add Sensei" or "Add Center Director"
+  2. **Staff page role labels:** Every row in StaffPage now shows a role badge — "Sensei" in muted gray for senseis, "Director" in blue for managers (previously only Directors had a label)
+  3. **Sensei staff nav:** Added `/manager/staff` to `senseiLinks` in Sidebar.jsx — senseis can now navigate to the Staff page from the desktop sidebar (MobileNav already showed it to all roles)
+  4. **Location isolation — LogClubPage:** Added `isReadOnly` check; managers viewing another location see a blocked amber state instead of the log form — prevents creating club sessions for the wrong center
+  5. **Location isolation — club comments:** `POST /api/clubs/:id/comments` was missing `requireOwnLocation` — added so staff can't comment on another location's club sessions
+  6. **Mobile logout:** `AccountPage` now imports `useNavigate` + `logout`; "Sign Out" button added at bottom of page with `ninja-red` border styling
+  7. **Parent note on log page:** Removed `ParentNote` component (sensei→parent note, now scrapped). Replaced with read-only display of `student.special_instructions` (parent's "Note for Senseis") shown as a blue card on LogProgressPage — senseis see what parents wrote, without being able to edit it from there
+  8. **Parent portal cleanup:** Removed "Note from Your Sensei" block from `ParentStudentProfile.jsx` (was reading `parent_note` which is no longer written anywhere); deleted `ParentNote.jsx`
+
 - **What was worked on (Session 4 — 14 May 2026):**
   1. **Club cover photo crop:** `ClubInfoCard` in `ClubProfilePage.jsx` now reads the selected file as a DataURL → opens `CropModal` with `aspect={16/9}` and `cropShape="rect"` → uploads cropped JPEG blob to Supabase `club-resources` bucket at path `covers/{clubDef.id}/{timestamp}.jpg`
   2. **CropModal now accepts props:** Added `aspect` (default `1`) and `cropShape` (default `'round'`) props — AccountPage uses defaults (no change needed), ClubInfoCard passes 16/9 rect
@@ -147,6 +164,17 @@
   - **CREATE excluded from multi-lesson UI:** CREATE tracks belt/project snapshots, not lesson lists — the multi-lesson row UI only appears for programs with curriculum (Robotics, AI Academy, JR)
   - **Backward-compatible API:** `lesson_entries` array is optional; single-lesson submissions still work unchanged
 
+- **What changed in the system (Session 5):**
+  - `client/src/components/manager/AddSenseiModal.jsx`: role toggle (sensei/manager); auto-prefix "Sensei "; live preview hint; dynamic submit label
+  - `client/src/pages/manager/StaffPage.jsx`: role label shown for all staff (both sensei and manager rows)
+  - `client/src/components/layout/Sidebar.jsx`: `/manager/staff` added to `senseiLinks`
+  - `client/src/pages/sensei/LogClubPage.jsx`: `isReadOnly` imported; blocked state rendered when manager is at non-home location
+  - `server/routes/clubs.js`: `requireOwnLocation` added to `POST /:id/comments`
+  - `client/src/pages/AccountPage.jsx`: imports `useNavigate` + `logout`; Sign Out button at bottom
+  - `client/src/pages/sensei/LogProgressPage.jsx`: replaced `<ParentNote>` with read-only `student.special_instructions` blue card; removed `ParentNote` import
+  - `client/src/pages/parent/ParentStudentProfile.jsx`: removed `parent_note` "Note from Your Sensei" block
+  - `client/src/components/shared/ParentNote.jsx`: deleted
+
 - **What changed in the system (Session 4):**
   - `client/src/components/ui/CropModal.jsx`: added `aspect`/`cropShape` props; flex-col layout with pinned buttons; crop area 240px; `overflow-hidden` on container
   - `client/src/pages/ClubProfilePage.jsx` (`ClubInfoCard`): added `cropSrc` state; `handleFileChange` now reads DataURL → CropModal; `handleCropConfirm` uploads blob; uses `aspect={16/9} cropShape="rect"`; imports `CropModal`
@@ -173,6 +201,7 @@
   - Old `/parent/login` page (`ParentLogin.jsx`) still exists and is routed — could be cleaned up
   - Mobile responsiveness was focused on login + staff pages; other pages may still have mobile layout issues
   - Club cover photos upload to `club-resources` bucket without cache-busting on update — if a cover is replaced, the old URL's CDN cache may serve the stale image briefly
+  - `parent_note` column still exists on the `students` table in the DB — data is no longer written or read by the app but the column was not dropped (safe to leave or drop later)
 
 ---
 
@@ -240,7 +269,7 @@
 - **Section 1 (Project Identity):** HIGH CONFIDENCE — verified against codebase this session
 - **Section 2 (Current State):** HIGH CONFIDENCE — built/fixed directly this session
 - **Section 3 (Architecture):** HIGH CONFIDENCE — verified files and routes this session
-- **Section 4 (Recent Work):** HIGH CONFIDENCE — all work done this session with successful builds and pushes
+- **Section 4 (Recent Work — Session 5):** HIGH CONFIDENCE — all work done this session with successful builds and pushes
 - **Section 5 (What Could Go Wrong):** MEDIUM — edge cases inferred from code review, not exhaustively tested
 - **Section 6 (How to Think):** HIGH CONFIDENCE — points 4 and 5 confirmed by debugging this session
 - **Section 7 (Do Not Touch):** HIGH CONFIDENCE — derived from explicit user feedback and memory files
