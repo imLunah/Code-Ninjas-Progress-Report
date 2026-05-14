@@ -112,6 +112,68 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   }
 });
 
+// PATCH /api/users/me — any staff can update their own username/password
+router.patch('/me', requireSensei, async (req, res) => {
+  const pool = req.app.get('db');
+  const { username, new_password } = req.body;
+  if (!username?.trim() && !new_password?.trim()) {
+    return res.status(400).json({ error: 'Nothing to update' });
+  }
+  try {
+    if (username?.trim()) {
+      const { rows } = await pool.query(
+        'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id != $2',
+        [username.trim(), req.session.userId]
+      );
+      if (rows[0]) return res.status(409).json({ error: 'Username already taken' });
+      await pool.query('UPDATE users SET username = $1 WHERE id = $2', [username.trim(), req.session.userId]);
+    }
+    if (new_password?.trim()) {
+      if (new_password.trim().length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      const hash = await bcrypt.hash(new_password.trim(), SALT_ROUNDS);
+      await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.session.userId]);
+    }
+    res.json({ ok: true, username: username?.trim() || undefined });
+  } catch (err) {
+    console.error('Self credential update error:', err);
+    res.status(500).json({ error: 'Failed to update account' });
+  }
+});
+
+// PATCH /api/users/:id/credentials — manager resets another user's credentials (same location)
+router.patch('/:id/credentials', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const targetId = parseInt(req.params.id, 10);
+  const { username, new_password } = req.body;
+  if (!username?.trim() && !new_password?.trim()) {
+    return res.status(400).json({ error: 'Nothing to update' });
+  }
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, role FROM users WHERE id = $1 AND location_id = $2 AND active = true',
+      [targetId, req.session.activeLocationId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'User not found' });
+    if (username?.trim()) {
+      const { rows: existing } = await pool.query(
+        'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id != $2',
+        [username.trim(), targetId]
+      );
+      if (existing[0]) return res.status(409).json({ error: 'Username already taken' });
+      await pool.query('UPDATE users SET username = $1 WHERE id = $2', [username.trim(), targetId]);
+    }
+    if (new_password?.trim()) {
+      if (new_password.trim().length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      const hash = await bcrypt.hash(new_password.trim(), SALT_ROUNDS);
+      await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, targetId]);
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Credential reset error:', err);
+    res.status(500).json({ error: 'Failed to update credentials' });
+  }
+});
+
 // DELETE /api/users/:id (soft delete — manager only, own location, senseis only)
 router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');

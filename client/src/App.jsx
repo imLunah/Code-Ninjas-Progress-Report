@@ -10,6 +10,7 @@ import StudentRoster from './pages/manager/StudentRoster';
 import AddStudentPage from './pages/manager/AddStudentPage';
 import StudentProfile from './pages/manager/StudentProfile';
 import StaffPage from './pages/manager/StaffPage';
+import AccountPage from './pages/AccountPage';
 
 import SenseiDashboard from './pages/sensei/SenseiDashboard';
 import LogProgressPage from './pages/sensei/LogProgressPage';
@@ -149,6 +150,16 @@ export default function App() {
           <Route
             path="/parent/students/:id"
             element={<ParentRoute><ParentStudentProfile /></ParentRoute>}
+          />
+
+          {/* Account settings */}
+          <Route
+            path="/account"
+            element={
+              <ProtectedRoute role="sensei">
+                <AccountPage />
+              </ProtectedRoute>
+            }
           />
 
           {/* Catch-all */}
