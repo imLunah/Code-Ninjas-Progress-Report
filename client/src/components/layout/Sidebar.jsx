@@ -69,8 +69,8 @@ export default function Sidebar() {
   return (
     <aside className="hidden lg:flex flex-col w-56 xl:w-60 bg-white border-r border-ninja-border flex-shrink-0 sticky top-0 h-screen z-40">
       {/* Logo */}
-      <div className="px-5 py-4 border-b border-ninja-border">
-        <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-8 w-auto" />
+      <div className="px-5 py-5 border-b border-ninja-border">
+        <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-14 w-auto" />
       </div>
 
       {/* Center switcher */}
@@ -125,9 +125,13 @@ export default function Sidebar() {
       <div className="p-3 border-t border-ninja-border">
         <div className="flex items-center gap-2.5 px-2 py-2">
           <Link to="/account" className="flex items-center gap-2.5 flex-1 min-w-0 hover:opacity-80 transition-opacity">
-            <div className="w-8 h-8 rounded-full bg-ninja-blue flex items-center justify-center text-white font-ninja font-bold text-xs flex-shrink-0">
-              {initials}
-            </div>
+            {user?.profilePicUrl ? (
+              <img src={user.profilePicUrl} alt={user.displayName} className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-ninja-border" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-ninja-blue flex items-center justify-center text-white font-ninja font-bold text-xs flex-shrink-0">
+                {initials}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="font-ninja font-bold text-ninja-navy text-sm truncate">{user?.displayName}</p>
               <p className="font-ninja text-ninja-muted text-xs capitalize">{user?.role === 'manager' ? 'Center Director' : user?.role}</p>
