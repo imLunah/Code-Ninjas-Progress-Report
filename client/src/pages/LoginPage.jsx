@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useParentAuth } from '../context/ParentAuthContext';
 
 const stagger = {
   hidden: {},
@@ -29,22 +30,28 @@ export default function LoginPage() {
   const [tab, setTab] = useState('staff'); // 'staff' | 'parent'
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [parentEmail, setParentEmail] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [alphaDismissed, setAlphaDismissed] = useState(false);
   const { login } = useAuth();
+  const { login: parentLogin } = useParentAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (tab === 'parent') { navigate('/parent/login'); return; }
     setError('');
     setLoading(true);
     try {
-      const user = await login(username, password);
-      navigate(user.role === 'manager' ? '/manager/dashboard' : '/sensei/dashboard');
+      if (tab === 'parent') {
+        await parentLogin(parentEmail.trim());
+        navigate('/parent/dashboard');
+      } else {
+        const user = await login(username, password);
+        navigate(user.role === 'manager' ? '/manager/dashboard' : '/sensei/dashboard');
+      }
     } catch (err) {
       setError(err.message || 'Login failed');
     } finally {
@@ -53,7 +60,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-start sm:justify-center px-5 sm:px-6 py-8 sm:py-12">
 
       {/* Alpha notice */}
       <AnimatePresence>
@@ -98,23 +105,35 @@ export default function LoginPage() {
         animate="show"
       >
         {/* DojoLink logo — big and prominent */}
-        <motion.div variants={fadeUp} className="mb-8">
-          <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-16 w-auto" />
+        <motion.div variants={fadeUp} className="mb-5 sm:mb-8">
+          <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-11 sm:h-16 w-auto" />
         </motion.div>
 
         {/* Hero copy */}
-        <motion.p variants={fadeUp} className="text-ninja-blue font-ninja font-bold text-sm uppercase tracking-widest mb-2">
+        <motion.p variants={fadeUp} className="text-ninja-blue font-ninja font-bold text-xs sm:text-sm uppercase tracking-widest mb-1.5 sm:mb-2">
           Welcome back, Ninja
         </motion.p>
-        <motion.h1 variants={fadeUp} className="text-ninja-navy font-ninja font-black text-4xl sm:text-5xl leading-tight mb-3">
+        <motion.h1 variants={fadeUp} className="text-ninja-navy font-ninja font-black text-3xl sm:text-4xl lg:text-5xl leading-tight mb-2 sm:mb-3">
           Sign in to your dojo.
         </motion.h1>
-        <motion.p variants={fadeUp} className="text-ninja-muted font-ninja text-base leading-relaxed mb-8">
-          Senseis and center directors — track today's board, log belt progress, and message parents from one place.
-        </motion.p>
+        <AnimatePresence mode="wait">
+          {tab === 'parent' && (
+            <motion.p
+              key="parent-sub"
+              variants={fadeUp}
+              initial="hidden" animate="show" exit="hidden"
+              className="text-ninja-muted font-ninja text-sm sm:text-base leading-relaxed mb-5 sm:mb-8"
+            >
+              Enter the email address linked to your child's account.
+            </motion.p>
+          )}
+          {tab === 'staff' && (
+            <motion.div key="staff-spacer" className="mb-5 sm:mb-8" />
+          )}
+        </AnimatePresence>
 
         {/* Tab switcher */}
-        <motion.div variants={fadeUp} className="relative flex bg-ninja-bg border border-ninja-border rounded-2xl p-1 mb-6">
+        <motion.div variants={fadeUp} className="relative flex bg-ninja-bg border border-ninja-border rounded-2xl p-1 mb-4 sm:mb-6">
           <motion.div
             className="absolute top-1 bottom-1 bg-white rounded-xl shadow-sm"
             layout
@@ -159,7 +178,7 @@ export default function LoginPage() {
                     placeholder="e.g. sensei_alex"
                     required
                     autoFocus
-                    className="w-full border border-ninja-border text-ninja-navy rounded-xl px-4 py-3.5 font-ninja text-base focus:outline-none focus:border-ninja-blue focus:ring-2 focus:ring-ninja-blue/10 transition-all bg-white"
+                    className="w-full border border-ninja-border text-ninja-navy rounded-xl px-4 py-3 sm:py-3.5 font-ninja text-base focus:outline-none focus:border-ninja-blue focus:ring-2 focus:ring-ninja-blue/10 transition-all bg-white"
                   />
                 </div>
 
@@ -175,7 +194,7 @@ export default function LoginPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••"
                       required
-                      className="w-full border border-ninja-border text-ninja-navy rounded-xl px-4 py-3.5 pr-12 font-ninja text-base focus:outline-none focus:border-ninja-blue focus:ring-2 focus:ring-ninja-blue/10 transition-all bg-white"
+                      className="w-full border border-ninja-border text-ninja-navy rounded-xl px-4 py-3 sm:py-3.5 pr-12 font-ninja text-base focus:outline-none focus:border-ninja-blue focus:ring-2 focus:ring-ninja-blue/10 transition-all bg-white"
                     />
                     <button
                       type="button"
@@ -230,12 +249,19 @@ export default function LoginPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{    opacity: 0, y: -8 }}
                 transition={{ duration: 0.22, ease: 'easeOut' }}
-                className="bg-ninja-bg border border-ninja-border rounded-2xl p-5 text-center"
               >
-                <p className="text-ninja-navy font-ninja font-semibold text-sm mb-1">Parent Portal</p>
-                <p className="text-ninja-muted font-ninja text-sm">
-                  You'll be taken to the parent sign-in page where you can log in with your email.
-                </p>
+                <label className="block text-ninja-navy font-ninja font-bold text-xs uppercase tracking-widest mb-2">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={parentEmail}
+                  onChange={(e) => setParentEmail(e.target.value)}
+                  placeholder="you@email.com"
+                  required
+                  autoFocus
+                  className="w-full border border-ninja-border text-ninja-navy rounded-xl px-4 py-3 sm:py-3.5 font-ninja text-base focus:outline-none focus:border-ninja-blue focus:ring-2 focus:ring-ninja-blue/10 transition-all bg-white"
+                />
               </motion.div>
             )}
           </AnimatePresence>
