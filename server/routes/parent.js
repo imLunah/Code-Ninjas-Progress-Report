@@ -92,7 +92,7 @@ router.get('/students/:id', requireParent, async (req, res) => {
   const { id } = req.params;
   try {
     const { rows } = await pool.query(`
-      SELECT s.id, s.full_name, s.birthday, s.created_at, s.special_instructions,
+      SELECT s.id, s.full_name, s.birthday, s.created_at, s.special_instructions, s.parent_note,
         ${STUDENT_PROGRAMS_SUBQUERY}
       FROM students s
       WHERE s.id = $1 AND LOWER(s.parent_email) = LOWER($2) AND s.active = true
