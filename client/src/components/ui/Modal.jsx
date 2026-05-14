@@ -16,11 +16,11 @@ export default function Modal({ isOpen, onClose, title, children, width = 'max-w
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ninja-navy/50"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-ninja-navy/50"
       onClick={onClose}
     >
       <div
-        className={`bg-white border border-ninja-border rounded-xl shadow-xl w-full ${width} max-h-[90vh] flex flex-col`}
+        className={`bg-white border border-ninja-border rounded-t-2xl sm:rounded-xl shadow-xl w-full ${width} max-h-[85vh] flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header — never scrolls */}
