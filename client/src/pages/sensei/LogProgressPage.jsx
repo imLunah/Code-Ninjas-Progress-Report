@@ -6,7 +6,6 @@ import ProgramBadge from '../../components/ui/ProgramBadge';
 import Card from '../../components/ui/Card';
 import LogEntryForm from '../../components/sensei/LogEntryForm';
 import PinnedNote from '../../components/shared/PinnedNote';
-import ParentNote from '../../components/shared/ParentNote';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
@@ -151,11 +150,19 @@ export default function LogProgressPage() {
               initialNote={student.pinned_note}
               onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
             />
-            <ParentNote
-              studentId={student.id}
-              initialNote={student.parent_note}
-              onUpdated={(note) => setStudent((prev) => ({ ...prev, parent_note: note }))}
-            />
+            {student.special_instructions && (
+              <div className="rounded-2xl overflow-hidden" style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe' }}>
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-base">📌</span>
+                    <h2 className="font-ninja font-bold text-sm uppercase tracking-wide" style={{ color: '#1e3a5f' }}>Note from Parent</h2>
+                  </div>
+                  <p className="font-ninja text-sm leading-relaxed whitespace-pre-wrap" style={{ color: '#1e40af' }}>
+                    {student.special_instructions}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right panel: log form */}
