@@ -135,70 +135,64 @@ function BeltJourney({ enrollment }) {
         )}
         {!current_project && !last_session_date && <div className="mb-5" />}
 
-        {/* Belt path — 5-belt window centred on current belt */}
-        {(() => {
-          const start = Math.max(0, Math.min(currentIndex - 2, BELTS.length - 5));
-          const visible = BELTS.slice(start, start + 5);
-          return (
-            <>
-              {/* Row 1: images + connecting lines */}
-              <div className="flex items-center justify-center">
-                {visible.map((belt, i) => {
-                  const absIdx = start + i;
-                  const reached = absIdx <= currentIndex;
-                  const isCurrent = absIdx === currentIndex;
-                  const imgSize = isCurrent ? 34 : 26;
-                  return (
-                    <React.Fragment key={belt.name}>
-                      {i > 0 && (
-                        <div style={{
-                          flex: '1 1 0', maxWidth: 40, height: '2px',
-                          backgroundColor: absIdx <= currentIndex ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.22)',
-                        }} />
-                      )}
-                      <img
-                        src={BELT_IMAGES[belt.name]}
-                        alt={belt.name}
-                        draggable={false}
-                        style={{
-                          width: imgSize, height: imgSize, display: 'block', flexShrink: 0,
-                          opacity: reached ? 1 : 0.45,
-                          filter: isCurrent
-                            ? 'drop-shadow(0 0 6px rgba(255,255,255,0.55))'
-                            : reached ? 'none' : 'grayscale(100%)',
-                        }}
-                      />
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-              {/* Row 2: labels — same spacing logic */}
-              <div className="flex justify-center" style={{ marginTop: '5px' }}>
-                {visible.map((belt, i) => {
-                  const absIdx = start + i;
-                  const reached = absIdx <= currentIndex;
-                  const isCurrent = absIdx === currentIndex;
-                  const imgSize = isCurrent ? 34 : 26;
-                  return (
-                    <React.Fragment key={belt.name}>
-                      {i > 0 && <div style={{ flex: '1 1 0', maxWidth: 40 }} />}
-                      <div style={{ width: imgSize, textAlign: 'center', flexShrink: 0 }}>
-                        <span style={{
-                          fontSize: '9px', fontFamily: 'Nunito, sans-serif',
-                          fontWeight: isCurrent ? 700 : 400,
-                          color: reached ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)',
-                          whiteSpace: 'nowrap', display: 'block',
-                        }}>
-                          {belt.name}
-                        </span>
-                      </div>
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            </>
-          );
-        })()}
+        {/* Belt path */}
+        {/* Belt path — images and labels in separate rows so lines stay centered */}
+        <div className="overflow-x-auto" style={{ margin: '0 -4px', padding: '4px' }}>
+          {/* Row 1: images + connecting lines, all vertically centered */}
+          <div className="flex items-center" style={{ minWidth: 'max-content' }}>
+            {BELTS.map((belt, i) => {
+              const reached = i <= currentIndex;
+              const isCurrent = i === currentIndex;
+              const imgSize = isCurrent ? 34 : 26;
+              return (
+                <React.Fragment key={belt.name}>
+                  {i > 0 && (
+                    <div style={{
+                      width: '12px', height: '2px', flexShrink: 0,
+                      backgroundColor: reached ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.22)',
+                    }} />
+                  )}
+                  <img
+                    src={BELT_IMAGES[belt.name]}
+                    alt={belt.name}
+                    draggable={false}
+                    style={{
+                      width: imgSize, height: imgSize, display: 'block',
+                      opacity: reached ? 1 : 0.45,
+                      filter: isCurrent
+                        ? 'drop-shadow(0 0 6px rgba(255,255,255,0.55))'
+                        : reached ? 'none' : 'grayscale(100%)',
+                      transition: 'all 0.2s',
+                    }}
+                  />
+                </React.Fragment>
+              );
+            })}
+          </div>
+          {/* Row 2: labels, widths match image widths so they stay aligned */}
+          <div className="flex" style={{ minWidth: 'max-content', marginTop: '5px' }}>
+            {BELTS.map((belt, i) => {
+              const reached = i <= currentIndex;
+              const isCurrent = i === currentIndex;
+              const imgSize = isCurrent ? 34 : 26;
+              return (
+                <React.Fragment key={belt.name}>
+                  {i > 0 && <div style={{ width: '12px', flexShrink: 0 }} />}
+                  <div style={{ width: imgSize, textAlign: 'center' }}>
+                    <span style={{
+                      fontSize: '9px', fontFamily: 'Nunito, sans-serif',
+                      fontWeight: isCurrent ? 700 : 400,
+                      color: reached ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)',
+                      whiteSpace: 'nowrap', display: 'block',
+                    }}>
+                      {belt.name}
+                    </span>
+                  </div>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Sublevel progress bar */}
