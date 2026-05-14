@@ -264,7 +264,7 @@ export default function StudentProfile() {
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              {programs.length > 0 && (
+              {programs.length > 0 && !isReadOnly && (
                 <Button
                   onClick={() => {
                     const programsStr = programs.map((p) => p.program).join(',');
