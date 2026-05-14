@@ -206,12 +206,14 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpda
                 )}
 
                 {/* Log Progress — opens session detail with notes + comment thread */}
-                <button
-                  onClick={() => navigate(`/clubs/${toSlug(s.club_name)}/sessions/${s.id}`)}
-                  className="w-full text-sm font-ninja font-bold text-ninja-blue border border-ninja-blue rounded-lg py-1.5 hover:bg-ninja-blue hover:text-white transition-colors"
-                >
-                  Log Progress
-                </button>
+                {!isReadOnly && (
+                  <button
+                    onClick={() => navigate(`/clubs/${toSlug(s.club_name)}/sessions/${s.id}`)}
+                    className="w-full text-sm font-ninja font-bold text-ninja-blue border border-ninja-blue rounded-lg py-1.5 hover:bg-ninja-blue hover:text-white transition-colors"
+                  >
+                    Log Progress
+                  </button>
+                )}
 
                 {/* Manager delete */}
                 {isManager && !isReadOnly && (
