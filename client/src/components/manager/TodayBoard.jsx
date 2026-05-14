@@ -33,16 +33,6 @@ export default function TodayBoard({ assignments, onRemove }) {
     );
   }
 
-  if (sorted.length === 0) {
-    return (
-      <div className="text-center py-12 text-ninja-muted font-ninja">
-        <p className="text-2xl mb-2">🎉</p>
-        <p className="text-lg font-bold text-ninja-navy">All {completedCount} ninja{completedCount !== 1 ? 's' : ''} logged!</p>
-        <p className="text-sm mt-1">Great session today.</p>
-      </div>
-    );
-  }
-
   const completedCount = assignments.filter((a) => a.completed).length;
   // Only show pending/overdue — completed ninjas are tracked in the stat strip above
   const sorted = [...assignments]
@@ -53,6 +43,16 @@ export default function TodayBoard({ assignments, onRemove }) {
       if (aOver === bOver) return 0;
       return aOver ? 1 : -1; // overdue at the end
     });
+
+  if (sorted.length === 0) {
+    return (
+      <div className="text-center py-12 text-ninja-muted font-ninja">
+        <p className="text-2xl mb-2">🎉</p>
+        <p className="text-lg font-bold text-ninja-navy">All {completedCount} ninja{completedCount !== 1 ? 's' : ''} logged!</p>
+        <p className="text-sm mt-1">Great session today.</p>
+      </div>
+    );
+  }
 
   return (
     <>
