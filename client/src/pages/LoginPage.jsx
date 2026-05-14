@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useParentAuth } from '../context/ParentAuthContext';
@@ -27,7 +27,8 @@ function EyeIcon({ open }) {
 }
 
 export default function LoginPage() {
-  const [tab, setTab] = useState('staff'); // 'staff' | 'parent'
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(searchParams.get('tab') === 'parent' ? 'parent' : 'staff');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [parentEmail, setParentEmail] = useState('');
