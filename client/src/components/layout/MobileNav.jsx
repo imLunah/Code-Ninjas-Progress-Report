@@ -87,7 +87,7 @@ export default function MobileNav() {
   ];
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-ninja-border">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-ninja-border">
       <LocationBar user={user} switchLocation={switchLocation} />
       <div className="flex items-stretch">
         {tabs.map((tab) => (
