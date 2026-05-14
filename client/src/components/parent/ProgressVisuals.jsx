@@ -142,7 +142,7 @@ function BeltJourney({ enrollment }) {
           return (
             <>
               {/* Row 1: images + connecting lines */}
-              <div className="flex items-center">
+              <div className="flex items-center justify-center">
                 {visible.map((belt, i) => {
                   const absIdx = start + i;
                   const reached = absIdx <= currentIndex;
@@ -152,7 +152,7 @@ function BeltJourney({ enrollment }) {
                     <React.Fragment key={belt.name}>
                       {i > 0 && (
                         <div style={{
-                          flex: 1, height: '2px',
+                          flex: '1 1 0', maxWidth: 40, height: '2px',
                           backgroundColor: absIdx <= currentIndex ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.22)',
                         }} />
                       )}
@@ -172,8 +172,8 @@ function BeltJourney({ enrollment }) {
                   );
                 })}
               </div>
-              {/* Row 2: labels */}
-              <div className="flex" style={{ marginTop: '5px' }}>
+              {/* Row 2: labels — same spacing logic */}
+              <div className="flex justify-center" style={{ marginTop: '5px' }}>
                 {visible.map((belt, i) => {
                   const absIdx = start + i;
                   const reached = absIdx <= currentIndex;
@@ -181,7 +181,7 @@ function BeltJourney({ enrollment }) {
                   const imgSize = isCurrent ? 34 : 26;
                   return (
                     <React.Fragment key={belt.name}>
-                      {i > 0 && <div style={{ flex: 1 }} />}
+                      {i > 0 && <div style={{ flex: '1 1 0', maxWidth: 40 }} />}
                       <div style={{ width: imgSize, textAlign: 'center', flexShrink: 0 }}>
                         <span style={{
                           fontSize: '9px', fontFamily: 'Nunito, sans-serif',
