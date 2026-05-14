@@ -10,7 +10,7 @@ import { today, formatDate } from '../../utils/dateUtils';
 
 export default function LogClubPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isReadOnly } = useAuth();
   const [searchParams] = useSearchParams();
 
   const [students, setStudents] = useState([]);
@@ -71,6 +71,21 @@ export default function LogClubPage() {
       setSubmitting(false);
     }
   };
+
+  if (isReadOnly) {
+    return (
+      <Layout>
+        <div className="max-w-2xl mx-auto space-y-4">
+          <button onClick={() => navigate(-1)} className="text-ninja-muted hover:text-ninja-blue font-ninja text-sm flex items-center gap-1 transition-colors">
+            ← Back
+          </button>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
+            <p className="text-amber-700 font-ninja font-semibold">You can only log sessions at your home center.</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
