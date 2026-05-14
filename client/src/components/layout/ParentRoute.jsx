@@ -12,6 +12,6 @@ export default function ParentRoute({ children }) {
     );
   }
 
-  if (!parent) return <Navigate to="/parent/login" replace />;
+  if (!parent) return <Navigate to="/login?tab=parent" replace />;
   return children;
 }

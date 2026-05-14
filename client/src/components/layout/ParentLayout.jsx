@@ -7,7 +7,7 @@ export default function ParentLayout({ children }) {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/parent/login');
+    navigate('/login?tab=parent');
   };
 
   return (
