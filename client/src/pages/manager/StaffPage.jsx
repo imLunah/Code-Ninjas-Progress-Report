@@ -214,7 +214,7 @@ export default function StaffPage() {
                         {s.progress_log_count || 0}
                       </span>
                       {isManager && !isReadOnly && (
-                        <>
+                        <div className="hidden sm:flex items-center gap-2">
                           <Button variant="secondary" size="sm" onClick={() => setEditCredentialsSensei(s)}>Edit Login</Button>
                           {confirmRemoveId === s.id ? (
                             <div className="flex items-center gap-1">
@@ -224,7 +224,7 @@ export default function StaffPage() {
                           ) : (
                             <Button variant="danger" size="sm" onClick={() => setConfirmRemoveId(s.id)}>Remove</Button>
                           )}
-                        </>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -246,6 +246,10 @@ export default function StaffPage() {
         onClose={() => setSelectedSensei(null)}
         sensei={selectedSensei}
         logs={profileLoading ? [] : profileLogs}
+        isManager={isManager}
+        isReadOnly={isReadOnly}
+        onEditLogin={() => setEditCredentialsSensei(selectedSensei)}
+        onRemove={() => selectedSensei && handleRemove(selectedSensei.id)}
       />
 
       {editCredentialsSensei && (
