@@ -48,14 +48,14 @@ export default function Sidebar() {
     { to: '/manager/dashboard', label: "Today's Board", icon: 'today' },
     { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
     { to: '/clubs', label: 'Clubs', icon: 'clubs' },
-    { to: '/manager/staff', label: 'Senseis', icon: 'senseis' },
+    { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
   ];
 
   const senseiLinks = [
     { to: '/sensei/dashboard', label: "Today's Board", icon: 'today' },
     { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
     { to: '/clubs', label: 'Clubs', icon: 'clubs' },
-    { to: '/manager/staff', label: 'Senseis', icon: 'senseis' },
+    { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
   ];
 
   const navLinks = user?.role === 'manager' ? managerLinks : user?.role === 'sensei' ? senseiLinks : [];

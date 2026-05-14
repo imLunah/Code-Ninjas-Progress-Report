@@ -63,6 +63,11 @@ export default function ManagerDashboard() {
               <span className="text-ninja-blue">Ninjas</span>
             </h1>
             <p className="text-ninja-muted font-ninja mt-1">{formatDate(todayStr)}</p>
+            {user && (
+              <p className="text-ninja-navy font-ninja mt-1 font-semibold">
+                Welcome Director {user.displayName?.split(' ')[0]}
+              </p>
+            )}
           </div>
           {!isReadOnly && (
             <Button onClick={() => setShowAddModal(true)} size="md">
