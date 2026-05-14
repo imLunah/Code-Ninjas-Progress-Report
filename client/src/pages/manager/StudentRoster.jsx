@@ -67,12 +67,6 @@ export default function StudentRoster() {
   const { user, isReadOnly } = useAuth();
   const isManager = user?.role === 'manager' && !isReadOnly;
 
-  useEffect(() => {
-    const lockScroll = window.innerWidth >= 768;
-    if (lockScroll) document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
-
   const loadStudents = () => {
     const params = new URLSearchParams();
     if (search) params.set('search', search);
@@ -179,7 +173,7 @@ export default function StudentRoster() {
 
   return (
     <Layout>
-      <div className="flex flex-col md:h-[calc(100vh-6rem-2rem)] lg:h-[calc(100vh-6rem-4rem)]">
+      <div className="flex flex-col md:h-[calc(100vh-6rem-2rem)] lg:h-[calc(100vh-6rem-4rem)] md:overflow-hidden">
         {/* Sticky header + filters */}
         <div className="flex-shrink-0 space-y-4 pb-4">
         {/* Header */}
@@ -279,7 +273,7 @@ export default function StudentRoster() {
         </div>{/* end sticky header */}
 
         {/* Scrollable table — fixed-height scroll on desktop, natural flow on mobile */}
-        <div className="md:flex-1 md:overflow-auto md:min-h-0">
+        <div className="md:flex-1 md:overflow-y-auto md:min-h-0">
         <div className="bg-white border border-ninja-border rounded-xl overflow-clip shadow-sm">
           {error && <p className="text-ninja-red font-ninja text-center py-8">{error}</p>}
           {loading && <p className="text-ninja-muted font-ninja text-center py-8">Loading ninjas...</p>}
