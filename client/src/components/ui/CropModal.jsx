@@ -21,7 +21,7 @@ function Slider({ label, value, min, max, step, onChange }) {
   );
 }
 
-export default function CropModal({ imageSrc, onConfirm, onCancel }) {
+export default function CropModal({ imageSrc, onConfirm, onCancel, aspect = 1, cropShape = 'round' }) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -55,23 +55,24 @@ export default function CropModal({ imageSrc, onConfirm, onCancel }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 40 }}
           transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-          className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-2xl"
+          className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col"
+          style={{ maxHeight: '92dvh' }}
         >
           {/* Header */}
-          <div className="px-5 pt-5 pb-3 flex items-center justify-between border-b border-ninja-border">
+          <div className="px-5 pt-5 pb-3 flex items-center justify-between border-b border-ninja-border flex-shrink-0">
             <h3 className="font-ninja font-bold text-ninja-navy text-base">Adjust Photo</h3>
             <button onClick={onCancel} className="text-ninja-muted hover:text-ninja-navy transition-colors text-lg leading-none">✕</button>
           </div>
 
           {/* Crop area */}
-          <div className="relative w-full bg-black" style={{ height: 280 }}>
+          <div className="relative w-full bg-black flex-shrink-0 overflow-hidden" style={{ height: 260 }}>
             <Cropper
               image={imageSrc}
               crop={crop}
               zoom={zoom}
               rotation={rotation}
-              aspect={1}
-              cropShape="round"
+              aspect={aspect}
+              cropShape={cropShape}
               showGrid={false}
               onCropChange={setCrop}
               onZoomChange={setZoom}
@@ -80,7 +81,10 @@ export default function CropModal({ imageSrc, onConfirm, onCancel }) {
           </div>
 
           {/* Controls */}
-          <div className="px-5 pt-4 pb-5 space-y-4">
+          <div
+            className="px-5 pt-4 space-y-4 overflow-y-auto flex-shrink-0"
+            style={{ paddingBottom: 'max(1.25rem, calc(env(safe-area-inset-bottom, 0px) + 1.25rem))' }}
+          >
             <Slider label="Zoom" value={zoom} min={1} max={3} step={0.05} onChange={setZoom} />
             <Slider label="Rotation" value={rotation} min={-180} max={180} step={1} onChange={setRotation} />
 
