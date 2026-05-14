@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import BeltBadge from '../ui/BeltBadge';
 import Button from '../ui/Button';
 import { formatDate } from '../../utils/dateUtils';
@@ -41,6 +41,7 @@ export default function SenseiProfileModal({
   isManager, isReadOnly, onEditLogin, onRemove,
 }) {
   const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const dragControls = useDragControls();
 
   const handleClose = () => {
     setConfirmingRemove(false);
@@ -70,23 +71,38 @@ export default function SenseiProfileModal({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 60 }}
           transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-          className="w-full sm:max-w-md bg-ninja-bg rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-2xl"
+          drag="y"
+          dragControls={dragControls}
+          dragListener={false}
+          dragConstraints={{ top: 0 }}
+          dragElastic={{ top: 0, bottom: 0.3 }}
+          dragMomentum={false}
+          onDragEnd={(_, info) => {
+            if (info.offset.y > 80) handleClose();
+          }}
+          className="w-full sm:max-w-md bg-ninja-bg rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+          style={{ maxHeight: '90vh' }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Hero header */}
-          <div className="relative bg-ninja-navy px-6 pt-8 pb-6">
-            {/* Code Ninjas star watermark */}
+          {/* Hero header — touch here to drag-to-dismiss */}
+          <div
+            className="relative bg-ninja-navy px-6 pt-8 pb-6 flex-shrink-0 cursor-grab active:cursor-grabbing sm:cursor-default"
+            onPointerDown={(e) => dragControls.start(e)}
+          >
             <img
               src="/CodeNinjasIcon.svg"
               alt=""
               className="absolute right-4 top-4 w-16 h-16 opacity-10 pointer-events-none select-none"
             />
 
-            {/* Close pill */}
+            {/* Drag handle pill — tap or swipe down from here to close */}
             <button
               onClick={handleClose}
-              className="absolute top-4 left-1/2 -translate-x-1/2 sm:hidden w-10 h-1 rounded-full bg-white/30"
-            />
+              className="absolute top-2 left-1/2 -translate-x-1/2 sm:hidden py-2 px-6"
+              aria-label="Close"
+            >
+              <span className="block w-10 h-1 rounded-full bg-white/40" />
+            </button>
 
             <div className="flex items-end gap-4 mb-5">
               <motion.div
@@ -110,73 +126,76 @@ export default function SenseiProfileModal({
               </motion.div>
             </div>
 
-            {/* Stats row */}
             <div className="flex gap-2">
               <StatCard value={logs.length} label="Progress Logs" delay={0.15} />
               <StatCard value={joinYear} label="Joined" delay={0.2} />
             </div>
           </div>
 
-          {/* Log history */}
-          <div className="px-5 py-4 max-h-[45vh] overflow-y-auto no-scrollbar">
-            <p className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest mb-3">
-              Recent Logs
-            </p>
+          {/* Scrollable content — logs + manager actions */}
+          <div className="overflow-y-auto flex-1 min-h-0">
+            <div className="px-5 py-4">
+              <p className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest mb-3">
+                Recent Logs
+              </p>
 
-            {logs.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.25 }}
-                className="text-center py-10"
-              >
-                <img src="/CodeNinjasIcon.svg" alt="" className="w-10 h-10 opacity-10 mx-auto mb-3" />
-                <p className="text-ninja-muted font-ninja text-sm">No progress logs yet.</p>
-              </motion.div>
-            ) : (
-              <div className="space-y-2.5">
-                {logs.map((log, i) => (
-                  <motion.div
-                    key={log.id}
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.15 + i * 0.05, duration: 0.25, ease: 'easeOut' }}
-                    className="bg-white border border-ninja-border rounded-xl p-3 shadow-sm"
-                  >
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="font-ninja font-bold text-ninja-navy text-sm">{log.student_name}</span>
-                      <span className="text-ninja-muted font-ninja text-xs flex-shrink-0">{formatDate(log.session_date)}</span>
-                    </div>
-                    {log.belt_level_at && (
-                      <div className="mb-1.5">
-                        <BeltBadge belt={log.belt_level_at} sublevel={log.belt_sublevel_at} size="xs" />
+              {logs.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.25 }}
+                  className="text-center py-10"
+                >
+                  <img src="/CodeNinjasIcon.svg" alt="" className="w-10 h-10 opacity-10 mx-auto mb-3" />
+                  <p className="text-ninja-muted font-ninja text-sm">No progress logs yet.</p>
+                </motion.div>
+              ) : (
+                <div className="space-y-2.5">
+                  {logs.map((log, i) => (
+                    <motion.div
+                      key={log.id}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.15 + i * 0.05, duration: 0.25, ease: 'easeOut' }}
+                      className="bg-white border border-ninja-border rounded-xl p-3 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="font-ninja font-bold text-ninja-navy text-sm">{log.student_name}</span>
+                        <span className="text-ninja-muted font-ninja text-xs flex-shrink-0">{formatDate(log.session_date)}</span>
                       </div>
-                    )}
-                    {log.notes && (
-                      <p className="text-ninja-muted font-ninja text-sm leading-relaxed line-clamp-2">{log.notes}</p>
-                    )}
-                  </motion.div>
-                ))}
+                      {log.belt_level_at && (
+                        <div className="mb-1.5">
+                          <BeltBadge belt={log.belt_level_at} sublevel={log.belt_sublevel_at} size="xs" />
+                        </div>
+                      )}
+                      {log.notes && (
+                        <p className="text-ninja-muted font-ninja text-sm leading-relaxed line-clamp-2">{log.notes}</p>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {isManager && !isReadOnly && (
+              <div
+                className="px-5 pt-2 border-t border-ninja-border flex gap-2"
+                style={{ paddingBottom: 'max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 1.5rem))' }}
+              >
+                <Button variant="secondary" className="flex-1" onClick={() => { handleClose(); onEditLogin(); }}>
+                  Edit Login
+                </Button>
+                {confirmingRemove ? (
+                  <>
+                    <Button variant="danger" onClick={() => { onRemove(); handleClose(); }}>Confirm</Button>
+                    <Button variant="secondary" onClick={() => setConfirmingRemove(false)}>Cancel</Button>
+                  </>
+                ) : (
+                  <Button variant="danger" onClick={() => setConfirmingRemove(true)}>Remove</Button>
+                )}
               </div>
             )}
           </div>
-
-          {/* Manager actions */}
-          {isManager && !isReadOnly && (
-            <div className="px-5 pb-6 pt-2 border-t border-ninja-border flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={() => { handleClose(); onEditLogin(); }}>
-                Edit Login
-              </Button>
-              {confirmingRemove ? (
-                <>
-                  <Button variant="danger" onClick={() => { onRemove(); handleClose(); }}>Confirm</Button>
-                  <Button variant="secondary" onClick={() => setConfirmingRemove(false)}>Cancel</Button>
-                </>
-              ) : (
-                <Button variant="danger" onClick={() => setConfirmingRemove(true)}>Remove</Button>
-              )}
-            </div>
-          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>
