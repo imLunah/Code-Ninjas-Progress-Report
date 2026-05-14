@@ -375,8 +375,18 @@ export default function StudentProfile() {
               >
                 {getInitials(student.full_name)}
               </div>
-              <div className="min-w-0">
-                <h1 className="text-xl font-bold font-ninja text-ninja-navy leading-tight">{student.full_name}</h1>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <h1 className="text-xl font-bold font-ninja text-ninja-navy leading-tight">{student.full_name}</h1>
+                  {isManager && !isReadOnly && (
+                    <button
+                      onClick={() => setShowEdit(true)}
+                      className="text-ninja-blue font-ninja text-sm font-semibold flex-shrink-0"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
                 <p className="text-ninja-muted font-ninja text-sm mt-0.5 truncate">
                   {[
                     locationName,
