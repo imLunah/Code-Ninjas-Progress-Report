@@ -102,7 +102,15 @@
 
 ### 4. RECENT WORK — WHAT JUST HAPPENED
 
-- **What was worked on this session:**
+- **What was worked on (Session 2 — 14 May 2026):**
+  1. **Multiple check-ins per day:** Dropped unique constraint `daily_assignments_student_program_date_key` on `(student_id, program, session_date)` — managers can now check a ninja into the same program multiple times in one day (makeup classes, double sessions)
+  2. **Session number badges:** Today's Board shows a purple "Session 2 / Session 3" badge on cards that are the 2nd+ check-in for the same student/program/day
+  3. **Assignment completion fix:** `POST /api/progress` now marks only the **oldest pending** assignment complete (by `id`) — previously updated all matching assignments, which would have incorrectly completed both at once
+  4. **Multi-lesson log form:** `LogEntryForm.jsx` refactored — non-CREATE programs now have a `LessonEntryRow` component array with a "+ Add Another Lesson" dashed button. Each row has its own kit/module/lesson selectors. Shared notes field covers all lessons.
+  5. **Backend multi-lesson support:** `POST /api/progress` accepts a `lesson_entries` array; inserts one `progress_logs` row per lesson. `student_programs` is updated with the last entry's lesson position. `percent_complete` recalculated after all inserts. Backward compatible — falls back to single-lesson fields if no array.
+  6. Submit button updates to "Log N Lessons" when multiple entries are present.
+
+- **What was worked on (Session 1 — 14 May 2026):**
   1. Mobile navigation: registered `MobileNav.jsx` in Layout, added location switcher, made Senseis tab visible to all staff roles
   2. StaffPage mobile: hid inline Edit Login/Remove buttons on mobile (sm:hidden), moved them into SenseiProfileModal footer
   3. SenseiProfileModal: full Framer Motion redesign — navy hero header, circular avatar, role badge, stat cards, staggered log feed, CN star watermark
@@ -110,23 +118,25 @@
   5. Fixed `/parent/me` returning 401 (changed to 200 null) — was flooding console on every staff page
   6. Vite chunk splitting: all major vendors split into separate chunks, chunkSizeWarningLimit: 600
   7. UI overhaul: Framer Motion added to TodayBoard, ManagerDashboard stats, ClubsPage, AccountPage
-  8. Login page: full redesign matching user mockup — white bg, left-aligned, tab switcher (Sensei/Director ↔ Parent) with spring sliding indicator, username+password with eye toggle, animated checkbox, alpha modal spring animation. No floating star background elements.
-  9. Parent tab: inline email field calling `useParentAuth.login()` directly — no more redirect to `/parent/login`
-  10. Parent sign-out: `ParentLayout` and `ParentRoute` now redirect to `/login?tab=parent`; LoginPage reads `?tab` param to initialize tab state
-  11. Profile photos: diagnosed Supabase RLS policies were missing → applied migration adding anon insert/update/select policies on `profile-pics` bucket
-  12. Photo crop modal: installed `react-easy-crop`, created `CropModal.jsx` + `cropImage.js`, wired into AccountPage (file → DataURL → crop modal → canvas → blob → Supabase upload)
+  8. Login page: full redesign — white bg, left-aligned, tab switcher (Sensei/Director ↔ Parent) with spring sliding indicator, username+password with eye toggle, animated checkbox, alpha modal. No floating background elements.
+  9. Parent tab: inline email field calling `useParentAuth.login()` directly
+  10. Parent sign-out: redirects to `/login?tab=parent`
+  11. Profile photos: Supabase RLS policies added for `profile-pics` bucket (anon insert/update/select)
+  12. Photo crop modal: `CropModal.jsx` + `cropImage.js` — file → DataURL → crop → canvas → blob → Supabase upload
 
 - **Decisions made and why:**
-  - **No floating stars on login:** User explicitly requested removal of moving background elements
-  - **Parent email inline on login page:** User said "just have them enter their email there" — avoids navigation to separate page
-  - **Redirect to `/login?tab=parent` on sign-out:** Keeps the unified login page as single entry point
-  - **Circular crop shape:** Standard for profile photos; `aspect=1` ensures square crop
-  - **Upload as JPEG blob with fixed path `avatar.jpg`:** Simpler than preserving original extension; upsert replaces old file
+  - **Multiple check-ins, manager only:** Only managers can add duplicate check-ins — senseis cannot, consistent with existing check-in permission model
+  - **Mark oldest pending assignment:** When logging, mark the first (oldest) incomplete assignment complete so second check-in stays open — not all assignments for that student/program/date
+  - **Multi-lesson uses shared notes:** One notes field for the whole session — avoids per-lesson note overhead for senseis
+  - **CREATE excluded from multi-lesson UI:** CREATE tracks belt/project snapshots, not lesson lists — the multi-lesson row UI only appears for programs with curriculum (Robotics, AI Academy, JR)
+  - **Backward-compatible API:** `lesson_entries` array is optional; single-lesson submissions still work unchanged
 
 - **What changed in the system:**
-  - New files: `MobileNav.jsx`, `CropModal.jsx`, `cropImage.js`
-  - Supabase: 3 new RLS policies on `storage.objects` for `profile-pics` bucket
-  - All staff-facing pages now have entrance animations via Framer Motion
+  - DB: dropped `daily_assignments_student_program_date_key` unique constraint
+  - `server/routes/daily.js`: added `session_number` correlated subquery to `ASSIGNMENT_SELECT`; removed 409 guard
+  - `server/routes/progress.js`: multi-lesson support via `lesson_entries` array; assignment completion targets specific `id`
+  - `client/src/components/manager/TodayBoard.jsx`: purple "Session N" badge on duplicate cards
+  - `client/src/components/sensei/LogEntryForm.jsx`: `LessonEntryRow` component, multi-entry state, dynamic submit label
 
 - **Discussed but not implemented:**
   - "Keep me signed in" persistence (checkbox exists as UI only)
@@ -134,7 +144,7 @@
   - "New center? Get DojoLink" link (no URL yet)
 
 - **Open threads:**
-  - Old `/parent/login` page (`ParentLogin.jsx`) still exists and is routed — could be cleaned up or kept as fallback
+  - Old `/parent/login` page (`ParentLogin.jsx`) still exists and is routed — could be cleaned up
   - Mobile responsiveness was focused on login + staff pages; other pages may still have mobile layout issues
 
 ---
@@ -146,6 +156,9 @@
   - "Keep me signed in" checkbox does nothing server-side — user expectation mismatch if they expect persistent sessions.
 
 - **Edge cases:**
+  - Multiple check-ins: if a manager adds 3 check-ins for a student but only 2 are logged, the 3rd stays permanently pending (shows as overdue next day). No auto-cleanup.
+  - Multi-lesson submit: if the sensei adds lesson rows but leaves module blank, those empty rows are filtered out on submit (`filledEntries` filter). A row with only a kit selected but no module is also dropped — only rows with at least one field set are sent.
+  - `session_number` uses a correlated subquery counting rows with `created_at <=` — if two assignments are inserted in the same millisecond (very unlikely), their numbers may swap. No real-world impact.
   - Profile pic upload: if Supabase storage goes down or anon key is rotated, uploads fail silently with "Upload failed. Try again." — no retry logic.
   - getCroppedImg uses `crossOrigin: 'anonymous'` — could fail with CORS if image src is not Supabase (unlikely since we generate the DataURL locally).
   - Tab switching on login: if parent login fails, the error shows under the Parent tab correctly; if user switches tabs the error is cleared (`setError('')`) which is correct.
