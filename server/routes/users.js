@@ -11,15 +11,16 @@ router.get('/', requireSensei, async (req, res) => {
   const { role } = req.query;
 
   try {
-    if (role === 'sensei') {
+    if (role === 'sensei' || role === 'staff') {
+      const roleFilter = role === 'staff' ? `u.role IN ('sensei', 'manager')` : `u.role = 'sensei'`;
       const { rows } = await pool.query(`
         SELECT u.id, u.username, u.display_name, u.role, u.location_id, u.created_at,
                u.profile_pic_url, COUNT(pl.id)::int AS progress_log_count
         FROM users u
         LEFT JOIN progress_logs pl ON pl.sensei_id = u.id
-        WHERE u.role = 'sensei' AND u.location_id = $1 AND u.active = true
+        WHERE ${roleFilter} AND u.location_id = $1 AND u.active = true
         GROUP BY u.id
-        ORDER BY u.display_name ASC
+        ORDER BY u.role ASC, u.display_name ASC
       `, [req.session.activeLocationId]);
       return res.json(rows);
     }
@@ -199,10 +200,10 @@ router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
     );
     const target = rows[0];
     if (!target) return res.status(404).json({ error: 'User not found' });
-    if (target.role !== 'sensei') return res.status(403).json({ error: 'Can only remove sensei accounts' });
+    if (target.id === req.session.userId) return res.status(403).json({ error: 'Cannot remove your own account' });
 
     await pool.query('UPDATE users SET active = false WHERE id = $1', [id]);
-    res.json({ message: 'Sensei removed' });
+    res.json({ message: 'Staff member removed' });
   } catch (err) {
     console.error('Error removing user:', err);
     res.status(500).json({ error: 'Failed to remove sensei' });
