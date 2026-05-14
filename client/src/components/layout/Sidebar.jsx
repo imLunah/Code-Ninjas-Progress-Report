@@ -15,11 +15,6 @@ function NavIcon({ id }) {
       <path strokeLinecap="round" strokeWidth="2" d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
     </svg>
   );
-  if (id === 'log') return (
-    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-    </svg>
-  );
   if (id === 'clubs') return (
     <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
@@ -41,10 +36,6 @@ function isLinkActive(link, pathname, search) {
   if (linkQuery) {
     return pathname === linkPath && search.includes(linkQuery);
   }
-  // Roster link should NOT be active when ?mode=log is present
-  if (link.to === '/manager/students') {
-    return pathname === '/manager/students' && !search.includes('mode=log');
-  }
   return pathname === link.to || (link.to.length > 1 && pathname.startsWith(link.to + '/'));
 }
 
@@ -55,16 +46,14 @@ export default function Sidebar() {
 
   const managerLinks = [
     { to: '/manager/dashboard', label: "Today's Board", icon: 'today' },
-    { to: '/manager/students', label: 'Roster', icon: 'roster' },
-    { to: '/manager/students?mode=log', label: 'Log Progress', icon: 'log' },
+    { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
     { to: '/clubs', label: 'Clubs', icon: 'clubs' },
     { to: '/manager/staff', label: 'Senseis', icon: 'senseis' },
   ];
 
   const senseiLinks = [
     { to: '/sensei/dashboard', label: "Today's Board", icon: 'today' },
-    { to: '/manager/students', label: 'Roster', icon: 'roster' },
-    { to: '/manager/students?mode=log', label: 'Log Progress', icon: 'log' },
+    { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
     { to: '/clubs', label: 'Clubs', icon: 'clubs' },
   ];
 
