@@ -213,35 +213,41 @@ function DesktopBeltJourney({ enrollment }) {
         )}
       </div>
 
-      <div className="flex items-end">
+      {/* Icon + connector row */}
+      <div className="flex items-center">
         {BELTS.map((b, i) => {
           const isCurrent = i === beltIdx;
           const isPast = i < beltIdx;
+          const size = isCurrent ? 52 : 36;
           return (
             <React.Fragment key={b.name}>
               {i > 0 && (
                 <div
-                  className="h-0.5 flex-1 mx-1 mb-6"
+                  className="h-0.5 flex-1"
                   style={{ backgroundColor: i <= beltIdx ? '#006ADD' : '#e2e8f0' }}
                 />
               )}
-              <div className="flex flex-col items-center flex-shrink-0">
-                <div
-                  style={{
-                    width: isCurrent ? 52 : 36,
-                    height: isCurrent ? 52 : 36,
-                    ...(isCurrent
-                      ? { borderRadius: '50%', boxShadow: `0 0 0 3px ${belt?.color || '#e9a71c'}, 0 0 0 6px ${(belt?.color || '#e9a71c')}33` }
-                      : {}),
-                  }}
-                >
-                  <img
-                    src={`/belts/belt-${b.name.toLowerCase()}.png`}
-                    alt={b.name}
-                    className={`w-full h-full object-contain ${!isPast && !isCurrent ? 'opacity-25 grayscale' : ''}`}
-                  />
-                </div>
-                <span className={`font-ninja text-[10px] mt-1.5 ${isCurrent ? 'font-bold text-ninja-navy' : 'text-ninja-muted'}`}>
+              <div className="flex-shrink-0" style={{ width: size, height: size }}>
+                <img
+                  src={`/belts/belt-${b.name.toLowerCase()}.png`}
+                  alt={b.name}
+                  className={`w-full h-full object-contain ${!isPast && !isCurrent ? 'opacity-25 grayscale' : ''}`}
+                />
+              </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
+      {/* Label row */}
+      <div className="flex mt-1.5">
+        {BELTS.map((b, i) => {
+          const isCurrent = i === beltIdx;
+          const size = isCurrent ? 52 : 36;
+          return (
+            <React.Fragment key={b.name}>
+              {i > 0 && <div className="flex-1" />}
+              <div className="flex-shrink-0 flex justify-center" style={{ width: size }}>
+                <span className={`font-ninja text-[10px] ${isCurrent ? 'font-bold text-ninja-navy' : 'text-ninja-muted'}`}>
                   {b.name}
                 </span>
               </div>
