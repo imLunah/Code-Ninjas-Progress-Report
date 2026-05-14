@@ -48,36 +48,38 @@ function MobileBeltJourney({ enrollment }) {
         )}
       </div>
 
-      {/* Belt icons */}
-      <div className="flex items-center">
-        {visible.map((b, i) => {
-          const idx = BELTS.findIndex(x => x.name === b.name);
-          const isCurrent = idx === beltIdx;
-          const isPast = idx < beltIdx;
-          const size = isCurrent ? 56 : 40;
-          return (
-            <React.Fragment key={b.name}>
-              {i > 0 && (
-                <div className="flex-1 h-0.5" style={{ backgroundColor: idx <= beltIdx ? '#006ADD' : '#e2e8f0' }} />
-              )}
-              <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
-                <img
-                  src={`/belts/belt-${b.name.toLowerCase()}.png`}
-                  alt={b.name}
-                  className={`w-full h-full object-contain ${!isPast && !isCurrent ? 'opacity-25 grayscale' : ''}`}
-                />
-                {isCurrent && belt?.color && (
-                  <div className="absolute inset-0 rounded-full border-[3px]" style={{ borderColor: belt.color }} />
+      {/* Belt icons — overflow-x-auto prevents clipping */}
+      <div className="overflow-x-auto -mx-1 px-1">
+        <div className="flex items-center py-1" style={{ minWidth: 'max-content' }}>
+          {visible.map((b, i) => {
+            const idx = BELTS.findIndex(x => x.name === b.name);
+            const isCurrent = idx === beltIdx;
+            const isPast = idx < beltIdx;
+            const size = isCurrent ? 56 : 40;
+            return (
+              <React.Fragment key={b.name}>
+                {i > 0 && (
+                  <div className="flex-1 h-0.5" style={{ width: 24, backgroundColor: idx <= beltIdx ? '#006ADD' : '#e2e8f0' }} />
                 )}
-              </div>
-            </React.Fragment>
-          );
-        })}
+                <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+                  <img
+                    src={`/belts/belt-${b.name.toLowerCase()}.png`}
+                    alt={b.name}
+                    className={`w-full h-full object-contain ${!isPast && !isCurrent ? 'opacity-25 grayscale' : ''}`}
+                  />
+                  {isCurrent && belt?.color && (
+                    <div className="absolute inset-0 rounded-full border-[3px]" style={{ borderColor: belt.color }} />
+                  )}
+                </div>
+              </React.Fragment>
+            );
+          })}
+        </div>
       </div>
 
       {/* Progress bar */}
       {progress !== null && (
-        <div className="mt-4">
+        <div className="mt-3">
           <div className="h-2.5 rounded-full overflow-hidden bg-gray-100">
             <div className="h-full rounded-full" style={{ width: `${progress}%`, backgroundColor: belt?.color || '#006ADD' }} />
           </div>
@@ -88,6 +90,49 @@ function MobileBeltJourney({ enrollment }) {
             <span className="font-ninja font-bold text-xs text-ninja-navy">{progress}%</span>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ── Mobile: Non-CREATE program card ──────────────────────────────────────────
+function MobileProgramCard({ enrollment }) {
+  const { program, percent_complete, last_sub_program, last_module_name, last_lesson_name, last_session_date } = enrollment;
+  const shortName = program === 'Robotics Academy' ? 'Robotics Academy' : program === 'AI Academy' ? 'AI Academy' : program;
+  const barColor = program === 'Robotics Academy' ? '#f97316' : program === 'AI Academy' ? '#6366f1' : '#14b8a6';
+
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-ninja font-bold text-ninja-navy">{shortName}</h2>
+        <ProgramBadge program={program} size="xs" />
+      </div>
+
+      {last_sub_program && (
+        <p className="text-ninja-muted font-ninja text-sm mb-1">
+          <span className="font-semibold text-ninja-navy">Kit:</span> {last_sub_program}
+        </p>
+      )}
+      {last_module_name && (
+        <p className="text-ninja-muted font-ninja text-sm mb-1">
+          <span className="font-semibold text-ninja-navy">Module:</span> {last_module_name}
+          {last_lesson_name && <span> · {last_lesson_name}</span>}
+        </p>
+      )}
+
+      {percent_complete != null && (
+        <div className="mt-2.5">
+          <div className="h-2.5 rounded-full overflow-hidden bg-gray-100">
+            <div className="h-full rounded-full" style={{ width: `${percent_complete}%`, backgroundColor: barColor }} />
+          </div>
+          <p className="text-right text-xs font-ninja font-bold text-ninja-navy mt-1">{Math.round(percent_complete)}%</p>
+        </div>
+      )}
+
+      {last_session_date && (
+        <p className="text-ninja-muted font-ninja text-xs mt-2">
+          Last session: {new Date(String(last_session_date).split('T')[0] + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </p>
       )}
     </div>
   );
@@ -275,6 +320,7 @@ export default function StudentProfile() {
 
   const programs = student.programs || [];
   const createEnrollment = programs.find((p) => p.program === 'CREATE');
+  const nonCreatePrograms = programs.filter((p) => p.program !== 'CREATE');
   const logs = student.progress_logs || [];
   const locationName = user?.availableLocations?.find(l => l.id === student.location_id)?.name;
 
@@ -292,27 +338,34 @@ export default function StudentProfile() {
         <div className="md:hidden space-y-4">
 
           {/* Compact header */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border flex items-center gap-4">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold font-ninja text-ninja-navy leading-tight">{student.full_name}</h1>
-              <p className="text-ninja-muted font-ninja text-sm mt-0.5 truncate">
-                {[
-                  locationName,
-                  programs.map(p => p.program === 'Robotics Academy' ? 'Robotics' : p.program === 'AI Academy' ? 'AI' : p.program).join(' · '),
-                  `Joined ${new Date(student.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`,
-                ].filter(Boolean).join(' · ')}
-              </p>
-            </div>
-            <div
-              className="w-12 h-12 rounded-full flex items-center justify-center text-white font-ninja font-bold text-base flex-shrink-0"
-              style={{ backgroundColor: getAvatarColor(student.full_name) }}
-            >
-              {getInitials(student.full_name)}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center text-white font-ninja font-bold text-lg flex-shrink-0"
+                style={{ backgroundColor: getAvatarColor(student.full_name) }}
+              >
+                {getInitials(student.full_name)}
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold font-ninja text-ninja-navy leading-tight">{student.full_name}</h1>
+                <p className="text-ninja-muted font-ninja text-sm mt-0.5 truncate">
+                  {[
+                    locationName,
+                    programs.map(p => p.program === 'Robotics Academy' ? 'Robotics' : p.program === 'AI Academy' ? 'AI' : p.program).join(' · '),
+                    `Joined ${new Date(student.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`,
+                  ].filter(Boolean).join(' · ')}
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Belt Journey */}
+          {/* Belt Journey (CREATE) */}
           {createEnrollment?.belt_level && <MobileBeltJourney enrollment={createEnrollment} />}
+
+          {/* Other program cards */}
+          {nonCreatePrograms.map((enrollment) => (
+            <MobileProgramCard key={enrollment.program} enrollment={enrollment} />
+          ))}
 
           {/* Activity chart */}
           {logs.length > 0 && (
