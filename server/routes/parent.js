@@ -58,7 +58,7 @@ router.post('/login', async (req, res) => {
 
 // GET /api/parent/me
 router.get('/me', (req, res) => {
-  if (!req.session.parentEmail) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.session.parentEmail) return res.json(null);
   res.json({ email: req.session.parentEmail, role: 'parent', parentName: req.session.parentName });
 });
 
