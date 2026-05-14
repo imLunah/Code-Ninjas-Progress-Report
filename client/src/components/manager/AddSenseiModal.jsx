@@ -26,8 +26,13 @@ export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
     setLoading(true);
     setError('');
     try {
+      const rawName = form.display_name.trim();
+      const display_name = role === 'sensei' && !rawName.toLowerCase().startsWith('sensei ')
+        ? `Sensei ${rawName}`
+        : rawName;
+
       const created = await api.post('/users', {
-        display_name: form.display_name,
+        display_name,
         username: form.username,
         password: form.password,
         role,
@@ -91,9 +96,14 @@ export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
             value={form.display_name}
             onChange={handleChange}
             required
-            placeholder="e.g. Alex Kim"
+            placeholder={role === 'sensei' ? 'e.g. Alex Kim → saved as Sensei Alex Kim' : 'e.g. Jordan Smith'}
             className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
           />
+          {role === 'sensei' && form.display_name.trim() && !form.display_name.trim().toLowerCase().startsWith('sensei ') && (
+            <p className="text-ninja-muted font-ninja text-xs mt-1">
+              Will be saved as <span className="font-semibold text-ninja-navy">Sensei {form.display_name.trim()}</span>
+            </p>
+          )}
         </div>
 
         <div>
