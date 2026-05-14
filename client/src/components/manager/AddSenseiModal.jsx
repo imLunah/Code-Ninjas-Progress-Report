@@ -5,6 +5,7 @@ import { api } from '../../api/client';
 
 export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
   const [form, setForm] = useState({ display_name: '', username: '', password: '' });
+  const [role, setRole] = useState('sensei');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -15,6 +16,7 @@ export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
 
   const handleClose = () => {
     setForm({ display_name: '', username: '', password: '' });
+    setRole('sensei');
     setError('');
     onClose();
   };
@@ -28,25 +30,56 @@ export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
         display_name: form.display_name,
         username: form.username,
         password: form.password,
-        role: 'sensei',
+        role,
       });
       onAdded && onAdded(created);
       handleClose();
     } catch (err) {
-      setError(err.message || 'Failed to create sensei');
+      setError(err.message || 'Failed to create account');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Add Sensei">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Add Staff">
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div className="bg-red-50 border border-red-200 text-ninja-red rounded-lg p-3 text-sm font-ninja">
             {error}
           </div>
         )}
+
+        {/* Role toggle */}
+        <div>
+          <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-2 uppercase tracking-wide">
+            Role
+          </label>
+          <div className="flex gap-2">
+            {[
+              { value: 'sensei', label: 'Sensei' },
+              { value: 'manager', label: 'Center Director' },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setRole(opt.value)}
+                className={`flex-1 py-2 rounded-lg text-sm font-ninja font-semibold transition-colors border ${
+                  role === opt.value
+                    ? 'bg-ninja-blue text-white border-ninja-blue'
+                    : 'bg-white border-ninja-border text-ninja-navy hover:border-ninja-blue'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {role === 'manager' && (
+            <p className="text-ninja-muted font-ninja text-xs mt-1.5">
+              Center Directors have full access — student management, staff, and settings.
+            </p>
+          )}
+        </div>
 
         <div>
           <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
@@ -73,7 +106,7 @@ export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
             value={form.username}
             onChange={handleChange}
             required
-            placeholder="e.g. sensei_alex"
+            placeholder={role === 'manager' ? 'e.g. director_kim' : 'e.g. sensei_alex'}
             className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
           />
         </div>
@@ -95,7 +128,7 @@ export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
 
         <div className="flex gap-3 pt-2">
           <Button type="submit" disabled={loading} className="flex-1">
-            {loading ? 'Creating...' : 'Create Sensei'}
+            {loading ? 'Creating...' : `Add ${role === 'manager' ? 'Center Director' : 'Sensei'}`}
           </Button>
           <Button variant="secondary" type="button" onClick={handleClose}>
             Cancel
