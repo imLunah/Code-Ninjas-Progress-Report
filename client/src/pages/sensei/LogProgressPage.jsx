@@ -6,6 +6,7 @@ import ProgramBadge from '../../components/ui/ProgramBadge';
 import Card from '../../components/ui/Card';
 import LogEntryForm from '../../components/sensei/LogEntryForm';
 import PinnedNote from '../../components/shared/PinnedNote';
+import ParentNote from '../../components/shared/ParentNote';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
@@ -149,6 +150,11 @@ export default function LogProgressPage() {
               studentId={student.id}
               initialNote={student.pinned_note}
               onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
+            />
+            <ParentNote
+              studentId={student.id}
+              initialNote={student.parent_note}
+              onUpdated={(note) => setStudent((prev) => ({ ...prev, parent_note: note }))}
             />
           </div>
 

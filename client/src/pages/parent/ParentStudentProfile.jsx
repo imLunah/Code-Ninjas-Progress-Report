@@ -109,6 +109,17 @@ export default function ParentStudentProfile() {
           <ProgressVisuals programs={programs} sessionLogs={student.session_logs || []} />
         )}
 
+        {/* Note from sensei to parent */}
+        {student.parent_note && (
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-blue-500 text-base">💌</span>
+              <h2 className="font-ninja font-bold text-sm text-blue-800 uppercase tracking-wide">Note from Your Sensei</h2>
+            </div>
+            <p className="font-ninja text-sm leading-relaxed text-blue-900 whitespace-pre-wrap">{student.parent_note}</p>
+          </div>
+        )}
+
         {/* Note for senseis — pinned note style */}
         <div className="rounded-2xl overflow-hidden" style={{ background: '#fffbeb', border: '1.5px dashed #fcd34d' }}>
           <div className="p-5">
