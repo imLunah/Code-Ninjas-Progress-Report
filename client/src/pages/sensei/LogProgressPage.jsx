@@ -49,10 +49,7 @@ export default function LogProgressPage() {
   }, [id]);
 
   const handleLogged = (newLog) => {
-    setStudent((prev) => ({
-      ...prev,
-      progress_logs: [newLog, ...(prev.progress_logs || [])],
-    }));
+    navigate(dashboardPath);
   };
 
   if (loading) {
