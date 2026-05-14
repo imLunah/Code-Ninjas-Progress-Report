@@ -173,9 +173,9 @@ export default function StudentRoster() {
 
   return (
     <Layout>
-      <div className="flex flex-col h-[calc(100dvh-8rem)] md:h-[calc(100vh-6rem-2rem)] lg:h-[calc(100vh-6rem-4rem)] overflow-hidden">
-        {/* Sticky header + filters */}
-        <div className="flex-shrink-0 space-y-4 pb-4">
+      <div className="space-y-4">
+        {/* Header + filters */}
+        <div className="space-y-4">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -270,10 +270,8 @@ export default function StudentRoster() {
             <option value="joined">Newest Members</option>
           </select>
         </div>
-        </div>{/* end sticky header */}
+        </div>{/* end header */}
 
-        {/* Scrollable table — fixed-height scroll on desktop, natural flow on mobile */}
-        <div className="flex-1 overflow-y-auto min-h-0">
         <div className="bg-white border border-ninja-border rounded-xl overflow-clip shadow-sm">
           {error && <p className="text-ninja-red font-ninja text-center py-8">{error}</p>}
           {loading && <p className="text-ninja-muted font-ninja text-center py-8">Loading ninjas...</p>}
@@ -421,7 +419,6 @@ export default function StudentRoster() {
             </>
           )}
         </div>
-        </div>{/* end scrollable */}
       </div>
 
       {/* CSV Import Modal */}
