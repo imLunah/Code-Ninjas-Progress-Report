@@ -41,10 +41,12 @@ router.get('/definitions', requireAuth, async (req, res) => {
   const pool = req.app.get('db');
   try {
     const { rows } = await pool.query(
-      `SELECT id, name, slug, description, color_key, location_id, created_at
-       FROM club_definitions
-       WHERE location_id = $1 OR location_id IS NULL
-       ORDER BY location_id NULLS FIRST, created_at ASC`,
+      `SELECT cd.id, cd.name, cd.slug, cd.description, cd.color_key, cd.location_id, cd.created_at, cd.schedule,
+              u.display_name AS creator_name
+       FROM club_definitions cd
+       LEFT JOIN users u ON cd.created_by = u.id
+       WHERE cd.location_id = $1 OR cd.location_id IS NULL
+       ORDER BY cd.location_id NULLS FIRST, cd.created_at ASC`,
       [req.session.activeLocationId]
     );
     res.json(rows);
@@ -57,15 +59,15 @@ router.get('/definitions', requireAuth, async (req, res) => {
 // POST /api/clubs/definitions — manager creates a new club
 router.post('/definitions', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
-  const { name, description, color_key } = req.body;
+  const { name, description, color_key, schedule } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'Club name is required' });
 
   const slug = toSlug(name.trim());
   try {
     const { rows } = await pool.query(
-      `INSERT INTO club_definitions (name, slug, description, color_key, location_id, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [name.trim(), slug, description?.trim() || null, color_key || 'blue', req.session.activeLocationId, req.session.userId]
+      `INSERT INTO club_definitions (name, slug, description, color_key, location_id, created_by, schedule)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [name.trim(), slug, description?.trim() || null, color_key || 'blue', req.session.activeLocationId, req.session.userId, schedule?.trim() || null]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -89,11 +91,12 @@ router.patch('/definitions/:id', requireManager, requireOwnLocation, async (req,
     if (existing[0].location_id === null) return res.status(403).json({ error: 'Cannot edit a built-in club' });
     if (existing[0].location_id !== req.session.activeLocationId) return res.status(403).json({ error: 'Forbidden' });
 
+    const { schedule } = req.body;
     const slug = toSlug(name.trim());
     const { rows } = await pool.query(
-      `UPDATE club_definitions SET name = $1, slug = $2, description = $3, color_key = $4
-       WHERE id = $5 RETURNING *`,
-      [name.trim(), slug, description?.trim() || null, color_key || 'blue', req.params.id]
+      `UPDATE club_definitions SET name = $1, slug = $2, description = $3, color_key = $4, schedule = $5
+       WHERE id = $6 RETURNING *`,
+      [name.trim(), slug, description?.trim() || null, color_key || 'blue', schedule?.trim() || null, req.params.id]
     );
     res.json(rows[0]);
   } catch (err) {
@@ -192,15 +195,14 @@ router.get('/profile/:clubName', requireAuth, async (req, res) => {
   if (!validClubs.has(clubName)) return res.status(400).json({ error: 'Invalid club' });
 
   try {
-    const { rows: profileRows } = await pool.query(
-      'SELECT * FROM club_profiles WHERE club_name = $1 AND location_id = $2',
-      [clubName, req.session.activeLocationId]
-    );
-    const { rows: resourceRows } = await pool.query(
-      'SELECT * FROM club_resources WHERE club_name = $1 AND location_id = $2 ORDER BY created_at DESC',
-      [clubName, req.session.activeLocationId]
-    );
-    res.json({ profile: profileRows[0] || null, resources: resourceRows });
+    const [profileRes, resourceRes, memberRes] = await Promise.all([
+      pool.query('SELECT * FROM club_profiles WHERE club_name = $1 AND location_id = $2', [clubName, req.session.activeLocationId]),
+      pool.query('SELECT * FROM club_resources WHERE club_name = $1 AND location_id = $2 ORDER BY created_at DESC', [clubName, req.session.activeLocationId]),
+      pool.query('SELECT COUNT(*) AS count FROM club_members WHERE club_name = $1 AND location_id = $2', [clubName, req.session.activeLocationId]),
+    ]);
+    const profile = profileRes.rows[0] || null;
+    const member_count = parseInt(memberRes.rows[0].count, 10);
+    res.json({ profile, resources: resourceRes.rows, member_count });
   } catch (err) {
     console.error('Club profile fetch error:', err);
     res.status(500).json({ error: 'Failed to load club profile' });
@@ -303,12 +305,21 @@ router.patch('/:id/attendees', requireSensei, requireOwnLocation, async (req, re
       [req.params.id, req.session.activeLocationId]
     );
     if (!rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Session not found' }); }
+    const { rows: sessionInfo } = await client.query(
+      'SELECT club_name, location_id FROM club_sessions WHERE id = $1', [req.params.id]
+    );
     await client.query('DELETE FROM club_attendees WHERE club_session_id = $1', [req.params.id]);
     for (const sid of student_ids) {
       await client.query(
         'INSERT INTO club_attendees (club_session_id, student_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
         [req.params.id, sid]
       );
+      if (sessionInfo[0]) {
+        await client.query(
+          'INSERT INTO club_members (club_name, location_id, student_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+          [sessionInfo[0].club_name, sessionInfo[0].location_id, sid]
+        );
+      }
     }
     await client.query('COMMIT');
     res.json({ ok: true });
