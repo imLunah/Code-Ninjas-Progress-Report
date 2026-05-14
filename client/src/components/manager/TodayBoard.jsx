@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { today } from '../../utils/dateUtils';
@@ -25,11 +26,15 @@ export default function TodayBoard({ assignments, onRemove }) {
 
   if (assignments.length === 0) {
     return (
-      <div className="text-center py-12 text-ninja-muted font-ninja">
-        <img src="/CodeNinjasLaptop.png" alt="Code Ninjas" className="h-24 mx-auto mb-3" />
-        <p className="text-lg">No ninjas added for today yet.</p>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="text-center py-16 text-ninja-muted font-ninja"
+      >
+        <img src="/CodeNinjasLaptop.png" alt="Code Ninjas" className="h-28 mx-auto mb-4 opacity-80" />
+        <p className="text-lg font-semibold text-ninja-navy">No ninjas added for today yet.</p>
         <p className="text-sm mt-1">Use the "+ Check In Ninja" button to get started.</p>
-      </div>
+      </motion.div>
     );
   }
 
@@ -46,11 +51,15 @@ export default function TodayBoard({ assignments, onRemove }) {
 
   if (sorted.length === 0) {
     return (
-      <div className="text-center py-12 text-ninja-muted font-ninja">
-        <p className="text-2xl mb-2">🎉</p>
-        <p className="text-lg font-bold text-ninja-navy">All {completedCount} ninja{completedCount !== 1 ? 's' : ''} logged!</p>
-        <p className="text-sm mt-1">Great session today.</p>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="text-center py-16 font-ninja"
+      >
+        <img src="/CodeNinjasCelebrate.webp" alt="" className="h-28 mx-auto mb-4" />
+        <p className="text-xl font-bold text-ninja-navy">All {completedCount} ninja{completedCount !== 1 ? 's' : ''} logged!</p>
+        <p className="text-sm mt-1 text-ninja-muted">Great session today.</p>
+      </motion.div>
     );
   }
 
@@ -76,15 +85,18 @@ export default function TodayBoard({ assignments, onRemove }) {
         </div>
 
         <div className="space-y-3">
-          {sorted.map((a) => {
+          {sorted.map((a, i) => {
             const isOverdue = !a.completed && a.session_date &&
               new Date(a.session_date).toISOString().split('T')[0] < todayStr;
             const borderColor = a.completed ? '#4ade80' : isOverdue ? '#f87171' : '#fde047';
             const dotClass = a.completed ? 'bg-green-500' : isOverdue ? 'bg-red-400' : 'bg-yellow-400';
 
             return (
-              <div
+              <motion.div
                 key={a.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05, duration: 0.25, ease: 'easeOut' }}
                 className="bg-white rounded-2xl p-4 cursor-pointer"
                 style={{ border: `2px solid ${borderColor}` }}
                 onClick={() => navigate(`/manager/students/${a.student_id}`)}
@@ -146,7 +158,7 @@ export default function TodayBoard({ assignments, onRemove }) {
                     Sensei: {a.sensei_name}
                   </p>
                 )}
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -154,15 +166,18 @@ export default function TodayBoard({ assignments, onRemove }) {
 
       {/* ── Tablet + Desktop layout (sm+): card grid ── */}
       <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {sorted.map((a) => {
+        {sorted.map((a, i) => {
           const isOverdue = !a.completed && a.session_date &&
             String(a.session_date).split('T')[0] < todayStr;
           const borderClass = a.completed ? 'border-green-400' : isOverdue ? 'border-red-400' : 'border-yellow-300';
           const dotClass = a.completed ? 'bg-green-500' : isOverdue ? 'bg-red-400' : 'bg-yellow-400';
 
           return (
-            <div
+            <motion.div
               key={a.id}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.06, duration: 0.28, ease: 'easeOut' }}
               className={`bg-white border-2 ${borderClass} rounded-2xl p-4 shadow-sm flex flex-col gap-3`}
             >
               <div className="flex items-start justify-between gap-2">
@@ -208,7 +223,7 @@ export default function TodayBoard({ assignments, onRemove }) {
                   Log Progress
                 </button>
               )}
-            </div>
+            </motion.div>
           );
         })}
       </div>
