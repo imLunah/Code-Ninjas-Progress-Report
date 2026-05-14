@@ -82,7 +82,7 @@ export default function MobileNav() {
     { to: dashPath, label: 'Today', icon: <TodayIcon /> },
     { to: '/manager/students', label: 'Ninjas', icon: <NinjasIcon /> },
     { to: '/clubs', label: 'Clubs', icon: <ClubsIcon /> },
-    { to: '/manager/staff', label: 'Senseis', icon: <SenseiIcon /> },
+    { to: '/manager/staff', label: 'Staff', icon: <SenseiIcon /> },
     { to: '/account', label: 'Account', icon: <AccountIcon profilePicUrl={user.profilePicUrl} initials={initials} /> },
   ];
 
