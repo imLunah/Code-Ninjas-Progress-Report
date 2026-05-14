@@ -19,7 +19,12 @@ const ASSIGNMENT_SELECT = `
     sp.belt_sublevel,
     sp.current_project,
     sp.project_status,
-    u.display_name as sensei_name
+    u.display_name as sensei_name,
+    (SELECT COUNT(*) FROM daily_assignments da2
+     WHERE da2.student_id = da.student_id
+       AND da2.program = da.program
+       AND da2.session_date = da.session_date
+       AND da2.created_at <= da.created_at) AS session_number
   FROM daily_assignments da
   JOIN students s ON da.student_id = s.id
   LEFT JOIN student_programs sp ON sp.student_id = da.student_id AND sp.program = da.program
@@ -95,9 +100,6 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
 
     res.status(201).json(rows[0]);
   } catch (err) {
-    if (err.code === '23505') {
-      return res.status(409).json({ error: 'Ninja already added for this program on this date' });
-    }
     console.error('Error adding assignment:', err);
     res.status(500).json({ error: 'Failed to add assignment' });
   }
