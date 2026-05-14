@@ -162,12 +162,8 @@ export default function ParentStudentProfile() {
 
         {/* Session history */}
         <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4">
             <h2 className="text-ninja-navy font-ninja font-bold text-lg">Session History</h2>
-            <div className="flex items-center gap-1 font-ninja font-bold px-2 py-1 rounded-full text-xs" style={{ background: '#eff6ff', color: '#006ADD' }}>
-              <span>📧</span>
-              <span>Monthly recap</span>
-            </div>
           </div>
           {(student.session_logs || []).length === 0 && (student.club_attendance || []).length === 0 ? (
             <p className="text-ninja-muted font-ninja text-sm italic">No sessions logged yet.</p>
