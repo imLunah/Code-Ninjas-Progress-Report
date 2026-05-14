@@ -150,105 +150,134 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
         <div className="text-center py-6 text-ninja-muted font-ninja text-sm">No logs for this program yet.</div>
       )}
 
-      {visible.map((log) => {
-        const allComments = [...(log.comments || []), ...(localComments[log.id] || [])];
-        const isEditing = editingId === log.id;
-        const isConfirmingDelete = confirmDeleteId === log.id;
+      {(() => {
+        // Group logs by session_date
+        const groups = visible.reduce((acc, log) => {
+          const key = log.session_date;
+          if (!acc[key]) acc[key] = [];
+          acc[key].push(log);
+          return acc;
+        }, {});
+        const dates = Object.keys(groups).sort((a, b) => new Date(b) - new Date(a));
 
-        return (
-          <div key={log.id} className="bg-ninja-bg border border-ninja-border rounded-xl p-4">
-            <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="text-ninja-blue font-ninja font-semibold text-sm">{formatDate(log.session_date)}</span>
-                {log.sensei_name && <span className="text-ninja-muted text-sm font-ninja">by {log.sensei_name}</span>}
-                {log.program && <ProgramBadge program={log.program} size="xs" />}
+        return dates.map((date) => {
+          const dayLogs = groups[date];
+          const sharedSensei = dayLogs.every((l) => l.sensei_name === dayLogs[0].sensei_name)
+            ? dayLogs[0].sensei_name
+            : null;
+
+          return (
+            <div key={date} className="bg-ninja-bg border border-ninja-border rounded-xl p-4">
+              {/* Day header */}
+              <div className="flex flex-wrap items-center gap-3 mb-3">
+                <span className="text-ninja-blue font-ninja font-semibold text-sm">{formatDate(date)}</span>
+                {sharedSensei && <span className="text-ninja-muted text-sm font-ninja">by {sharedSensei}</span>}
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {log.belt_level_at && <BeltBadge belt={log.belt_level_at} sublevel={log.belt_sublevel_at} size="xs" />}
-                {log.project_at && (
-                  <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-ninja font-semibold">{log.project_at}</span>
-                )}
-                {log.status_at && (
-                  <span className={`text-xs px-2 py-0.5 rounded-md font-ninja font-semibold ${
-                    log.status_at === 'Completed' ? 'bg-green-100 text-green-700'
-                    : log.status_at === 'Working On' ? 'bg-blue-100 text-blue-700'
-                    : 'bg-gray-100 text-gray-600'
-                  }`}>{log.status_at}</span>
-                )}
-                {!isReadOnly && (isManager || log.sensei_id === user?.id) && !isEditing && (
-                  <div className="flex items-center gap-1.5 ml-1">
-                    <button
-                      onClick={() => startEdit(log)}
-                      className="text-ninja-muted hover:text-ninja-blue font-ninja text-xs font-semibold transition-colors"
-                    >
-                      Edit
-                    </button>
-                    {isManager && (
-                      isConfirmingDelete ? (
-                        <>
-                          <Button variant="danger" size="sm" onClick={() => handleDelete(log.id)} disabled={deleting}>
-                            {deleting ? '...' : 'Confirm'}
-                          </Button>
-                          <Button variant="secondary" size="sm" onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
-                        </>
+
+              {/* Individual log entries */}
+              <div className="space-y-3">
+                {dayLogs.map((log, i) => {
+                  const allComments = [...(log.comments || []), ...(localComments[log.id] || [])];
+                  const isEditing = editingId === log.id;
+                  const isConfirmingDelete = confirmDeleteId === log.id;
+
+                  return (
+                    <div key={log.id} className={i > 0 ? 'border-t border-ninja-border/60 pt-3' : ''}>
+                      <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {log.program && <ProgramBadge program={log.program} size="xs" />}
+                          {!sharedSensei && log.sensei_name && (
+                            <span className="text-ninja-muted text-xs font-ninja">by {log.sensei_name}</span>
+                          )}
+                          {log.belt_level_at && <BeltBadge belt={log.belt_level_at} sublevel={log.belt_sublevel_at} size="xs" />}
+                          {log.project_at && (
+                            <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-ninja font-semibold">{log.project_at}</span>
+                          )}
+                          {log.status_at && (
+                            <span className={`text-xs px-2 py-0.5 rounded-md font-ninja font-semibold ${
+                              log.status_at === 'Completed' ? 'bg-green-100 text-green-700'
+                              : log.status_at === 'Working On' ? 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-600'
+                            }`}>{log.status_at}</span>
+                          )}
+                        </div>
+                        {!isReadOnly && (isManager || log.sensei_id === user?.id) && !isEditing && (
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => startEdit(log)}
+                              className="text-ninja-muted hover:text-ninja-blue font-ninja text-xs font-semibold transition-colors"
+                            >
+                              Edit
+                            </button>
+                            {isManager && (
+                              isConfirmingDelete ? (
+                                <>
+                                  <Button variant="danger" size="sm" onClick={() => handleDelete(log.id)} disabled={deleting}>
+                                    {deleting ? '...' : 'Confirm'}
+                                  </Button>
+                                  <Button variant="secondary" size="sm" onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => { setConfirmDeleteId(log.id); setEditingId(null); }}
+                                  className="text-ninja-muted hover:text-ninja-red font-ninja text-xs font-semibold transition-colors"
+                                >
+                                  Delete
+                                </button>
+                              )
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {(log.sub_program || log.module_name || log.lesson_name) && (
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {log.sub_program && (
+                            <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-md font-ninja font-semibold">{log.sub_program}</span>
+                          )}
+                          {log.module_name && (
+                            <span className="text-xs bg-ninja-bg border border-ninja-border text-ninja-navy px-2 py-0.5 rounded-md font-ninja">{log.module_name}</span>
+                          )}
+                          {log.lesson_name && (
+                            <span className="text-xs bg-ninja-bg border border-ninja-border text-ninja-muted px-2 py-0.5 rounded-md font-ninja">{log.lesson_name}</span>
+                          )}
+                        </div>
+                      )}
+
+                      {isEditing ? (
+                        <div className="space-y-2 mt-1">
+                          <textarea
+                            value={editDraft}
+                            onChange={(e) => setEditDraft(e.target.value)}
+                            rows={4}
+                            className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
+                            autoFocus
+                          />
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={() => saveEdit(log.id)} disabled={savingEdit || !editDraft.trim()}>
+                              {savingEdit ? 'Saving...' : 'Save'}
+                            </Button>
+                            <Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>Cancel</Button>
+                          </div>
+                        </div>
                       ) : (
-                        <button
-                          onClick={() => { setConfirmDeleteId(log.id); setEditingId(null); }}
-                          className="text-ninja-muted hover:text-ninja-red font-ninja text-xs font-semibold transition-colors"
-                        >
-                          Delete
-                        </button>
-                      )
-                    )}
-                  </div>
-                )}
+                        log.notes && <p className="text-ninja-navy font-ninja text-sm leading-relaxed">{log.notes}</p>
+                      )}
+
+                      {allComments.length > 0 && (
+                        <div className="mt-3 space-y-1 border-t border-ninja-border pt-3">
+                          {allComments.map((c) => <LogComment key={c.id} comment={c} />)}
+                        </div>
+                      )}
+                      {!isReadOnly && <CommentBox logId={log.id} onAdded={(c) => handleCommentAdded(log.id, c)} />}
+                    </div>
+                  );
+                })}
               </div>
             </div>
-
-            {(log.sub_program || log.module_name || log.lesson_name) && (
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {log.sub_program && (
-                  <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-md font-ninja font-semibold">{log.sub_program}</span>
-                )}
-                {log.module_name && (
-                  <span className="text-xs bg-ninja-bg border border-ninja-border text-ninja-navy px-2 py-0.5 rounded-md font-ninja">{log.module_name}</span>
-                )}
-                {log.lesson_name && (
-                  <span className="text-xs bg-ninja-bg border border-ninja-border text-ninja-muted px-2 py-0.5 rounded-md font-ninja">{log.lesson_name}</span>
-                )}
-              </div>
-            )}
-
-            {isEditing ? (
-              <div className="space-y-2 mt-1">
-                <textarea
-                  value={editDraft}
-                  onChange={(e) => setEditDraft(e.target.value)}
-                  rows={4}
-                  className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
-                  autoFocus
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => saveEdit(log.id)} disabled={savingEdit || !editDraft.trim()}>
-                    {savingEdit ? 'Saving...' : 'Save'}
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>Cancel</Button>
-                </div>
-              </div>
-            ) : (
-              <p className="text-ninja-navy font-ninja text-sm leading-relaxed">{log.notes}</p>
-            )}
-
-            {/* Comments */}
-            {allComments.length > 0 && (
-              <div className="mt-3 space-y-1 border-t border-ninja-border pt-3">
-                {allComments.map((c) => <LogComment key={c.id} comment={c} />)}
-              </div>
-            )}
-            {!isReadOnly && <CommentBox logId={log.id} onAdded={(c) => handleCommentAdded(log.id, c)} />}
-          </div>
-        );
-      })}
+          );
+        });
+      })()}
     </div>
   );
 }
