@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
 import { api } from '../api/client';
@@ -350,18 +351,27 @@ export default function ClubsPage() {
         {loading ? (
           <p className="text-ninja-muted font-ninja text-center py-12">Loading...</p>
         ) : clubs.length === 0 ? (
-          <p className="text-ninja-muted font-ninja text-center py-12 italic">No clubs yet.</p>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
+            <img src="/CodeNinjasIcon.svg" alt="" className="w-12 h-12 mx-auto mb-3 opacity-20" />
+            <p className="text-ninja-muted font-ninja italic">No clubs yet.</p>
+          </motion.div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {clubs.map((club) => (
-              <ClubCard
+            {clubs.map((club, i) => (
+              <motion.div
                 key={club.id}
-                club={club}
-                onClick={() => navigate(`/clubs/${club.slug}`)}
-                canManage={isManager && !isReadOnly && !!club.location_id}
-                onDelete={handleDeleteClub}
-                onEdit={setEditingClub}
-              />
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.07, duration: 0.28, ease: 'easeOut' }}
+              >
+                <ClubCard
+                  club={club}
+                  onClick={() => navigate(`/clubs/${club.slug}`)}
+                  canManage={isManager && !isReadOnly && !!club.location_id}
+                  onDelete={handleDeleteClub}
+                  onEdit={setEditingClub}
+                />
+              </motion.div>
             ))}
           </div>
         )}

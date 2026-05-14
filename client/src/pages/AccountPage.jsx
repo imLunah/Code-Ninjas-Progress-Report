@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { motion } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -84,50 +85,55 @@ export default function AccountPage() {
   return (
     <Layout>
       <div className="max-w-md mx-auto space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold font-ninja text-ninja-navy">Account Settings</h1>
-          <p className="text-ninja-muted font-ninja text-sm mt-1">Update your profile photo, username, or password.</p>
-        </div>
 
-        {/* Profile photo */}
-        <div className="bg-white border border-ninja-border rounded-2xl p-6 shadow-sm">
-          <p className="text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-4">Profile Photo</p>
-          <div className="flex items-center gap-5">
+        {/* Hero profile banner */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          className="relative bg-ninja-navy rounded-2xl overflow-hidden px-6 pt-7 pb-6 shadow-lg"
+        >
+          <img src="/CodeNinjasIcon.svg" alt="" className="absolute right-4 top-4 w-20 opacity-[0.08] pointer-events-none" />
+          <div className="flex items-center gap-4 relative z-10">
             <div className="relative flex-shrink-0">
               {user?.profilePicUrl ? (
-                <img
-                  src={user.profilePicUrl}
-                  alt={user.displayName}
-                  className="w-20 h-20 rounded-full object-cover border-2 border-ninja-border"
-                />
+                <img src={user.profilePicUrl} alt={user.displayName} className="w-16 h-16 rounded-full object-cover border-3 border-white/30 shadow-lg" />
               ) : (
-                <div className="w-20 h-20 rounded-full bg-ninja-blue flex items-center justify-center text-white font-ninja font-bold text-2xl">
+                <div className="w-16 h-16 rounded-full bg-ninja-blue border-2 border-white/20 flex items-center justify-center text-white font-ninja font-bold text-xl shadow-lg">
                   {initials}
                 </div>
               )}
               {uploadingPic && (
-                <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
             </div>
-            <div className="space-y-2">
-              <button
-                onClick={() => fileRef.current?.click()}
-                disabled={uploadingPic}
-                className="text-sm font-ninja font-semibold text-ninja-blue border border-ninja-blue rounded-xl px-4 py-2 hover:bg-ninja-blue hover:text-white transition-colors disabled:opacity-50"
-              >
-                {uploadingPic ? 'Uploading...' : 'Change Photo'}
-              </button>
-              <p className="text-ninja-muted font-ninja text-xs">JPG, PNG, or GIF · Max 5 MB</p>
-              {picError && <p className="text-ninja-red font-ninja text-xs">{picError}</p>}
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-ninja font-bold text-lg leading-tight truncate">{user?.displayName}</p>
+              <p className="text-white/50 font-ninja text-xs mt-0.5 capitalize">{user?.role === 'manager' ? 'Center Director' : 'Sensei'}</p>
+              <p className="text-white/40 font-ninja text-xs">@{user?.username}</p>
             </div>
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePicChange} />
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploadingPic}
+              className="flex-shrink-0 text-xs font-ninja font-semibold text-white/80 border border-white/20 rounded-xl px-3 py-1.5 hover:bg-white/10 transition-colors disabled:opacity-50"
+            >
+              {uploadingPic ? '...' : 'Edit Photo'}
+            </button>
           </div>
-        </div>
+          {picError && <p className="text-red-300 font-ninja text-xs mt-2 relative z-10">{picError}</p>}
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePicChange} />
+        </motion.div>
 
         {/* Username + Password */}
-        <form onSubmit={handleSave} className="bg-white border border-ninja-border rounded-2xl p-6 shadow-sm space-y-5">
+        <motion.form
+          onSubmit={handleSave}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.3 }}
+          className="bg-white border border-ninja-border rounded-2xl p-6 shadow-sm space-y-5"
+        >
           <div>
             <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1.5">Username</label>
             <input
@@ -174,7 +180,7 @@ export default function AccountPage() {
           >
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
-        </form>
+        </motion.form>
       </div>
     </Layout>
   );
