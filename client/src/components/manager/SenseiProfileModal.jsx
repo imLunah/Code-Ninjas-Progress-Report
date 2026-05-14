@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { motion, AnimatePresence, useDragControls } from 'framer-motion';
+import { useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import BeltBadge from '../ui/BeltBadge';
 import Button from '../ui/Button';
 import { formatDate } from '../../utils/dateUtils';
@@ -41,11 +41,21 @@ export default function SenseiProfileModal({
   isManager, isReadOnly, onEditLogin, onRemove,
 }) {
   const [confirmingRemove, setConfirmingRemove] = useState(false);
-  const dragControls = useDragControls();
+  const touchStartY = useRef(null);
 
   const handleClose = () => {
     setConfirmingRemove(false);
     onClose();
+  };
+
+  // Swipe-down-to-dismiss: only tracked from the header area
+  const handleTouchStart = (e) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+  const handleTouchEnd = (e) => {
+    if (touchStartY.current === null) return;
+    if (e.changedTouches[0].clientY - touchStartY.current > 80) handleClose();
+    touchStartY.current = null;
   };
 
   if (!isOpen || !sensei) return null;
@@ -71,23 +81,15 @@ export default function SenseiProfileModal({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 60 }}
           transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-          drag="y"
-          dragControls={dragControls}
-          dragListener={false}
-          dragConstraints={{ top: 0 }}
-          dragElastic={{ top: 0, bottom: 0.3 }}
-          dragMomentum={false}
-          onDragEnd={(_, info) => {
-            if (info.offset.y > 80) handleClose();
-          }}
           className="w-full sm:max-w-md bg-ninja-bg rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col"
           style={{ maxHeight: '90vh' }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Hero header — touch here to drag-to-dismiss */}
+          {/* Hero header — touch here to swipe-dismiss */}
           <div
-            className="relative bg-ninja-navy px-6 pt-8 pb-6 flex-shrink-0 cursor-grab active:cursor-grabbing sm:cursor-default"
-            onPointerDown={(e) => dragControls.start(e)}
+            className="relative bg-ninja-navy px-6 pt-8 pb-6 flex-shrink-0"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
           >
             <img
               src="/CodeNinjasIcon.svg"
@@ -95,10 +97,10 @@ export default function SenseiProfileModal({
               className="absolute right-4 top-4 w-16 h-16 opacity-10 pointer-events-none select-none"
             />
 
-            {/* Drag handle pill — tap or swipe down from here to close */}
+            {/* Large-tap drag handle — also closes on tap */}
             <button
               onClick={handleClose}
-              className="absolute top-2 left-1/2 -translate-x-1/2 sm:hidden py-2 px-6"
+              className="absolute top-0 left-0 right-0 h-8 sm:hidden flex items-center justify-center"
               aria-label="Close"
             >
               <span className="block w-10 h-1 rounded-full bg-white/40" />
@@ -132,7 +134,7 @@ export default function SenseiProfileModal({
             </div>
           </div>
 
-          {/* Scrollable content — logs + manager actions */}
+          {/* Scrollable body */}
           <div className="overflow-y-auto flex-1 min-h-0">
             <div className="px-5 py-4">
               <p className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest mb-3">
