@@ -34,6 +34,17 @@ function MobileBeltJourney({ enrollment }) {
   const maxLevel = getMaxLevel(belt_level);
   const progress = maxLevel ? Math.round((belt_sublevel / maxLevel) * 100) : null;
   const beltIdx = BELTS.findIndex(b => b.name === belt_level);
+  const currentIconRef = React.useRef(null);
+  const scrollRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (scrollRef.current && currentIconRef.current) {
+      const container = scrollRef.current;
+      const icon = currentIconRef.current;
+      const scrollTo = icon.offsetLeft - container.offsetWidth / 2 + icon.offsetWidth / 2;
+      container.scrollLeft = Math.max(0, scrollTo);
+    }
+  }, [beltIdx]);
 
   return (
     <div className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
@@ -47,7 +58,7 @@ function MobileBeltJourney({ enrollment }) {
       </div>
 
       {/* All belts, scrollable — icons row + labels row kept separate so lines align with icon centers */}
-      <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
+      <div ref={scrollRef} className="overflow-x-auto -mx-4 px-4 no-scrollbar">
         {/* Icons + connecting lines */}
         <div className="flex items-center" style={{ minWidth: 'max-content' }}>
           {BELTS.map((b, i) => {
@@ -59,7 +70,11 @@ function MobileBeltJourney({ enrollment }) {
                 {i > 0 && (
                   <div className="h-0.5 flex-shrink-0" style={{ width: 16, backgroundColor: i <= beltIdx ? '#006ADD' : '#e2e8f0' }} />
                 )}
-                <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+                <div
+                  ref={isCurrent ? currentIconRef : null}
+                  className="relative flex-shrink-0"
+                  style={{ width: size, height: size }}
+                >
                   <img
                     src={`/belts/belt-${b.name.toLowerCase()}.png`}
                     alt={b.name}
