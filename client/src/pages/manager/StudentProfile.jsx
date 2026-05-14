@@ -41,7 +41,9 @@ function MobileBeltJourney({ enrollment }) {
     if (scrollRef.current && currentIconRef.current) {
       const container = scrollRef.current;
       const icon = currentIconRef.current;
-      const scrollTo = icon.offsetLeft - container.offsetWidth / 2 + icon.offsetWidth / 2;
+      const containerRect = container.getBoundingClientRect();
+      const iconRect = icon.getBoundingClientRect();
+      const scrollTo = container.scrollLeft + iconRect.left - containerRect.left - containerRect.width / 2 + iconRect.width / 2;
       container.scrollLeft = Math.max(0, scrollTo);
     }
   }, [beltIdx]);
