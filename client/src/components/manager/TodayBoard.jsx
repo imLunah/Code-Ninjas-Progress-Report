@@ -106,6 +106,11 @@ export default function TodayBoard({ assignments, onRemove }) {
                     <span className="text-ninja-navy font-ninja font-bold text-lg leading-tight">
                       {a.student_name}
                     </span>
+                    {parseInt(a.session_number) > 1 && (
+                      <span className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
+                        Session {a.session_number}
+                      </span>
+                    )}
                     {isOverdue && (
                       <span className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600 border border-red-200">
                         Overdue
@@ -181,12 +186,19 @@ export default function TodayBoard({ assignments, onRemove }) {
               className={`bg-white border-2 ${borderClass} rounded-2xl p-4 shadow-sm flex flex-col gap-3`}
             >
               <div className="flex items-start justify-between gap-2">
-                <button
-                  onClick={() => navigate(`/manager/students/${a.student_id}`)}
-                  className="text-ninja-navy font-ninja font-bold text-lg leading-tight hover:text-ninja-blue transition-colors text-left"
-                >
-                  {a.student_name}
-                </button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => navigate(`/manager/students/${a.student_id}`)}
+                    className="text-ninja-navy font-ninja font-bold text-lg leading-tight hover:text-ninja-blue transition-colors text-left"
+                  >
+                    {a.student_name}
+                  </button>
+                  {parseInt(a.session_number) > 1 && (
+                    <span className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
+                      Session {a.session_number}
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 flex-shrink-0 mt-1">
                   <div className={`w-3 h-3 rounded-full ${dotClass}`} />
                   {!isReadOnly && (
