@@ -110,10 +110,10 @@ export default function AddStudentToday({ isOpen, onClose, onAdded, existingEntr
                       <Button
                         variant={added ? 'secondary' : 'primary'}
                         size="sm"
-                        disabled={added || adding === key}
+                        disabled={adding === key}
                         onClick={() => handleAdd(student, enrollment.program)}
                       >
-                        {added ? 'Added' : adding === key ? '...' : 'Add'}
+                        {adding === key ? '...' : added ? 'Add Again' : 'Add'}
                       </Button>
                     </div>
                   );
