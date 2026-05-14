@@ -398,6 +398,23 @@ export default function StudentProfile() {
             </div>
           </div>
 
+          {/* Special Instructions */}
+          {student.special_instructions && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm">
+              <h2 className="text-ninja-navy font-ninja font-bold text-sm mb-1.5 flex items-center gap-2">
+                <span className="text-amber-500">⚠</span> Special Instructions from Parent
+              </h2>
+              <p className="text-ninja-navy font-ninja text-sm leading-relaxed whitespace-pre-wrap">{student.special_instructions}</p>
+            </div>
+          )}
+
+          {/* Pinned Note */}
+          <PinnedNote
+            studentId={student.id}
+            initialNote={student.pinned_note}
+            onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
+          />
+
           {/* Belt Journey (CREATE) */}
           {createEnrollment?.belt_level && <MobileBeltJourney enrollment={createEnrollment} />}
 
