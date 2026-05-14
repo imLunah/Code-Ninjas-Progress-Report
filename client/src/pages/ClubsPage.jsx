@@ -103,6 +103,7 @@ function EditClubModal({ club, onSaved, onClose }) {
   const [name, setName] = useState(club.name);
   const [description, setDescription] = useState(club.description || '');
   const [colorKey, setColorKey] = useState(club.color_key || 'blue');
+  const [schedule, setSchedule] = useState(club.schedule || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -118,6 +119,7 @@ function EditClubModal({ club, onSaved, onClose }) {
         name: name.trim(),
         description: description.trim() || undefined,
         color_key: colorKey,
+        schedule: schedule.trim() || undefined,
       });
       onSaved(updated);
     } catch (err) {
@@ -159,6 +161,19 @@ function EditClubModal({ club, onSaved, onClose }) {
               placeholder="What do students do in this club?"
               rows={2}
               className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1">
+              When does this club meet? <span className="normal-case font-normal">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={schedule}
+              onChange={(e) => setSchedule(e.target.value)}
+              placeholder="e.g. Saturdays 1:00–2:00pm"
+              className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
             />
           </div>
 
@@ -206,6 +221,7 @@ function CreateClubModal({ onCreated, onClose }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [colorKey, setColorKey] = useState('blue');
+  const [schedule, setSchedule] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -221,6 +237,7 @@ function CreateClubModal({ onCreated, onClose }) {
         name: name.trim(),
         description: description.trim() || undefined,
         color_key: colorKey,
+        schedule: schedule.trim() || undefined,
       });
       onCreated(club);
     } catch (err) {
@@ -263,6 +280,19 @@ function CreateClubModal({ onCreated, onClose }) {
               placeholder="What do students do in this club?"
               rows={2}
               className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1">
+              When does this club meet? <span className="normal-case font-normal">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={schedule}
+              onChange={(e) => setSchedule(e.target.value)}
+              placeholder="e.g. Saturdays 1:00–2:00pm"
+              className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
             />
           </div>
 
