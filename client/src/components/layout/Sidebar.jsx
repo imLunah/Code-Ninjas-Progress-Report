@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 function NavIcon({ id }) {
@@ -124,13 +124,15 @@ export default function Sidebar() {
       {/* User card */}
       <div className="p-3 border-t border-ninja-border">
         <div className="flex items-center gap-2.5 px-2 py-2">
-          <div className="w-8 h-8 rounded-full bg-ninja-blue flex items-center justify-center text-white font-ninja font-bold text-xs flex-shrink-0">
-            {initials}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-ninja font-bold text-ninja-navy text-sm truncate">{user?.displayName}</p>
-            <p className="font-ninja text-ninja-muted text-xs capitalize">{user?.role === 'manager' ? 'Center Director' : user?.role}</p>
-          </div>
+          <Link to="/account" className="flex items-center gap-2.5 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+            <div className="w-8 h-8 rounded-full bg-ninja-blue flex items-center justify-center text-white font-ninja font-bold text-xs flex-shrink-0">
+              {initials}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-ninja font-bold text-ninja-navy text-sm truncate">{user?.displayName}</p>
+              <p className="font-ninja text-ninja-muted text-xs capitalize">{user?.role === 'manager' ? 'Center Director' : user?.role}</p>
+            </div>
+          </Link>
           <button
             onClick={handleLogout}
             className="text-ninja-muted hover:text-ninja-red font-ninja text-xs font-semibold transition-colors flex-shrink-0"

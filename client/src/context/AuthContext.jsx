@@ -41,7 +41,7 @@ export function AuthProvider({ children }) {
   const isReadOnly = user?.role === 'manager' && user?.activeLocation?.id !== user?.homeLocationId;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, switchLocation, isReadOnly }}>
+    <AuthContext.Provider value={{ user, setUser, loading, login, logout, switchLocation, isReadOnly }}>
       {children}
     </AuthContext.Provider>
   );

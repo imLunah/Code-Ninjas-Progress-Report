@@ -6,6 +6,92 @@ import SenseiProfileModal from '../../components/manager/SenseiProfileModal';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
+function EditCredentialsModal({ sensei, onClose }) {
+  const [username, setUsername] = useState(sensei.username || '');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    const trimmedPassword = newPassword.trim();
+    if (trimmedPassword && trimmedPassword !== confirmPassword.trim()) {
+      return setError('Passwords do not match.');
+    }
+    if (trimmedPassword && trimmedPassword.length < 6) {
+      return setError('Password must be at least 6 characters.');
+    }
+    const payload = {};
+    if (username.trim() !== sensei.username) payload.username = username.trim();
+    if (trimmedPassword) payload.new_password = trimmedPassword;
+    if (!Object.keys(payload).length) return setSuccess('No changes to save.');
+
+    setSaving(true);
+    try {
+      await api.patch(`/users/${sensei.id}/credentials`, payload);
+      setSuccess('Credentials updated.');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setError(err?.message || 'Failed to update credentials.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+        <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-1">Edit Login — {sensei.display_name}</h2>
+        <p className="text-ninja-muted font-ninja text-xs mb-4">Passwords are never shown. Leave blank to keep current.</p>
+
+        <form onSubmit={handleSave} className="space-y-4">
+          <div>
+            <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
+            />
+          </div>
+          <div>
+            <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1">New Password</label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Leave blank to keep current"
+              autoComplete="new-password"
+              className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
+            />
+          </div>
+          <div>
+            <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1">Confirm Password</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              autoComplete="new-password"
+              className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
+            />
+          </div>
+          {error && <p className="text-ninja-red font-ninja text-sm">{error}</p>}
+          {success && <p className="text-green-600 font-ninja text-sm">{success}</p>}
+          <div className="flex gap-2 pt-1">
+            <Button type="submit" disabled={saving} className="flex-1">{saving ? 'Saving...' : 'Save'}</Button>
+            <Button variant="secondary" type="button" onClick={onClose}>Close</Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function StaffPage() {
   const [senseis, setSenseis] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,6 +101,7 @@ export default function StaffPage() {
   const [selectedSensei, setSelectedSensei] = useState(null);
   const [profileLogs, setProfileLogs] = useState([]);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [editCredentialsSensei, setEditCredentialsSensei] = useState(null);
   const { user, isReadOnly } = useAuth();
 
   const isManager = user?.role === 'manager';
@@ -122,19 +209,22 @@ export default function StaffPage() {
                   >
                     <p className="font-ninja font-bold text-ninja-navy">{s.display_name}</p>
                     <p className="font-ninja text-sm text-ninja-muted">@{s.username}</p>
-                    <div className="flex items-center justify-end gap-3" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                       <span className={`text-lg font-bold font-ninja ${s.progress_log_count > 0 ? 'text-ninja-blue' : 'text-ninja-border'}`}>
                         {s.progress_log_count || 0}
                       </span>
                       {isManager && !isReadOnly && (
-                        confirmRemoveId === s.id ? (
-                          <div className="flex items-center gap-1">
-                            <Button variant="danger" size="sm" onClick={() => handleRemove(s.id)}>Confirm</Button>
-                            <Button variant="secondary" size="sm" onClick={() => setConfirmRemoveId(null)}>Cancel</Button>
-                          </div>
-                        ) : (
-                          <Button variant="danger" size="sm" onClick={() => setConfirmRemoveId(s.id)}>Remove</Button>
-                        )
+                        <>
+                          <Button variant="secondary" size="sm" onClick={() => setEditCredentialsSensei(s)}>Edit Login</Button>
+                          {confirmRemoveId === s.id ? (
+                            <div className="flex items-center gap-1">
+                              <Button variant="danger" size="sm" onClick={() => handleRemove(s.id)}>Confirm</Button>
+                              <Button variant="secondary" size="sm" onClick={() => setConfirmRemoveId(null)}>Cancel</Button>
+                            </div>
+                          ) : (
+                            <Button variant="danger" size="sm" onClick={() => setConfirmRemoveId(s.id)}>Remove</Button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -157,6 +247,13 @@ export default function StaffPage() {
         sensei={selectedSensei}
         logs={profileLoading ? [] : profileLogs}
       />
+
+      {editCredentialsSensei && (
+        <EditCredentialsModal
+          sensei={editCredentialsSensei}
+          onClose={() => setEditCredentialsSensei(null)}
+        />
+      )}
     </Layout>
   );
 }
