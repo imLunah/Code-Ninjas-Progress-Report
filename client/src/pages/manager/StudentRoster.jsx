@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Papa from 'papaparse';
 import Layout from '../../components/layout/Layout';
 import BeltBadge from '../../components/ui/BeltBadge';
 import ProgramBadge from '../../components/ui/ProgramBadge';
 import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
-import { PROGRAMS, BELTS, getBelt } from '../../utils/beltConfig';
+import { PROGRAMS, getBelt } from '../../utils/beltConfig';
 import { formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 
@@ -35,11 +35,11 @@ function getInitials(name) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-const MOBILE_CHIPS = [
+const FILTER_CHIPS = [
   { label: 'All', value: '' },
   { label: 'CREATE', value: 'CREATE' },
-  { label: 'Robotics', value: 'Robotics Academy' },
-  { label: 'AI', value: 'AI Academy' },
+  { label: 'Robotics Academy', value: 'Robotics Academy' },
+  { label: 'AI Academy', value: 'AI Academy' },
   { label: 'JR', value: 'JR' },
 ];
 
@@ -49,7 +49,7 @@ export default function StudentRoster() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [programFilter, setProgramFilter] = useState('');
-  const [sortBy, setSortBy] = useState('name');
+  const [sortBy, setSortBy] = useState('last_active');
 
   // Bulk delete
   const [selected, setSelected] = useState(new Set());
@@ -64,8 +64,10 @@ export default function StudentRoster() {
   const fileInputRef = useRef(null);
 
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, isReadOnly } = useAuth();
   const isManager = user?.role === 'manager' && !isReadOnly;
+  const isLogMode = searchParams.get('mode') === 'log';
 
   const loadStudents = () => {
     const params = new URLSearchParams();
@@ -91,7 +93,6 @@ export default function StudentRoster() {
     return a.full_name.localeCompare(b.full_name);
   });
 
-  // --- Bulk delete ---
   const toggleSelect = (id) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -101,11 +102,8 @@ export default function StudentRoster() {
   };
 
   const toggleAll = () => {
-    if (selected.size === sorted.length) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(sorted.map((s) => s.id)));
-    }
+    if (selected.size === sorted.length) setSelected(new Set());
+    else setSelected(new Set(sorted.map((s) => s.id)));
   };
 
   const handleDeleteSelected = async () => {
@@ -122,7 +120,15 @@ export default function StudentRoster() {
     }
   };
 
-  // --- CSV import ---
+  const handleRowClick = (student) => {
+    if (isLogMode) {
+      const programs = (student.programs || []).map(p => p.program).join(',');
+      navigate(`/sensei/student/${student.id}${programs ? `?programs=${encodeURIComponent(programs)}` : ''}`);
+    } else {
+      navigate(`/manager/students/${student.id}`);
+    }
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -171,29 +177,42 @@ export default function StudentRoster() {
     });
   };
 
+  // Chip counts from loaded students
+  const chipCounts = FILTER_CHIPS.reduce((acc, chip) => {
+    acc[chip.value] = chip.value
+      ? students.filter(s => (s.programs || []).some(p => p.program === chip.value)).length
+      : students.length;
+    return acc;
+  }, {});
+
   return (
     <Layout>
       <div className="space-y-4">
-        {/* Header + filters */}
-        <div className="space-y-4">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
+
+        {/* ── Header ── */}
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-4xl font-bold font-ninja text-ninja-navy tracking-wide">
-              Ninja <span className="text-ninja-blue">Roster</span>
+            <h1 className="text-2xl font-bold font-ninja text-ninja-navy leading-tight">
+              {isLogMode ? 'Log Progress' : 'Roster'}
             </h1>
-            <p className="text-ninja-muted font-ninja mt-1">{students.length} active ninjas</p>
+            <p className="text-ninja-muted font-ninja text-sm mt-0.5">
+              {isLogMode
+                ? 'Pick a ninja to log a session'
+                : `${students.length} active ninja${students.length !== 1 ? 's' : ''}`}
+            </p>
           </div>
-          {isManager && (
+          {isManager && !isLogMode && (
             <div className="flex gap-2 flex-wrap">
               {selected.size > 0 && !confirmDelete && (
                 <Button variant="danger" onClick={() => setConfirmDelete(true)}>
-                  Delete Selected ({selected.size})
+                  Delete ({selected.size})
                 </Button>
               )}
               {selected.size > 0 && confirmDelete && (
                 <>
-                  <span className="self-center text-ninja-red font-ninja text-sm font-semibold">Remove {selected.size} ninja{selected.size > 1 ? 's' : ''}?</span>
+                  <span className="self-center text-ninja-red font-ninja text-sm font-semibold">
+                    Remove {selected.size} ninja{selected.size > 1 ? 's' : ''}?
+                  </span>
                   <Button variant="danger" onClick={handleDeleteSelected} disabled={deleting}>
                     {deleting ? 'Deleting...' : 'Confirm'}
                   </Button>
@@ -203,15 +222,13 @@ export default function StudentRoster() {
               <Button variant="secondary" onClick={() => { setImportModal(true); setImportResult(null); setImportError(''); }}>
                 Import CSV
               </Button>
-              <Button onClick={() => navigate('/manager/students/new')}>
-                + Add Ninja
-              </Button>
+              <Button onClick={() => navigate('/manager/students/new')}>+ Add Ninja</Button>
             </div>
           )}
         </div>
 
-        {/* Mobile filters: search + chips */}
-        <div className="md:hidden space-y-2.5">
+        {/* ── Mobile: search + chips ── */}
+        <div className="lg:hidden space-y-2.5">
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ninja-muted pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
@@ -225,7 +242,7 @@ export default function StudentRoster() {
             />
           </div>
           <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar">
-            {MOBILE_CHIPS.map((chip) => (
+            {FILTER_CHIPS.map((chip) => (
               <button
                 key={chip.value}
                 onClick={() => setProgramFilter(chip.value)}
@@ -241,183 +258,218 @@ export default function StudentRoster() {
           </div>
         </div>
 
-        {/* Desktop filters */}
-        <div className="hidden md:flex gap-3">
-          <input
-            type="text"
-            placeholder="Search by name..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-          />
-          <select
-            value={programFilter}
-            onChange={(e) => setProgramFilter(e.target.value)}
-            className="bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-          >
-            <option value="">All Programs</option>
-            {PROGRAMS.map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-          >
-            <option value="name">Name (A–Z)</option>
-            <option value="last_active">Last Active</option>
-            <option value="joined">Newest Members</option>
-          </select>
-        </div>
-        </div>{/* end header */}
-
-        <div className="bg-white border border-ninja-border rounded-xl overflow-clip shadow-sm">
+        {/* ── Mobile list ── */}
+        <div className="lg:hidden bg-white border border-ninja-border rounded-xl overflow-clip shadow-sm">
           {error && <p className="text-ninja-red font-ninja text-center py-8">{error}</p>}
           {loading && <p className="text-ninja-muted font-ninja text-center py-8">Loading ninjas...</p>}
           {!loading && !error && (
-            <>
-              {/* Mobile list */}
-              <div className="md:hidden divide-y divide-ninja-border/50">
+            <div className="divide-y divide-ninja-border/50">
+              {sorted.length === 0 && (
+                <p className="text-center text-ninja-muted font-ninja py-12">No ninjas found</p>
+              )}
+              {sorted.map((s) => {
+                const create = (s.programs || []).find((p) => p.program === 'CREATE');
+                const belt = create?.belt_level ? getBelt(create.belt_level) : null;
+                return (
+                  <div
+                    key={s.id}
+                    className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-ninja-bg transition-colors"
+                    onClick={() => handleRowClick(s)}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-white font-ninja font-bold text-sm"
+                      style={{ backgroundColor: getAvatarColor(s.full_name) }}
+                    >
+                      {getInitials(s.full_name)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-ninja font-bold text-ninja-navy truncate">{s.full_name}</p>
+                      <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                        {(s.programs || []).map((p) => (
+                          <ProgramBadge key={p.program} program={p.program} size="xs" />
+                        ))}
+                      </div>
+                    </div>
+                    {belt && (
+                      <span
+                        className="flex-shrink-0 text-xs font-ninja font-bold px-3 py-1 rounded-full"
+                        style={{
+                          backgroundColor: belt.color,
+                          color: belt.textColor,
+                          border: belt.name === 'White' ? '1.5px solid #d1d5db' : 'none',
+                        }}
+                      >
+                        {belt.name} #{create.belt_sublevel}
+                      </span>
+                    )}
+                    {isLogMode && (
+                      <span className="text-ninja-blue font-ninja font-bold text-xs flex-shrink-0">Log →</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* ── Desktop table ── */}
+        <div className="hidden lg:block space-y-3">
+          {/* Filter + sort bar */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Search */}
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ninja-muted pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="bg-white border border-ninja-border text-ninja-navy rounded-lg pl-8 pr-3 py-1.5 font-ninja text-sm focus:outline-none focus:border-ninja-blue transition-colors w-44"
+              />
+            </div>
+
+            {/* Program filter chips */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {FILTER_CHIPS.map((chip) => (
+                <button
+                  key={chip.value}
+                  onClick={() => setProgramFilter(chip.value)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-ninja font-bold text-xs border transition-colors ${
+                    programFilter === chip.value
+                      ? 'bg-ninja-blue text-white border-ninja-blue'
+                      : 'bg-white text-ninja-navy border-ninja-border hover:border-ninja-blue'
+                  }`}
+                >
+                  {chip.label}
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    programFilter === chip.value ? 'bg-white/25 text-white' : 'bg-ninja-bg text-ninja-muted'
+                  }`}>
+                    {chipCounts[chip.value] ?? 0}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex-1" />
+
+            {/* Sort */}
+            <span className="font-ninja text-sm text-ninja-muted">
+              Sort:{' '}
+              <button
+                className="font-bold text-ninja-navy hover:text-ninja-blue transition-colors"
+                onClick={() => setSortBy(sortBy === 'last_active' ? 'name' : sortBy === 'name' ? 'joined' : 'last_active')}
+              >
+                {sortBy === 'last_active' ? 'Last session ↓' : sortBy === 'name' ? 'Name A–Z' : 'Newest first'}
+              </button>
+            </span>
+          </div>
+
+          {/* Table card */}
+          <div className="bg-white border border-ninja-border rounded-2xl overflow-hidden shadow-sm">
+            {error && <p className="text-ninja-red font-ninja text-center py-8">{error}</p>}
+            {loading && <p className="text-ninja-muted font-ninja text-center py-8">Loading ninjas...</p>}
+            {!loading && !error && (
+              <>
+                {/* Table head */}
+                <div className={`grid gap-4 px-5 py-3.5 border-b border-ninja-border bg-ninja-bg font-ninja font-bold text-xs text-ninja-muted uppercase tracking-widest ${isManager && !isLogMode ? 'grid-cols-[28px_2fr_1.5fr_1.4fr_1fr_80px]' : 'grid-cols-[2fr_1.5fr_1.4fr_1fr_80px]'}`}>
+                  {isManager && !isLogMode && (
+                    <div>
+                      <input
+                        type="checkbox"
+                        checked={sorted.length > 0 && selected.size === sorted.length}
+                        onChange={toggleAll}
+                        className="rounded border-ninja-border accent-ninja-blue cursor-pointer"
+                      />
+                    </div>
+                  )}
+                  <div>Name</div>
+                  <div>Programs</div>
+                  <div>Belt</div>
+                  <div>Last session</div>
+                  <div />
+                </div>
+
+                {/* Rows */}
                 {sorted.length === 0 && (
                   <p className="text-center text-ninja-muted font-ninja py-12">No ninjas found</p>
                 )}
-                {sorted.map((s) => {
+                {sorted.map((s, idx) => {
                   const create = (s.programs || []).find((p) => p.program === 'CREATE');
-                  const belt = create?.belt_level ? getBelt(create.belt_level) : null;
-                  const initials = getInitials(s.full_name);
-                  const avatarBg = getAvatarColor(s.full_name);
-
+                  const isSelected = selected.has(s.id);
                   return (
                     <div
                       key={s.id}
-                      className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-ninja-bg transition-colors"
-                      onClick={() => navigate(`/manager/students/${s.id}`)}
+                      onClick={() => handleRowClick(s)}
+                      className={`grid gap-4 px-5 py-3.5 items-center cursor-pointer transition-colors border-b border-ninja-border/60 last:border-b-0 ${
+                        isSelected ? 'bg-blue-50' : 'hover:bg-ninja-bg'
+                      } ${isManager && !isLogMode ? 'grid-cols-[28px_2fr_1.5fr_1.4fr_1fr_80px]' : 'grid-cols-[2fr_1.5fr_1.4fr_1fr_80px]'}`}
                     >
-                      {/* Avatar */}
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-white font-ninja font-bold text-sm"
-                        style={{ backgroundColor: avatarBg }}
-                      >
-                        {initials}
-                      </div>
-
-                      {/* Name + badges */}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-ninja font-bold text-ninja-navy truncate">{s.full_name}</p>
-                        <div className="flex flex-wrap items-center gap-1 mt-0.5">
-                          {(s.programs || []).map((p) => (
-                            <ProgramBadge key={p.program} program={p.program} size="xs" />
-                          ))}
+                      {isManager && !isLogMode && (
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelect(s.id)}
+                            className="rounded border-ninja-border accent-ninja-blue cursor-pointer"
+                          />
                         </div>
+                      )}
+
+                      {/* Name + avatar */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white font-ninja font-bold text-xs"
+                          style={{ backgroundColor: getAvatarColor(s.full_name) }}
+                        >
+                          {getInitials(s.full_name)}
+                        </div>
+                        <span className="font-ninja font-bold text-ninja-navy text-sm truncate">{s.full_name}</span>
                       </div>
 
-                      {/* Belt pill (CREATE only) */}
-                      {belt && (
-                        <span
-                          className="flex-shrink-0 text-xs font-ninja font-bold px-3 py-1 rounded-full"
-                          style={{
-                            backgroundColor: belt.color,
-                            color: belt.textColor,
-                            border: belt.name === 'White' ? '1.5px solid #d1d5db' : 'none',
-                          }}
-                        >
-                          {belt.name} #{create.belt_sublevel}
-                        </span>
-                      )}
+                      {/* Programs */}
+                      <div className="flex flex-wrap gap-1">
+                        {(s.programs || []).map((p) => (
+                          <ProgramBadge key={p.program} program={p.program} size="xs" />
+                        ))}
+                        {(s.programs || []).length === 0 && (
+                          <span className="text-ninja-muted font-ninja text-sm italic">—</span>
+                        )}
+                      </div>
+
+                      {/* Belt */}
+                      <div>
+                        {create?.belt_level
+                          ? <BeltBadge belt={create.belt_level} sublevel={create.belt_sublevel} size="xs" />
+                          : <span className="text-ninja-muted font-ninja text-sm">—</span>
+                        }
+                      </div>
+
+                      {/* Last session */}
+                      <div className="font-ninja text-sm text-ninja-navy font-semibold">
+                        {s.last_activity ? formatDate(s.last_activity) : <span className="text-ninja-muted font-normal">Never</span>}
+                      </div>
+
+                      {/* Action */}
+                      <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                        {isLogMode ? (
+                          <button
+                            onClick={() => handleRowClick(s)}
+                            className="text-xs font-ninja font-bold text-ninja-blue border border-ninja-blue rounded-lg px-3 py-1.5 hover:bg-ninja-blue hover:text-white transition-colors"
+                          >
+                            Log
+                          </button>
+                        ) : (
+                          <span className="text-ninja-muted text-lg cursor-pointer hover:text-ninja-navy transition-colors">···</span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
-              </div>
-
-              {/* Desktop table */}
-              <div className="hidden md:block">
-                <table className="w-full min-w-[640px]">
-                  <thead className="sticky top-0 z-10">
-                    <tr className="border-b border-ninja-border bg-ninja-bg">
-                      {isManager && (
-                        <th className="px-4 py-3 w-10">
-                          <input
-                            type="checkbox"
-                            checked={sorted.length > 0 && selected.size === sorted.length}
-                            onChange={toggleAll}
-                            className="rounded border-ninja-border accent-ninja-blue cursor-pointer"
-                          />
-                        </th>
-                      )}
-                      <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3">Name</th>
-                      <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3">Program</th>
-                      <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3">Belt</th>
-                      <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3">Project</th>
-                      <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3">Status</th>
-                      <th className="text-left text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest px-4 py-3 hidden lg:table-cell">Last Activity</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sorted.length === 0 && (
-                      <tr>
-                        <td colSpan={isManager ? 7 : 6} className="text-center text-ninja-muted font-ninja py-12">No ninjas found</td>
-                      </tr>
-                    )}
-                    {sorted.map((s) => (
-                      <tr
-                        key={s.id}
-                        className={`border-b border-ninja-border/50 hover:bg-ninja-bg transition-colors ${selected.has(s.id) ? 'bg-blue-50' : ''}`}
-                      >
-                        {isManager && (
-                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="checkbox"
-                              checked={selected.has(s.id)}
-                              onChange={() => toggleSelect(s.id)}
-                              className="rounded border-ninja-border accent-ninja-blue cursor-pointer"
-                            />
-                          </td>
-                        )}
-                        <td className="px-4 py-3 font-ninja font-bold text-ninja-navy cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>{s.full_name}</td>
-                        <td className="px-4 py-3 cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
-                          <div className="flex flex-wrap gap-1">
-                            {(s.programs || []).map((p) => <ProgramBadge key={p.program} program={p.program} size="xs" />)}
-                            {(s.programs || []).length === 0 && <span className="text-ninja-muted font-ninja text-sm">—</span>}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
-                          {(() => {
-                            const create = (s.programs || []).find((p) => p.program === 'CREATE');
-                            return create?.belt_level
-                              ? <BeltBadge belt={create.belt_level} sublevel={create.belt_sublevel} size="xs" />
-                              : <span className="text-ninja-muted font-ninja text-sm">—</span>;
-                          })()}
-                        </td>
-                        <td className="px-4 py-3 cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
-                          <span className="text-ninja-muted font-ninja text-sm">
-                            {(s.programs || []).find((p) => p.program === 'CREATE')?.current_project || '—'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
-                          {(() => {
-                            const status = (s.programs || []).find((p) => p.program === 'CREATE')?.project_status;
-                            return status ? (
-                              <span className={`text-xs font-ninja font-semibold px-2 py-0.5 rounded-md ${
-                                status === 'Completed' ? 'bg-green-100 text-green-700'
-                                : status === 'Working On' ? 'bg-blue-100 text-blue-700'
-                                : 'bg-gray-100 text-gray-600'
-                              }`}>{status}</span>
-                            ) : <span className="text-ninja-muted font-ninja text-sm">—</span>;
-                          })()}
-                        </td>
-                        <td className="px-4 py-3 hidden lg:table-cell cursor-pointer" onClick={() => navigate(`/manager/students/${s.id}`)}>
-                          <span className="text-ninja-muted font-ninja text-sm">
-                            {s.last_activity ? formatDate(s.last_activity) : 'Never'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
