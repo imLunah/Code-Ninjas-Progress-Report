@@ -33,12 +33,26 @@ export default function TodayBoard({ assignments, onRemove }) {
     );
   }
 
-  const sorted = [...assignments].sort((a, b) => {
-    if (a.completed === b.completed) return 0;
-    return a.completed ? 1 : -1;
-  });
+  if (sorted.length === 0) {
+    return (
+      <div className="text-center py-12 text-ninja-muted font-ninja">
+        <p className="text-2xl mb-2">🎉</p>
+        <p className="text-lg font-bold text-ninja-navy">All {completedCount} ninja{completedCount !== 1 ? 's' : ''} logged!</p>
+        <p className="text-sm mt-1">Great session today.</p>
+      </div>
+    );
+  }
 
   const completedCount = assignments.filter((a) => a.completed).length;
+  // Only show pending/overdue — completed ninjas are tracked in the stat strip above
+  const sorted = [...assignments]
+    .filter((a) => !a.completed)
+    .sort((a, b) => {
+      const aOver = a.session_date && String(a.session_date).split('T')[0] < todayStr;
+      const bOver = b.session_date && String(b.session_date).split('T')[0] < todayStr;
+      if (aOver === bOver) return 0;
+      return aOver ? 1 : -1; // overdue at the end
+    });
 
   return (
     <>
@@ -47,10 +61,6 @@ export default function TodayBoard({ assignments, onRemove }) {
         {/* Legend + count */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 font-ninja text-sm text-ninja-muted">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />
-              Logged
-            </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block" />
               Pending
@@ -61,7 +71,7 @@ export default function TodayBoard({ assignments, onRemove }) {
             </span>
           </div>
           <span className="font-ninja font-bold text-sm text-ninja-navy">
-            {completedCount} / {assignments.length}
+            {completedCount} / {assignments.length} logged
           </span>
         </div>
 
