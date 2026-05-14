@@ -1,6 +1,32 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
+function LocationBar({ user, switchLocation }) {
+  if (user.role === 'manager') {
+    return (
+      <div className="px-4 py-1.5 border-b border-ninja-border bg-ninja-bg">
+        <select
+          value={user.activeLocation?.id ?? ''}
+          onChange={(e) => switchLocation(Number(e.target.value))}
+          className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-sm font-semibold focus:outline-none focus:border-ninja-blue transition-colors"
+        >
+          {user.availableLocations?.map((loc) => (
+            <option key={loc.id} value={loc.id}>{loc.name}</option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+  return (
+    <div className="px-4 py-1.5 border-b border-ninja-border bg-ninja-bg flex items-center gap-2">
+      <div className="w-5 h-5 rounded-md flex items-center justify-center text-ninja-blue bg-ninja-blue/10 font-ninja font-bold text-[10px] flex-shrink-0">
+        {user.activeLocation?.name?.slice(0, 2).toUpperCase() || '?'}
+      </div>
+      <span className="text-ninja-navy font-ninja text-sm font-semibold truncate">{user.activeLocation?.name ?? ''}</span>
+    </div>
+  );
+}
+
 function TodayIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,7 +71,7 @@ function AccountIcon({ profilePicUrl, initials }) {
 }
 
 export default function MobileNav() {
-  const { user } = useAuth();
+  const { user, switchLocation } = useAuth();
   if (!user) return null;
 
   const isManager = user.role === 'manager';
@@ -62,6 +88,7 @@ export default function MobileNav() {
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-ninja-border">
+      <LocationBar user={user} switchLocation={switchLocation} />
       <div className="flex items-stretch">
         {tabs.map((tab) => (
           <NavLink
