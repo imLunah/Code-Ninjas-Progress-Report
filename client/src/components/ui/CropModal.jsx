@@ -55,8 +55,8 @@ export default function CropModal({ imageSrc, onConfirm, onCancel, aspect = 1, c
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 40 }}
           transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-          className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col"
-          style={{ maxHeight: '92dvh' }}
+          className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+          style={{ maxHeight: '88vh' }}
         >
           {/* Header */}
           <div className="px-5 pt-5 pb-3 flex items-center justify-between border-b border-ninja-border flex-shrink-0">
@@ -65,7 +65,7 @@ export default function CropModal({ imageSrc, onConfirm, onCancel, aspect = 1, c
           </div>
 
           {/* Crop area */}
-          <div className="relative w-full bg-black flex-shrink-0 overflow-hidden" style={{ height: 260 }}>
+          <div className="relative w-full bg-black flex-shrink-0" style={{ height: 240 }}>
             <Cropper
               image={imageSrc}
               crop={crop}
@@ -80,29 +80,30 @@ export default function CropModal({ imageSrc, onConfirm, onCancel, aspect = 1, c
             />
           </div>
 
-          {/* Controls */}
-          <div
-            className="px-5 pt-4 space-y-4 overflow-y-auto flex-shrink-0"
-            style={{ paddingBottom: 'max(1.25rem, calc(env(safe-area-inset-bottom, 0px) + 1.25rem))' }}
-          >
+          {/* Sliders — scrollable if screen is short */}
+          <div className="px-5 pt-4 pb-3 space-y-4 overflow-y-auto flex-1 min-h-0">
             <Slider label="Zoom" value={zoom} min={1} max={3} step={0.05} onChange={setZoom} />
             <Slider label="Rotation" value={rotation} min={-180} max={180} step={1} onChange={setRotation} />
+          </div>
 
-            <div className="flex gap-2 pt-1">
-              <button
-                onClick={onCancel}
-                className="flex-1 py-2.5 rounded-xl border border-ninja-border text-ninja-navy font-ninja font-semibold text-sm hover:bg-ninja-bg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirm}
-                disabled={processing}
-                className="flex-1 py-2.5 rounded-xl bg-ninja-blue text-white font-ninja font-bold text-sm hover:bg-ninja-blue-hover transition-colors disabled:opacity-60"
-              >
-                {processing ? 'Saving…' : 'Save Photo'}
-              </button>
-            </div>
+          {/* Buttons — always pinned to bottom */}
+          <div
+            className="px-5 pt-3 pb-5 flex gap-2 flex-shrink-0 border-t border-ninja-border"
+            style={{ paddingBottom: 'max(1.25rem, calc(env(safe-area-inset-bottom, 0px) + 1.25rem))' }}
+          >
+            <button
+              onClick={onCancel}
+              className="flex-1 py-2.5 rounded-xl border border-ninja-border text-ninja-navy font-ninja font-semibold text-sm hover:bg-ninja-bg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirm}
+              disabled={processing}
+              className="flex-1 py-2.5 rounded-xl bg-ninja-blue text-white font-ninja font-bold text-sm hover:bg-ninja-blue-hover transition-colors disabled:opacity-60"
+            >
+              {processing ? 'Saving…' : 'Save Photo'}
+            </button>
           </div>
         </motion.div>
       </motion.div>
