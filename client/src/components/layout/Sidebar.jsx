@@ -26,12 +26,6 @@ function NavIcon({ id }) {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 12v5c3 3 9 3 12 0v-5"/>
     </svg>
   );
-  if (id === 'classes') return (
-    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="2"/>
-      <path strokeLinecap="round" strokeWidth="2" d="M3 9h18M9 21V9"/>
-    </svg>
-  );
   return null;
 }
 
@@ -54,7 +48,6 @@ export default function Sidebar() {
     { to: '/manager/dashboard', label: "Today's Board", icon: 'today' },
     { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
     { to: '/clubs', label: 'Clubs', icon: 'clubs' },
-    { to: '/manager/classes', label: 'Classes', icon: 'classes' },
     { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
   ];
 
@@ -62,7 +55,6 @@ export default function Sidebar() {
     { to: '/sensei/dashboard', label: "Today's Board", icon: 'today' },
     { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
     { to: '/clubs', label: 'Clubs', icon: 'clubs' },
-    { to: '/manager/classes', label: 'Classes', icon: 'classes' },
     { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
   ];
 
