@@ -13,12 +13,12 @@
 }
 
 .dark {
-  --ninja-bg:          13 13 13;
-  --ninja-border:      38 38 38;
+  --ninja-bg:          20 20 20;
+  --ninja-border:      46 46 46;
   --ninja-blue:        56 161 255;
   --ninja-blue-hover:  28 138 255;
-  --ninja-navy:        225 234 248;
-  --ninja-muted:       100 116 139;
+  --ninja-navy:        204 212 224;
+  --ninja-muted:       90 100 112;
 }
 
 /* ── Base ── */
@@ -39,16 +39,16 @@ body {
     box-shadow 0.28s ease !important;
 }
 
-/* ── Dark mode surface override (bg-white → charcoal card) ── */
+/* ── Dark mode surface override (bg-white → Cursor-style card) ── */
 .dark .bg-white {
-  background-color: #1a1a1a;
+  background-color: #1e1e1e;
 }
 
 /* ── Dark mode: input / select fields ── */
 .dark input,
 .dark select,
 .dark textarea {
-  background-color: #222222;
+  background-color: #272727;
   color: rgb(var(--ninja-navy));
 }
 .dark input::placeholder,
