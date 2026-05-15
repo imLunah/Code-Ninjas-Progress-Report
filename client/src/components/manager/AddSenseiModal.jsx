@@ -96,7 +96,7 @@ export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
             value={form.display_name}
             onChange={handleChange}
             required
-            placeholder={role === 'sensei' ? 'e.g. Alex Kim → saved as Sensei Alex Kim' : 'e.g. Jordan Smith'}
+            placeholder={role === 'sensei' ? 'e.g. Alex Kim' : 'e.g. Jordan Smith'}
             className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
           />
           {role === 'sensei' && form.display_name.trim() && !form.display_name.trim().toLowerCase().startsWith('sensei ') && (
