@@ -22,7 +22,6 @@ const ASSIGNMENT_SELECT = `
     u.display_name as sensei_name,
     (SELECT COUNT(*) FROM daily_assignments da2
      WHERE da2.student_id = da.student_id
-       AND da2.program = da.program
        AND da2.session_date = da.session_date
        AND da2.created_at <= da.created_at) AS session_number
   FROM daily_assignments da
