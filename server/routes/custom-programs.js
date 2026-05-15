@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { requireAuth, requireManager, requireOwnLocation } = require('../middleware/auth');
+const { requireAuth, requireManager, requireSensei, requireOwnLocation } = require('../middleware/auth');
 
 // GET /api/custom-programs — list with full module+lesson tree for current location
 router.get('/', requireAuth, async (req, res) => {
@@ -99,8 +99,8 @@ router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
   }
 });
 
-// POST /api/custom-programs/:id/modules — add a module
-router.post('/:id/modules', requireManager, requireOwnLocation, async (req, res) => {
+// POST /api/custom-programs/:id/modules — add a module (any staff)
+router.post('/:id/modules', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { name } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'Name is required' });
@@ -127,8 +127,8 @@ router.post('/:id/modules', requireManager, requireOwnLocation, async (req, res)
   }
 });
 
-// PATCH /api/custom-programs/:id/modules/:moduleId — rename module
-router.patch('/:id/modules/:moduleId', requireManager, requireOwnLocation, async (req, res) => {
+// PATCH /api/custom-programs/:id/modules/:moduleId — rename module (any staff)
+router.patch('/:id/modules/:moduleId', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { name } = req.body;
 
@@ -145,8 +145,8 @@ router.patch('/:id/modules/:moduleId', requireManager, requireOwnLocation, async
   }
 });
 
-// DELETE /api/custom-programs/:id/modules/:moduleId
-router.delete('/:id/modules/:moduleId', requireManager, requireOwnLocation, async (req, res) => {
+// DELETE /api/custom-programs/:id/modules/:moduleId (any staff)
+router.delete('/:id/modules/:moduleId', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   try {
     const { rows } = await pool.query(
@@ -160,8 +160,8 @@ router.delete('/:id/modules/:moduleId', requireManager, requireOwnLocation, asyn
   }
 });
 
-// POST /api/custom-programs/:id/modules/:moduleId/lessons — add a lesson
-router.post('/:id/modules/:moduleId/lessons', requireManager, requireOwnLocation, async (req, res) => {
+// POST /api/custom-programs/:id/modules/:moduleId/lessons — add a lesson (any staff)
+router.post('/:id/modules/:moduleId/lessons', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { name } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'Name is required' });
@@ -190,8 +190,8 @@ router.post('/:id/modules/:moduleId/lessons', requireManager, requireOwnLocation
   }
 });
 
-// PATCH /api/custom-programs/:id/modules/:moduleId/lessons/:lessonId
-router.patch('/:id/modules/:moduleId/lessons/:lessonId', requireManager, requireOwnLocation, async (req, res) => {
+// PATCH /api/custom-programs/:id/modules/:moduleId/lessons/:lessonId (any staff)
+router.patch('/:id/modules/:moduleId/lessons/:lessonId', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { name } = req.body;
 
@@ -208,8 +208,8 @@ router.patch('/:id/modules/:moduleId/lessons/:lessonId', requireManager, require
   }
 });
 
-// DELETE /api/custom-programs/:id/modules/:moduleId/lessons/:lessonId
-router.delete('/:id/modules/:moduleId/lessons/:lessonId', requireManager, requireOwnLocation, async (req, res) => {
+// DELETE /api/custom-programs/:id/modules/:moduleId/lessons/:lessonId (any staff)
+router.delete('/:id/modules/:moduleId/lessons/:lessonId', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   try {
     const { rows } = await pool.query(
