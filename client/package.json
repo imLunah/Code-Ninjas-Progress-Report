@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
+    "@vercel/analytics": "^2.0.1",
     "emoji-picker-react": "^4.19.1",
     "framer-motion": "^12.38.0",
     "papaparse": "^5.5.3",
