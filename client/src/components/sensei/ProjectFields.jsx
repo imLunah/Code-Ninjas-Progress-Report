@@ -1,10 +1,19 @@
 import { PROJECTS, STATUSES, BELT_LEVEL_PROJECTS, getLevelProjects } from '../../utils/beltConfig';
 
+const UPPER_BELTS = ['Purple', 'Brown', 'Red'];
+
+function getSectionLabel(index, total) {
+  if (index === total - 1) return 'Adventure';
+  const num = Math.floor(index / 2) + 1;
+  return index % 2 === 0 ? `Build ${num}` : `Solve ${num}`;
+}
+
 export default function ProjectFields({ project, setProject, status, setStatus, beltLevel, beltSublevel }) {
   const levelProjects = getLevelProjects(beltLevel, beltSublevel);
   const projectOptions = levelProjects ?? PROJECTS;
   const hasBeltProjects = beltLevel && !!BELT_LEVEL_PROJECTS[beltLevel];
   const needsSublevel = hasBeltProjects && (!beltSublevel || parseInt(beltSublevel) < 1);
+  const showLabels = levelProjects && !UPPER_BELTS.includes(beltLevel);
 
   return (
     <div className="space-y-3">
@@ -21,9 +30,12 @@ export default function ProjectFields({ project, setProject, status, setStatus, 
             className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
           >
             <option value="">Select project...</option>
-            {projectOptions.map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
+            {projectOptions.map((p, i) => {
+              const label = showLabels
+                ? `${getSectionLabel(i, projectOptions.length)}: ${p}`
+                : p;
+              return <option key={p} value={p}>{label}</option>;
+            })}
           </select>
         )}
       </div>
