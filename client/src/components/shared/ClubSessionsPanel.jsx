@@ -22,6 +22,18 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpda
   const { user, isReadOnly } = useAuth();
   const isManager = user?.role === 'manager';
 
+  const todayStr = today();
+
+  // Only show sessions that haven't been logged yet (no notes); sort overdue first
+  const pendingSessions = [...sessions]
+    .filter((s) => !s.notes)
+    .sort((a, b) => {
+      const aOver = String(a.session_date).split('T')[0] < todayStr;
+      const bOver = String(b.session_date).split('T')[0] < todayStr;
+      if (aOver === bOver) return 0;
+      return aOver ? -1 : 1;
+    });
+
   const [expanded, setExpanded] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
 
@@ -92,22 +104,16 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpda
         )}
       </div>
 
-      {sessions.length === 0 ? (
-        <p className="text-ninja-muted font-ninja text-sm text-center py-6 italic">No club sessions logged yet.</p>
+      {pendingSessions.length === 0 ? (
+        <p className="text-ninja-muted font-ninja text-sm text-center py-6 italic">No pending club sessions.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {sessions.map((s) => {
+          {pendingSessions.map((s) => {
             const isOpen = expanded === s.id;
             const isEditingAttendees = editingAttendeesId === s.id;
-            const todayStr = today();
             const sessionDateStr = String(s.session_date).split('T')[0];
-            const isLogged = !!s.notes;
             const isPast = sessionDateStr < todayStr;
-            const borderClass = isLogged
-              ? 'border-green-400'
-              : isPast
-              ? 'border-red-400'
-              : 'border-yellow-300';
+            const borderClass = isPast ? 'border-red-400' : 'border-yellow-300';
 
             return (
               <div key={s.id} className={`bg-white border ${borderClass} rounded-xl shadow-sm p-4 flex flex-col gap-3`}>
@@ -195,14 +201,6 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpda
                       )}
                     </div>
                   )
-                )}
-
-                {/* Notes preview */}
-                {s.notes && (
-                  <p className="text-ninja-navy font-ninja text-sm line-clamp-2">{s.notes}</p>
-                )}
-                {s.sensei_name && s.notes && (
-                  <p className="text-ninja-muted font-ninja text-xs">Notes by {s.sensei_name}</p>
                 )}
 
                 {/* Log Progress — opens session detail with notes + comment thread */}
