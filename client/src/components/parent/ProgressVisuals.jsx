@@ -570,7 +570,7 @@ function ModuleProgress({ program, enrollment, logs }) {
 // ─── Custom program progress card ────────────────────────────────────────────
 
 function CustomProgramProgress({ enrollment, logs }) {
-  const name = enrollment.display_name || enrollment.program;
+  const name = enrollment.program;
   const pct = enrollment.percent_complete ?? 0;
   const totalSessions = logs.length;
   const lastDate = enrollment.last_session_date;
@@ -610,8 +610,8 @@ function CustomProgramProgress({ enrollment, logs }) {
 
 export default function ProgressVisuals({ programs, sessionLogs }) {
   const create = programs.find((p) => p.program === 'CREATE');
-  const others = programs.filter((p) => p.program !== 'CREATE' && !p.program?.startsWith('custom_'));
-  const customs = programs.filter((p) => p.program?.startsWith('custom_'));
+  const others = programs.filter((p) => p.program !== 'CREATE' && !p.is_custom);
+  const customs = programs.filter((p) => p.is_custom);
 
   return (
     <div className="space-y-4">

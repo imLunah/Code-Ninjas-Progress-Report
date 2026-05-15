@@ -159,14 +159,21 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     const lastModuleName = lastEntry.module_name;
     const lastSubProgram = lastEntry.sub_program;
 
-    if (program.startsWith('custom_') && lastModuleName) {
+    // Check if this is a custom program (name-based lookup, no prefix needed)
+    const { rows: cpLookup } = await pool.query(
+      'SELECT id FROM custom_programs WHERE name = $1 AND location_id = $2 AND is_active = true',
+      [program, req.session.activeLocationId]
+    );
+    const isCustomProgram = !!cpLookup[0];
+    const customProgramId = cpLookup[0]?.id ?? null;
+
+    if (isCustomProgram && lastModuleName) {
       // Custom program: percent = distinct (module, lesson) pairs logged / total lessons in program
-      const programId = parseInt(program.replace('custom_', ''), 10);
       const { rows: totalRows } = await pool.query(
         `SELECT COUNT(*) AS cnt FROM custom_program_lessons cpl
          JOIN custom_program_modules cpm ON cpl.module_id = cpm.id
          WHERE cpm.custom_program_id = $1`,
-        [programId]
+        [customProgramId]
       );
       const totalLessons = parseInt(totalRows[0].cnt);
       if (totalLessons > 0) {
@@ -234,7 +241,7 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
           }
         }
       }
-    } else if (program !== 'CREATE' && program !== 'AI Academy' && program !== 'JR' && lastModuleName) {
+    } else if (program !== 'CREATE' && program !== 'AI Academy' && program !== 'JR' && !isCustomProgram && lastModuleName) {
       const lookupKey = lastSubProgram || program;
       const totalModules = CURRICULUM_MODULE_COUNTS[lookupKey];
       if (totalModules) {
