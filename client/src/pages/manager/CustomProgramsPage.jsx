@@ -4,6 +4,7 @@ import Layout from '../../components/layout/Layout';
 import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
 import { useCustomPrograms } from '../../context/CustomProgramsContext';
+import { useAuth } from '../../context/AuthContext';
 
 function LessonRow({ lesson, programId, moduleId, onUpdate, onDelete }) {
   const [editing, setEditing] = useState(false);
@@ -176,7 +177,7 @@ function ModuleCard({ mod, programId, onUpdate, onDelete }) {
   );
 }
 
-function ProgramCard({ program, onUpdate, onDelete }) {
+function ProgramCard({ program, onUpdate, onDelete, isManager }) {
   const [expanded, setExpanded] = useState(false);
   const [addingModule, setAddingModule] = useState(false);
   const [moduleDraft, setModuleDraft] = useState('');
@@ -246,7 +247,7 @@ function ProgramCard({ program, onUpdate, onDelete }) {
       <div className="p-5">
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
-            {editingName ? (
+            {editingName && isManager ? (
               <div className="flex items-center gap-2">
                 <input
                   autoFocus
@@ -261,7 +262,7 @@ function ProgramCard({ program, onUpdate, onDelete }) {
             ) : (
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-ninja font-bold text-ninja-navy">{program.name}</h2>
-                <button onClick={() => setEditingName(true)} className="text-xs font-ninja text-ninja-muted hover:text-ninja-blue transition-colors">Rename</button>
+                {isManager && <button onClick={() => setEditingName(true)} className="text-xs font-ninja text-ninja-muted hover:text-ninja-blue transition-colors">Rename</button>}
               </div>
             )}
 
@@ -279,9 +280,11 @@ function ProgramCard({ program, onUpdate, onDelete }) {
                 {program.description ? (
                   <p className="text-sm font-ninja text-ninja-muted">{program.description}</p>
                 ) : null}
-                <button onClick={() => { setDescDraft(program.description || ''); setEditingDesc(true); }} className="text-xs font-ninja text-ninja-muted hover:text-ninja-blue transition-colors">
-                  {program.description ? 'Edit description' : '+ Add description'}
-                </button>
+                {isManager && (
+                  <button onClick={() => { setDescDraft(program.description || ''); setEditingDesc(true); }} className="text-xs font-ninja text-ninja-muted hover:text-ninja-blue transition-colors">
+                    {program.description ? 'Edit description' : '+ Add description'}
+                  </button>
+                )}
               </div>
             )}
             {editingDesc && (
@@ -303,7 +306,7 @@ function ProgramCard({ program, onUpdate, onDelete }) {
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            {confirming ? (
+            {isManager && (confirming ? (
               <div className="flex items-center gap-2">
                 <span className="text-xs font-ninja text-ninja-muted">Archive class?</span>
                 <button onClick={archive} className="text-xs font-ninja font-semibold text-ninja-red hover:underline">Yes</button>
@@ -311,7 +314,7 @@ function ProgramCard({ program, onUpdate, onDelete }) {
               </div>
             ) : (
               <button onClick={() => setConfirming(true)} className="text-xs font-ninja text-ninja-muted hover:text-ninja-red transition-colors">Archive</button>
-            )}
+            ))}
             <button
               onClick={() => setExpanded((v) => !v)}
               className="text-ninja-muted hover:text-ninja-blue transition-colors"
@@ -383,6 +386,8 @@ function ProgramCard({ program, onUpdate, onDelete }) {
 
 export default function CustomProgramsPage() {
   const { programs, setPrograms } = useCustomPrograms();
+  const { user } = useAuth();
+  const isManager = user?.role === 'manager';
   const [creating, setCreating] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [saving, setSaving] = useState(false);
@@ -417,9 +422,11 @@ export default function CustomProgramsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-ninja font-bold text-ninja-navy">Custom Classes</h1>
-            <p className="text-ninja-muted font-ninja text-sm mt-1">Define your own programs with custom modules and lessons.</p>
+            <p className="text-ninja-muted font-ninja text-sm mt-1">
+              {isManager ? 'Create classes and define their curriculum.' : 'Add modules and lessons to existing classes.'}
+            </p>
           </div>
-          {!creating && (
+          {isManager && !creating && (
             <Button onClick={() => setCreating(true)}>+ New Class</Button>
           )}
         </div>
@@ -458,8 +465,14 @@ export default function CustomProgramsPage() {
         {programs.length === 0 && !creating && (
           <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-10 text-center">
             <p className="text-ninja-muted font-ninja text-lg font-semibold mb-2">No custom classes yet</p>
-            <p className="text-ninja-muted font-ninja text-sm mb-4">Create a class to define your own curriculum with modules and lessons.</p>
-            <Button onClick={() => setCreating(true)}>+ New Class</Button>
+            {isManager ? (
+              <>
+                <p className="text-ninja-muted font-ninja text-sm mb-4">Create a class to define your own curriculum with modules and lessons.</p>
+                <Button onClick={() => setCreating(true)}>+ New Class</Button>
+              </>
+            ) : (
+              <p className="text-ninja-muted font-ninja text-sm">Ask a Center Director to create a class first.</p>
+            )}
           </div>
         )}
 
@@ -470,6 +483,7 @@ export default function CustomProgramsPage() {
               program={prog}
               onUpdate={updateProgram}
               onDelete={deleteProgram}
+              isManager={isManager}
             />
           ))}
         </div>
