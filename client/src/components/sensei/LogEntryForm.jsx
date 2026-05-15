@@ -110,11 +110,11 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const { programs: customPrograms } = useCustomPrograms();
+  const { programs: customPrograms, isCustomProgram } = useCustomPrograms();
   const isCreate = program === 'CREATE';
-  const isCustom = program?.startsWith('custom_');
+  const isCustom = isCustomProgram(program);
   const customProgram = isCustom
-    ? customPrograms.find((cp) => `custom_${cp.id}` === program) || null
+    ? customPrograms.find((cp) => cp.name === program) || null
     : null;
   const customCurriculum = customProgram?.modules?.length > 0 ? customProgram.modules : null;
   const sessionDate = sessionDateProp || today();
