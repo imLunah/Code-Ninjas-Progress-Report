@@ -1,3 +1,5 @@
+import { useCustomPrograms } from '../../context/CustomProgramsContext';
+
 const PROGRAM_COLORS = {
   'CREATE': 'bg-blue-100 text-blue-700',
   'Robotics Academy': 'bg-purple-100 text-purple-700',
@@ -5,10 +7,13 @@ const PROGRAM_COLORS = {
   'JR': 'bg-green-100 text-green-700',
 };
 
-export default function ProgramBadge({ program, size = 'sm' }) {
+export default function ProgramBadge({ program, displayName: displayNameProp, size = 'sm' }) {
+  const { resolve } = useCustomPrograms();
   if (!program) return null;
 
-  const colorClass = PROGRAM_COLORS[program] || 'bg-gray-100 text-gray-600';
+  const isCustom = program.startsWith('custom_');
+  const displayName = displayNameProp || (isCustom ? resolve(program) : program);
+  const colorClass = isCustom ? 'bg-orange-100 text-orange-700' : (PROGRAM_COLORS[program] || 'bg-gray-100 text-gray-600');
 
   const sizeClasses = {
     xs: 'text-xs px-1.5 py-0.5',
@@ -17,10 +22,8 @@ export default function ProgramBadge({ program, size = 'sm' }) {
   };
 
   return (
-    <span
-      className={`inline-block rounded-md font-ninja font-bold ${sizeClasses[size]} ${colorClass}`}
-    >
-      {program}
+    <span className={`inline-block rounded-md font-ninja font-bold ${sizeClasses[size]} ${colorClass}`}>
+      {displayName}
     </span>
   );
 }

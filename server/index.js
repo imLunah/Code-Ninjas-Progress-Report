@@ -55,6 +55,7 @@ app.use('/api/daily', require('./routes/daily'));
 app.use('/api/progress', require('./routes/progress'));
 app.use('/api/clubs', require('./routes/clubs'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/custom-programs', require('./routes/custom-programs'));
 
 
 if (process.env.NODE_ENV === 'production') {

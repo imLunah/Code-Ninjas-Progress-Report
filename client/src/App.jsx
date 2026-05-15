@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ParentAuthProvider } from './context/ParentAuthContext';
+import { CustomProgramsProvider } from './context/CustomProgramsContext';
+import CustomProgramsPage from './pages/manager/CustomProgramsPage';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import ParentRoute from './components/layout/ParentRoute';
 
@@ -43,6 +45,7 @@ export default function App() {
     <BrowserRouter>
       <ParentAuthProvider>
       <AuthProvider>
+        <CustomProgramsProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<RoleRedirect />} />
@@ -152,6 +155,16 @@ export default function App() {
             element={<ParentRoute><ParentStudentProfile /></ParentRoute>}
           />
 
+          {/* Custom Classes */}
+          <Route
+            path="/manager/classes"
+            element={
+              <ProtectedRoute role="manager">
+                <CustomProgramsPage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Account settings */}
           <Route
             path="/account"
@@ -165,6 +178,7 @@ export default function App() {
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </CustomProgramsProvider>
       </AuthProvider>
       </ParentAuthProvider>
     </BrowserRouter>
