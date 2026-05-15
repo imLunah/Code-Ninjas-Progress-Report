@@ -1,5 +1,5 @@
 # PROJECT CONTINUATION DOCUMENT
-## Session 6 — 14 May 2026
+## Session 7 — 15 May 2026
 
 ---
 
@@ -44,6 +44,8 @@
   - Mobile logout: Account page now has a "Sign Out" button visible on all screen sizes
   - Parent "Note for Senseis" (`special_instructions`) displayed read-only on LogProgressPage so senseis can see parent notes while logging
   - Parent note from sensei feature removed (was `ParentNote.jsx` + `parent_note` DB field usage) — concept scrapped, component deleted
+  - **JR sequential progress:** JR Coding tracks highest module reached (all prior credited). Snap Circuits tracks highest Project N / 24. `jr_percent_complete` in `student_monthly_summary` view for Zapier.
+  - **CREATE belt curriculum with full project names:** `beltConfig.js` has `BELT_LEVEL_PROJECTS` covering White–Red. Project dropdown shows actual game titles with Build/Solve/Adventure section labels (White–Blue) or plain titles (Purple/Brown/Red).
 
 - **Partially built:**
   - "Keep me signed in" checkbox on login — UI only, not functional server-side
@@ -84,6 +86,7 @@
   - `client/src/components/ui/CropModal.jsx` — photo crop/rotate modal (react-easy-crop)
   - `client/src/utils/cropImage.js` — canvas getCroppedImg utility
   - `client/src/utils/progressData.js` — full curriculum data (large file ~11KB)
+  - `client/src/utils/beltConfig.js` — belt metadata + full `BELT_LEVEL_PROJECTS` map (White–Red game titles)
   - `server/routes/` — auth, users, students, clubs, progress, parent, daily
   - `vercel.json` — build command + rewrite rules
   - `api/index.js` — `module.exports = require('../server/index.js')` (Vercel serverless entry)
@@ -110,6 +113,12 @@
 
 ### 4. RECENT WORK — WHAT JUST HAPPENED
 
+- **What was worked on (Session 7 — 15 May 2026):**
+  1. **Custom Classes — built and fully removed:** A complete custom program feature was built (managers create programs with modules/lessons, full check-in and progress tracking, parent portal integration, Zapier view columns). User then requested it be removed entirely. All code, routes, context, pages, DB tables (`custom_programs`, `custom_program_modules`, `custom_program_lessons`), and view columns were deleted. `ProgramBadge` simplified back to a self-contained component with no context dependency. Nav tabs (Classes) removed from Sidebar and MobileNav. This feature does NOT exist in the codebase — do not reference it.
+  2. **`student_programs_current_project_check` constraint dropped:** This DB constraint only allowed `['Build 1', 'Build 2', 'Build 3', 'Solve 1', 'Solve 2', 'Solve 3', 'Adventure']` for `current_project`. Broke progress logging once full game titles from `beltConfig.js` were introduced in Session 6. Dropped via migration — `current_project` now accepts any string.
+  3. **JR sequential progress (built this session):** `POST /api/progress` now computes JR percent_complete sequentially: JR Coding uses highest module index reached (all prior credited, not distinct count); Snap Circuits uses highest "Project N" number / 24. `student_monthly_summary` view gained `jr_percent_complete` column.
+  4. **Parent portal JR visuals:** `ProgressVisuals.jsx` shows per-kit progress for JR — JR Coding has module dot grid (greened up to highest reached), Snap Circuits shows "Project X of 24" progress bar.
+
 - **What was worked on (Session 6 — 14 May 2026):**
   1. **CREATE belt curriculum — full project names:** `beltConfig.js` now contains `BELT_LEVEL_PROJECTS` covering all belts (White through Red). Each belt level maps to its actual project names from the "Belt Project Names.md" curriculum doc. Project dropdown on the CREATE log form shows these names once a sublevel is selected.
   2. **Section labels on project dropdown:** White–Blue belts show `Build 1: [name]`, `Solve 1: [name]`, …, `Adventure: [name]` — label derived from array position (even=Build, odd=Solve, last=Adventure). Purple/Brown/Red show plain game titles only.
@@ -131,49 +140,31 @@
   7. **Parent note on log page:** Removed `ParentNote` component (sensei→parent note, now scrapped). Replaced with read-only display of `student.special_instructions` (parent's "Note for Senseis") shown as a blue card on LogProgressPage — senseis see what parents wrote, without being able to edit it from there
   8. **Parent portal cleanup:** Removed "Note from Your Sensei" block from `ParentStudentProfile.jsx` (was reading `parent_note` which is no longer written anywhere); deleted `ParentNote.jsx`
 
-- **What was worked on (Session 4 — 14 May 2026):**
-  1. **Club cover photo crop:** `ClubInfoCard` in `ClubProfilePage.jsx` now reads the selected file as a DataURL → opens `CropModal` with `aspect={16/9}` and `cropShape="rect"` → uploads cropped JPEG blob to Supabase `club-resources` bucket at path `covers/{clubDef.id}/{timestamp}.jpg`
-  2. **CropModal now accepts props:** Added `aspect` (default `1`) and `cropShape` (default `'round'`) props — AccountPage uses defaults (no change needed), ClubInfoCard passes 16/9 rect
-  3. **CropModal mobile layout fix:** Restructured to `flex flex-col overflow-hidden max-h-[88vh]` — header (`flex-shrink-0`), crop area (`flex-shrink-0`, 240px), sliders (`flex-1 min-h-0 overflow-y-auto`), buttons (`flex-shrink-0` pinned to bottom). Buttons are now always visible regardless of screen height.
-  4. **MobileNav z-index fix:** Changed `MobileNav` from `z-50` → `z-40`. Root cause: both MobileNav and all modals were `z-50`; since MobileNav renders later in the DOM it was winning the tie, painting the LocationBar ("Yorba Linda" select) on top of modal buttons and hiding them entirely.
-  5. **SenseiProfileModal scrollable + swipe-dismiss:** Added `max-height: 90vh` with `flex flex-col overflow-hidden`; hero header is `flex-shrink-0`; content area (logs + manager actions) is `overflow-y-auto flex-1 min-h-0`. Removed Framer Motion `drag` (was applying `touch-action: none` which blocked all child scrolling). Replaced with raw `onTouchStart`/`onTouchEnd` on the hero header — swipe down 80px closes the sheet. Drag handle pill is now a full-width `h-8` tap button (much easier to hit than old `h-1`).
-
-- **What was worked on (Session 3 — 14 May 2026):**
-  1. **Profile pic visibility fix:** `GET /api/users` (role=sensei) and `GET /api/users/:id` were not selecting `profile_pic_url` — added to both queries so other accounts can see uploaded photos
-  2. **Staff list avatars:** Each row on StaffPage now shows a circular profile pic (or initials fallback) before the sensei name
-  3. **Staff page Framer animations:** Stat cards and sensei rows now animate in with staggered fade-up (60ms per row)
-  4. **Inline buttons removed from StaffPage rows:** "Edit Login" and "Remove" buttons fully removed from the sensei list rows on all screen sizes
-  5. **Modal buttons always visible:** SenseiProfileModal manager actions (Edit Login + Remove) were `sm:hidden` (mobile only) — removed that restriction so they always appear at the bottom of the profile sheet
-  6. **"Add Again" for check-ins:** `AddStudentToday` was disabling the Add button once a student/program was already on the board — changed to show "Add Again" and stay enabled for multiple check-ins
-
-- **What was worked on (Session 2 — 14 May 2026):**
-  1. **Multiple check-ins per day:** Dropped unique constraint `daily_assignments_student_program_date_key` on `(student_id, program, session_date)` — managers can now check a ninja into the same program multiple times in one day (makeup classes, double sessions)
-  2. **Session number badges:** Today's Board shows a purple "Session 2 / Session 3" badge on cards that are the 2nd+ check-in for the same student/program/day
-  3. **Assignment completion fix:** `POST /api/progress` now marks only the **oldest pending** assignment complete (by `id`) — previously updated all matching assignments, which would have incorrectly completed both at once
-  4. **Multi-lesson log form:** `LogEntryForm.jsx` refactored — non-CREATE programs now have a `LessonEntryRow` component array with a "+ Add Another Lesson" dashed button. Each row has its own kit/module/lesson selectors. Shared notes field covers all lessons.
-  5. **Backend multi-lesson support:** `POST /api/progress` accepts a `lesson_entries` array; inserts one `progress_logs` row per lesson. `student_programs` is updated with the last entry's lesson position. `percent_complete` recalculated after all inserts. Backward compatible — falls back to single-lesson fields if no array.
-  6. Submit button updates to "Log N Lessons" when multiple entries are present.
-
-- **What was worked on (Session 1 — 14 May 2026):**
-  1. Mobile navigation: registered `MobileNav.jsx` in Layout, added location switcher, made Senseis tab visible to all staff roles
-  2. StaffPage mobile: hid inline Edit Login/Remove buttons on mobile (sm:hidden), moved them into SenseiProfileModal footer
-  3. SenseiProfileModal: full Framer Motion redesign — navy hero header, circular avatar, role badge, stat cards, staggered log feed, CN star watermark
-  4. Fixed orphaned `</div>` in SenseiProfileModal that caused Vercel build failures
-  5. Fixed `/parent/me` returning 401 (changed to 200 null) — was flooding console on every staff page
-  6. Vite chunk splitting: all major vendors split into separate chunks, chunkSizeWarningLimit: 600
-  7. UI overhaul: Framer Motion added to TodayBoard, ManagerDashboard stats, ClubsPage, AccountPage
-  8. Login page: full redesign — white bg, left-aligned, tab switcher (Sensei/Director ↔ Parent) with spring sliding indicator, username+password with eye toggle, animated checkbox, alpha modal. No floating background elements.
-  9. Parent tab: inline email field calling `useParentAuth.login()` directly
-  10. Parent sign-out: redirects to `/login?tab=parent`
-  11. Profile photos: Supabase RLS policies added for `profile-pics` bucket (anon insert/update/select)
-  12. Photo crop modal: `CropModal.jsx` + `cropImage.js` — file → DataURL → crop → canvas → blob → Supabase upload
+- **What was worked on (Sessions 1–4 — 14 May 2026):**
+  - Multiple check-ins per day, session number badges, multi-lesson log form, SenseiProfileModal redesign, profile photos, crop modals, Framer Motion animations — all detailed in prior session entries.
 
 - **Decisions made and why:**
-  - **Multiple check-ins, manager only:** Only managers can add duplicate check-ins — senseis cannot, consistent with existing check-in permission model
-  - **Mark oldest pending assignment:** When logging, mark the first (oldest) incomplete assignment complete so second check-in stays open — not all assignments for that student/program/date
-  - **Multi-lesson uses shared notes:** One notes field for the whole session — avoids per-lesson note overhead for senseis
-  - **CREATE excluded from multi-lesson UI:** CREATE tracks belt/project snapshots, not lesson lists — the multi-lesson row UI only appears for programs with curriculum (Robotics, AI Academy, JR)
-  - **Backward-compatible API:** `lesson_entries` array is optional; single-lesson submissions still work unchanged
+  - **Custom Classes removed:** User decided the feature concept didn't fit. Entire feature (code + DB) torn out cleanly. Do not re-introduce.
+  - **`current_project` constraint dropped:** The old constraint was a leftover from before full game titles existed. Now that `beltConfig.js` has real project names, any string must be allowed.
+  - **JR sequential vs. distinct progress:** "If student starts at Module 5, prior modules are credited." Solved with `MAX(module_index)` not `COUNT(DISTINCT)`.
+
+- **What changed in the system (Session 7):**
+  - DB: dropped `student_programs_current_project_check` constraint (was blocking full game titles)
+  - DB: dropped `custom_programs`, `custom_program_modules`, `custom_program_lessons` tables
+  - DB: `student_monthly_summary` view — added `jr_percent_complete` column (at end); removed `custom_programs_this_month`/`custom_sessions_this_month` columns (added and removed same session)
+  - `server/routes/progress.js`: JR sequential logic added; custom program block removed
+  - `server/routes/daily.js`: custom program auto-enrollment block removed; back to standard enrollment check only
+  - `server/routes/parent.js`: `is_custom` field removed from programs subquery
+  - `server/index.js`: `custom-programs` route registration removed
+  - `client/src/components/ui/ProgramBadge.jsx`: simplified — no context dependency, no `isCustom` prop, just PROGRAM_COLORS map + gray fallback
+  - `client/src/components/layout/Sidebar.jsx`: Classes link removed from both managerLinks and senseiLinks; classes NavIcon removed
+  - `client/src/components/layout/MobileNav.jsx`: Classes tab and `ClassesIcon` removed
+  - `client/src/App.jsx`: `CustomProgramsProvider` wrapper removed; `/manager/classes` route removed
+  - `client/src/components/manager/AddStudentToday.jsx`: custom programs appending removed
+  - `client/src/components/sensei/LogEntryForm.jsx`: custom program detection removed; `LessonEntryRow` simplified (no `customCurriculum` prop)
+  - `client/src/pages/parent/ParentStudentProfile.jsx`: `is_custom` references removed
+  - `client/src/components/parent/ProgressVisuals.jsx`: `CustomProgramProgress` component removed; entry point simplified; JR section added with sequential kit progress
+  - Deleted: `server/routes/custom-programs.js`, `client/src/context/CustomProgramsContext.jsx`, `client/src/pages/manager/CustomProgramsPage.jsx`
 
 - **What changed in the system (Session 6):**
   - `client/src/utils/beltConfig.js`: `BELT_LEVEL_PROJECTS` added covering White/Yellow/Orange/Green/Blue/Purple/Brown/Red; Purple→11, Brown→17, Red→4 levels; `PROJECTS` gains Build 4/5, Solve 4/5; `getLevelProjects()` helper exported
@@ -181,34 +172,6 @@
   - `client/src/components/sensei/BeltProgressFields.jsx`: rejects sublevel 0/negative; accepts `setProject` prop and clears project on belt or sublevel change
   - `client/src/components/sensei/LogEntryForm.jsx`: passes `beltLevel`/`beltSublevel` to `ProjectFields`; passes `setProject` to `BeltProgressFields`
   - `client/src/components/shared/ClubSessionsPanel.jsx`: "Log Progress" button wrapped with `!isReadOnly`
-
-- **What changed in the system (Session 5):**
-  - `client/src/components/manager/AddSenseiModal.jsx`: role toggle (sensei/manager); auto-prefix "Sensei "; live preview hint; dynamic submit label
-  - `client/src/pages/manager/StaffPage.jsx`: role label shown for all staff (both sensei and manager rows)
-  - `client/src/components/layout/Sidebar.jsx`: `/manager/staff` added to `senseiLinks`
-  - `client/src/pages/sensei/LogClubPage.jsx`: `isReadOnly` imported; blocked state rendered when manager is at non-home location
-  - `server/routes/clubs.js`: `requireOwnLocation` added to `POST /:id/comments`
-  - `client/src/pages/AccountPage.jsx`: imports `useNavigate` + `logout`; Sign Out button at bottom
-  - `client/src/pages/sensei/LogProgressPage.jsx`: replaced `<ParentNote>` with read-only `student.special_instructions` blue card; removed `ParentNote` import
-  - `client/src/pages/parent/ParentStudentProfile.jsx`: removed `parent_note` "Note from Your Sensei" block
-  - `client/src/components/shared/ParentNote.jsx`: deleted
-
-- **What changed in the system (Session 4):**
-  - `client/src/components/ui/CropModal.jsx`: added `aspect`/`cropShape` props; flex-col layout with pinned buttons; crop area 240px; `overflow-hidden` on container
-  - `client/src/pages/ClubProfilePage.jsx` (`ClubInfoCard`): added `cropSrc` state; `handleFileChange` now reads DataURL → CropModal; `handleCropConfirm` uploads blob; uses `aspect={16/9} cropShape="rect"`; imports `CropModal`
-  - `client/src/components/layout/MobileNav.jsx`: `z-50` → `z-40`
-  - `client/src/components/manager/SenseiProfileModal.jsx`: removed Framer `drag`/`useDragControls`; added `useRef` touch tracking; hero header has `onTouchStart`/`onTouchEnd` for swipe-dismiss; content div is `overflow-y-auto flex-1 min-h-0`; safe-area padding on manager actions
-
-- **What changed in the system (Sessions 1–3):**
-  - `server/routes/users.js`: both `GET /` (role=sensei) and `GET /:id` now select `profile_pic_url`
-  - `client/src/pages/manager/StaffPage.jsx`: avatar in rows, Framer stagger, inline buttons removed, `confirmRemoveId` state removed
-  - `client/src/components/manager/SenseiProfileModal.jsx`: removed `sm:hidden` from manager action buttons
-  - `client/src/components/manager/AddStudentToday.jsx`: Add button always enabled; shows "Add Again" if already checked in
-  - DB: dropped `daily_assignments_student_program_date_key` unique constraint
-  - `server/routes/daily.js`: added `session_number` correlated subquery to `ASSIGNMENT_SELECT`; removed 409 guard
-  - `server/routes/progress.js`: multi-lesson support via `lesson_entries` array; assignment completion targets specific `id`
-  - `client/src/components/manager/TodayBoard.jsx`: purple "Session N" badge on duplicate cards
-  - `client/src/components/sensei/LogEntryForm.jsx`: `LessonEntryRow` component, multi-entry state, dynamic submit label
 
 - **Discussed but not implemented:**
   - "Keep me signed in" persistence (checkbox exists as UI only)
@@ -235,8 +198,7 @@
   - Multi-lesson submit: if the sensei adds lesson rows but leaves module blank, those empty rows are filtered out on submit (`filledEntries` filter). A row with only a kit selected but no module is also dropped — only rows with at least one field set are sent.
   - `session_number` uses a correlated subquery counting rows with `created_at <=` — if two assignments are inserted in the same millisecond (very unlikely), their numbers may swap. No real-world impact.
   - Profile pic upload: if Supabase storage goes down or anon key is rotated, uploads fail silently with "Upload failed. Try again." — no retry logic.
-  - getCroppedImg uses `crossOrigin: 'anonymous'` — could fail with CORS if image src is not Supabase (unlikely since we generate the DataURL locally).
-  - Tab switching on login: if parent login fails, the error shows under the Parent tab correctly; if user switches tabs the error is cleared (`setError('')`) which is correct.
+  - JR percent_complete is updated based on which sub-program was just logged. Only one `percent_complete` column per student/program row. If a student does Snap Circuits, it updates the overall JR percent — JR Coding's progress is recalculated dynamically in the parent portal from `session_logs`, not from `percent_complete`.
 
 - **Technical debt:**
   - `react-easy-crop` CSS may need to be imported explicitly in some setups — it's included via the npm package automatically but worth verifying.
@@ -246,7 +208,7 @@
 
 - **Assumptions that could be wrong:**
   - Assumes `user.id` is always available when uploading profile pic — if session expires mid-upload, the path would be `users/undefined/avatar.jpg`.
-  - Assumes Supabase anon key has storage access — verified this session via RLS migration, but if bucket permissions change on Supabase dashboard it will break.
+  - Assumes Supabase anon key has storage access — verified in a prior session via RLS migration, but if bucket permissions change on Supabase dashboard it will break.
   - The `profile_pic_url` column exists on the `users` table — was added in a previous session, not re-verified this session.
 
 ---
@@ -257,11 +219,15 @@
 
 2. **Most common mistake a new person would make:** Assuming Supabase Auth is in use and trying to use `supabase.auth.getUser()` or RLS policies that reference `auth.uid()`. They would also likely try to add Supabase Auth middleware instead of using the Express session middleware already in place.
 
-3. **What looks like it should be refactored but shouldn't be:** The `progressData.js` file looks like it should live in the database — it's a large hardcoded curriculum object. It's intentionally kept client-side because it's static reference data that never changes during a session and would add unnecessary DB queries on every log. The per-program `percent_complete` semantics are also intentionally different per program (CREATE uses belt sublevels, Robotics uses module counts, AI Academy uses lesson-within-module) — don't try to unify this logic.
+3. **What looks like it should be refactored but shouldn't be:** The `progressData.js` file looks like it should live in the database — it's a large hardcoded curriculum object. It's intentionally kept client-side because it's static reference data that never changes during a session and would add unnecessary DB queries on every log. The per-program `percent_complete` semantics are also intentionally different per program (CREATE uses belt sublevels, Robotics uses module counts, AI Academy uses lesson-within-module, JR uses sequential module index) — don't try to unify this logic.
 
 4. **Z-index layering rule:** MobileNav is `z-40`. All modals/overlays are `z-50`. This is intentional — MobileNav must be lower so modals cover it. Do NOT raise MobileNav back to `z-50`.
 
 5. **Framer Motion `drag` blocks child scroll:** Never put `drag` on a container that has `overflow-y-auto` children. Framer Motion applies `touch-action: none` to draggable elements, which the browser interprets as "I'm handling all touch events" — scrolling inside child elements stops working. For swipe-to-dismiss on bottom sheets, use raw `onTouchStart`/`onTouchEnd` on the header area instead.
+
+6. **DB check constraints and new features:** The `student_programs_current_project_check` constraint (now dropped) was a lesson learned — don't add enumerative CHECK constraints on fields that will grow (like project names). Accept any string at the DB level and validate in application logic if needed.
+
+7. **Vercel deploy timing + DB changes:** When dropping DB tables/columns and pushing code changes in the same session, there's a window where Vercel may be running old code against the new DB schema, causing 500s. The safest order: push the code change FIRST, wait for Vercel to deploy, THEN do the DB migration. Dropping tables before the code referencing them is deployed will cause temporary 500s.
 
 ---
 
@@ -280,6 +246,8 @@
 - The old `/parent/login` route still exists — do not delete it without checking if any external links point to it.
 - Do NOT raise `MobileNav` back to `z-50` — it must stay at `z-40` so modals cover it.
 - Do NOT use Framer Motion `drag` on any container that has scrollable children — use `onTouchStart`/`onTouchEnd` for swipe gestures instead.
+- Do NOT re-introduce the custom classes / custom programs feature — it was explicitly removed by the user.
+- Do NOT add enumerative DB CHECK constraints on fields that may grow (like project names, program names) — accept any string at the DB level.
 
 ---
 
@@ -288,9 +256,9 @@
 - **Section 1 (Project Identity):** HIGH CONFIDENCE — verified against codebase this session
 - **Section 2 (Current State):** HIGH CONFIDENCE — built/fixed directly this session
 - **Section 3 (Architecture):** HIGH CONFIDENCE — verified files and routes this session
-- **Section 4 (Recent Work — Session 6):** HIGH CONFIDENCE — all work done this session with successful builds and pushes
+- **Section 4 (Recent Work — Session 7):** HIGH CONFIDENCE — all work done this session with successful builds and pushes
 - **Section 5 (What Could Go Wrong):** MEDIUM — edge cases inferred from code review, not exhaustively tested
-- **Section 6 (How to Think):** HIGH CONFIDENCE — points 4 and 5 confirmed by debugging this session
+- **Section 6 (How to Think):** HIGH CONFIDENCE — points 4, 5, 6, 7 confirmed by debugging this session
 - **Section 7 (Do Not Touch):** HIGH CONFIDENCE — derived from explicit user feedback and memory files
 
 ---
