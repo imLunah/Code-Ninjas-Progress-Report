@@ -567,51 +567,11 @@ function ModuleProgress({ program, enrollment, logs }) {
   );
 }
 
-// ─── Custom program progress card ────────────────────────────────────────────
-
-function CustomProgramProgress({ enrollment, logs }) {
-  const name = enrollment.program;
-  const pct = enrollment.percent_complete ?? 0;
-  const totalSessions = logs.length;
-  const lastDate = enrollment.last_session_date;
-  const lastModule = enrollment.last_module_name;
-
-  return (
-    <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
-      <div className="flex items-center justify-between mb-1">
-        <h2 className="text-ninja-navy font-ninja font-bold text-lg">{name}</h2>
-        <span className="text-ninja-muted font-ninja text-sm">{totalSessions} session{totalSessions !== 1 ? 's' : ''}</span>
-      </div>
-      {lastDate && (
-        <p className="text-ninja-muted font-ninja text-xs mb-3">Last: {formatDate(lastDate)}</p>
-      )}
-      {lastModule && (
-        <p className="text-ninja-muted font-ninja text-sm mb-3">
-          Working on: <span className="text-ninja-navy font-semibold">{lastModule}</span>
-        </p>
-      )}
-      <div>
-        <div className="flex justify-between text-xs font-ninja text-ninja-muted mb-1.5">
-          <span>Curriculum progress</span>
-          <span className="font-bold text-ninja-navy">{pct}%</span>
-        </div>
-        <div className="h-3 bg-ninja-bg rounded-full overflow-hidden border border-ninja-border">
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{ width: `${pct}%`, backgroundColor: '#ea580c' }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Entry point ──────────────────────────────────────────────────────────────
 
 export default function ProgressVisuals({ programs, sessionLogs }) {
   const create = programs.find((p) => p.program === 'CREATE');
-  const others = programs.filter((p) => p.program !== 'CREATE' && !p.is_custom);
-  const customs = programs.filter((p) => p.is_custom);
+  const others = programs.filter((p) => p.program !== 'CREATE');
 
   return (
     <div className="space-y-4">
@@ -621,13 +581,6 @@ export default function ProgressVisuals({ programs, sessionLogs }) {
         <ModuleProgress
           key={p.program}
           program={p.program}
-          enrollment={p}
-          logs={sessionLogs.filter((l) => l.program === p.program)}
-        />
-      ))}
-      {customs.map((p) => (
-        <CustomProgramProgress
-          key={p.program}
           enrollment={p}
           logs={sessionLogs.filter((l) => l.program === p.program)}
         />

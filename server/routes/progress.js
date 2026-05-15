@@ -159,38 +159,7 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     const lastModuleName = lastEntry.module_name;
     const lastSubProgram = lastEntry.sub_program;
 
-    // Check if this is a custom program (name-based lookup, no prefix needed)
-    const { rows: cpLookup } = await pool.query(
-      'SELECT id FROM custom_programs WHERE name = $1 AND location_id = $2 AND is_active = true',
-      [program, req.session.activeLocationId]
-    );
-    const isCustomProgram = !!cpLookup[0];
-    const customProgramId = cpLookup[0]?.id ?? null;
-
-    if (isCustomProgram && lastModuleName) {
-      // Custom program: percent = distinct (module, lesson) pairs logged / total lessons in program
-      const { rows: totalRows } = await pool.query(
-        `SELECT COUNT(*) AS cnt FROM custom_program_lessons cpl
-         JOIN custom_program_modules cpm ON cpl.module_id = cpm.id
-         WHERE cpm.custom_program_id = $1`,
-        [customProgramId]
-      );
-      const totalLessons = parseInt(totalRows[0].cnt);
-      if (totalLessons > 0) {
-        const { rows: doneRows } = await pool.query(
-          `SELECT COUNT(*) AS cnt FROM (
-             SELECT DISTINCT module_name, lesson_name FROM progress_logs
-             WHERE student_id = $1 AND program = $2 AND module_name IS NOT NULL AND lesson_name IS NOT NULL
-           ) x`,
-          [student_id, program]
-        );
-        const pct = Math.min(100, Math.round((parseInt(doneRows[0].cnt) / totalLessons) * 100));
-        await pool.query(
-          'UPDATE student_programs SET percent_complete = $1 WHERE student_id = $2 AND program = $3',
-          [pct, student_id, program]
-        );
-      }
-    } else if (program === 'AI Academy' && lastModuleName) {
+    if (program === 'AI Academy' && lastModuleName) {
       const totalLessons = AI_MODULE_LESSON_COUNTS[lastModuleName];
       if (totalLessons) {
         const { rows: cntRows } = await pool.query(
@@ -241,7 +210,7 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
           }
         }
       }
-    } else if (program !== 'CREATE' && program !== 'AI Academy' && program !== 'JR' && !isCustomProgram && lastModuleName) {
+    } else if (program !== 'CREATE' && program !== 'AI Academy' && program !== 'JR' && lastModuleName) {
       const lookupKey = lastSubProgram || program;
       const totalModules = CURRICULUM_MODULE_COUNTS[lookupKey];
       if (totalModules) {

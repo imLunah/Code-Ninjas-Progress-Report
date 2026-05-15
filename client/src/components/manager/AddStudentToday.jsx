@@ -5,7 +5,6 @@ import ProgramBadge from '../ui/ProgramBadge';
 import BeltBadge from '../ui/BeltBadge';
 import Button from '../ui/Button';
 import { today } from '../../utils/dateUtils';
-import { useCustomPrograms } from '../../context/CustomProgramsContext';
 
 export default function AddStudentToday({ isOpen, onClose, onAdded, existingEntries = [] }) {
   const [search, setSearch] = useState('');
@@ -13,7 +12,6 @@ export default function AddStudentToday({ isOpen, onClose, onAdded, existingEntr
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState(null);
   const [error, setError] = useState('');
-  const { programs: customPrograms } = useCustomPrograms();
 
   useEffect(() => {
     if (!isOpen) {
@@ -90,14 +88,7 @@ export default function AddStudentToday({ isOpen, onClose, onAdded, existingEntr
             <p className="text-ninja-muted font-ninja text-center py-4">No ninjas found</p>
           )}
           {!loading && results.map((student) => {
-            const programs = student.programs || [];
-            const enrolledKeys = new Set(programs.map((p) => p.program));
-            const allPrograms = [
-              ...programs,
-              ...customPrograms
-                .filter((cp) => !enrolledKeys.has(cp.name))
-                .map((cp) => ({ program: cp.name, belt_level: null, belt_sublevel: null })),
-            ];
+            const allPrograms = student.programs || [];
             if (allPrograms.length === 0) return null;
             return (
               <div
