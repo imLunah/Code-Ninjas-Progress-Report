@@ -7,12 +7,11 @@ const PROGRAM_COLORS = {
   'JR': 'bg-green-100 text-green-700',
 };
 
-export default function ProgramBadge({ program, displayName: displayNameProp, size = 'sm' }) {
-  const { resolve } = useCustomPrograms();
+export default function ProgramBadge({ program, isCustom: isCustomProp, size = 'sm' }) {
+  const { isCustomProgram } = useCustomPrograms();
   if (!program) return null;
 
-  const isCustom = program.startsWith('custom_');
-  const displayName = displayNameProp || (isCustom ? resolve(program) : program);
+  const isCustom = isCustomProp ?? isCustomProgram(program);
   const colorClass = isCustom ? 'bg-orange-100 text-orange-700' : (PROGRAM_COLORS[program] || 'bg-gray-100 text-gray-600');
 
   const sizeClasses = {
@@ -23,7 +22,7 @@ export default function ProgramBadge({ program, displayName: displayNameProp, si
 
   return (
     <span className={`inline-block rounded-md font-ninja font-bold ${sizeClasses[size]} ${colorClass}`}>
-      {displayName}
+      {program}
     </span>
   );
 }

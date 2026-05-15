@@ -95,8 +95,8 @@ export default function AddStudentToday({ isOpen, onClose, onAdded, existingEntr
             const allPrograms = [
               ...programs,
               ...customPrograms
-                .filter((cp) => !enrolledKeys.has(`custom_${cp.id}`))
-                .map((cp) => ({ program: `custom_${cp.id}`, belt_level: null, belt_sublevel: null })),
+                .filter((cp) => !enrolledKeys.has(cp.name))
+                .map((cp) => ({ program: cp.name, belt_level: null, belt_sublevel: null })),
             ];
             if (allPrograms.length === 0) return null;
             return (
