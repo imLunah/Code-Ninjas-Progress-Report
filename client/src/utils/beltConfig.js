@@ -14,9 +14,63 @@ export const PROJECTS = ['Build 1', 'Build 2', 'Build 3', 'Build 4', 'Build 5', 
 export const STATUSES = ['Started', 'Working On', 'Completed'];
 export const PROGRAMS = ['CREATE', 'Robotics Academy', 'AI Academy', 'JR'];
 
-// Project names for Purple+ belts — each level has the main project + optional Prove Yourself variant.
-// Keyed by belt name → level number → array of project options.
+// Project names per belt + level. Keyed by belt name → level number → ordered project options.
+// White–Blue list each Build/Solve/Adventure by its actual name.
+// Purple–Red list the game title + optional Prove Yourself variant.
 export const BELT_LEVEL_PROJECTS = {
+  White: {
+    1: ['Your First Sprite', 'Debugging Our First Bugs!', 'Spooky Effect', 'Debugging More Bugs!', 'Creating with Code!'],
+    2: ['Meeting New Friends', 'Debugging Sequence #1', "Where's My Puppy?", 'Debugging Sequence #2', 'Creating with Sequence!'],
+    3: ['Fly Me to the Moon!', 'Debugging Sprite Movement', 'Dinner Time!', 'Debugging Sprite Layers', 'Creating with Events!'],
+    4: ['A Piece of Cake', 'Debugging Overlap Blocks', 'Underwater Food Chain', 'Debugging Sprite Kinds and Parameters', 'Creating with Functions!'],
+    5: ['Munchy Munchy Monkey', 'Debugging Life and Countdown Variables', 'Pearl Collector', 'Debugging Life and Score Variables', 'Creating with Variables!'],
+    6: ['Avoid the Asteroids!', 'Debugging Loops, Velocity, and Randomness', 'Space Adventure', 'Debugging Projectiles', 'Creating with Loops!'],
+    7: ["The Wizard's Mystic Toadstools", 'Debugging If/Then Conditionals', 'Unlock the Hidden Treasure', 'Debugging If/Then/Else Conditionals', 'Creating with Conditionals!'],
+    8: ['Animated Aquarium', 'Debugging Animations', 'Musical Mayhem', 'Debugging Music Blocks', 'White Belt Belt-Up Project!'],
+  },
+  Yellow: {
+    1:  ['Avoid the Snakes!', 'Debugging Tilemaps', 'Carrot Chase', 'Debugging Walls and Tiles in Tilemaps', 'Creating with Tilemaps!'],
+    2:  ['The Key to the Castle', 'Debugging Tilemap Overlap Events', 'Coin Grabber!', 'Debugging Lifecycle Events', 'Creating with Tilemap and Lifecycle Events!'],
+    3:  ['All About Me', 'Debugging Variables and Strings', 'Welcome to the Farm', 'Debugging Image Arrays', 'Mad Libs', 'Debugging Text Arrays', 'Creating with User Input, Variables, and Arrays!'],
+    4:  ['Memory Game', 'Debugging Repeat Loops', 'Archeological Dig', 'Debugging for Element Loops', 'Creating with User Input, Variables, and Arrays!'],
+    5:  ['Cookie Clicker Game!', 'Debugging Functions', 'Snowflake Catch', 'Debugging Functions with Parameters', 'Creating with Functions!'],
+    6:  ['Cactus Jump', 'Debugging Acceleration and Velocity', 'Avoid the Roadblocks', 'Debugging 2D Tilemaps Designs', 'Lava Escape Platformer', 'Debugging 2D Tilemaps', 'Creating with 2D Platformer Tilemaps and Physics!'],
+    7:  ['Magic Coin Scavenger Hunt', 'Debugging AND Booleans', 'Raindrop Invincibility', 'Debugging NOT Booleans', 'Snake Pit!', 'Debugging OR Booleans', 'Creating with Booleans and Logic Operators!'],
+    8:  ['Bubble Pop!', 'Debugging For Index Loops', 'Bee Catcher', 'Debugging While Loops', 'Creating with Index and While Loops!'],
+    9:  ['Block Jumper', 'Debugging Tilemap Location Blocks', 'Bridge Builder', 'Debugging Tilemap Location Blocks and Operators', 'Dino Defender', 'Debugging Tilemap Extension Blocks', 'Creating with Tilemap Location and Extension Blocks!'],
+    10: ['Scenic Drive', 'Debugging Scroller Extension Blocks', 'Burger Dash', 'Debugging Status Bar Extension Blocks', 'Yellow Belt Belt-Up Project!'],
+  },
+  Orange: {
+    1:  ['Hello World!', 'Debugging Setting Sprites', 'Bouncing on the Walls', 'Debugging Sprite Effects', 'Follow Me!', 'Debugging Sprite Movement', 'Creating with Javascript Code and Syntax!'],
+    2:  ['Greeting Card', 'Debugging Properties and Text Parameters', 'Show Time!', 'Debugging Effect Parameters and Sequencing', 'Seasons Change', 'Debugging Code Comments and Dialog Boxes', 'Creating with Properties!'],
+    3:  ['Screen Saver', 'Debugging Block Statements and Loops', 'Button Clicker!', 'Debugging Block Statements and Events', 'Two Sprite Showdown!', 'Debugging Screen Positions and Multiplayer Score', 'Creating with Block Statements!'],
+    4:  ['Save the Crab!', 'Debugging Nested Block Statements and If Conditionals', 'Going Bananas!', 'Debugging Nested Block Statements and If/Else Conditionals', 'Grab Bag!', 'Debugging Nested Block Statements and If/Else If/Else Conditionals', 'Creating with Nested Block Statements!'],
+    5:  ["Shop 'Til You Drop", 'Debugging Variables, Concatenation, and Assignment Operators', 'Cookie Stackers', 'Debugging Variables, Equality Operators, and Math Operators', 'Creating with Assignment and Equality Operators!'],
+    6:  ['Shooting Hoops!', 'Debugging Boolean AND Operators and Relational Operators', 'Guess the Number!', 'Debugging Boolean OR Operators', 'Creating with Boolean and Relational Operators!'],
+    7:  ['Collect the Honey!', 'Debugging Sprite Kinds and Overlap Events', 'Snowball Fight!', 'Debugging Sprite Kinds and Projectiles', 'Asteroid Attack!', 'Debugging Sprite Kinds and onCreated Events', 'Creating with Sprite Kinds and Sprite Overlap Events!'],
+    8:  ['Fireflies Collector', 'Debugging For Loops', 'Counting Sprites', 'Debugging Incrementing and Decrementing For Loops', 'Mystery Boxes!', 'Debugging Nested For Loops and Increment Operators', 'Creating with For Loops!'],
+    9:  ['Magic 8 Ball', 'Debugging Arrays', "What's in a Name?", 'Debugging Empty Arrays', 'Concentration', 'Debugging Array Indices and For Element Of Loops', 'Creating with Arrays!'],
+    10: ['Match Game', 'Debugging Array Index Values', 'Username Generator', 'Debugging Nested Arrays', 'Memory Match', 'Debugging Array Functions', 'Creating with Nested Arrays!'],
+    11: ['Pizza Party', 'Debugging Functions with Parameters', 'Barn Breakout!', 'Debugging Multiple Functions', 'Damage Control', 'Debugging Functions with Multiple Parameters', 'Creating with Functions!'],
+    12: ['Escape the Haunted Castle!', 'Debugging Animation and Music', 'City Scroller', 'Debugging the Background Scroll Extension', 'Find the Ninja!', 'Debugging the Story Extension', 'Orange Belt Belt-Up Project!'],
+  },
+  Green: {
+    1:  ['The Bookcase', 'Debugging Assets and Tilemaps', 'Shark Attack', 'Debugging Tilemap Location and Camera Functions', 'Creating with the Assets Menu!'],
+    2:  ['Two Worlds', 'Debugging Tile Overlap Events', 'Avoid the Haystacks!', 'Debugging Tilemap Walls', 'Creating with Tilemap Overlap Events!'],
+    3:  ['Dust Mite Adventure', 'Debugging 2D Tilemap Movement', 'Gravity Jumper', 'Debugging Sprite Movement with Functions', 'Salmon Catch', 'Debugging Tile Overlaps and While Loops', 'Creating with 2D Platform Tilemaps!'],
+    4:  ['A Walk through the Seasons', 'Debugging Customized Assets and the Scroller Extension', 'A Change of Scenery', 'Debugging Cycling through Assets', "Painter's Palette", 'Debugging Pixel Color Functions', 'Creating with Modified Pixel Art Assets!'],
+    5:  ['Creating Custom Pixel Art', 'Debugging Custom Pixel Art', 'Pixel Art Colors & Outlines', 'Debugging Pixel Art Colors & Outlines', 'Pixel Art Shading - Shadows & Reflections', 'Debugging Pixel Art Shading', 'Pixel Dithering', 'Debugging Dithering in Pixel Art', 'Creating Pixel Art in Multiple Sizes', 'Debugging Pixel Art in Multiple Sizes', 'Creating with Original Pixel Art Images!'],
+    6:  ['Creating Sprites with Multiple Perspectives', 'Debugging Pixel Art Person Sprites Perspectives', 'Create a Color Palette for a Sprite Pack', 'Debugging Pixel Art Sprite Packs', 'Creating and Using a Sprite Pack', 'Debugging Projectile Sprite Perspectives', 'Creating with Pixel Art Sprite Packs!'],
+    7:  ['Animation Techniques', 'Debugging Animation Techniques', 'A Cozy Evening', 'Debugging Realistic Sprite Movement', 'Super Ninja!', 'Debugging Sprite Animation', 'Creating with Pixel Art Animation Assets!'],
+    8:  ['Hills and Ladders', 'Debugging 2D Tilemap Tiles', 'We Built this City!', 'Debugging Building with Multiple Custom Tiles', 'Creating with Original Tile Assets!'],
+    9:  ['Maze Masters', 'Debugging Text Sprites', "A Pet's Day", 'Debugging Scene Sequence and Dialog Text', 'Creating with User Interface and User Experience Features!'],
+    10: ['Maps of all Sizes!', 'Debugging Minimaps', 'Feed the Hungry Dinos!', 'Debugging Timers and Status Bars', 'Museum Heist', 'Debugging Raycasting', 'Green Belt Belt-Up Project!'],
+  },
+  Blue: {
+    1: ['First Hole', 'Debugging Sprite Physics', 'A Multi-Perspective Golf Course', 'Debugging Tilemap Transitions', 'Adventure Golf', 'Debugging Projects Using the sayText Function', 'Creating with Mini Golf Concepts'],
+    2: ['First Wave', 'Debugging Projectile Movement', 'Many Enemies, Many Paths!', 'Debugging Sprite Movement and Image Consistency', 'Inventory Menu', 'Image Functions', 'Finishing Touches', 'Debugging Code by Project Scene', 'Creating with Tower Defense Concepts'],
+    3: ['Belt-Up Project'],
+  },
   Purple: {
     1:  ['Dropping Bombs', 'Prove Yourself - Color Drop'],
     2:  ['Scavenger Hunt', 'Prove Yourself - Particle Hunt'],

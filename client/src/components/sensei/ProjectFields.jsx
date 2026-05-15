@@ -1,9 +1,10 @@
-import { PROJECTS, STATUSES, getLevelProjects } from '../../utils/beltConfig';
+import { PROJECTS, STATUSES, BELT_LEVEL_PROJECTS, getLevelProjects } from '../../utils/beltConfig';
 
 export default function ProjectFields({ project, setProject, status, setStatus, beltLevel, beltSublevel }) {
   const levelProjects = getLevelProjects(beltLevel, beltSublevel);
   const projectOptions = levelProjects ?? PROJECTS;
-  const needsSublevel = ['Purple', 'Brown', 'Red'].includes(beltLevel) && (!beltSublevel || parseInt(beltSublevel) < 1);
+  const hasBeltProjects = beltLevel && !!BELT_LEVEL_PROJECTS[beltLevel];
+  const needsSublevel = hasBeltProjects && (!beltSublevel || parseInt(beltSublevel) < 1);
 
   return (
     <div className="space-y-3">
