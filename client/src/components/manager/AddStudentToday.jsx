@@ -5,6 +5,7 @@ import ProgramBadge from '../ui/ProgramBadge';
 import BeltBadge from '../ui/BeltBadge';
 import Button from '../ui/Button';
 import { today } from '../../utils/dateUtils';
+import { useCustomPrograms } from '../../context/CustomProgramsContext';
 
 export default function AddStudentToday({ isOpen, onClose, onAdded, existingEntries = [] }) {
   const [search, setSearch] = useState('');
@@ -12,6 +13,7 @@ export default function AddStudentToday({ isOpen, onClose, onAdded, existingEntr
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState(null);
   const [error, setError] = useState('');
+  const { programs: customPrograms } = useCustomPrograms();
 
   useEffect(() => {
     if (!isOpen) {
@@ -89,14 +91,21 @@ export default function AddStudentToday({ isOpen, onClose, onAdded, existingEntr
           )}
           {!loading && results.map((student) => {
             const programs = student.programs || [];
-            if (programs.length === 0) return null;
+            const enrolledKeys = new Set(programs.map((p) => p.program));
+            const allPrograms = [
+              ...programs,
+              ...customPrograms
+                .filter((cp) => !enrolledKeys.has(`custom_${cp.id}`))
+                .map((cp) => ({ program: `custom_${cp.id}`, belt_level: null, belt_sublevel: null })),
+            ];
+            if (allPrograms.length === 0) return null;
             return (
               <div
                 key={student.id}
                 className="bg-ninja-bg border border-ninja-border rounded-xl p-3 space-y-2"
               >
                 <p className="text-ninja-navy font-ninja font-semibold">{student.full_name}</p>
-                {programs.map((enrollment) => {
+                {allPrograms.map((enrollment) => {
                   const added = isEntryAdded(student.id, enrollment.program);
                   const key = `${student.id}:${enrollment.program}`;
                   return (

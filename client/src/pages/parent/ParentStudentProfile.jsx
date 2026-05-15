@@ -73,6 +73,7 @@ export default function ParentStudentProfile() {
   }
 
   const programs = student.programs || [];
+  const programDisplayNames = Object.fromEntries(programs.map((p) => [p.program, p.display_name]));
 
   return (
     <ParentLayout>
@@ -89,7 +90,7 @@ export default function ParentStudentProfile() {
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <h1 className="text-2xl font-bold font-ninja text-ninja-navy">{student.full_name}</h1>
             {programs.map((p) => (
-              <ProgramBadge key={p.program} program={p.program} size="sm" />
+              <ProgramBadge key={p.program} program={p.program} displayName={p.display_name} size="sm" />
             ))}
           </div>
           {student.birthday && (
@@ -185,7 +186,7 @@ export default function ParentStudentProfile() {
                         <ClubBadge name={entry.club_name} />
                       ) : (
                         <>
-                          <ProgramBadge program={entry.program} size="xs" />
+                          <ProgramBadge program={entry.program} displayName={programDisplayNames[entry.program]} size="xs" />
                           {entry.sub_program && (
                             <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-md font-ninja font-semibold">
                               {entry.sub_program}
