@@ -1,5 +1,5 @@
 # PROJECT CONTINUATION DOCUMENT
-## Session 5 — 14 May 2026
+## Session 6 — 14 May 2026
 
 ---
 
@@ -110,6 +110,17 @@
 
 ### 4. RECENT WORK — WHAT JUST HAPPENED
 
+- **What was worked on (Session 6 — 14 May 2026):**
+  1. **CREATE belt curriculum — full project names:** `beltConfig.js` now contains `BELT_LEVEL_PROJECTS` covering all belts (White through Red). Each belt level maps to its actual project names from the "Belt Project Names.md" curriculum doc. Project dropdown on the CREATE log form shows these names once a sublevel is selected.
+  2. **Section labels on project dropdown:** White–Blue belts show `Build 1: [name]`, `Solve 1: [name]`, …, `Adventure: [name]` — label derived from array position (even=Build, odd=Solve, last=Adventure). Purple/Brown/Red show plain game titles only.
+  3. **Purple/Brown/Red level counts fixed:** Purple=11, Brown=17, Red=4 (were all `null` — senseis couldn't enter a sublevel for these belts at all).
+  4. **Build 4/5 and Solve 4/5 added to PROJECTS list** — needed for Green level 5 (11 columns) and Blue level 2 (9 columns).
+  5. **Sublevel 0 rejected:** `BeltProgressFields` now blocks input of 0 or negative — only 1 through `maxLevel` accepted. `ProjectFields` `needsSublevel` guard also catches `< 1`.
+  6. **Project cleared on belt/sublevel change:** `BeltProgressFields` calls `setProject('')` whenever belt or sublevel changes so stale project names from a different level don't carry over.
+  7. **"Prove Yourself" naming:** PYS variants for Purple/Brown are labeled "Prove Yourself - [name]" (e.g. "Prove Yourself - Color Drop"). Not a separate level — same level's harder variant.
+  8. **Canva avatar picker — built and scrapped:** Downloaded 12 ninja illustrations from Canva "Ninjas" folder, uploaded to `profile-pics/avatars/` in Supabase, built a picker grid on AccountPage. User scrapped the feature. Code reverted. Images remain in Supabase storage (user to delete via dashboard — anon key lacks DELETE permission on storage).
+  9. **Log Progress button hidden for read-only managers:** `ClubSessionsPanel` wraps the "Log Progress" button with `!isReadOnly` — managers viewing another location's clubs can no longer see or click it.
+
 - **What was worked on (Session 5 — 14 May 2026):**
   1. **Add Staff / role toggle:** `AddSenseiModal` renamed concept to "Add Staff"; added two-button role toggle (Sensei / Center Director); sensei display names auto-prefixed with "Sensei " on submit if not already prefixed; live preview hint shown while typing; button label updates to "Add Sensei" or "Add Center Director"
   2. **Staff page role labels:** Every row in StaffPage now shows a role badge — "Sensei" in muted gray for senseis, "Director" in blue for managers (previously only Directors had a label)
@@ -164,6 +175,13 @@
   - **CREATE excluded from multi-lesson UI:** CREATE tracks belt/project snapshots, not lesson lists — the multi-lesson row UI only appears for programs with curriculum (Robotics, AI Academy, JR)
   - **Backward-compatible API:** `lesson_entries` array is optional; single-lesson submissions still work unchanged
 
+- **What changed in the system (Session 6):**
+  - `client/src/utils/beltConfig.js`: `BELT_LEVEL_PROJECTS` added covering White/Yellow/Orange/Green/Blue/Purple/Brown/Red; Purple→11, Brown→17, Red→4 levels; `PROJECTS` gains Build 4/5, Solve 4/5; `getLevelProjects()` helper exported
+  - `client/src/components/sensei/ProjectFields.jsx`: imports `BELT_LEVEL_PROJECTS`/`getLevelProjects`; shows "select sublevel first" for any belt with specific project data; applies `Build N:` / `Solve N:` / `Adventure:` prefix labels for White–Blue; Purple/Brown/Red plain titles only
+  - `client/src/components/sensei/BeltProgressFields.jsx`: rejects sublevel 0/negative; accepts `setProject` prop and clears project on belt or sublevel change
+  - `client/src/components/sensei/LogEntryForm.jsx`: passes `beltLevel`/`beltSublevel` to `ProjectFields`; passes `setProject` to `BeltProgressFields`
+  - `client/src/components/shared/ClubSessionsPanel.jsx`: "Log Progress" button wrapped with `!isReadOnly`
+
 - **What changed in the system (Session 5):**
   - `client/src/components/manager/AddSenseiModal.jsx`: role toggle (sensei/manager); auto-prefix "Sensei "; live preview hint; dynamic submit label
   - `client/src/pages/manager/StaffPage.jsx`: role label shown for all staff (both sensei and manager rows)
@@ -202,6 +220,7 @@
   - Mobile responsiveness was focused on login + staff pages; other pages may still have mobile layout issues
   - Club cover photos upload to `club-resources` bucket without cache-busting on update — if a cover is replaced, the old URL's CDN cache may serve the stale image briefly
   - `parent_note` column still exists on the `students` table in the DB — data is no longer written or read by the app but the column was not dropped (safe to leave or drop later)
+  - 12 ninja avatar images still sitting in `profile-pics/avatars/` on Supabase storage — user to delete via Supabase dashboard (Storage → profile-pics → avatars folder). Anon key has no DELETE permission so cannot be removed programmatically.
 
 ---
 
@@ -269,7 +288,7 @@
 - **Section 1 (Project Identity):** HIGH CONFIDENCE — verified against codebase this session
 - **Section 2 (Current State):** HIGH CONFIDENCE — built/fixed directly this session
 - **Section 3 (Architecture):** HIGH CONFIDENCE — verified files and routes this session
-- **Section 4 (Recent Work — Session 5):** HIGH CONFIDENCE — all work done this session with successful builds and pushes
+- **Section 4 (Recent Work — Session 6):** HIGH CONFIDENCE — all work done this session with successful builds and pushes
 - **Section 5 (What Could Go Wrong):** MEDIUM — edge cases inferred from code review, not exhaustively tested
 - **Section 6 (How to Think):** HIGH CONFIDENCE — points 4 and 5 confirmed by debugging this session
 - **Section 7 (Do Not Touch):** HIGH CONFIDENCE — derived from explicit user feedback and memory files
