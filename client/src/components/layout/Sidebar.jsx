@@ -1,5 +1,6 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import ThemeToggle from '../ui/ThemeToggle';
 
 function NavIcon({ id }) {
   if (id === 'today') return (
@@ -121,6 +122,12 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Theme toggle */}
+      <div className="px-4 py-2 flex items-center justify-between border-t border-ninja-border">
+        <span className="text-ninja-muted font-ninja text-xs font-semibold">Appearance</span>
+        <ThemeToggle />
+      </div>
 
       {/* User card */}
       <div className="p-3 border-t border-ninja-border">

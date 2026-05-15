@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useParentAuth } from '../../context/ParentAuthContext';
+import ThemeToggle from '../ui/ThemeToggle';
 
 export default function ParentLayout({ children }) {
   const { parent, logout } = useParentAuth();
@@ -23,6 +24,7 @@ export default function ParentLayout({ children }) {
               {parent.parentName}
             </span>
           )}
+          <ThemeToggle />
           <button
             onClick={handleLogout}
             className="text-ninja-muted hover:text-ninja-red font-ninja text-sm transition-colors"

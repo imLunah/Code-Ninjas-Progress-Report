@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useParentAuth } from '../context/ParentAuthContext';
+import ThemeToggle from '../components/ui/ThemeToggle';
 
 const stagger = {
   hidden: {},
@@ -61,7 +62,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-start sm:justify-center px-5 sm:px-6 py-8 sm:py-12">
+    <div className="min-h-screen bg-ninja-bg flex flex-col items-center justify-start sm:justify-center px-5 sm:px-6 py-8 sm:py-12">
+      <div className="fixed top-3 right-4 z-30"><ThemeToggle /></div>
 
       {/* Alpha notice */}
       <AnimatePresence>
