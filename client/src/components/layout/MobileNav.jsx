@@ -59,14 +59,6 @@ function SenseiIcon() {
     </svg>
   );
 }
-function ClassesIcon() {
-  return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="2"/>
-      <path strokeLinecap="round" strokeWidth="2" d="M3 9h18M9 21V9"/>
-    </svg>
-  );
-}
 function AccountIcon({ profilePicUrl, initials }) {
   if (profilePicUrl) {
     return <img src={profilePicUrl} alt="me" className="w-6 h-6 rounded-full object-cover border border-ninja-border" />;
@@ -90,7 +82,6 @@ export default function MobileNav() {
     { to: dashPath, label: 'Today', icon: <TodayIcon /> },
     { to: '/manager/students', label: 'Ninjas', icon: <NinjasIcon /> },
     { to: '/clubs', label: 'Clubs', icon: <ClubsIcon /> },
-    { to: '/manager/classes', label: 'Classes', icon: <ClassesIcon /> },
     { to: '/manager/staff', label: 'Staff', icon: <SenseiIcon /> },
     { to: '/account', label: 'Account', icon: <AccountIcon profilePicUrl={user.profilePicUrl} initials={initials} /> },
   ];

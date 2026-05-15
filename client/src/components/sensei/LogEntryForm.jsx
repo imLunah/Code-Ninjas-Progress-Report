@@ -5,13 +5,10 @@ import Button from '../ui/Button';
 import BeltProgressFields from './BeltProgressFields';
 import ProjectFields from './ProjectFields';
 import { SUB_PROGRAMS, getCurriculum } from '../../utils/progressData';
-import { useCustomPrograms } from '../../context/CustomProgramsContext';
 
-function LessonEntryRow({ entry, index, total, program, onChange, onRemove, customCurriculum }) {
-  const subProgramOptions = customCurriculum ? null : (SUB_PROGRAMS[program] || null);
-  const curriculum = customCurriculum
-    ? customCurriculum.map((m) => ({ module: m.name, lessons: m.lessons.map((l) => l.name) }))
-    : (getCurriculum(program, entry.subProgram || null) || []);
+function LessonEntryRow({ entry, index, total, program, onChange, onRemove }) {
+  const subProgramOptions = SUB_PROGRAMS[program] || null;
+  const curriculum = getCurriculum(program, entry.subProgram || null) || [];
   const moduleOptions = curriculum;
   const lessonOptions = moduleOptions.find((m) => m.module === entry.moduleName)?.lessons || [];
 
@@ -110,15 +107,9 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const { programs: customPrograms, isCustomProgram } = useCustomPrograms();
   const isCreate = program === 'CREATE';
-  const isCustom = isCustomProgram(program);
-  const customProgram = isCustom
-    ? customPrograms.find((cp) => cp.name === program) || null
-    : null;
-  const customCurriculum = customProgram?.modules?.length > 0 ? customProgram.modules : null;
   const sessionDate = sessionDateProp || today();
-  const hasLessonFields = !!(SUB_PROGRAMS[program] || getCurriculum(program, null)?.length || customCurriculum);
+  const hasLessonFields = !!(SUB_PROGRAMS[program] || getCurriculum(program, null)?.length);
 
   // Reset lesson entries when program changes
   useEffect(() => {
@@ -248,7 +239,6 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
               program={program}
               onChange={(field, value) => updateEntry(i, field, value)}
               onRemove={() => removeEntry(i)}
-              customCurriculum={customCurriculum}
             />
           ))}
           <button

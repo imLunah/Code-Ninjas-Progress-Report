@@ -8,7 +8,6 @@ const STUDENT_PROGRAMS_SUBQUERY = `
       json_build_object(
         'id', sp.id,
         'program', sp.program,
-        'is_custom', EXISTS (SELECT 1 FROM custom_programs cp WHERE cp.name = sp.program),
         'belt_level', sp.belt_level,
         'belt_sublevel', sp.belt_sublevel,
         'current_project', sp.current_project,
