@@ -79,13 +79,39 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   const date = session_date || todayDate();
 
   try {
-    const { rows: enrollmentRows } = await pool.query(
-      `SELECT sp.id FROM student_programs sp
-       JOIN students s ON sp.student_id = s.id
-       WHERE sp.student_id = $1 AND sp.program = $2 AND s.active = true AND s.location_id = $3`,
-      [student_id, program, req.session.activeLocationId]
-    );
-    if (!enrollmentRows[0]) return res.status(404).json({ error: 'Ninja not enrolled in this program' });
+    if (program.startsWith('custom_')) {
+      // Custom program — validate it belongs to this location, then auto-enroll
+      const programId = parseInt(program.replace('custom_', ''), 10);
+      const { rows: cpRows } = await pool.query(
+        'SELECT id FROM custom_programs WHERE id = $1 AND location_id = $2 AND is_active = true',
+        [programId, req.session.activeLocationId]
+      );
+      if (!cpRows[0]) return res.status(404).json({ error: 'Custom program not found' });
+
+      // Verify student is active at this location
+      const { rows: stuRows } = await pool.query(
+        'SELECT id FROM students WHERE id = $1 AND active = true AND location_id = $2',
+        [student_id, req.session.activeLocationId]
+      );
+      if (!stuRows[0]) return res.status(404).json({ error: 'Ninja not found' });
+
+      // Auto-enroll if not already enrolled
+      await pool.query(
+        `INSERT INTO student_programs (student_id, program)
+         SELECT $1, $2 WHERE NOT EXISTS (
+           SELECT 1 FROM student_programs WHERE student_id = $1 AND program = $2
+         )`,
+        [student_id, program]
+      );
+    } else {
+      const { rows: enrollmentRows } = await pool.query(
+        `SELECT sp.id FROM student_programs sp
+         JOIN students s ON sp.student_id = s.id
+         WHERE sp.student_id = $1 AND sp.program = $2 AND s.active = true AND s.location_id = $3`,
+        [student_id, program, req.session.activeLocationId]
+      );
+      if (!enrollmentRows[0]) return res.status(404).json({ error: 'Ninja not enrolled in this program' });
+    }
 
     const { rows: inserted } = await pool.query(
       'INSERT INTO daily_assignments (student_id, program, session_date) VALUES ($1, $2, $3) RETURNING id',
