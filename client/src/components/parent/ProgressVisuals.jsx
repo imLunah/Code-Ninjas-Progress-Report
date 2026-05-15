@@ -318,8 +318,28 @@ function ModuleProgress({ program, enrollment, logs }) {
     );
   }
 
-  // ── JR: no progress bar, just last session + sub-program module grids ────────
+  // ── JR: sequential project progress per kit ─────────────────────────────────
   if (program === 'JR') {
+    const JR_CODING_MODULES = ['Module 1','Module 2','Module 3','Module 4','Module 5','Module 6','Module 7','Module 8','Module 9','Module 10'];
+    const SNAP_CIRCUITS_TOTAL = 24;
+
+    // JR Coding: highest module index reached (sequential — all prior counted as done)
+    const jrCodingLogs = logs.filter((l) => l.sub_program === 'JR Coding');
+    const jrCodingHighestIdx = Math.max(-1, ...jrCodingLogs
+      .map((l) => JR_CODING_MODULES.indexOf(l.module_name))
+      .filter((i) => i >= 0));
+    const jrCodingDone = jrCodingHighestIdx + 1;
+    const jrCodingPct = jrCodingDone > 0 ? Math.round((jrCodingDone / JR_CODING_MODULES.length) * 100) : 0;
+
+    // Snap Circuits: highest project number reached
+    const snapLogs = logs.filter((l) => l.sub_program === 'Snap Circuits');
+    const snapNums = snapLogs.map((l) => { const m = l.lesson_name?.match(/Project\s+(\d+)/i); return m ? parseInt(m[1], 10) : 0; });
+    const snapHighest = snapNums.length > 0 ? Math.max(0, ...snapNums) : 0;
+    const snapPct = snapHighest > 0 ? Math.min(100, Math.round((snapHighest / SNAP_CIRCUITS_TOTAL) * 100)) : 0;
+
+    const hasJrCoding = jrCodingLogs.length > 0;
+    const hasSnap = snapLogs.length > 0;
+
     return (
       <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
         <div className="flex items-center justify-between mb-1">
@@ -327,25 +347,86 @@ function ModuleProgress({ program, enrollment, logs }) {
           <span className="text-ninja-muted font-ninja text-sm">{totalSessions} sessions</span>
         </div>
         {lastDate && (
-          <p className="text-ninja-muted font-ninja text-xs mb-3">Last: {formatDate(lastDate)}</p>
+          <p className="text-ninja-muted font-ninja text-xs mb-4">Last: {formatDate(lastDate)}</p>
         )}
-        <div className="space-y-4">
-          {(subProgramList || []).map((sp) => {
-            const spLogs = logs.filter((l) => l.sub_program === sp);
-            const modules = CURRICULUM[sp] || [];
-            const visited = new Set(spLogs.map((l) => l.module_name).filter(Boolean));
-            return (
-              <div key={sp}>
-                <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-2">
-                  {sp}
-                  {spLogs.length > 0 && (
-                    <span className="ml-2 text-ninja-blue font-bold">{spLogs.length} sessions</span>
-                  )}
-                </p>
-                <ModuleGrid modules={modules} visited={visited} />
+
+        <div className="space-y-5">
+          {/* JR Coding sequential progress */}
+          {hasJrCoding && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide">JR Coding</p>
+                <span className="text-ninja-navy font-ninja text-xs font-bold">
+                  {jrCodingDone > 0 ? `Module ${jrCodingDone} of ${JR_CODING_MODULES.length}` : 'Not started'}
+                </span>
               </div>
-            );
-          })}
+              <div className="flex justify-between text-xs font-ninja text-ninja-muted mb-1.5">
+                <span>Progress</span>
+                <span className="font-bold text-ninja-navy">{jrCodingPct}%</span>
+              </div>
+              <div className="h-3 bg-ninja-bg rounded-full overflow-hidden border border-ninja-border mb-3">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${jrCodingPct}%`, backgroundColor: '#16a34a' }}
+                />
+              </div>
+              {/* Module dots — all up to highest shown as done */}
+              <div className="flex flex-wrap gap-1.5">
+                {JR_CODING_MODULES.map((mod, i) => {
+                  const done = i < jrCodingDone;
+                  const isCurrent = i === jrCodingHighestIdx;
+                  return (
+                    <div
+                      key={mod}
+                      title={mod}
+                      className={`px-2 py-0.5 rounded-lg text-xs font-ninja font-bold border transition-colors ${
+                        done
+                          ? isCurrent
+                            ? 'bg-green-600 text-white border-green-600'
+                            : 'bg-green-100 text-green-700 border-green-200'
+                          : 'bg-ninja-bg text-ninja-muted border-ninja-border'
+                      }`}
+                    >
+                      M{i + 1}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-ninja-muted font-ninja text-xs mt-1.5">
+                {jrCodingDone} of {JR_CODING_MODULES.length} modules complete
+                {jrCodingDone > 0 && jrCodingHighestIdx > 0 ? ' (includes all prior modules)' : ''}
+              </p>
+            </div>
+          )}
+
+          {/* Snap Circuits sequential progress */}
+          {hasSnap && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide">Snap Circuits</p>
+                <span className="text-ninja-navy font-ninja text-xs font-bold">
+                  {snapHighest > 0 ? `Project ${snapHighest} of ${SNAP_CIRCUITS_TOTAL}` : 'Not started'}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs font-ninja text-ninja-muted mb-1.5">
+                <span>Progress</span>
+                <span className="font-bold text-ninja-navy">{snapPct}%</span>
+              </div>
+              <div className="h-3 bg-ninja-bg rounded-full overflow-hidden border border-ninja-border mb-1">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${snapPct}%`, backgroundColor: '#16a34a' }}
+                />
+              </div>
+              <p className="text-ninja-muted font-ninja text-xs mt-1">
+                {snapHighest} of {SNAP_CIRCUITS_TOTAL} projects complete
+              </p>
+            </div>
+          )}
+
+          {!hasJrCoding && !hasSnap && (
+            <p className="text-ninja-muted font-ninja text-sm italic">No sessions logged yet.</p>
+          )}
         </div>
       </div>
     );
