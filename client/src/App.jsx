@@ -159,7 +159,7 @@ export default function App() {
           <Route
             path="/manager/classes"
             element={
-              <ProtectedRoute role="manager">
+              <ProtectedRoute role="sensei">
                 <CustomProgramsPage />
               </ProtectedRoute>
             }
