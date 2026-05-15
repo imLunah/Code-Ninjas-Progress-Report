@@ -34,8 +34,15 @@ export default function SenseiDashboard() {
   }, {});
   const allGrouped = Object.values(grouped);
   const completedCount = allGrouped.filter((g) => g.assignments.every((a) => a.completed)).length;
-  // Only show students with at least one program not yet logged
-  const groupedList = allGrouped.filter((g) => !g.assignments.every((a) => a.completed));
+  // Only show students with at least one program not yet logged; overdue first
+  const groupedList = allGrouped
+    .filter((g) => !g.assignments.every((a) => a.completed))
+    .sort((a, b) => {
+      const aOver = a.assignments.some((x) => !x.completed && x.session_date && String(x.session_date).split('T')[0] < todayStr);
+      const bOver = b.assignments.some((x) => !x.completed && x.session_date && String(x.session_date).split('T')[0] < todayStr);
+      if (aOver === bOver) return 0;
+      return aOver ? -1 : 1;
+    });
 
   return (
     <Layout>
