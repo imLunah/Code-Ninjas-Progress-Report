@@ -196,7 +196,45 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
           [pct, student_id, program]
         );
       }
-    } else if (program !== 'CREATE' && program !== 'AI Academy' && lastModuleName) {
+    } else if (program === 'JR' && lastSubProgram) {
+      // JR: sequential position — if student reaches Module 5, credit modules 1-5 as complete
+      if (lastSubProgram === 'JR Coding' && lastModuleName) {
+        const JR_CODING_MODULES = ['Module 1', 'Module 2', 'Module 3', 'Module 4', 'Module 5',
+          'Module 6', 'Module 7', 'Module 8', 'Module 9', 'Module 10'];
+        const { rows: modRows } = await pool.query(
+          'SELECT DISTINCT module_name FROM progress_logs WHERE student_id = $1 AND program = $2 AND sub_program = $3 AND module_name IS NOT NULL',
+          [student_id, program, 'JR Coding']
+        );
+        const highestIdx = Math.max(-1, ...modRows.map((r) => JR_CODING_MODULES.indexOf(r.module_name)));
+        if (highestIdx >= 0) {
+          const pct = Math.round(((highestIdx + 1) / JR_CODING_MODULES.length) * 100);
+          await pool.query(
+            'UPDATE student_programs SET percent_complete = $1 WHERE student_id = $2 AND program = $3',
+            [pct, student_id, program]
+          );
+        }
+      } else if (lastSubProgram === 'Snap Circuits') {
+        const lastLessonName = lastEntry.lesson_name;
+        if (lastLessonName) {
+          const { rows: lessonRows } = await pool.query(
+            'SELECT lesson_name FROM progress_logs WHERE student_id = $1 AND program = $2 AND sub_program = $3 AND lesson_name IS NOT NULL',
+            [student_id, program, 'Snap Circuits']
+          );
+          const nums = lessonRows.map((r) => {
+            const m = r.lesson_name?.match(/Project\s+(\d+)/i);
+            return m ? parseInt(m[1], 10) : 0;
+          });
+          const highest = nums.length > 0 ? Math.max(0, ...nums) : 0;
+          if (highest > 0) {
+            const pct = Math.min(100, Math.round((highest / 24) * 100));
+            await pool.query(
+              'UPDATE student_programs SET percent_complete = $1 WHERE student_id = $2 AND program = $3',
+              [pct, student_id, program]
+            );
+          }
+        }
+      }
+    } else if (program !== 'CREATE' && program !== 'AI Academy' && program !== 'JR' && lastModuleName) {
       const lookupKey = lastSubProgram || program;
       const totalModules = CURRICULUM_MODULE_COUNTS[lookupKey];
       if (totalModules) {
