@@ -2,23 +2,120 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Color tokens (RGB channels for Tailwind opacity modifier support) ── */
+:root {
+  --ninja-bg:          245 247 250;
+  --ninja-border:      226 232 240;
+  --ninja-blue:        0 106 221;
+  --ninja-blue-hover:  0 88 184;
+  --ninja-navy:        26 46 74;
+  --ninja-muted:       80 102 144;
+}
+
+.dark {
+  --ninja-bg:          13 13 13;
+  --ninja-border:      38 38 38;
+  --ninja-blue:        56 161 255;
+  --ninja-blue-hover:  28 138 255;
+  --ninja-navy:        225 234 248;
+  --ninja-muted:       100 116 139;
+}
+
+/* ── Base ── */
 body {
-  background-color: #f5f7fa;
-  color: #1a2e4a;
+  background-color: rgb(var(--ninja-bg));
+  color: rgb(var(--ninja-navy));
   font-family: 'Nunito', sans-serif;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
+/* ── Smooth theme transition (only fires during the toggle) ── */
+.theme-transitioning *,
+.theme-transitioning *::before,
+.theme-transitioning *::after {
+  transition:
+    background-color 0.28s ease,
+    border-color 0.28s ease,
+    color 0.22s ease,
+    box-shadow 0.28s ease !important;
 }
-::-webkit-scrollbar-track {
-  background: #f5f7fa;
+
+/* ── Dark mode surface override (bg-white → charcoal card) ── */
+.dark .bg-white {
+  background-color: #1a1a1a;
 }
-::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
-  border-radius: 3px;
+
+/* ── Dark mode: input / select fields ── */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #222222;
+  color: rgb(var(--ninja-navy));
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #006ADD;
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: rgb(var(--ninja-muted));
 }
+
+/* ── Dark mode: shadows ── */
+.dark .shadow-sm  { box-shadow: 0 1px 3px 0 rgba(0,0,0,0.5); }
+.dark .shadow     { box-shadow: 0 2px 6px 0 rgba(0,0,0,0.6); }
+.dark .shadow-lg  { box-shadow: 0 8px 24px 0 rgba(0,0,0,0.7); }
+
+/* ── Dark mode: Tailwind colored badge / status overrides ── */
+
+/* Blue */
+.dark .bg-blue-50  { background-color: #0d1e35 !important; }
+.dark .bg-blue-100 { background-color: #0d1e35 !important; }
+.dark .text-blue-700 { color: #60a5fa !important; }
+.dark .border-blue-200 { border-color: #1e3a5f !important; }
+
+/* Green */
+.dark .bg-green-50  { background-color: #052016 !important; }
+.dark .bg-green-100 { background-color: #052016 !important; }
+.dark .text-green-700 { color: #4ade80 !important; }
+.dark .text-green-600 { color: #34d399 !important; }
+.dark .text-green-500 { color: #4ade80 !important; }
+.dark .border-green-200 { border-color: #14532d !important; }
+.dark .border-green-400 { border-color: #16a34a !important; }
+
+/* Red */
+.dark .bg-red-50  { background-color: #1c0a0a !important; }
+.dark .bg-red-100 { background-color: #1c0a0a !important; }
+.dark .text-red-700 { color: #f87171 !important; }
+.dark .text-red-600 { color: #f87171 !important; }
+.dark .text-red-400 { color: #f87171 !important; }
+.dark .border-red-200 { border-color: #7f1d1d !important; }
+.dark .border-red-400 { border-color: #b91c1c !important; }
+.dark .bg-red-500  { background-color: #dc2626 !important; }
+
+/* Purple */
+.dark .bg-purple-50  { background-color: #1a0a2e !important; }
+.dark .bg-purple-100 { background-color: #1a0a2e !important; }
+.dark .text-purple-700 { color: #c084fc !important; }
+.dark .border-purple-200 { border-color: #4c1d95 !important; }
+
+/* Indigo */
+.dark .bg-indigo-100 { background-color: #0f0a2e !important; }
+.dark .text-indigo-700 { color: #818cf8 !important; }
+.dark .border-indigo-200 { border-color: #312e81 !important; }
+
+/* Yellow */
+.dark .bg-yellow-50  { background-color: #1a1200 !important; }
+.dark .bg-yellow-100 { background-color: #1a1200 !important; }
+.dark .text-yellow-700 { color: #fbbf24 !important; }
+.dark .border-yellow-300 { border-color: #92400e !important; }
+
+/* Amber */
+.dark .bg-amber-50 { background-color: #1c1000 !important; }
+.dark .border-amber-200 { border-color: #78350f !important; }
+.dark .text-amber-700 { color: #fbbf24 !important; }
+
+/* Gray */
+.dark .bg-gray-100 { background-color: #222222 !important; }
+.dark .text-gray-600 { color: #9ca3af !important; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: rgb(var(--ninja-bg)); }
+::-webkit-scrollbar-thumb { background: rgb(var(--ninja-border)); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--ninja-blue)); }

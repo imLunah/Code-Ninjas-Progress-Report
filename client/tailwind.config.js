@@ -1,17 +1,17 @@
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
       colors: {
         ninja: {
-          bg:          '#f5f7fa',
-          card:        '#ffffff',
-          border:      '#e2e8f0',
-          blue:        '#006ADD',
-          'blue-hover':'#0058b8',
-          navy:        '#1a2e4a',
-          muted:       '#506690',
-          red:         '#e51520',
+          bg:           'rgb(var(--ninja-bg) / <alpha-value>)',
+          border:       'rgb(var(--ninja-border) / <alpha-value>)',
+          blue:         'rgb(var(--ninja-blue) / <alpha-value>)',
+          'blue-hover': 'rgb(var(--ninja-blue-hover) / <alpha-value>)',
+          navy:         'rgb(var(--ninja-navy) / <alpha-value>)',
+          muted:        'rgb(var(--ninja-muted) / <alpha-value>)',
+          red:          '#e51520',
         }
       },
       fontFamily: {
