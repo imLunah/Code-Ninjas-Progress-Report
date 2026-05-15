@@ -141,7 +141,7 @@ export default function LoginPage() {
             transition={{ type: 'spring', damping: 28, stiffness: 380 }}
             style={{ width: 'calc(50% - 4px)', left: tab === 'staff' ? 4 : 'calc(50%)' }}
           />
-          {[{ id: 'staff', label: 'Sensei / Director' }, { id: 'parent', label: 'Parent' }].map((t) => (
+          {[{ id: 'staff', label: 'Sensei / Center Director' }, { id: 'parent', label: 'Parent' }].map((t) => (
             <button
               key={t.id}
               onClick={() => { setTab(t.id); setError(''); }}
