@@ -1,6 +1,15 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const { requireParent } = require('../middleware/auth');
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Try again in 15 minutes.' },
+});
 
 const STUDENT_PROGRAMS_SUBQUERY = `
   COALESCE(
@@ -23,7 +32,7 @@ const STUDENT_PROGRAMS_SUBQUERY = `
 `;
 
 // POST /api/parent/login
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   const pool = req.app.get('db');
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email is required' });
