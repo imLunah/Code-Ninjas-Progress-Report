@@ -66,8 +66,8 @@ app.use((req, res, next) => {
 // Parent portal uses its own cookie (parent.sid) — completely isolated from staff
 const parentSession = session({ ...sessionConfig, name: 'parent.sid' });
 
-app.use('/api/auth', loginLimiter, require('./routes/auth'));
-app.use('/api/parent', parentSession, loginLimiter, require('./routes/parent'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/parent', parentSession, require('./routes/parent'));
 app.use('/api/students', require('./routes/students'));
 app.use('/api/daily', require('./routes/daily'));
 app.use('/api/progress', require('./routes/progress'));
