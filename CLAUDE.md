@@ -13,8 +13,9 @@
   - App uses **Express sessions for authentication** — NOT Supabase Auth. The Supabase JS client is used only for storage (profile pics). Do not introduce Supabase Auth.
   - Three locations: Yorba Linda, Fullerton, Cerritos. Location names stored as short city names (no "Code Ninjas" prefix).
   - Roles: `manager` (Center Director), `sensei`, `parent`. Parents are a completely separate auth context.
-  - Deploy target is **Vercel** via auto-deploy from `imLunah/dojolink` `main` branch. Every push is live.
-  - **Always commit and push immediately** — user tests on the live Vercel site.
+  - Deploy target is **Vercel** via auto-deploy from `imLunah/dojolink` `main` branch. Every push to `main` is live on `dojolink-neon.vercel.app`.
+  - **Sandbox-first workflow:** All new features and changes go to the `sandbox` branch first. Only push to `main` when the user explicitly says to release/ship it. Never push to `main` on your own.
+  - **Always commit and push to sandbox immediately** — user tests on the sandbox Vercel preview URL.
   - **Never add Co-Authored-By lines to commits.** User does not want Claude on GitHub contributors list.
   - Use `lg` (1024px) breakpoint for the sidebar/mobile nav split — not `md`.
   - Use inline Confirm/Cancel pattern for destructive actions — never `window.confirm`.
