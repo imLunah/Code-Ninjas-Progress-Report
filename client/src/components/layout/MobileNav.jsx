@@ -18,11 +18,8 @@ function LocationBar({ user, switchLocation }) {
     );
   }
   return (
-    <div className="px-4 py-1.5 border-b border-ninja-border bg-ninja-bg flex items-center gap-2">
-      <div className="w-5 h-5 rounded-md flex items-center justify-center text-ninja-blue bg-ninja-blue/10 font-ninja font-bold text-[10px] flex-shrink-0">
-        {user.activeLocation?.name?.slice(0, 2).toUpperCase() || '?'}
-      </div>
-      <span className="text-ninja-navy font-ninja text-sm font-semibold truncate">{user.activeLocation?.name ?? ''}</span>
+    <div className="px-4 py-1.5 border-b border-ninja-border bg-ninja-bg">
+      <span className="text-ninja-navy font-ninja text-sm font-semibold">{user.activeLocation?.name ?? ''}</span>
     </div>
   );
 }

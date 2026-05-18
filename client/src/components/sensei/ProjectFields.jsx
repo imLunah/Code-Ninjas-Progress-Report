@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { PROJECTS, STATUSES, BELT_LEVEL_PROJECTS, getLevelProjects } from '../../utils/beltConfig';
 
 const UPPER_BELTS = ['Purple', 'Brown', 'Red'];
@@ -11,6 +11,7 @@ function getSectionLabel(index, total) {
 
 export default function ProjectFields({ project, setProject, status, setStatus, beltLevel, beltSublevel }) {
   const [isCustomProject, setIsCustomProject] = useState(false);
+  const enteringCustomRef = useRef(false);
 
   const levelProjects = getLevelProjects(beltLevel, beltSublevel);
   const projectOptions = levelProjects ?? PROJECTS;
@@ -18,13 +19,16 @@ export default function ProjectFields({ project, setProject, status, setStatus, 
   const needsSublevel = hasBeltProjects && (!beltSublevel || parseInt(beltSublevel) < 1);
   const showLabels = levelProjects && !UPPER_BELTS.includes(beltLevel);
 
-  // Exit custom mode when project is cleared externally (e.g., belt changed)
+  // Exit custom mode only when project is cleared externally (e.g., belt changed)
+  // The ref prevents the effect from firing when we intentionally clear on custom entry
   useEffect(() => {
-    if (!project) setIsCustomProject(false);
+    if (!project && !enteringCustomRef.current) setIsCustomProject(false);
+    enteringCustomRef.current = false;
   }, [project]);
 
   const handleProjectChange = (e) => {
     if (e.target.value === '__custom__') {
+      enteringCustomRef.current = true;
       setIsCustomProject(true);
       setProject('');
     } else {
