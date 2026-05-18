@@ -5,6 +5,10 @@ const { requireManager, requireSensei, requireOwnLocation } = require('../middle
 
 const SALT_ROUNDS = 10;
 
+function validatePassword(pw) {
+  return pw.length >= 6 && /[A-Z]/.test(pw) && /[^A-Za-z0-9]/.test(pw);
+}
+
 // GET /api/users
 router.get('/', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
@@ -77,7 +81,7 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   }
   if (username.length > 50) return res.status(400).json({ error: 'Username too long (max 50 chars)' });
   if (display_name.length > 80) return res.status(400).json({ error: 'Display name too long (max 80 chars)' });
-  if (password.length > 200) return res.status(400).json({ error: 'Password too long' });
+  if (!validatePassword(password)) return res.status(400).json({ error: 'Password must be at least 6 characters and include an uppercase letter and a special character' });
 
   if (!['manager', 'sensei'].includes(role)) {
     return res.status(400).json({ error: 'Invalid role' });
@@ -136,7 +140,7 @@ router.patch('/me', requireSensei, async (req, res) => {
       await pool.query('UPDATE users SET username = $1 WHERE id = $2', [username.trim(), req.session.userId]);
     }
     if (new_password?.trim()) {
-      if (new_password.trim().length < 12) return res.status(400).json({ error: 'Password must be at least 12 characters' });
+      if (!validatePassword(new_password.trim())) return res.status(400).json({ error: 'Password must be at least 6 characters and include an uppercase letter and a special character' });
       const hash = await bcrypt.hash(new_password.trim(), SALT_ROUNDS);
       await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.session.userId]);
     }
@@ -171,7 +175,7 @@ router.patch('/:id/credentials', requireManager, requireOwnLocation, async (req,
       await pool.query('UPDATE users SET username = $1 WHERE id = $2', [username.trim(), targetId]);
     }
     if (new_password?.trim()) {
-      if (new_password.trim().length < 12) return res.status(400).json({ error: 'Password must be at least 12 characters' });
+      if (!validatePassword(new_password.trim())) return res.status(400).json({ error: 'Password must be at least 6 characters and include an uppercase letter and a special character' });
       const hash = await bcrypt.hash(new_password.trim(), SALT_ROUNDS);
       await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, targetId]);
     }
