@@ -26,9 +26,16 @@ const PROGRAMS_SUBQUERY = `
 // GET /api/students
 router.get('/', requireAuth, async (req, res) => {
   const pool = req.app.get('db');
-  const { search, program, belt } = req.query;
+  const { search, program, belt, sort } = req.query;
   const limit = Math.min(parseInt(req.query.limit) || 100, 500);
   const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+
+  const SORT_ORDERS = {
+    last_active: `(SELECT MAX(pl2.session_date) FROM progress_logs pl2 WHERE pl2.student_id = s.id) DESC NULLS LAST, s.full_name ASC`,
+    joined: `s.created_at DESC, s.full_name ASC`,
+    name: `s.full_name ASC`,
+  };
+  const orderClause = SORT_ORDERS[sort] || SORT_ORDERS.name;
 
   let query = `
     SELECT s.*,
@@ -57,13 +64,24 @@ router.get('/', requireAuth, async (req, res) => {
     params.push(belt);
   }
 
-  paramCount++; query += ` ORDER BY s.full_name ASC LIMIT $${paramCount}`; params.push(limit);
+  paramCount++; query += ` ORDER BY ${orderClause} LIMIT $${paramCount}`; params.push(limit);
   paramCount++; query += ` OFFSET $${paramCount}`; params.push(offset);
 
   try {
-    const { rows } = await pool.query(query, params);
+    const [{ rows }, { rows: countRows }] = await Promise.all([
+      pool.query(query, params),
+      pool.query(
+        `SELECT sp.program, COUNT(DISTINCT sp.student_id)::int AS count
+         FROM student_programs sp
+         JOIN students s ON sp.student_id = s.id
+         WHERE s.active = true AND s.location_id = $1
+         GROUP BY sp.program`,
+        [req.session.activeLocationId]
+      ),
+    ]);
     const total = rows[0]?.total_count ?? 0;
-    res.json({ students: rows, total });
+    const programCounts = countRows.reduce((acc, r) => ({ ...acc, [r.program]: r.count }), {});
+    res.json({ students: rows, total, programCounts });
   } catch (err) {
     console.error('Error fetching students:', err);
     res.status(500).json({ error: 'Failed to fetch students' });
