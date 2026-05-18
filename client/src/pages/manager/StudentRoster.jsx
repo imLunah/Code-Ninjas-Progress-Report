@@ -69,16 +69,21 @@ export default function StudentRoster() {
   const isManager = user?.role === 'manager' && !isReadOnly;
   const isLogMode = searchParams.get('mode') === 'log';
 
-  const PAGE_SIZE = 100;
+  const PAGE_SIZE = 25;
   const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const mobileSentinelRef = useRef(null);
+  const desktopSentinelRef = useRef(null);
 
   const loadStudents = (offset = 0, append = false) => {
+    if (append && loadingMore) return;
     const params = new URLSearchParams();
     if (search) params.set('search', search);
     if (programFilter) params.set('program', programFilter);
     params.set('limit', PAGE_SIZE);
     params.set('offset', offset);
-    if (!append) setLoading(true);
+    if (append) setLoadingMore(true);
+    else setLoading(true);
     api.get(`/students?${params.toString()}`)
       .then((data) => {
         setStudents((prev) => append ? [...prev, ...data] : data);
@@ -86,10 +91,28 @@ export default function StudentRoster() {
         if (!append) setSelected(new Set());
       })
       .catch(() => setError('Failed to load ninjas'))
-      .finally(() => setLoading(false));
+      .finally(() => { setLoading(false); setLoadingMore(false); });
   };
 
   useEffect(() => { loadStudents(0); }, [search, programFilter, user?.activeLocation?.id]);
+
+  useEffect(() => {
+    if (!hasMore || loading || loadingMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          loadStudents(students.length, true);
+        }
+      },
+      { rootMargin: '120px' }
+    );
+
+    if (mobileSentinelRef.current) observer.observe(mobileSentinelRef.current);
+    if (desktopSentinelRef.current) observer.observe(desktopSentinelRef.current);
+
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadingMore, students.length]);
 
   const sorted = [...students].sort((a, b) => {
     if (sortBy === 'last_active') {
@@ -318,13 +341,9 @@ export default function StudentRoster() {
               })}
             </div>
           )}
-          {hasMore && !loading && (
-            <button
-              onClick={() => loadStudents(students.length, true)}
-              className="w-full py-3 text-ninja-blue font-ninja font-semibold text-sm hover:bg-ninja-bg transition-colors"
-            >
-              Load more ninjas
-            </button>
+          <div ref={mobileSentinelRef} className="h-1" />
+          {loadingMore && (
+            <div className="py-3 text-center text-ninja-muted font-ninja text-sm">Loading...</div>
           )}
         </div>
 
@@ -412,7 +431,7 @@ export default function StudentRoster() {
                 {sorted.length === 0 && (
                   <p className="text-center text-ninja-muted font-ninja py-12">No ninjas found</p>
                 )}
-                {sorted.map((s, idx) => {
+                {sorted.map((s) => {
                   const create = (s.programs || []).find((p) => p.program === 'CREATE');
                   const isSelected = selected.has(s.id);
                   return (
@@ -484,6 +503,10 @@ export default function StudentRoster() {
                     </div>
                   );
                 })}
+                <div ref={desktopSentinelRef} className="h-1" />
+                {loadingMore && (
+                  <div className="py-3 text-center text-ninja-muted font-ninja text-sm">Loading...</div>
+                )}
                 </div>
               </>
             )}
