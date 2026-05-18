@@ -28,7 +28,7 @@ export default function LogClubPage() {
 
   useEffect(() => {
     api.get('/students')
-      .then((data) => setStudents(data.filter((s) => s.active !== false)))
+      .then(({ students: data }) => setStudents(data.filter((s) => s.active !== false)))
       .catch(() => setError('Could not load students'))
       .finally(() => setLoadingStudents(false));
 
