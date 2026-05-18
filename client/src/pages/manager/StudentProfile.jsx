@@ -449,10 +449,14 @@ export default function StudentProfile() {
   const isManager = user?.role === 'manager';
 
   useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError('');
     api.get(`/students/${id}`)
-      .then(setStudent)
-      .catch(() => setError('Failed to load ninja'))
-      .finally(() => setLoading(false));
+      .then((data) => { if (!controller.signal.aborted) setStudent(data); })
+      .catch(() => { if (!controller.signal.aborted) setError('Failed to load ninja'); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, [id, user?.activeLocation?.id]);
 
   const handleSaved = (updated) => setStudent((prev) => ({ ...prev, ...updated }));
@@ -561,7 +565,7 @@ export default function StudentProfile() {
                   {[
                     locationName,
                     programs.map(p => p.program === 'Robotics Academy' ? 'Robotics' : p.program === 'AI Academy' ? 'AI' : p.program).join(' · '),
-                    `Joined ${new Date(student.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`,
+                    `Joined ${student.created_at ? new Date(student.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—'}`,
                   ].filter(Boolean).join(' · ')}
                 </p>
               </div>
@@ -676,7 +680,7 @@ export default function StudentProfile() {
               <p className="text-ninja-muted font-ninja text-sm mt-1">
                 {[
                   programs.map((p) => p.program === 'Robotics Academy' ? 'Robotics' : p.program === 'AI Academy' ? 'AI' : p.program).join(' · '),
-                  `Joined ${new Date(student.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`,
+                  `Joined ${student.created_at ? new Date(student.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—'}`,
                   locationName,
                   student.parent_name && `Parent: ${student.parent_name}`,
                 ].filter(Boolean).join(' · ')}
@@ -851,7 +855,7 @@ export default function StudentProfile() {
                     {student.birthday
                       ? `Age ${Math.floor((Date.now() - new Date(student.birthday.split('T')[0] + 'T00:00:00')) / (365.25 * 24 * 60 * 60 * 1000))} · `
                       : ''}
-                    Member since {new Date(student.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                    Member since {student.created_at ? new Date(student.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—'}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1 justify-center">
                     {programs.map((p) => <ProgramBadge key={p.program} program={p.program} size="xs" />)}

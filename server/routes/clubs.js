@@ -61,6 +61,8 @@ router.post('/definitions', requireManager, requireOwnLocation, async (req, res)
   const pool = req.app.get('db');
   const { name, description, color_key, schedule } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'Club name is required' });
+  if (name.trim().length > 80) return res.status(400).json({ error: 'Club name too long (max 80 chars)' });
+  if (description && description.length > 500) return res.status(400).json({ error: 'Description too long (max 500 chars)' });
 
   const slug = toSlug(name.trim());
   try {
@@ -265,6 +267,12 @@ router.post('/profile/:clubName/resources', requireSensei, requireOwnLocation, a
   const validClubs = await getValidClubNames(pool, req.session.activeLocationId);
   if (!validClubs.has(clubName)) return res.status(400).json({ error: 'Invalid club' });
   if (!title?.trim() || !url?.trim()) return res.status(400).json({ error: 'Title and URL are required' });
+  try {
+    const parsed = new URL(url.trim());
+    if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error();
+  } catch {
+    return res.status(400).json({ error: 'URL must start with http:// or https://' });
+  }
 
   try {
     const { rows } = await pool.query(
@@ -331,8 +339,16 @@ router.patch('/:id/attendees', requireSensei, requireOwnLocation, async (req, re
     const { rows: sessionInfo } = await client.query(
       'SELECT club_name, location_id FROM club_sessions WHERE id = $1', [req.params.id]
     );
+    // Validate all student_ids belong to this location before inserting
+    const { rows: validStudents } = await client.query(
+      'SELECT id FROM students WHERE id = ANY($1::int[]) AND location_id = $2 AND active = true',
+      [student_ids, req.session.activeLocationId]
+    );
+    const validIds = new Set(validStudents.map((s) => s.id));
+
     await client.query('DELETE FROM club_attendees WHERE club_session_id = $1', [req.params.id]);
     for (const sid of student_ids) {
+      if (!validIds.has(sid)) continue;
       await client.query(
         'INSERT INTO club_attendees (club_session_id, student_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
         [req.params.id, sid]

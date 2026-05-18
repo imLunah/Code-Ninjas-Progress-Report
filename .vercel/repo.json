@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_pVnbIzPpOy0gfvY2Z9a1VcCqSHsD",
+      "name": "dojolink",
+      "directory": ".",
+      "orgId": "team_ujC5UDibsMElrTjPEJvp7KBb"
+    }
+  ]
+}

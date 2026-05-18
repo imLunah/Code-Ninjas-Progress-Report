@@ -137,6 +137,7 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
       setError('Notes are required');
       return;
     }
+    if (loading) return; // prevent double-submit
 
     setLoading(true);
     setError('');

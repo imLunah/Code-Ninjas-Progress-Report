@@ -11,7 +11,9 @@ import ProgressVisuals from '../../components/parent/ProgressVisuals';
 import { ClubBadge } from '../../components/shared/ClubSessionsPanel';
 
 function calcAge(birthday) {
+  if (!birthday || typeof birthday !== 'string' || !birthday.trim()) return null;
   const dob = new Date(birthday.split('T')[0] + 'T00:00:00');
+  if (isNaN(dob.getTime())) return null;
   return Math.floor((Date.now() - dob) / (365.25 * 24 * 60 * 60 * 1000));
 }
 
@@ -92,7 +94,7 @@ export default function ParentStudentProfile() {
               <ProgramBadge key={p.program} program={p.program} size="sm" />
             ))}
           </div>
-          {student.birthday && (
+          {student.birthday && calcAge(student.birthday) !== null && (
             <p className="text-ninja-muted font-ninja text-sm">
               Age {calcAge(student.birthday)}
               {' · '}

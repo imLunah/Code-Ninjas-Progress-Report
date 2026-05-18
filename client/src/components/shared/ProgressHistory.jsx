@@ -23,35 +23,40 @@ function LogComment({ comment }) {
 function CommentBox({ logId, onAdded }) {
   const [body, setBody] = useState('');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!body.trim()) return;
     setSaving(true);
+    setError('');
     try {
       const comment = await api.post(`/progress/${logId}/comments`, { body: body.trim() });
       onAdded(comment);
       setBody('');
-    } catch {
-      // ignore
+    } catch (err) {
+      setError(err.message || 'Failed to post comment.');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 mt-3">
-      <input
-        type="text"
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder="Add a comment..."
-        className="flex-1 bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-sm focus:outline-none focus:border-ninja-blue transition-colors"
-      />
-      <Button type="submit" size="sm" disabled={saving || !body.trim()}>
-        {saving ? '...' : 'Reply'}
-      </Button>
-    </form>
+    <div className="mt-3">
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <input
+          type="text"
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="Add a comment..."
+          className="flex-1 bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-sm focus:outline-none focus:border-ninja-blue transition-colors"
+        />
+        <Button type="submit" size="sm" disabled={saving || !body.trim()}>
+          {saving ? '...' : 'Reply'}
+        </Button>
+      </form>
+      {error && <p className="text-ninja-red font-ninja text-xs mt-1">{error}</p>}
+    </div>
   );
 }
 
@@ -67,8 +72,11 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [commentErrors, setCommentErrors] = useState({});
 
   const visible = filter ? logs.filter((l) => l.program === filter) : logs;
 
@@ -88,12 +96,13 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
   const saveEdit = async (logId) => {
     if (!editDraft.trim()) return;
     setSavingEdit(true);
+    setEditError('');
     try {
       await api.patch(`/progress/${logId}`, { notes: editDraft.trim() });
       onLogUpdated && onLogUpdated(logId, { notes: editDraft.trim() });
       setEditingId(null);
-    } catch {
-      // ignore
+    } catch (err) {
+      setEditError(err.message || 'Failed to save. Try again.');
     } finally {
       setSavingEdit(false);
     }
@@ -101,12 +110,13 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
 
   const handleDelete = async (logId) => {
     setDeleting(true);
+    setDeleteError('');
     try {
       await api.delete(`/progress/${logId}`);
       onLogDeleted && onLogDeleted(logId);
       setConfirmDeleteId(null);
-    } catch {
-      // ignore
+    } catch (err) {
+      setDeleteError(err.message || 'Failed to delete. Try again.');
     } finally {
       setDeleting(false);
     }
@@ -215,7 +225,8 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                                   <Button variant="danger" size="sm" onClick={() => handleDelete(log.id)} disabled={deleting}>
                                     {deleting ? '...' : 'Confirm'}
                                   </Button>
-                                  <Button variant="secondary" size="sm" onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+                                  <Button variant="secondary" size="sm" onClick={() => { setConfirmDeleteId(null); setDeleteError(''); }}>Cancel</Button>
+                                  {deleteError && <p className="text-ninja-red font-ninja text-xs">{deleteError}</p>}
                                 </>
                               ) : (
                                 <button
@@ -259,6 +270,7 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                             </Button>
                             <Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>Cancel</Button>
                           </div>
+                          {editError && <p className="text-ninja-red font-ninja text-xs mt-1">{editError}</p>}
                         </div>
                       ) : (
                         log.notes && <p className="text-ninja-navy font-ninja text-sm leading-relaxed">{log.notes}</p>
