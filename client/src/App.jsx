@@ -20,7 +20,6 @@ import LogClubPage from './pages/sensei/LogClubPage';
 import ClubsPage from './pages/ClubsPage';
 import ClubProfilePage from './pages/ClubProfilePage';
 import ClubSessionPage from './pages/ClubSessionPage';
-import ParentLogin from './pages/parent/ParentLogin';
 import ParentDashboard from './pages/parent/ParentDashboard';
 import ParentStudentProfile from './pages/parent/ParentStudentProfile';
 

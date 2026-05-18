@@ -257,6 +257,12 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
         .upload(path, blob, { cacheControl: '3600', upsert: false, contentType: 'image/jpeg' });
       if (error) throw new Error(error.message);
       const { data: { publicUrl } } = supabase.storage.from('club-resources').getPublicUrl(data.path);
+      if (clubDef.cover_image_url) {
+        try {
+          const oldPath = new URL(clubDef.cover_image_url).pathname.split('/object/public/club-resources/')[1];
+          if (oldPath) await supabase.storage.from('club-resources').remove([oldPath]);
+        } catch {}
+      }
       await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { cover_image_url: publicUrl });
       onCoverUpdated(publicUrl);
     } catch {

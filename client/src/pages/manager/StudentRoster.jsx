@@ -46,11 +46,12 @@ const FILTER_CHIPS = [
 export default function StudentRoster() {
   const [students, setStudents] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [programCounts, setProgramCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [programFilter, setProgramFilter] = useState('');
-  const [sortBy, setSortBy] = useState('last_active');
+  const [sort, setSort] = useState('last_active');
 
   // Bulk delete
   const [selected, setSelected] = useState(new Set());
@@ -81,14 +82,16 @@ export default function StudentRoster() {
     const params = new URLSearchParams();
     if (search) params.set('search', search);
     if (programFilter) params.set('program', programFilter);
+    params.set('sort', sort);
     params.set('limit', PAGE_SIZE);
     params.set('offset', offset);
     if (append) setLoadingMore(true);
     else setLoading(true);
     api.get(`/students?${params.toString()}`)
-      .then(({ students: page, total }) => {
+      .then(({ students: page, total, programCounts: counts }) => {
         setStudents((prev) => append ? [...prev, ...page] : page);
         setTotalCount(total);
+        if (counts) setProgramCounts(counts);
         setHasMore(page.length === PAGE_SIZE);
         if (!append) setSelected(new Set());
       })
@@ -96,7 +99,7 @@ export default function StudentRoster() {
       .finally(() => { setLoading(false); setLoadingMore(false); });
   };
 
-  useEffect(() => { loadStudents(0); }, [search, programFilter, user?.activeLocation?.id]);
+  useEffect(() => { loadStudents(0); }, [search, programFilter, sort, user?.activeLocation?.id]);
 
   useEffect(() => {
     if (!hasMore || loading || loadingMore) return;
@@ -116,16 +119,7 @@ export default function StudentRoster() {
     return () => observer.disconnect();
   }, [hasMore, loading, loadingMore, students.length]);
 
-  const sorted = [...students].sort((a, b) => {
-    if (sortBy === 'last_active') {
-      if (!a.last_activity && !b.last_activity) return 0;
-      if (!a.last_activity) return 1;
-      if (!b.last_activity) return -1;
-      return new Date(b.last_activity) - new Date(a.last_activity);
-    }
-    if (sortBy === 'joined') return new Date(b.created_at) - new Date(a.created_at);
-    return a.full_name.localeCompare(b.full_name);
-  });
+  const sorted = students;
 
   const toggleSelect = (id) => {
     setSelected((prev) => {
@@ -209,11 +203,10 @@ export default function StudentRoster() {
     });
   };
 
-  // Chip counts from loaded students
   const chipCounts = FILTER_CHIPS.reduce((acc, chip) => {
     acc[chip.value] = chip.value
-      ? students.filter(s => (s.programs || []).some(p => p.program === chip.value)).length
-      : students.length;
+      ? (programCounts[chip.value] ?? 0)
+      : totalCount;
     return acc;
   }, {});
 
@@ -396,9 +389,9 @@ export default function StudentRoster() {
               Sort:{' '}
               <button
                 className="font-bold text-ninja-navy hover:text-ninja-blue transition-colors"
-                onClick={() => setSortBy(sortBy === 'last_active' ? 'name' : sortBy === 'name' ? 'joined' : 'last_active')}
+                onClick={() => setSort(sort === 'last_active' ? 'name' : sort === 'name' ? 'joined' : 'last_active')}
               >
-                {sortBy === 'last_active' ? 'Last session ↓' : sortBy === 'name' ? 'Name A–Z' : 'Newest first'}
+                {sort === 'last_active' ? 'Last session ↓' : sort === 'name' ? 'Name A–Z' : 'Newest first'}
               </button>
             </span>
           </div>
