@@ -10,7 +10,8 @@ function LessonEntryRow({ entry, index, total, program, onChange, onRemove }) {
   const subProgramOptions = SUB_PROGRAMS[program] || null;
   const curriculum = getCurriculum(program, entry.subProgram || null) || [];
   const moduleOptions = curriculum;
-  const lessonOptions = moduleOptions.find((m) => m.module === entry.moduleName)?.lessons || [];
+  const isCustomModule = entry.moduleName === '__custom__';
+  const lessonOptions = isCustomModule ? [] : (moduleOptions.find((m) => m.module === entry.moduleName)?.lessons || []);
 
   return (
     <div className="relative border border-ninja-border rounded-xl p-4 bg-ninja-bg space-y-3">
@@ -54,7 +55,7 @@ function LessonEntryRow({ entry, index, total, program, onChange, onRemove }) {
         </div>
       )}
 
-      {(entry.subProgram || !subProgramOptions) && moduleOptions.length > 0 && (
+      {(entry.subProgram || !subProgramOptions) && moduleOptions.length > 0 && !isCustomModule && (
         <div>
           <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
             Module
@@ -68,11 +69,49 @@ function LessonEntryRow({ entry, index, total, program, onChange, onRemove }) {
             {moduleOptions.map((m) => (
               <option key={m.module} value={m.module}>{m.module}</option>
             ))}
+            <option value="__custom__">Custom...</option>
           </select>
         </div>
       )}
 
-      {entry.moduleName && lessonOptions.length > 0 && (
+      {isCustomModule && (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
+              Custom Module
+            </label>
+            <input
+              type="text"
+              value={entry.customModule}
+              onChange={(e) => onChange('customModule', e.target.value)}
+              placeholder="e.g., Special Project, Guest Session..."
+              className="w-full bg-white border border-ninja-blue text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
+              Custom Lesson
+            </label>
+            <input
+              type="text"
+              value={entry.customLesson}
+              onChange={(e) => onChange('customLesson', e.target.value)}
+              placeholder="e.g., Intro to Python, Robot Challenge..."
+              className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => onChange('moduleName', '')}
+            className="text-ninja-muted hover:text-ninja-navy text-xs font-ninja underline"
+          >
+            ← Back to curriculum
+          </button>
+        </div>
+      )}
+
+      {entry.moduleName && !isCustomModule && lessonOptions.length > 0 && (
         <div>
           <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
             Lesson
@@ -100,7 +139,7 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
   const [project, setProject] = useState(enrollment?.current_project || '');
   const [status, setStatus] = useState(enrollment?.project_status || '');
 
-  const emptyEntry = { subProgram: '', moduleName: '', lessonName: '' };
+  const emptyEntry = { subProgram: '', moduleName: '', lessonName: '', customModule: '', customLesson: '' };
   const [lessonEntries, setLessonEntries] = useState([{ ...emptyEntry }]);
 
   const [loading, setLoading] = useState(false);
@@ -121,8 +160,8 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
       prev.map((e, i) => {
         if (i !== index) return e;
         const updated = { ...e, [field]: value };
-        if (field === 'subProgram') { updated.moduleName = ''; updated.lessonName = ''; }
-        if (field === 'moduleName') { updated.lessonName = ''; }
+        if (field === 'subProgram') { updated.moduleName = ''; updated.lessonName = ''; updated.customModule = ''; updated.customLesson = ''; }
+        if (field === 'moduleName') { updated.lessonName = ''; updated.customModule = ''; updated.customLesson = ''; }
         return updated;
       })
     );
@@ -146,11 +185,14 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
     try {
       // Build lesson_entries — only include entries that have at least a module selected
       const filledEntries = lessonEntries
-        .filter((e) => e.moduleName || e.subProgram || e.lessonName)
+        .filter((e) => {
+          if (e.moduleName === '__custom__') return e.customModule || e.customLesson;
+          return e.moduleName || e.subProgram || e.lessonName;
+        })
         .map((e) => ({
           sub_program: e.subProgram || null,
-          module_name: e.moduleName || null,
-          lesson_name: e.lessonName || null,
+          module_name: e.moduleName === '__custom__' ? (e.customModule || null) : (e.moduleName || null),
+          lesson_name: e.moduleName === '__custom__' ? (e.customLesson || null) : (e.lessonName || null),
         }));
 
       const payload = {
