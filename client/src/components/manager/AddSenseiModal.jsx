@@ -21,8 +21,15 @@ export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
     onClose();
   };
 
+  const passwordValid = (pw) =>
+    pw.length >= 6 && /[A-Z]/.test(pw) && /[^A-Za-z0-9]/.test(pw);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!passwordValid(form.password)) {
+      setError('Password must be at least 6 characters and include an uppercase letter and a special character.');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -134,6 +141,7 @@ export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
             placeholder="Set a password"
             className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
           />
+          <p className="text-ninja-muted font-ninja text-xs mt-1">Min 6 characters, one uppercase, one special character (e.g. Ninja@1)</p>
         </div>
 
         <div className="flex gap-3 pt-2">
