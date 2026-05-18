@@ -37,7 +37,6 @@ export default function LoginPage() {
   const [keepSignedIn, setKeepSignedIn] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [alphaDismissed, setAlphaDismissed] = useState(false);
   const { login } = useAuth();
   const { login: parentLogin } = useParentAuth();
   const navigate = useNavigate();
@@ -65,41 +64,6 @@ export default function LoginPage() {
     <div className="min-h-screen bg-ninja-bg flex flex-col items-center justify-start sm:justify-center px-5 sm:px-6 py-8 sm:py-12">
       <div className="fixed top-3 right-4 z-30"><ThemeToggle /></div>
 
-      {/* Alpha notice */}
-      <AnimatePresence>
-        {!alphaDismissed && (
-          <motion.div
-            key="overlay"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-          >
-            <motion.div
-              initial={{ scale: 0.94, opacity: 0, y: 14 }}
-              animate={{ scale: 1,    opacity: 1, y:  0 }}
-              exit={{    scale: 0.94, opacity: 0, y: 14 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 300 }}
-              className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center"
-            >
-              <motion.div
-                initial={{ rotate: -15, scale: 0.7 }}
-                animate={{ rotate: 0, scale: 1 }}
-                transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.1 }}
-                className="text-3xl mb-3"
-              >🚧</motion.div>
-              <h2 className="text-lg font-bold font-ninja text-ninja-navy mb-2">Early Alpha</h2>
-              <p className="text-ninja-muted font-ninja text-sm leading-relaxed mb-5">
-                DojoLink is still in early development. Expect bugs, missing features, and changes as we continue building. John is working very long hours on this. Thanks for your patience!
-              </p>
-              <button
-                onClick={() => setAlphaDismissed(true)}
-                className="w-full bg-ninja-blue hover:bg-ninja-blue-hover text-white font-ninja font-bold py-2.5 rounded-xl transition-colors"
-              >
-                Got it
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <motion.div
         className="w-full max-w-lg"
