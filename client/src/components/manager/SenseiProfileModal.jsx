@@ -186,13 +186,15 @@ export default function SenseiProfileModal({
                 <Button variant="secondary" className="flex-1" onClick={() => { handleClose(); onEditLogin(); }}>
                   Edit Login
                 </Button>
-                {confirmingRemove ? (
-                  <>
-                    <Button variant="danger" onClick={() => { onRemove(); handleClose(); }}>Confirm</Button>
-                    <Button variant="secondary" onClick={() => setConfirmingRemove(false)}>Cancel</Button>
-                  </>
-                ) : (
-                  <Button variant="danger" onClick={() => setConfirmingRemove(true)}>Remove</Button>
+                {sensei.role !== 'manager' && (
+                  confirmingRemove ? (
+                    <>
+                      <Button variant="danger" onClick={() => { onRemove(); handleClose(); }}>Confirm</Button>
+                      <Button variant="secondary" onClick={() => setConfirmingRemove(false)}>Cancel</Button>
+                    </>
+                  ) : (
+                    <Button variant="danger" onClick={() => setConfirmingRemove(true)}>Remove</Button>
+                  )
                 )}
               </div>
             )}
