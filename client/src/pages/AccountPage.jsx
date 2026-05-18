@@ -69,7 +69,9 @@ export default function AccountPage() {
 
     if (!trimmedUsername && !trimmedPassword) return setError('Enter a new username or password.');
     if (trimmedPassword && trimmedPassword !== confirmPassword.trim()) return setError('Passwords do not match.');
-    if (trimmedPassword && trimmedPassword.length < 6) return setError('Password must be at least 6 characters.');
+    if (trimmedPassword && (trimmedPassword.length < 6 || !/[A-Z]/.test(trimmedPassword) || !/[^A-Za-z0-9]/.test(trimmedPassword))) {
+      return setError('Password must be at least 6 characters and include an uppercase letter and a special character.');
+    }
 
     const payload = {};
     if (trimmedUsername && trimmedUsername !== user?.username) payload.username = trimmedUsername;
