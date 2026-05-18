@@ -32,6 +32,7 @@ router.get('/', requireAuth, async (req, res) => {
 
   let query = `
     SELECT s.*,
+      COUNT(*) OVER() AS total_count,
       (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id) AS last_activity,
       ${PROGRAMS_SUBQUERY}
     FROM students s
@@ -61,7 +62,8 @@ router.get('/', requireAuth, async (req, res) => {
 
   try {
     const { rows } = await pool.query(query, params);
-    res.json(rows);
+    const total = rows[0]?.total_count ?? 0;
+    res.json({ students: rows, total });
   } catch (err) {
     console.error('Error fetching students:', err);
     res.status(500).json({ error: 'Failed to fetch students' });
