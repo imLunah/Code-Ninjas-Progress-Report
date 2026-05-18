@@ -89,10 +89,7 @@ export default function Sidebar() {
               ))}
             </select>
           ) : (
-            <div className="flex items-center gap-2 px-3 py-2 bg-ninja-bg border border-ninja-border rounded-lg">
-              <div className="w-6 h-6 rounded-md flex items-center justify-center text-ninja-blue bg-ninja-blue/10 font-ninja font-bold text-xs flex-shrink-0">
-                {user.activeLocation?.name?.slice(0, 2).toUpperCase() || '?'}
-              </div>
+            <div className="px-3 py-2 bg-ninja-bg border border-ninja-border rounded-lg">
               <span className="text-ninja-navy font-ninja text-sm font-semibold truncate">{user.activeLocation?.name ?? ''}</span>
             </div>
           )}
