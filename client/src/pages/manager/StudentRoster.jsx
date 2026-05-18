@@ -45,6 +45,7 @@ const FILTER_CHIPS = [
 
 export default function StudentRoster() {
   const [students, setStudents] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
@@ -85,9 +86,10 @@ export default function StudentRoster() {
     if (append) setLoadingMore(true);
     else setLoading(true);
     api.get(`/students?${params.toString()}`)
-      .then((data) => {
-        setStudents((prev) => append ? [...prev, ...data] : data);
-        setHasMore(data.length === PAGE_SIZE);
+      .then(({ students: page, total }) => {
+        setStudents((prev) => append ? [...prev, ...page] : page);
+        setTotalCount(total);
+        setHasMore(page.length === PAGE_SIZE);
         if (!append) setSelected(new Set());
       })
       .catch(() => setError('Failed to load ninjas'))
@@ -228,7 +230,7 @@ export default function StudentRoster() {
             <p className="text-ninja-muted font-ninja text-sm mt-0.5">
               {isLogMode
                 ? 'Pick a ninja to log a session'
-                : `${students.length} active ninja${students.length !== 1 ? 's' : ''}`}
+                : `${totalCount} active ninja${totalCount !== 1 ? 's' : ''}`}
             </p>
           </div>
           {isManager && !isLogMode && (
