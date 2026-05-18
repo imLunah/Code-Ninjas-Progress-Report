@@ -48,6 +48,7 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
   if (!student_id || !program || !notes) {
     return res.status(400).json({ error: 'student_id, program, and notes are required' });
   }
+  if (notes.length > 2000) return res.status(400).json({ error: 'Notes too long (max 2000 chars)' });
 
   // Build the list of lesson entries to insert — fall back to single-lesson fields if no array
   const entries = (Array.isArray(lesson_entries) && lesson_entries.length > 0)

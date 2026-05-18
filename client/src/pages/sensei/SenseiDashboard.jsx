@@ -17,11 +17,13 @@ export default function SenseiDashboard() {
   const todayStr = today();
 
   useEffect(() => {
+    const controller = new AbortController();
     api.get(`/daily?date=${todayStr}`)
-      .then(setAssignments)
-      .catch(() => setError('Failed to load today\'s ninjas'))
-      .finally(() => setLoading(false));
-    api.get('/clubs').then(setClubSessions).catch(() => {});
+      .then((data) => { if (!controller.signal.aborted) setAssignments(data); })
+      .catch(() => { if (!controller.signal.aborted) setError('Failed to load today\'s ninjas'); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    api.get('/clubs').then((data) => { if (!controller.signal.aborted) setClubSessions(data); }).catch(() => {});
+    return () => controller.abort();
   }, [todayStr, user?.activeLocation?.id]);
 
   // Group assignments by student so each student shows one card

@@ -25,21 +25,12 @@ router.get('/', requireSensei, async (req, res) => {
       return res.json(rows);
     }
 
-    let query = 'SELECT id, username, display_name, role, location_id, created_at FROM users';
-    const conditions = [];
-    const params = [];
-    let paramCount = 0;
-
-    if (role) {
-      paramCount++;
-      conditions.push(`role = $${paramCount}`);
-      params.push(role);
-    }
-
-    if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
-    query += ' ORDER BY role, display_name ASC';
-
-    const { rows } = await pool.query(query, params);
+    // Always filter by own location — never expose other locations' users
+    const { rows } = await pool.query(
+      `SELECT id, username, display_name, role, location_id, created_at FROM users
+       WHERE location_id = $1 AND active = true ORDER BY role, display_name ASC`,
+      [req.session.activeLocationId]
+    );
     res.json(rows);
   } catch (err) {
     console.error('Error fetching users:', err);
@@ -84,6 +75,9 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   if (!username || !password || !display_name || !role) {
     return res.status(400).json({ error: 'All fields are required' });
   }
+  if (username.length > 50) return res.status(400).json({ error: 'Username too long (max 50 chars)' });
+  if (display_name.length > 80) return res.status(400).json({ error: 'Display name too long (max 80 chars)' });
+  if (password.length > 200) return res.status(400).json({ error: 'Password too long' });
 
   if (!['manager', 'sensei'].includes(role)) {
     return res.status(400).json({ error: 'Invalid role' });
@@ -96,9 +90,8 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
     );
     if (existing[0]) return res.status(409).json({ error: 'Username already taken' });
 
-    const locationId = role === 'sensei'
-      ? req.session.activeLocationId
-      : (req.body.location_id || req.session.activeLocationId);
+    // Always use the manager's own location — never trust location_id from request body
+    const locationId = req.session.activeLocationId;
 
     const hash = await bcrypt.hash(password, SALT_ROUNDS);
     const { rows } = await pool.query(
@@ -143,13 +136,14 @@ router.patch('/me', requireSensei, async (req, res) => {
       await pool.query('UPDATE users SET username = $1 WHERE id = $2', [username.trim(), req.session.userId]);
     }
     if (new_password?.trim()) {
-      if (new_password.trim().length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      if (new_password.trim().length < 12) return res.status(400).json({ error: 'Password must be at least 12 characters' });
       const hash = await bcrypt.hash(new_password.trim(), SALT_ROUNDS);
       await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.session.userId]);
     }
     res.json({ ok: true, username: username?.trim() || undefined });
   } catch (err) {
     console.error('Self credential update error:', err);
+    if (err.code === '23505') return res.status(409).json({ error: 'Username already taken' });
     res.status(500).json({ error: 'Failed to update account' });
   }
 });
@@ -177,7 +171,7 @@ router.patch('/:id/credentials', requireManager, requireOwnLocation, async (req,
       await pool.query('UPDATE users SET username = $1 WHERE id = $2', [username.trim(), targetId]);
     }
     if (new_password?.trim()) {
-      if (new_password.trim().length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      if (new_password.trim().length < 12) return res.status(400).json({ error: 'Password must be at least 12 characters' });
       const hash = await bcrypt.hash(new_password.trim(), SALT_ROUNDS);
       await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, targetId]);
     }
@@ -201,6 +195,7 @@ router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
     const target = rows[0];
     if (!target) return res.status(404).json({ error: 'User not found' });
     if (target.id === req.session.userId) return res.status(403).json({ error: 'Cannot remove your own account' });
+    if (target.role !== 'sensei') return res.status(403).json({ error: 'Can only remove senseis' });
 
     await pool.query('UPDATE users SET active = false WHERE id = $1', [id]);
     res.json({ message: 'Staff member removed' });

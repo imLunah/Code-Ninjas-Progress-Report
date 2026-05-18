@@ -69,18 +69,27 @@ export default function StudentRoster() {
   const isManager = user?.role === 'manager' && !isReadOnly;
   const isLogMode = searchParams.get('mode') === 'log';
 
-  const loadStudents = () => {
+  const PAGE_SIZE = 100;
+  const [hasMore, setHasMore] = useState(false);
+
+  const loadStudents = (offset = 0, append = false) => {
     const params = new URLSearchParams();
     if (search) params.set('search', search);
     if (programFilter) params.set('program', programFilter);
-    setLoading(true);
+    params.set('limit', PAGE_SIZE);
+    params.set('offset', offset);
+    if (!append) setLoading(true);
     api.get(`/students?${params.toString()}`)
-      .then((data) => { setStudents(data); setSelected(new Set()); })
+      .then((data) => {
+        setStudents((prev) => append ? [...prev, ...data] : data);
+        setHasMore(data.length === PAGE_SIZE);
+        if (!append) setSelected(new Set());
+      })
       .catch(() => setError('Failed to load ninjas'))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadStudents(); }, [search, programFilter, user?.activeLocation?.id]);
+  useEffect(() => { loadStudents(0); }, [search, programFilter, user?.activeLocation?.id]);
 
   const sorted = [...students].sort((a, b) => {
     if (sortBy === 'last_active') {
@@ -108,16 +117,14 @@ export default function StudentRoster() {
 
   const handleDeleteSelected = async () => {
     setDeleting(true);
-    try {
-      await Promise.all([...selected].map((id) => api.delete(`/students/${id}`)));
-      setConfirmDelete(false);
-      setSelected(new Set());
-      loadStudents();
-    } catch {
-      setError('Failed to delete some ninjas');
-    } finally {
-      setDeleting(false);
-    }
+    setError('');
+    const results = await Promise.allSettled([...selected].map((id) => api.delete(`/students/${id}`)));
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    setDeleting(false);
+    setConfirmDelete(false);
+    setSelected(new Set());
+    loadStudents();
+    if (failed > 0) setError(`${failed} ninja${failed > 1 ? 's' : ''} could not be removed. Please try again.`);
   };
 
   const handleRowClick = (student) => {
@@ -275,6 +282,7 @@ export default function StudentRoster() {
                     key={s.id}
                     className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-ninja-bg transition-colors"
                     onClick={() => handleRowClick(s)}
+
                   >
                     <div
                       className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-white font-ninja font-bold text-sm"
@@ -309,6 +317,14 @@ export default function StudentRoster() {
                 );
               })}
             </div>
+          )}
+          {hasMore && !loading && (
+            <button
+              onClick={() => loadStudents(students.length, true)}
+              className="w-full py-3 text-ninja-blue font-ninja font-semibold text-sm hover:bg-ninja-bg transition-colors"
+            >
+              Load more ninjas
+            </button>
           )}
         </div>
 
