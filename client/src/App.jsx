@@ -145,7 +145,7 @@ export default function App() {
           />
 
           {/* Parent portal */}
-          <Route path="/parent/login" element={<ParentLogin />} />
+          <Route path="/parent/login" element={<Navigate to="/login?tab=parent" replace />} />
           <Route
             path="/parent/dashboard"
             element={<ParentRoute><ParentDashboard /></ParentRoute>}

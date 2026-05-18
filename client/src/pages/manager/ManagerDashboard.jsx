@@ -33,8 +33,10 @@ export default function ManagerDashboard() {
   }, [todayStr, user?.activeLocation?.id]);
 
   useEffect(() => {
+    const controller = new AbortController();
     fetchAssignments();
-    api.get('/clubs').then(setClubSessions).catch(() => {});
+    api.get('/clubs').then((data) => { if (!controller.signal.aborted) setClubSessions(data); }).catch(() => {});
+    return () => controller.abort();
   }, [fetchAssignments]);
 
   const handleAdded = (newAssignment) => {

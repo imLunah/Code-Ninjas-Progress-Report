@@ -3,7 +3,8 @@ const router = express.Router();
 const { requireAuth, requireManager, requireSensei, requireOwnLocation } = require('../middleware/auth');
 
 function todayDate() {
-  return new Date().toISOString().split('T')[0];
+  // All locations are in California — use Pacific time so the board doesn't flip at midnight UTC
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
 }
 
 const ASSIGNMENT_SELECT = `

@@ -27,6 +27,8 @@ const PROGRAMS_SUBQUERY = `
 router.get('/', requireAuth, async (req, res) => {
   const pool = req.app.get('db');
   const { search, program, belt } = req.query;
+  const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+  const offset = Math.max(parseInt(req.query.offset) || 0, 0);
 
   let query = `
     SELECT s.*,
@@ -54,7 +56,8 @@ router.get('/', requireAuth, async (req, res) => {
     params.push(belt);
   }
 
-  query += ' ORDER BY s.full_name ASC';
+  paramCount++; query += ` ORDER BY s.full_name ASC LIMIT $${paramCount}`; params.push(limit);
+  paramCount++; query += ` OFFSET $${paramCount}`; params.push(offset);
 
   try {
     const { rows } = await pool.query(query, params);

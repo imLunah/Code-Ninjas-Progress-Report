@@ -1,4 +1,6 @@
--- Run this in the Supabase SQL editor to set up the schema
+-- Initial schema snapshot. The live DB has additional columns added via the Supabase dashboard
+-- (profile_pic_url on users, special_instructions on students, schedule/cover_image_url on club_definitions).
+-- For new columns, see supabase/migrations/ instead of editing this file.
 
 CREATE TABLE IF NOT EXISTS locations (
   id SERIAL PRIMARY KEY,
