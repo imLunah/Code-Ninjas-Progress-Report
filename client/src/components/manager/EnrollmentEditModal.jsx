@@ -4,6 +4,8 @@ import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { BELTS, PROJECTS, STATUSES, getMaxLevel } from '../../utils/beltConfig';
 
+const UPPER_BELTS = ['Purple', 'Brown', 'Red', 'Black'];
+
 export default function EnrollmentEditModal({ isOpen, onClose, studentId, enrollment, onSaved }) {
   const [form, setForm] = useState({
     belt_level: '',
@@ -88,7 +90,7 @@ export default function EnrollmentEditModal({ isOpen, onClose, studentId, enroll
           </select>
         </div>
 
-        {maxLevel && (
+        {maxLevel && !UPPER_BELTS.includes(form.belt_level) && (
           <div>
             <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
               Sublevel (1–{maxLevel})

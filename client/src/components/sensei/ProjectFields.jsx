@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { PROJECTS, STATUSES, BELT_LEVEL_PROJECTS, getLevelProjects } from '../../utils/beltConfig';
 
-const UPPER_BELTS = ['Purple', 'Brown', 'Red'];
+const UPPER_BELTS = ['Purple', 'Brown', 'Red', 'Black'];
 
 function getSectionLabel(index, total) {
   if (index === total - 1) return 'Adventure';
@@ -13,11 +13,15 @@ export default function ProjectFields({ project, setProject, status, setStatus, 
   const [isCustomProject, setIsCustomProject] = useState(false);
   const enteringCustomRef = useRef(false);
 
+  const isUpperBelt = UPPER_BELTS.includes(beltLevel);
   const levelProjects = getLevelProjects(beltLevel, beltSublevel);
-  const projectOptions = levelProjects ?? PROJECTS;
+  const allUpperBeltProjects = isUpperBelt && BELT_LEVEL_PROJECTS[beltLevel]
+    ? Object.values(BELT_LEVEL_PROJECTS[beltLevel]).flat()
+    : null;
+  const projectOptions = isUpperBelt ? (allUpperBeltProjects ?? PROJECTS) : (levelProjects ?? PROJECTS);
   const hasBeltProjects = beltLevel && !!BELT_LEVEL_PROJECTS[beltLevel];
-  const needsSublevel = hasBeltProjects && (!beltSublevel || parseInt(beltSublevel) < 1);
-  const showLabels = levelProjects && !UPPER_BELTS.includes(beltLevel);
+  const needsSublevel = !isUpperBelt && hasBeltProjects && (!beltSublevel || parseInt(beltSublevel) < 1);
+  const showLabels = levelProjects && !isUpperBelt;
 
   // Exit custom mode only when project is cleared externally (e.g., belt changed)
   // The ref prevents the effect from firing when we intentionally clear on custom entry
