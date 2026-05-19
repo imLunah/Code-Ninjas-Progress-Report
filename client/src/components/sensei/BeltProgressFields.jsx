@@ -1,5 +1,7 @@
 import { BELTS, getMaxLevel } from '../../utils/beltConfig';
 
+const UPPER_BELTS = ['Purple', 'Brown', 'Red', 'Black'];
+
 export default function BeltProgressFields({ beltLevel, setBeltLevel, beltSublevel, setBeltSublevel, setProject }) {
   const maxLevel = getMaxLevel(beltLevel);
 
@@ -36,7 +38,7 @@ export default function BeltProgressFields({ beltLevel, setBeltLevel, beltSublev
         </select>
       </div>
 
-      {beltLevel && maxLevel && (
+      {beltLevel && maxLevel && !UPPER_BELTS.includes(beltLevel) && (
         <div>
           <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
             Sublevel (1–{maxLevel})
