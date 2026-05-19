@@ -24,36 +24,13 @@ function LocationBar({ user, switchLocation }) {
   );
 }
 
-function TodayIcon() {
+function NavTabIcon({ id, isActive }) {
   return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <rect x="3" y="4" width="18" height="18" rx="2" strokeWidth="2"/>
-      <path strokeLinecap="round" strokeWidth="2" d="M16 2v4M8 2v4M3 10h18"/>
-    </svg>
-  );
-}
-function NinjasIcon() {
-  return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeWidth="2" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-      <circle cx="9" cy="7" r="4" strokeWidth="2"/>
-      <path strokeLinecap="round" strokeWidth="2" d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-    </svg>
-  );
-}
-function ClubsIcon() {
-  return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-    </svg>
-  );
-}
-function SenseiIcon() {
-  return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M22 10v6M2 10l10-5 10 5-10 5-10-5z"/>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 12v5c3 3 9 3 12 0v-5"/>
-    </svg>
+    <img
+      src={`/icons/${id}.png`}
+      alt=""
+      className={`w-5 h-5 transition-opacity ${isActive ? 'opacity-100' : 'opacity-40'}`}
+    />
   );
 }
 function AccountIcon({ profilePicUrl, initials }) {
@@ -76,11 +53,11 @@ export default function MobileNav() {
   const initials = user.displayName?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || '?';
 
   const tabs = [
-    { to: dashPath, label: 'Today', icon: <TodayIcon /> },
-    { to: '/manager/students', label: 'Ninjas', icon: <NinjasIcon /> },
-    { to: '/clubs', label: 'Clubs', icon: <ClubsIcon /> },
-    { to: '/manager/staff', label: 'Staff', icon: <SenseiIcon /> },
-    { to: '/account', label: 'Account', icon: <AccountIcon profilePicUrl={user.profilePicUrl} initials={initials} /> },
+    { to: dashPath, label: 'Today', iconId: 'today' },
+    { to: '/manager/students', label: 'Ninjas', iconId: 'roster' },
+    { to: '/clubs', label: 'Clubs', iconId: 'clubs' },
+    { to: '/manager/staff', label: 'Staff', iconId: 'staff' },
+    { to: '/account', label: 'Account', iconId: null },
   ];
 
   return (
@@ -97,8 +74,15 @@ export default function MobileNav() {
               }`
             }
           >
-            {tab.icon}
-            {tab.label}
+            {({ isActive }) => (
+              <>
+                {tab.iconId
+                  ? <NavTabIcon id={tab.iconId} isActive={isActive} />
+                  : <AccountIcon profilePicUrl={user.profilePicUrl} initials={initials} />
+                }
+                {tab.label}
+              </>
+            )}
           </NavLink>
         ))}
       </div>

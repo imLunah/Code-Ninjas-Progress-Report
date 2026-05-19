@@ -2,32 +2,14 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import ThemeToggle from '../ui/ThemeToggle';
 
-function NavIcon({ id }) {
-  if (id === 'today') return (
-    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <rect x="3" y="4" width="18" height="18" rx="2" strokeWidth="2"/>
-      <path strokeLinecap="round" strokeWidth="2" d="M16 2v4M8 2v4M3 10h18"/>
-    </svg>
+function NavIcon({ id, isActive }) {
+  return (
+    <img
+      src={`/icons/${id}.png`}
+      alt=""
+      className={`w-4 h-4 flex-shrink-0 transition-opacity ${isActive ? 'opacity-100' : 'opacity-40'}`}
+    />
   );
-  if (id === 'roster') return (
-    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeWidth="2" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-      <circle cx="9" cy="7" r="4" strokeWidth="2"/>
-      <path strokeLinecap="round" strokeWidth="2" d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-    </svg>
-  );
-  if (id === 'clubs') return (
-    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-    </svg>
-  );
-  if (id === 'senseis') return (
-    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M22 10v6M2 10l10-5 10 5-10 5-10-5z"/>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 12v5c3 3 9 3 12 0v-5"/>
-    </svg>
-  );
-  return null;
 }
 
 function isLinkActive(link, pathname, search) {
@@ -113,7 +95,7 @@ export default function Sidebar() {
               {isActive && (
                 <span className="absolute left-0 inset-y-2 w-0.5 bg-ninja-blue rounded-r-full" />
               )}
-              <NavIcon id={link.icon} />
+              <NavIcon id={link.icon} isActive={isActive} />
               <span>{link.label}</span>
             </Link>
           );
