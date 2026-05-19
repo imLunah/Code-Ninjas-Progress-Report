@@ -138,7 +138,6 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
   const [beltSublevel, setBeltSublevel] = useState(enrollment?.belt_sublevel || '');
   const [project, setProject] = useState(enrollment?.current_project || '');
   const [status, setStatus] = useState(enrollment?.project_status || '');
-  const [customLabel, setCustomLabel] = useState('');
 
   const emptyEntry = { subProgram: '', moduleName: '', lessonName: '', customModule: '', customLesson: '' };
   const [lessonEntries, setLessonEntries] = useState([{ ...emptyEntry }]);
@@ -201,7 +200,7 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
         program,
         session_date: sessionDate,
         notes: notes.trim(),
-        belt_level_at: isCreate ? (beltLevel || customLabel || null) : null,
+        belt_level_at: isCreate ? (beltLevel || null) : null,
         belt_sublevel_at: isCreate && beltSublevel ? parseInt(beltSublevel) : null,
         project_at: isCreate ? (project || null) : null,
         status_at: isCreate ? (status || null) : null,
@@ -222,7 +221,6 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
       setLessonEntries([{ ...emptyEntry }]);
       setProject(enrollment?.current_project || '');
       setStatus(enrollment?.project_status || '');
-      setCustomLabel('');
       onLogged && onLogged(log);
     } catch (err) {
       setError(err.message || 'Failed to save log');
@@ -331,19 +329,6 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
             beltSublevel={beltSublevel}
           />
 
-          <div>
-            <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
-              Custom
-            </label>
-            <input
-              type="text"
-              value={customLabel}
-              onChange={(e) => setCustomLabel(e.target.value)}
-              placeholder="e.g., Post-Red, Special Workshop, Advanced..."
-              className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-            />
-            <p className="text-ninja-muted font-ninja text-xs mt-1">Optional — used when no standard belt applies. Won't update belt progression.</p>
-          </div>
         </div>
       )}
 
