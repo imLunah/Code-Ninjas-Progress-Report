@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { requireSensei, requireManager, requireOwnLocation } = require('../middleware/auth');
 
+const STANDARD_BELTS = new Set(['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black']);
+
 // For Robotics/JR: distinct modules visited vs total in that sub-program
 const CURRICULUM_MODULE_COUNTS = {
   'JR Coding': 10,
@@ -118,7 +120,8 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
               last_sub_program = $5, last_module_name = $6, last_lesson_name = $7, last_session_date = $8
           WHERE student_id = $9 AND program = $10
         `, [
-          belt_level_at !== undefined ? belt_level_at : enrollment.belt_level,
+          // Custom belt labels are stored in the log but don't overwrite the student's tracked belt
+          (belt_level_at !== undefined && (belt_level_at === null || STANDARD_BELTS.has(belt_level_at))) ? belt_level_at : enrollment.belt_level,
           belt_sublevel_at !== undefined ? belt_sublevel_at : enrollment.belt_sublevel,
           project_at !== undefined ? project_at : enrollment.current_project,
           status_at !== undefined ? status_at : enrollment.project_status,
