@@ -637,6 +637,23 @@ export default function StudentProfile() {
                           <span className="font-normal text-ninja-muted"> · {log.sensei_name}</span>
                         )}
                       </p>
+                      {(log.sub_program || log.module_name || log.lesson_name || log.belt_level_at || log.project_at) && (
+                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                          {log.sub_program && (
+                            <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-md font-ninja font-semibold">{log.sub_program}</span>
+                          )}
+                          {log.belt_level_at && <BeltBadge belt={log.belt_level_at} sublevel={log.belt_sublevel_at} size="xs" />}
+                          {log.project_at && (
+                            <span className="text-xs text-ninja-muted font-ninja"><span className="font-semibold text-ninja-navy">Project:</span> {log.project_at}</span>
+                          )}
+                          {log.module_name && (
+                            <span className="text-xs text-ninja-muted font-ninja"><span className="font-semibold text-ninja-navy">Module:</span> {log.module_name}</span>
+                          )}
+                          {log.lesson_name && (
+                            <span className="text-xs text-ninja-muted font-ninja"><span className="font-semibold text-ninja-navy">Lesson:</span> {log.lesson_name}</span>
+                          )}
+                        </div>
+                      )}
                       {log.notes && (
                         <p className="text-ninja-muted font-ninja text-sm mt-0.5 leading-snug">{log.notes}</p>
                       )}
@@ -765,6 +782,23 @@ export default function StudentProfile() {
                             )}
                             {log.program && <ProgramBadge program={log.program} size="xs" />}
                           </div>
+                          {(log.sub_program || log.module_name || log.lesson_name || log.belt_level_at || log.project_at) && (
+                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mb-0.5">
+                              {log.sub_program && (
+                                <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-md font-ninja font-semibold">{log.sub_program}</span>
+                              )}
+                              {log.belt_level_at && <BeltBadge belt={log.belt_level_at} sublevel={log.belt_sublevel_at} size="xs" />}
+                              {log.project_at && (
+                                <span className="text-xs text-ninja-muted font-ninja"><span className="font-semibold text-ninja-navy">Project:</span> {log.project_at}</span>
+                              )}
+                              {log.module_name && (
+                                <span className="text-xs text-ninja-muted font-ninja"><span className="font-semibold text-ninja-navy">Module:</span> {log.module_name}</span>
+                              )}
+                              {log.lesson_name && (
+                                <span className="text-xs text-ninja-muted font-ninja"><span className="font-semibold text-ninja-navy">Lesson:</span> {log.lesson_name}</span>
+                              )}
+                            </div>
+                          )}
                           {log.notes && (
                             <p className="text-ninja-muted font-ninja text-sm leading-snug">{log.notes}</p>
                           )}
