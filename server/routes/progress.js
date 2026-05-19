@@ -237,7 +237,7 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
 
     res.status(201).json(rows[0]);
   } catch (err) {
-    console.error('Error creating progress log:', err);
+    console.error('Error creating progress log:', err.message, '| code:', err.code, '| detail:', err.detail);
     res.status(500).json({ error: 'Failed to create progress log' });
   }
 });
