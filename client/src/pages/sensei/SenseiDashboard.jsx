@@ -12,9 +12,18 @@ export default function SenseiDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [clubSessions, setClubSessions] = useState([]);
+  const [refreshKey, setRefreshKey] = useState(0);
   const navigate = useNavigate();
   const { user } = useAuth();
   const todayStr = today();
+
+  const refresh = () => setRefreshKey(k => k + 1);
+
+  // Auto-refresh every 30 seconds so new check-ins added by the manager appear automatically
+  useEffect(() => {
+    const interval = setInterval(refresh, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -24,7 +33,7 @@ export default function SenseiDashboard() {
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     api.get('/clubs').then((data) => { if (!controller.signal.aborted) setClubSessions(data); }).catch(() => {});
     return () => controller.abort();
-  }, [todayStr, user?.activeLocation?.id]);
+  }, [todayStr, user?.activeLocation?.id, refreshKey]);
 
   // Group assignments by student so each student shows one card
   const grouped = assignments.reduce((acc, a) => {
@@ -53,7 +62,15 @@ export default function SenseiDashboard() {
           <h1 className="text-2xl sm:text-4xl font-bold font-ninja text-ninja-navy tracking-wide">
             Today's <span className="text-ninja-blue">Ninjas</span>
           </h1>
-          <p className="text-ninja-muted font-ninja mt-1">{formatDate(todayStr)}</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-ninja-muted font-ninja">{formatDate(todayStr)}</p>
+            <button
+              onClick={refresh}
+              className="text-ninja-muted hover:text-ninja-blue font-ninja text-xs border border-ninja-border hover:border-ninja-blue rounded-lg px-2 py-1 transition-colors"
+            >
+              Refresh
+            </button>
+          </div>
           {user && (
             <p className="text-ninja-navy font-ninja mt-1 font-semibold">
               Welcome {user.role === 'manager' ? 'Center Director' : 'Sensei'}{' '}
