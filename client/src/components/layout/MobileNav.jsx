@@ -29,7 +29,7 @@ function NavTabIcon({ id, isActive }) {
     <img
       src={`/icons/${id}.png`}
       alt=""
-      className={`w-7 h-7 transition-all duration-200 ${isActive ? 'grayscale-0' : 'grayscale'}`}
+      className="w-7 h-7"
     />
   );
 }
