@@ -191,9 +191,8 @@ export default function LogProgressPage() {
                 </h2>
                 {(programCounts[selectedProgram] || 0) > 1 && (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-sm font-ninja text-amber-700">
-                    <strong>{programCounts[selectedProgram]} sessions pending</strong> — logging the earliest first
-                    {programDates[selectedProgram] ? ` (${formatDate(programDates[selectedProgram])})` : ''}.
-                    After this, the ninja will still appear on the board for today's session.
+                    <strong>{programCounts[selectedProgram]} sessions to log.</strong> Starting with the oldest
+                    {programDates[selectedProgram] ? ` (${formatDate(programDates[selectedProgram])})` : ''}. They'll still show up for today after.
                   </div>
                 )}
                 <LogEntryForm
