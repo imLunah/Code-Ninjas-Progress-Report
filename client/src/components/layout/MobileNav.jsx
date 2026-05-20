@@ -29,7 +29,7 @@ function NavTabIcon({ id, isActive }) {
     <img
       src={`/icons/${id}.png`}
       alt=""
-      className={`w-5 h-5 transition-opacity ${isActive ? 'opacity-100' : 'opacity-40'}`}
+      className={`w-7 h-7 transition-opacity ${isActive ? 'opacity-100' : 'opacity-40'}`}
     />
   );
 }
