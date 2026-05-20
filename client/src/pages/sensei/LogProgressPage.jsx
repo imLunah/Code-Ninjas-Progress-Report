@@ -8,6 +8,7 @@ import LogEntryForm from '../../components/sensei/LogEntryForm';
 import PinnedNote from '../../components/shared/PinnedNote';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { formatDate } from '../../utils/dateUtils';
 
 export default function LogProgressPage() {
   const { id } = useParams();
@@ -21,12 +22,22 @@ export default function LogProgressPage() {
   const [selectedProgram, setSelectedProgram] = useState('');
 
   // ?program=X pre-selects a single program; ?programs=X,Y lists programs available today
-  // ?done=X,Y lists programs already logged this session by another sensei
+  // ?done=X,Y lists programs already fully logged; ?dates=P:YYYY-MM-DD,...; ?counts=P:N,...
   const singleProgramParam = searchParams.get('program');
   const programsParam = searchParams.get('programs');
   const doneParam = searchParams.get('done');
+  const datesParam = searchParams.get('dates');
+  const countsParam = searchParams.get('counts');
   const todayPrograms = programsParam ? programsParam.split(',') : null;
   const donePrograms = new Set(doneParam ? doneParam.split(',') : []);
+
+  // Parse per-program session date and pending count from URL (set by dashboard)
+  const programDates = datesParam
+    ? Object.fromEntries(datesParam.split(',').map(s => { const i = s.lastIndexOf(':'); return [s.slice(0, i), s.slice(i + 1)]; }))
+    : {};
+  const programCounts = countsParam
+    ? Object.fromEntries(countsParam.split(',').map(s => { const i = s.lastIndexOf(':'); return [s.slice(0, i), parseInt(s.slice(i + 1))]; }))
+    : {};
 
   useEffect(() => {
     api.get(`/students/${id}`)
@@ -178,12 +189,19 @@ export default function LogProgressPage() {
                 <h2 className="text-xl font-bold font-ninja text-ninja-navy mb-4">
                   Log Today's <span className="text-ninja-blue">Session</span>
                 </h2>
+                {(programCounts[selectedProgram] || 0) > 1 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-sm font-ninja text-amber-700">
+                    <strong>{programCounts[selectedProgram]} sessions pending</strong> — logging the earliest first
+                    {programDates[selectedProgram] ? ` (${formatDate(programDates[selectedProgram])})` : ''}.
+                    After this, the ninja will still appear on the board for today's session.
+                  </div>
+                )}
                 <LogEntryForm
                   student={student}
                   program={selectedProgram}
                   enrollment={enrollment}
                   onLogged={handleLogged}
-                  sessionDate={student.pending_checkin_date || undefined}
+                  sessionDate={programDates[selectedProgram] || student.pending_checkin_date || undefined}
                 />
               </div>
             ) : (

@@ -106,20 +106,37 @@ export default function SenseiDashboard() {
 
         {!loading && !error && groupedList.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {groupedList.map((group) => {
-              const programsStr = group.assignments.map((a) => a.program).join(',');
-              const doneStr = group.assignments.filter((a) => a.completed).map((a) => a.program).join(',');
-              return (
-                <StudentCard
-                  key={group.student_id}
-                  student={group}
-                  onClick={() => navigate(`/manager/students/${group.student_id}`)}
-                  onLogProgress={() =>
-                    navigate(`/sensei/student/${group.student_id}?programs=${encodeURIComponent(programsStr)}${doneStr ? `&done=${encodeURIComponent(doneStr)}` : ''}`)
-                  }
-                />
-              );
-            })}
+            {groupedList.map((group) => (
+              <StudentCard
+                key={group.student_id}
+                student={group}
+                onClick={() => navigate(`/manager/students/${group.student_id}`)}
+                onLogProgress={() => {
+                  // Build per-program info from pending assignments (sorted ASC by server)
+                  const programInfo = {};
+                  group.assignments.forEach(a => {
+                    if (!a.completed) {
+                      const d = String(a.session_date).split('T')[0];
+                      if (!programInfo[a.program]) programInfo[a.program] = { date: d, count: 0 };
+                      programInfo[a.program].count++;
+                    }
+                  });
+                  const uniquePrograms = [...new Set(group.assignments.map(a => a.program))];
+                  // A program is "done" only when ALL its assignments are completed
+                  const fullDone = uniquePrograms.filter(p =>
+                    group.assignments.every(a => a.program !== p || a.completed)
+                  );
+                  const datesStr = Object.entries(programInfo).map(([p, {date}]) => `${p}:${date}`).join(',');
+                  const countsStr = Object.entries(programInfo).map(([p, {count}]) => `${p}:${count}`).join(',');
+                  navigate(
+                    `/sensei/student/${group.student_id}?programs=${encodeURIComponent(uniquePrograms.join(','))}` +
+                    `${fullDone.length > 0 ? `&done=${encodeURIComponent(fullDone.join(','))}` : ''}` +
+                    `&dates=${encodeURIComponent(datesStr)}` +
+                    `&counts=${encodeURIComponent(countsStr)}`
+                  );
+                }}
+              />
+            ))}
           </div>
         )}
 
