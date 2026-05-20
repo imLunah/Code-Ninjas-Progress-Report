@@ -7,7 +7,7 @@ function NavIcon({ id, isActive }) {
     <img
       src={`/icons/${id}.png`}
       alt=""
-      className={`w-4 h-4 flex-shrink-0 transition-opacity ${isActive ? 'opacity-100' : 'opacity-40'}`}
+      className={`w-7 h-7 flex-shrink-0 transition-opacity ${isActive ? 'opacity-100' : 'opacity-40'}`}
     />
   );
 }
