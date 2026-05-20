@@ -27,8 +27,9 @@ const PROGRAMS_SUBQUERY = `
 router.get('/', requireAuth, async (req, res) => {
   const pool = req.app.get('db');
   const { search, program, belt, sort } = req.query;
-  const limit = Math.min(parseInt(req.query.limit) || 100, 500);
-  const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+  const fetchAll = req.query.all === 'true';
+  const limit = fetchAll ? null : Math.min(parseInt(req.query.limit) || 100, 500);
+  const offset = fetchAll ? null : Math.max(parseInt(req.query.offset) || 0, 0);
 
   const SORT_ORDERS = {
     last_active: `(SELECT MAX(pl2.session_date) FROM progress_logs pl2 WHERE pl2.student_id = s.id) DESC NULLS LAST, s.full_name ASC`,
@@ -64,8 +65,11 @@ router.get('/', requireAuth, async (req, res) => {
     params.push(belt);
   }
 
-  paramCount++; query += ` ORDER BY ${orderClause} LIMIT $${paramCount}`; params.push(limit);
-  paramCount++; query += ` OFFSET $${paramCount}`; params.push(offset);
+  query += ` ORDER BY ${orderClause}`;
+  if (!fetchAll) {
+    paramCount++; query += ` LIMIT $${paramCount}`; params.push(limit);
+    paramCount++; query += ` OFFSET $${paramCount}`; params.push(offset);
+  }
 
   try {
     const [{ rows }, { rows: countRows }] = await Promise.all([

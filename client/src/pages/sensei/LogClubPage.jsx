@@ -27,7 +27,7 @@ export default function LogClubPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.get('/students?limit=500')
+    api.get('/students?all=true')
       .then(({ students: data }) => setStudents(data.filter((s) => s.active !== false)))
       .catch(() => setError('Could not load students'))
       .finally(() => setLoadingStudents(false));

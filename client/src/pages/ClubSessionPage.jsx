@@ -136,7 +136,7 @@ export default function ClubSessionPage() {
 
   const loadStudents = () => {
     if (allStudents.length === 0) {
-      api.get('/students?limit=500').then(({ students: data }) => setAllStudents(data.filter((s) => s.active !== false))).catch(() => {});
+      api.get('/students?all=true').then(({ students: data }) => setAllStudents(data.filter((s) => s.active !== false))).catch(() => {});
     }
     setEditingAttendees(true);
   };
