@@ -7,7 +7,7 @@ function NavIcon({ id, isActive }) {
     <img
       src={`/icons/${id}.png`}
       alt=""
-      className={`w-9 h-9 flex-shrink-0 transition-all duration-200 ${isActive ? 'grayscale-0' : 'grayscale'}`}
+      className="w-9 h-9 flex-shrink-0"
     />
   );
 }
