@@ -62,15 +62,7 @@ export default function SenseiDashboard() {
           <h1 className="text-2xl sm:text-4xl font-bold font-ninja text-ninja-navy tracking-wide">
             Today's <span className="text-ninja-blue">Ninjas</span>
           </h1>
-          <div className="flex items-center gap-3 mt-1">
-            <p className="text-ninja-muted font-ninja">{formatDate(todayStr)}</p>
-            <button
-              onClick={refresh}
-              className="text-ninja-muted hover:text-ninja-blue font-ninja text-xs border border-ninja-border hover:border-ninja-blue rounded-lg px-2 py-1 transition-colors"
-            >
-              Refresh
-            </button>
-          </div>
+          <p className="text-ninja-muted font-ninja mt-1">{formatDate(todayStr)}</p>
           {user && (
             <p className="text-ninja-navy font-ninja mt-1 font-semibold">
               Welcome {user.role === 'manager' ? 'Center Director' : 'Sensei'}{' '}
