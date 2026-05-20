@@ -18,8 +18,9 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
   assignments.forEach(a => {
     if (!a.completed) pendingPerProgram[a.program] = (pendingPerProgram[a.program] || 0) + 1;
   });
-  const totalPendingSessions = Object.values(pendingPerProgram).reduce((s, c) => s + c, 0);
-  const hasMultipleSessions = Object.values(pendingPerProgram).some(c => c > 1);
+  // Only count sessions from programs that have more than one pending — don't inflate with single-session programs
+  const multiPendingCount = Object.values(pendingPerProgram).filter(c => c > 1).reduce((s, c) => s + c, 0);
+  const hasMultipleSessions = multiPendingCount > 0;
 
   // For CREATE badge details, pull from the primary assignment or the student object
   const createAssignment = assignments.find((a) => a.program === 'CREATE') || {};
@@ -44,7 +45,7 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
               <span className="text-red-600 font-ninja font-semibold text-xs px-2 py-0.5 bg-red-50 border border-red-300 rounded-md">Overdue</span>
             )}
             {hasMultipleSessions && (
-              <span className="text-amber-600 font-ninja font-semibold text-xs px-2 py-0.5 bg-amber-50 border border-amber-300 rounded-md">{totalPendingSessions} sessions</span>
+              <span className="text-amber-600 font-ninja font-semibold text-xs px-2 py-0.5 bg-amber-50 border border-amber-300 rounded-md">{multiPendingCount} sessions</span>
             )}
           </div>
 
@@ -63,7 +64,7 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
 
           {someCompleted && (
             <p className="text-yellow-600 font-ninja text-xs mt-1 font-semibold">
-              {assignments.filter((a) => a.completed).length}/{assignments.length} programs logged
+              {assignments.filter((a) => a.completed).length}/{assignments.length} sessions logged
             </p>
           )}
           {!allCompleted && !someCompleted && (
