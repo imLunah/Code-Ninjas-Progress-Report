@@ -229,7 +229,10 @@ export default function TodayBoard({ assignments, onRemove }) {
               )}
               {!a.completed && !isReadOnly && (
                 <button
-                  onClick={() => navigate(`/sensei/student/${a.student_id}?programs=${encodeURIComponent(a.program)}`)}
+                  onClick={() => {
+                    const d = String(a.session_date).split('T')[0];
+                    navigate(`/sensei/student/${a.student_id}?programs=${encodeURIComponent(a.program)}&dates=${encodeURIComponent(`${a.program}:${d}`)}&counts=${encodeURIComponent(`${a.program}:1`)}`);
+                  }}
                   className="mt-auto w-full text-sm font-ninja font-bold text-ninja-blue border-2 border-ninja-blue rounded-xl py-2 hover:bg-ninja-blue hover:text-white transition-colors"
                 >
                   Log Progress

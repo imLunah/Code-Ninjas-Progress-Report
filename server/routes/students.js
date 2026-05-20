@@ -128,7 +128,7 @@ router.get('/:id', requireAuth, async (req, res) => {
     const { rows: assignmentRows } = await pool.query(
       `SELECT session_date FROM daily_assignments
        WHERE student_id = $1 AND completed = false
-       ORDER BY session_date DESC LIMIT 1`,
+       ORDER BY session_date ASC, created_at ASC LIMIT 1`,
       [id]
     );
     const pending_checkin_date = assignmentRows[0]
