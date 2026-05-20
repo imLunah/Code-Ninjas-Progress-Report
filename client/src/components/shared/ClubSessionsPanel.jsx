@@ -53,7 +53,7 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpda
     if (allStudents.length === 0) {
       setLoadingStudents(true);
       try {
-        const { students: data } = await api.get('/students');
+        const { students: data } = await api.get('/students?limit=500');
         setAllStudents(data.filter((s) => s.active !== false));
       } catch { /* ignore */ } finally {
         setLoadingStudents(false);
