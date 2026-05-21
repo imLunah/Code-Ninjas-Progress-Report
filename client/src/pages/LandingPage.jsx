@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-
-const TransitionScene = lazy(() => import('../components/ui/TransitionScene'));
+import { usePageTransition } from '../context/TransitionContext';
 
 const BG    = '#1c2132';
 const BLUE  = 'rgb(56,161,255)';
@@ -19,7 +18,7 @@ const fadeUp = (delay = 0) => ({
 export default function LandingPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [showTransition, setShowTransition] = useState(false);
+  const { start } = usePageTransition();
 
   useEffect(() => {
     if (!loading && user) {
@@ -30,11 +29,7 @@ export default function LandingPage() {
     }
   }, [user, loading, navigate]);
 
-  const handleSignIn = () => setShowTransition(true);
-  const handleNavigate = useCallback(
-    () => navigate('/login', { state: { fromLanding: true } }),
-    [navigate]
-  );
+  const handleSignIn = () => start('/login', { fromLanding: true });
 
   if (loading || user) {
     return (
@@ -154,13 +149,6 @@ export default function LandingPage() {
         <span style={{ opacity: 0.3 }}>·</span>
         <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
       </motion.footer>
-
-      {/* Three.js iris transition */}
-      {showTransition && (
-        <Suspense fallback={null}>
-          <TransitionScene onNavigate={handleNavigate} />
-        </Suspense>
-      )}
     </div>
   );
 }
