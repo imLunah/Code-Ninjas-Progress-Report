@@ -91,7 +91,6 @@ export default function BugReportButton({ reporter }) {
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Describe the bug — what you did, what you expected, and what actually happened."
                     rows={4}
                     maxLength={2000}
                     required
@@ -118,9 +117,9 @@ export default function BugReportButton({ reporter }) {
                     <button
                       type="button"
                       onClick={() => fileRef.current.click()}
-                      className="w-full border-2 border-dashed border-ninja-border rounded-xl py-4 text-ninja-muted font-ninja text-sm hover:border-ninja-blue hover:text-ninja-blue transition-colors flex items-center justify-center gap-2"
+                      className="w-full border border-ninja-border rounded-xl py-4 text-ninja-muted font-ninja text-sm hover:border-ninja-blue hover:text-ninja-blue transition-colors flex items-center justify-center gap-2"
                     >
-                      <span>📎</span> Attach a screenshot
+                      Attach a screenshot
                     </button>
                   )}
                 </div>
