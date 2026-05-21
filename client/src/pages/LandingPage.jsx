@@ -61,33 +61,15 @@ export default function LandingPage() {
       {/* Hero */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 text-center relative z-10 py-16">
 
-        {/* Logo */}
+        {/* Logo as heading */}
         <motion.div className="mb-8" {...fadeUp(0)}>
           <img
             src="/DojoLinkLogoH.svg"
             alt="DojoLink"
-            className="h-20 md:h-28 mx-auto drop-shadow-lg"
-            style={{ filter: 'drop-shadow(0 0 24px rgba(56,161,255,0.3))' }}
+            className="h-16 sm:h-20 md:h-28 mx-auto"
+            style={{ filter: 'drop-shadow(0 0 32px rgba(56,161,255,0.35))' }}
           />
         </motion.div>
-
-        {/* Accent line */}
-        <motion.div
-          className="mb-8 rounded-full"
-          style={{ width: 48, height: 2, background: BLUE, opacity: 0.6 }}
-          {...fadeUp(0.15)}
-        />
-
-        {/* Tagline */}
-        <motion.h1
-          className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-[1.12] tracking-tight mb-5"
-          {...fadeUp(0.25)}
-        >
-          Your Dojo.{' '}
-          <span style={{ color: BLUE, textShadow: '0 0 40px rgba(56,161,255,0.35)' }}>
-            Command&nbsp;it.
-          </span>
-        </motion.h1>
 
         {/* Subtext */}
         <motion.p
