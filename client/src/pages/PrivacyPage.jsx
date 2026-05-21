@@ -15,36 +15,36 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-bold mb-2">About DojoLink</h2>
             <p className="text-sm text-ninja-muted leading-relaxed">
-              DojoLink is a studio management platform operated by Code Ninjas franchise owners. It is used by center staff to manage student check-ins and progress, and by parents to view their child's progress. This policy explains what information is collected and how it is used.
+              DojoLink is an independently developed studio management tool created by a Code Ninjas franchise staff member. It is not affiliated with, endorsed by, or operated by Code Ninjas Inc. or its corporate entity. It is used by center staff to manage student check-ins and progress, and by parents to view their child's progress. This policy explains what information is collected and how it is used.
             </p>
           </section>
 
           <section>
             <h2 className="text-lg font-bold mb-2">Information We Collect</h2>
-            <ul className="text-sm text-ninja-muted leading-relaxed space-y-2 list-disc list-inside">
-              <li><strong className="text-ninja-navy">Student information</strong>: names, belt level, program enrollment, and progress logs entered by center staff.</li>
-              <li><strong className="text-ninja-navy">Parent information</strong>: email address and phone number on file with the center, used to create and manage parent portal accounts. Accounts are created by center staff, not through public registration.</li>
-              <li><strong className="text-ninja-navy">Staff information</strong>: usernames, encrypted passwords, display names, and optional profile photos.</li>
-            </ul>
+            <div className="text-sm text-ninja-muted leading-relaxed space-y-2">
+              <p><strong className="text-ninja-navy">Student information:</strong> names, belt level, program enrollment, and progress logs entered by center staff.</p>
+              <p><strong className="text-ninja-navy">Parent information:</strong> email address and phone number on file with the center, used to create and manage parent portal accounts. Accounts are created by center staff, not through public registration.</p>
+              <p><strong className="text-ninja-navy">Staff information:</strong> usernames, encrypted passwords, display names, and optional profile photos.</p>
+            </div>
           </section>
 
           <section>
             <h2 className="text-lg font-bold mb-2">How Information Is Used</h2>
-            <ul className="text-sm text-ninja-muted leading-relaxed space-y-2 list-disc list-inside">
-              <li>To track and display student progress within the center.</li>
-              <li>To allow parents to view their own child's progress: parents cannot view other students.</li>
-              <li>To authenticate center staff.</li>
-              <li>We do not sell, rent, or share your information with third parties for marketing purposes.</li>
-            </ul>
+            <div className="text-sm text-ninja-muted leading-relaxed space-y-2">
+              <p>To track and display student progress within the center.</p>
+              <p>To allow parents to view their own child's progress: parents cannot view other students.</p>
+              <p>To authenticate center staff.</p>
+              <p>We do not sell, rent, or share your information with third parties for marketing purposes.</p>
+            </div>
           </section>
 
           <section>
             <h2 className="text-lg font-bold mb-2">Who Can See What</h2>
-            <ul className="text-sm text-ninja-muted leading-relaxed space-y-2 list-disc list-inside">
-              <li><strong className="text-ninja-navy">Center Directors and Senseis</strong>: can view all students enrolled at their location.</li>
-              <li><strong className="text-ninja-navy">Parents</strong>: can only view progress data for their own child.</li>
-              <li>Children do not have accounts and do not log in.</li>
-            </ul>
+            <div className="text-sm text-ninja-muted leading-relaxed space-y-2">
+              <p><strong className="text-ninja-navy">Center Directors and Senseis:</strong> can view all students enrolled at their location.</p>
+              <p><strong className="text-ninja-navy">Parents:</strong> can only view progress data for their own child.</p>
+              <p>Children do not have accounts and do not log in.</p>
+            </div>
           </section>
 
           <section>
