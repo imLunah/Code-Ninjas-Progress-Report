@@ -140,8 +140,8 @@ export default function TermsPage() {
         </div>
 
         <div className="mt-6 text-center">
-          <Link to="/login" className="text-ninja-blue font-ninja text-sm font-semibold hover:underline">
-            ← Back to Login
+          <Link to="/" className="text-ninja-blue font-ninja text-sm font-semibold hover:underline">
+            ← Back
           </Link>
         </div>
       </div>
