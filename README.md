@@ -232,9 +232,7 @@ Statuses: Started, Working On, Completed
 │   └── index.js                  # Express app entry
 ├── supabase/
 │   └── schema.sql                # Full PostgreSQL schema
-├── CHANGELOG.md
-├── vercel.json                   # Vercel deployment config
-└── CLAUDE.md                     # Architecture guide for AI-assisted development
+└── vercel.json                   # Vercel deployment config
 ```
 
 ---
