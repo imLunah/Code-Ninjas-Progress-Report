@@ -1,8 +1,30 @@
 import { useState, useRef } from 'react';
 import { api } from '../../api/client';
 
+const CATEGORIES = [
+  'Login Issue',
+  'Student Progress',
+  'Check-In Issue',
+  'Parent Portal',
+  'UI / Visual Bug',
+  'Slow Performance',
+  'Other',
+];
+
+// Capture recent console errors to include in bug reports
+const recentConsoleErrors = [];
+const _origConsoleError = console.error;
+console.error = (...args) => {
+  recentConsoleErrors.push(
+    `[${new Date().toISOString()}] ${args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ')}`
+  );
+  if (recentConsoleErrors.length > 20) recentConsoleErrors.shift();
+  _origConsoleError(...args);
+};
+
 export default function BugReportButton({ reporter }) {
   const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [screenshot, setScreenshot] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -30,10 +52,14 @@ export default function BugReportButton({ reporter }) {
     setError('');
     try {
       await api.post('/bugs', {
+        category: category || 'Other',
         description: description.trim(),
         screenshot: screenshot || undefined,
         pageUrl: window.location.href,
         userAgent: navigator.userAgent,
+        screenSize: `${window.innerWidth}×${window.innerHeight}`,
+        timestamp: new Date().toISOString(),
+        consoleErrors: recentConsoleErrors.slice(),
         reporter,
       });
       setDone(true);
@@ -46,6 +72,7 @@ export default function BugReportButton({ reporter }) {
 
   const handleClose = () => {
     setOpen(false);
+    setCategory('');
     setDescription('');
     setScreenshot(null);
     setError('');
@@ -84,6 +111,24 @@ export default function BugReportButton({ reporter }) {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
+
+                <div>
+                  <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1.5">
+                    Category <span className="text-ninja-red">*</span>
+                  </label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    required
+                    className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-xl px-3 py-2.5 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
+                  >
+                    <option value="" disabled>Select a category</option>
+                    {CATEGORIES.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <div>
                   <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1.5">
                     What happened? <span className="text-ninja-red">*</span>
@@ -136,7 +181,7 @@ export default function BugReportButton({ reporter }) {
                   </button>
                   <button
                     type="submit"
-                    disabled={submitting || !description.trim()}
+                    disabled={submitting || !description.trim() || !category}
                     className="flex-1 bg-ninja-blue text-white font-ninja font-bold text-sm py-2.5 rounded-xl disabled:opacity-50 hover:bg-ninja-blue-hover transition-colors"
                   >
                     {submitting ? 'Sending…' : 'Send Report'}
@@ -144,7 +189,7 @@ export default function BugReportButton({ reporter }) {
                 </div>
 
                 <p className="text-ninja-muted font-ninja text-xs text-center leading-relaxed">
-                  We'll automatically include your current page, browser, and account info.
+                  We'll automatically include your current page, browser, screen size, and account info.
                 </p>
               </form>
             )}

@@ -3,7 +3,7 @@ const router = express.Router();
 const nodemailer = require('nodemailer');
 
 router.post('/', async (req, res) => {
-  const { description, screenshot, pageUrl, userAgent, reporter } = req.body;
+  const { category, description, screenshot, pageUrl, userAgent, screenSize, timestamp, consoleErrors, reporter } = req.body;
 
   if (!description?.trim()) {
     return res.status(400).json({ error: 'Description is required.' });
@@ -27,19 +27,32 @@ router.post('/', async (req, res) => {
       ? `${reporter.name || 'Unknown'} · ${reporter.role || 'unknown'}${reporter.location ? ' · ' + reporter.location : ''}`
       : 'Unknown';
 
-    const subject = `[DojoLink Bug] ${description.trim().slice(0, 60)}${description.length > 60 ? '…' : ''}`;
+    const cat = category || 'Other';
+    const subject = `[DojoLink Bug] [${cat}] ${description.trim().slice(0, 50)}${description.trim().length > 50 ? '…' : ''}`;
+
+    const reportedAt = timestamp
+      ? new Date(timestamp).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'medium', timeStyle: 'short' }) + ' PT'
+      : new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'medium', timeStyle: 'short' }) + ' PT';
+
+    const errorsHtml = Array.isArray(consoleErrors) && consoleErrors.length > 0
+      ? `<h3 style="color:#1a2e4a;margin:20px 0 8px">Console Errors</h3>
+         <pre style="background:#fff8f8;border:1px solid #fca5a5;padding:12px;border-radius:8px;font-size:11px;white-space:pre-wrap;overflow-wrap:break-word;color:#991b1b">${consoleErrors.join('\n')}</pre>`
+      : '';
 
     const html = `
       <div style="font-family:sans-serif;max-width:600px">
-        <h2 style="color:#1a2e4a;margin-bottom:4px">🐛 Bug Report</h2>
+        <h2 style="color:#1a2e4a;margin-bottom:4px">Bug Report</h2>
         <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
-          <tr><td style="padding:6px 0;color:#888;width:100px">Reporter</td><td style="padding:6px 0;font-weight:600">${reporterLine}</td></tr>
+          <tr><td style="padding:6px 0;color:#888;width:110px">Category</td><td style="padding:6px 0;font-weight:600;color:#1d4ed8">${cat}</td></tr>
+          <tr><td style="padding:6px 0;color:#888">Reporter</td><td style="padding:6px 0;font-weight:600">${reporterLine}</td></tr>
           <tr><td style="padding:6px 0;color:#888">Page</td><td style="padding:6px 0">${pageUrl || 'Unknown'}</td></tr>
+          <tr><td style="padding:6px 0;color:#888">Time</td><td style="padding:6px 0">${reportedAt}</td></tr>
+          <tr><td style="padding:6px 0;color:#888">Screen</td><td style="padding:6px 0">${screenSize || 'Unknown'}</td></tr>
           <tr><td style="padding:6px 0;color:#888">Browser</td><td style="padding:6px 0;font-size:12px;color:#555">${userAgent || 'Unknown'}</td></tr>
-          <tr><td style="padding:6px 0;color:#888">Time</td><td style="padding:6px 0">${new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'medium', timeStyle: 'short' })} PT</td></tr>
         </table>
         <h3 style="color:#1a2e4a;margin-bottom:8px">Description</h3>
         <p style="white-space:pre-wrap;background:#f5f7fa;padding:14px;border-radius:8px;line-height:1.6">${description.trim()}</p>
+        ${errorsHtml}
         ${screenshot ? '<p style="color:#888;font-size:13px;margin-top:16px">Screenshot attached.</p>' : ''}
       </div>
     `;
