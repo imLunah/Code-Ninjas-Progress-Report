@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-three/fiber": "^9.6.1",
     "@supabase/supabase-js": "^2.105.4",
     "@vercel/analytics": "^2.0.1",
     "emoji-picker-react": "^4.19.1",
@@ -18,7 +19,8 @@
     "react-easy-crop": "^5.5.7",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^6.22.0",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "three": "^0.184.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
