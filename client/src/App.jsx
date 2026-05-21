@@ -36,13 +36,12 @@ function TransitionOverlay() {
 
   const handleNavigate = useCallback(() => {
     navigate(pending.to, { state: pending.state });
-    setTimeout(end, 80);
-  }, [pending, navigate, end]);
+  }, [pending, navigate]);
 
   if (!pending) return null;
   return (
     <Suspense fallback={null}>
-      <TransitionScene onNavigate={handleNavigate} />
+      <TransitionScene onNavigate={handleNavigate} onComplete={end} />
     </Suspense>
   );
 }

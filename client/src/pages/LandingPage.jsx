@@ -20,6 +20,8 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const { start } = usePageTransition();
 
+  useEffect(() => { import('../components/ui/TransitionScene'); }, []);
+
   useEffect(() => {
     if (!loading && user) {
       navigate(
