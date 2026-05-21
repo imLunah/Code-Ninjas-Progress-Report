@@ -160,7 +160,7 @@ export default function LandingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.45, ease: 'easeInOut' }}
-            onAnimationComplete={() => navigate('/login')}
+            onAnimationComplete={() => navigate('/login', { state: { fromLanding: true } })}
           />
         )}
       </AnimatePresence>
