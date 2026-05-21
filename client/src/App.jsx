@@ -22,6 +22,7 @@ import ClubProfilePage from './pages/ClubProfilePage';
 import ClubSessionPage from './pages/ClubSessionPage';
 import ParentDashboard from './pages/parent/ParentDashboard';
 import ParentStudentProfile from './pages/parent/ParentStudentProfile';
+import PrivacyPage from './pages/PrivacyPage';
 
 function RoleRedirect() {
   const { user, loading } = useAuth();
@@ -163,6 +164,9 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Public pages */}
+          <Route path="/privacy" element={<PrivacyPage />} />
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
