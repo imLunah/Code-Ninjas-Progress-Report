@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import ParentLayout from '../../components/layout/ParentLayout';
 import ProgramBadge from '../../components/ui/ProgramBadge';
@@ -13,7 +13,7 @@ export default function ParentDashboard() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showWelcome, setShowWelcome] = useState(true);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,21 +35,6 @@ export default function ParentDashboard() {
           </p>
         </div>
 
-        {showWelcome && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-start justify-between gap-3">
-            <p className="text-blue-700 font-ninja text-sm leading-relaxed">
-              Your child's progress is shared with you by your Code Ninjas center. Questions about your data?{' '}
-              <Link to="/privacy" className="underline hover:text-blue-900 transition-colors">Privacy Policy</Link>
-            </p>
-            <button
-              onClick={() => setShowWelcome(false)}
-              className="text-blue-400 hover:text-blue-700 transition-colors flex-shrink-0 text-lg leading-none mt-0.5"
-              aria-label="Dismiss"
-            >
-              ✕
-            </button>
-          </div>
-        )}
 
         {loading && (
           <p className="text-ninja-muted font-ninja text-center py-12">Loading...</p>
