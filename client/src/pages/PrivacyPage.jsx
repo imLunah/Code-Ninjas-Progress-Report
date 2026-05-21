@@ -22,9 +22,9 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-bold mb-2">Information We Collect</h2>
             <ul className="text-sm text-ninja-muted leading-relaxed space-y-2 list-disc list-inside">
-              <li><strong className="text-ninja-navy">Student information</strong>:names, belt level, program enrollment, and progress logs entered by center staff.</li>
-              <li><strong className="text-ninja-navy">Parent information</strong>:email address used to log in to the parent portal. Accounts are created by center staff, not through public registration.</li>
-              <li><strong className="text-ninja-navy">Staff information</strong>:usernames, encrypted passwords, display names, and optional profile photos.</li>
+              <li><strong className="text-ninja-navy">Student information</strong>: names, belt level, program enrollment, and progress logs entered by center staff.</li>
+              <li><strong className="text-ninja-navy">Parent information</strong>: email address and phone number on file with the center, used to create and manage parent portal accounts. Accounts are created by center staff, not through public registration.</li>
+              <li><strong className="text-ninja-navy">Staff information</strong>: usernames, encrypted passwords, display names, and optional profile photos.</li>
             </ul>
           </section>
 
@@ -32,7 +32,7 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-bold mb-2">How Information Is Used</h2>
             <ul className="text-sm text-ninja-muted leading-relaxed space-y-2 list-disc list-inside">
               <li>To track and display student progress within the center.</li>
-              <li>To allow parents to view their own child's progress:parents cannot view other students.</li>
+              <li>To allow parents to view their own child's progress: parents cannot view other students.</li>
               <li>To authenticate center staff.</li>
               <li>We do not sell, rent, or share your information with third parties for marketing purposes.</li>
             </ul>
@@ -41,8 +41,8 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-bold mb-2">Who Can See What</h2>
             <ul className="text-sm text-ninja-muted leading-relaxed space-y-2 list-disc list-inside">
-              <li><strong className="text-ninja-navy">Center Directors and Senseis</strong>:can view all students enrolled at their location.</li>
-              <li><strong className="text-ninja-navy">Parents</strong>:can only view progress data for their own child.</li>
+              <li><strong className="text-ninja-navy">Center Directors and Senseis</strong>: can view all students enrolled at their location.</li>
+              <li><strong className="text-ninja-navy">Parents</strong>: can only view progress data for their own child.</li>
               <li>Children do not have accounts and do not log in.</li>
             </ul>
           </section>
