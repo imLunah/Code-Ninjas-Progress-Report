@@ -110,7 +110,7 @@ router.post('/switch-location', requireManager, async (req, res) => {
 // GET /api/auth/me
 router.get('/me', async (req, res) => {
   if (!req.session.userId) {
-    return res.status(401).json({ error: 'Not authenticated' });
+    return res.status(200).json(null);
   }
 
   try {
@@ -122,7 +122,7 @@ router.get('/me', async (req, res) => {
     const user = rows[0];
 
     if (!user) {
-      return res.status(401).json({ error: 'User not found' });
+      return res.status(200).json(null);
     }
 
     const { rows: [activeLocation] } = await pool.query(
