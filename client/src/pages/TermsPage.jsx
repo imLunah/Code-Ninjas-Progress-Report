@@ -7,80 +7,133 @@ export default function TermsPage() {
         <div className="mb-8">
           <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-10 w-auto mb-6" />
           <h1 className="text-3xl font-bold font-ninja text-ninja-navy">Terms and Conditions</h1>
-          <p className="text-ninja-muted font-ninja text-sm mt-1">Last updated: May 2026</p>
+          <p className="text-ninja-muted font-ninja text-sm mt-1">Last Updated: May 21, 2026</p>
         </div>
 
         <div className="bg-white border border-ninja-border rounded-2xl p-8 shadow-sm space-y-6 font-ninja text-ninja-navy">
 
           <section>
             <h2 className="text-lg font-bold mb-2">About DojoLink</h2>
+            <p className="text-sm text-ninja-muted leading-relaxed mb-2">
+              DojoLink is an independently developed studio management platform created by a staff member of a Code Ninjas franchise location. DojoLink is not affiliated with, endorsed by, sponsored by, or operated by Code Ninjas or any of its corporate entities.
+            </p>
             <p className="text-sm text-ninja-muted leading-relaxed">
-              DojoLink is an independently developed studio management tool created by a Code Ninjas franchise staff member. It is not affiliated with, endorsed by, or operated by Code Ninjas Inc. or its corporate entity. "Code Ninjas" is a registered trademark of its respective owner.
+              "Code Ninjas" and related marks are registered trademarks of their respective owners.
             </p>
           </section>
 
           <section>
             <h2 className="text-lg font-bold mb-2">Acceptance of Terms</h2>
+            <p className="text-sm text-ninja-muted leading-relaxed mb-2">
+              By accessing or using DojoLink, you agree to be bound by these Terms and Conditions and all applicable laws and regulations. If you do not agree to these terms, you may not access or use the platform.
+            </p>
             <p className="text-sm text-ninja-muted leading-relaxed">
-              By accessing or using DojoLink, you agree to be bound by these Terms and Conditions. If you do not agree, do not use the platform. Access is granted by center staff and accounts are not available through public registration.
+              Accounts are created and managed exclusively by authorized franchise staff. Public self-registration is not available.
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-2">Who May Use DojoLink</h2>
-            <div className="text-sm text-ninja-muted leading-relaxed space-y-2">
-              <p><strong className="text-ninja-navy">Staff (Center Directors and Senseis):</strong> Authorized employees of a Code Ninjas franchise location with credentials issued by their Center Director.</p>
-              <p><strong className="text-ninja-navy">Parents and Guardians:</strong> Individuals whose contact information is on file with the center and whose account was created by center staff.</p>
+            <h2 className="text-lg font-bold mb-3">Eligibility and Authorized Users</h2>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-ninja-navy mb-1">Staff Users</h3>
+                <p className="text-sm text-ninja-muted leading-relaxed">
+                  Authorized employees and contractors of participating franchise locations, including Center Directors and Senseis, may access DojoLink using credentials issued by authorized management personnel.
+                </p>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-ninja-navy mb-1">Parents and Guardians</h3>
+                <p className="text-sm text-ninja-muted leading-relaxed">
+                  Parents or legal guardians whose information is maintained by the participating franchise location may be granted access by center staff for the purpose of viewing student-related information.
+                </p>
+              </div>
             </div>
           </section>
 
           <section>
             <h2 className="text-lg font-bold mb-2">Permitted Use</h2>
-            <p className="text-sm text-ninja-muted leading-relaxed mb-2">
-              DojoLink is intended solely for managing student progress, check-ins, club participation, and parent visibility at Code Ninjas franchise locations. You agree not to:
+            <p className="text-sm text-ninja-muted leading-relaxed mb-3">
+              DojoLink is intended solely for internal operational use by participating franchise locations, including student management, attendance tracking, curriculum progress, club participation, communication, and parent visibility.
             </p>
+            <p className="text-sm text-ninja-muted leading-relaxed mb-2">You agree not to:</p>
             <div className="text-sm text-ninja-muted leading-relaxed space-y-2">
-              <p>Access accounts or data that do not belong to you.</p>
-              <p>Attempt to reverse-engineer, copy, or redistribute any part of the platform.</p>
-              <p>Use the platform for any unlawful purpose or in violation of any applicable law.</p>
-              <p>Share your login credentials with unauthorized individuals.</p>
+              <p>Access information or accounts that do not belong to you.</p>
+              <p>Share login credentials with unauthorized individuals.</p>
+              <p>Attempt to copy, modify, reverse-engineer, scrape, or redistribute any portion of the platform.</p>
+              <p>Use the platform in violation of any applicable law or regulation.</p>
+              <p>Interfere with the operation, security, or integrity of the platform.</p>
             </div>
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-2">Accounts and Credentials</h2>
+            <h2 className="text-lg font-bold mb-2">Account Security</h2>
+            <p className="text-sm text-ninja-muted leading-relaxed mb-2">
+              You are responsible for maintaining the confidentiality of your login credentials and for all activity occurring under your account.
+            </p>
+            <p className="text-sm text-ninja-muted leading-relaxed mb-2">
+              If you suspect unauthorized access or compromise of your account, you must notify your Center Director immediately.
+            </p>
             <p className="text-sm text-ninja-muted leading-relaxed">
-              You are responsible for maintaining the confidentiality of your login credentials and for all activity that occurs under your account. If you believe your account has been compromised, notify your Center Director immediately. DojoLink does not support self-service password recovery: contact your center directly.
+              DojoLink does not currently provide self-service password recovery. Password assistance must be handled directly through authorized center staff.
             </p>
           </section>
 
           <section>
             <h2 className="text-lg font-bold mb-2">Data and Privacy</h2>
             <p className="text-sm text-ninja-muted leading-relaxed">
-              Your use of DojoLink is also governed by our{' '}
-              <Link to="/privacy" className="text-ninja-blue hover:underline">Privacy Policy</Link>,
-              which describes what data is collected and how it is used. By using DojoLink, you consent to the collection and use of information as described therein.
+              Use of DojoLink is also governed by the{' '}
+              <Link to="/privacy" className="text-ninja-blue hover:underline">Privacy Policy</Link>{' '}
+              applicable to your participating franchise location. By using the platform, you consent to the collection, storage, and use of information as described in the applicable privacy practices.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold mb-2">Platform Availability</h2>
+            <p className="text-sm text-ninja-muted leading-relaxed mb-2">
+              DojoLink is provided on an "as-is" and "as-available" basis for internal franchise operations. While reasonable efforts may be made to maintain uptime and reliability, no guarantees are made regarding uninterrupted access, error-free functionality, or data accuracy.
+            </p>
+            <p className="text-sm text-ninja-muted leading-relaxed">
+              Features, functionality, and access may be modified, suspended, or discontinued at any time without prior notice.
             </p>
           </section>
 
           <section>
             <h2 className="text-lg font-bold mb-2">Limitation of Liability</h2>
+            <p className="text-sm text-ninja-muted leading-relaxed mb-3">
+              To the fullest extent permitted by applicable law, the operators, developers, and administrators of DojoLink shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or related to:
+            </p>
+            <div className="text-sm text-ninja-muted leading-relaxed space-y-2 mb-3">
+              <p>Use or inability to use the platform.</p>
+              <p>Data loss or service interruption.</p>
+              <p>Unauthorized account access.</p>
+              <p>Reliance on information displayed within the platform.</p>
+            </div>
             <p className="text-sm text-ninja-muted leading-relaxed">
-              DojoLink is provided as-is for internal franchise use. The platform operators make no warranties regarding uptime, accuracy, or fitness for any particular purpose beyond its intended use. To the fullest extent permitted by law, the operators are not liable for any indirect, incidental, or consequential damages arising from your use of the platform.
+              This limitation applies regardless of the legal theory asserted.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold mb-2">Termination of Access</h2>
+            <p className="text-sm text-ninja-muted leading-relaxed">
+              Participating franchise staff may suspend or terminate access to DojoLink at any time for violations of these terms, security concerns, employment termination, or operational reasons.
             </p>
           </section>
 
           <section>
             <h2 className="text-lg font-bold mb-2">Changes to These Terms</h2>
+            <p className="text-sm text-ninja-muted leading-relaxed mb-2">
+              These Terms and Conditions may be updated periodically. Continued use of DojoLink after updated terms are posted constitutes acceptance of the revised terms.
+            </p>
             <p className="text-sm text-ninja-muted leading-relaxed">
-              These terms may be updated from time to time. Continued use of DojoLink after changes are posted constitutes acceptance of the revised terms. The date at the top of this page reflects when the terms were last updated.
+              The "Last Updated" date at the top of this page indicates the effective date of the current version.
             </p>
           </section>
 
           <section>
             <h2 className="text-lg font-bold mb-2">Contact</h2>
             <p className="text-sm text-ninja-muted leading-relaxed">
-              For questions about these terms, contact the Center Director at your Code Ninjas location.
+              For questions regarding these Terms and Conditions, please contact your participating franchise location directly through its Center Director or management staff.
             </p>
           </section>
 
