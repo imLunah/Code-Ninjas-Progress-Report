@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from '../components/ui/ThemeToggle';
 
 const BG    = '#1c2132';
 const BLUE  = 'rgb(56,161,255)';
@@ -49,6 +50,8 @@ export default function LandingPage() {
       transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
       onAnimationComplete={() => { if (leaving) navigate('/login', { state: { fromLanding: true } }); }}
     >
+      <div className="fixed top-3 right-4 z-30"><ThemeToggle /></div>
+
       {/* Background glow */}
       <div
         className="absolute inset-0 pointer-events-none"
