@@ -23,7 +23,7 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // CSRF mitigation: require custom header on all state-changing requests
@@ -73,6 +73,7 @@ app.use('/api/daily', require('./routes/daily'));
 app.use('/api/progress', require('./routes/progress'));
 app.use('/api/clubs', require('./routes/clubs'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/bugs', require('./routes/bugs'));
 
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/dist')));
