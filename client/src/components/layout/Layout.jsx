@@ -1,8 +1,11 @@
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
 import ThemeToggle from '../ui/ThemeToggle';
+import BugReportButton from '../ui/BugReportButton';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Layout({ children }) {
+  const { user } = useAuth();
   return (
     <div className="min-h-[100dvh] bg-ninja-bg lg:flex">
       <Sidebar />
@@ -16,6 +19,7 @@ export default function Layout({ children }) {
         </main>
       </div>
       <MobileNav />
+      <BugReportButton reporter={{ name: user?.displayName, role: user?.role, location: user?.activeLocation?.name }} />
     </div>
   );
 }

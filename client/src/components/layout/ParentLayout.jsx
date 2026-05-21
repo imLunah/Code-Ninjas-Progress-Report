@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import ThemeToggle from '../ui/ThemeToggle';
+import BugReportButton from '../ui/BugReportButton';
 
 export default function ParentLayout({ children }) {
   const { parent, logout } = useParentAuth();
@@ -36,6 +37,7 @@ export default function ParentLayout({ children }) {
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
         {children}
       </main>
+      <BugReportButton reporter={{ name: parent?.parentName, role: 'parent' }} />
     </div>
   );
 }
