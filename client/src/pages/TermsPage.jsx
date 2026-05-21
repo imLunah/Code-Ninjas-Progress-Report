@@ -13,37 +13,44 @@ export default function TermsPage() {
         <div className="bg-white border border-ninja-border rounded-2xl p-8 shadow-sm space-y-6 font-ninja text-ninja-navy">
 
           <section>
+            <h2 className="text-lg font-bold mb-2">About DojoLink</h2>
+            <p className="text-sm text-ninja-muted leading-relaxed">
+              DojoLink is an independently developed studio management tool created by a Code Ninjas franchise staff member. It is not affiliated with, endorsed by, or operated by Code Ninjas Inc. or its corporate entity. "Code Ninjas" is a registered trademark of its respective owner.
+            </p>
+          </section>
+
+          <section>
             <h2 className="text-lg font-bold mb-2">Acceptance of Terms</h2>
             <p className="text-sm text-ninja-muted leading-relaxed">
-              By accessing or using DojoLink, you agree to be bound by these Terms and Conditions. If you do not agree, do not use the platform. Access is granted by Code Ninjas franchise center staff — accounts are not available through public registration.
+              By accessing or using DojoLink, you agree to be bound by these Terms and Conditions. If you do not agree, do not use the platform. Access is granted by center staff and accounts are not available through public registration.
             </p>
           </section>
 
           <section>
             <h2 className="text-lg font-bold mb-2">Who May Use DojoLink</h2>
-            <ul className="text-sm text-ninja-muted leading-relaxed space-y-2 list-disc list-inside">
-              <li><strong className="text-ninja-navy">Staff (Center Directors and Senseis)</strong>: Authorized employees of a Code Ninjas franchise location with credentials issued by their Center Director.</li>
-              <li><strong className="text-ninja-navy">Parents and Guardians</strong>: Individuals whose contact information is on file with the center and whose account was created by center staff.</li>
-            </ul>
+            <div className="text-sm text-ninja-muted leading-relaxed space-y-2">
+              <p><strong className="text-ninja-navy">Staff (Center Directors and Senseis):</strong> Authorized employees of a Code Ninjas franchise location with credentials issued by their Center Director.</p>
+              <p><strong className="text-ninja-navy">Parents and Guardians:</strong> Individuals whose contact information is on file with the center and whose account was created by center staff.</p>
+            </div>
           </section>
 
           <section>
             <h2 className="text-lg font-bold mb-2">Permitted Use</h2>
-            <p className="text-sm text-ninja-muted leading-relaxed">
+            <p className="text-sm text-ninja-muted leading-relaxed mb-2">
               DojoLink is intended solely for managing student progress, check-ins, club participation, and parent visibility at Code Ninjas franchise locations. You agree not to:
             </p>
-            <ul className="text-sm text-ninja-muted leading-relaxed space-y-2 list-disc list-inside mt-2">
-              <li>Access accounts or data that do not belong to you.</li>
-              <li>Attempt to reverse-engineer, copy, or redistribute any part of the platform.</li>
-              <li>Use the platform for any unlawful purpose or in violation of any applicable law.</li>
-              <li>Share your login credentials with unauthorized individuals.</li>
-            </ul>
+            <div className="text-sm text-ninja-muted leading-relaxed space-y-2">
+              <p>Access accounts or data that do not belong to you.</p>
+              <p>Attempt to reverse-engineer, copy, or redistribute any part of the platform.</p>
+              <p>Use the platform for any unlawful purpose or in violation of any applicable law.</p>
+              <p>Share your login credentials with unauthorized individuals.</p>
+            </div>
           </section>
 
           <section>
             <h2 className="text-lg font-bold mb-2">Accounts and Credentials</h2>
             <p className="text-sm text-ninja-muted leading-relaxed">
-              You are responsible for maintaining the confidentiality of your login credentials and for all activity that occurs under your account. If you believe your account has been compromised, notify your Center Director immediately. DojoLink does not support self-service password recovery — contact your center.
+              You are responsible for maintaining the confidentiality of your login credentials and for all activity that occurs under your account. If you believe your account has been compromised, notify your Center Director immediately. DojoLink does not support self-service password recovery: contact your center directly.
             </p>
           </section>
 
