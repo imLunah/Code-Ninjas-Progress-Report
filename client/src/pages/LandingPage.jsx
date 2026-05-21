@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import ThemeToggle from '../components/ui/ThemeToggle';
 
 const BG    = '#1c2132';
 const BLUE  = 'rgb(56,161,255)';
@@ -50,8 +49,6 @@ export default function LandingPage() {
       transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
       onAnimationComplete={() => { if (leaving) navigate('/login', { state: { fromLanding: true } }); }}
     >
-      <div className="fixed top-3 right-4 z-30"><ThemeToggle /></div>
-
       {/* Background glow */}
       <div
         className="absolute inset-0 pointer-events-none"
@@ -62,10 +59,10 @@ export default function LandingPage() {
       />
 
       {/* Hero */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 text-center relative z-10 py-16">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 text-center relative z-10 py-8">
 
-        {/* Logo as heading */}
-        <motion.div className="mb-8" {...fadeUp(0)}>
+        {/* Logo */}
+        <motion.div className="mb-5" {...fadeUp(0)}>
           <img
             src="/DojoLinkLogoH.svg"
             alt="DojoLink"
@@ -76,7 +73,7 @@ export default function LandingPage() {
 
         {/* Tagline */}
         <motion.h1
-          className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-[1.12] tracking-tight mb-5"
+          className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-[1.12] tracking-tight mb-4"
           {...fadeUp(0.15)}
         >
           Dojo management{' '}
@@ -87,7 +84,7 @@ export default function LandingPage() {
 
         {/* Subtext */}
         <motion.p
-          className="text-base md:text-lg max-w-sm leading-relaxed mb-10"
+          className="text-base md:text-lg max-w-sm leading-relaxed mb-7"
           style={{ color: MUTED }}
           {...fadeUp(0.28)}
         >
@@ -113,7 +110,7 @@ export default function LandingPage() {
             style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)', transform: 'skewX(-20deg)' }}
           />
           <span className="relative z-10 flex items-center gap-2.5">
-            Enter the Dojo
+            Get Started
             <motion.span
               animate={{ x: [0, 5, 0] }}
               transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
