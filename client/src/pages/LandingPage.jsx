@@ -71,14 +71,24 @@ export default function LandingPage() {
           />
         </motion.div>
 
+        {/* Tagline */}
+        <motion.h1
+          className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-[1.12] tracking-tight mb-5"
+          {...fadeUp(0.15)}
+        >
+          Dojo management{' '}
+          <span style={{ color: BLUE, textShadow: '0 0 40px rgba(56,161,255,0.35)' }}>
+            for staff and parents.
+          </span>
+        </motion.h1>
+
         {/* Subtext */}
         <motion.p
           className="text-base md:text-lg max-w-sm leading-relaxed mb-10"
           style={{ color: MUTED }}
-          {...fadeUp(0.38)}
+          {...fadeUp(0.28)}
         >
-          For Senseis and Center Directors.
-          Check‑ins, belt progress, clubs — all in one place.
+          Check ins, belt progress, clubs and parent updates all in one place.
         </motion.p>
 
         {/* CTA */}
@@ -91,7 +101,7 @@ export default function LandingPage() {
           }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ delay: 0.42, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           whileHover={{ scale: 1.05, boxShadow: '0 0 48px rgba(56,161,255,0.4), 0 6px 20px rgba(0,0,0,0.35)' }}
           whileTap={{ scale: 0.97 }}
         >
