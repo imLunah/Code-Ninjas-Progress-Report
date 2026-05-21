@@ -1,11 +1,8 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
-const DoorScene = lazy(() => import('../components/ui/DoorScene'));
-
-// ─── Landing page ─────────────────────────────────────────────────────────────
 const BG    = '#1c2132';
 const BLUE  = 'rgb(56,161,255)';
 const TEXT  = '#d0daed';
@@ -20,7 +17,7 @@ const fadeUp = (delay = 0) => ({
 export default function LandingPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [showDoor, setShowDoor] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
@@ -31,8 +28,9 @@ export default function LandingPage() {
     }
   }, [user, loading, navigate]);
 
-  const handleSignIn = () => setShowDoor(true);
-  const handleNavigate = useCallback(() => navigate('/login'), [navigate]);
+  const handleSignIn = () => {
+    setTransitioning(true);
+  };
 
   if (loading || user) {
     return (
@@ -62,7 +60,7 @@ export default function LandingPage() {
       {/* Hero */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 text-center relative z-10 py-16">
 
-        {/* Logo — main design element */}
+        {/* Logo */}
         <motion.div className="mb-8" {...fadeUp(0)}>
           <img
             src="/DojoLinkLogoH.svg"
@@ -72,7 +70,7 @@ export default function LandingPage() {
           />
         </motion.div>
 
-        {/* Thin accent line */}
+        {/* Accent line */}
         <motion.div
           className="mb-8 rounded-full"
           style={{ width: 48, height: 2, background: BLUE, opacity: 0.6 }}
@@ -114,8 +112,8 @@ export default function LandingPage() {
           whileHover={{ scale: 1.05, boxShadow: '0 0 48px rgba(56,161,255,0.4), 0 6px 20px rgba(0,0,0,0.35)' }}
           whileTap={{ scale: 0.97 }}
         >
-          {/* Shimmer */}
-          <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out pointer-events-none"
+          <span
+            className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out pointer-events-none"
             style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)', transform: 'skewX(-20deg)' }}
           />
           <span className="relative z-10 flex items-center gap-2.5">
@@ -153,12 +151,19 @@ export default function LandingPage() {
         <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
       </motion.footer>
 
-      {/* 3D door overlay */}
-      {showDoor && (
-        <Suspense fallback={null}>
-          <DoorScene onNavigate={handleNavigate} />
-        </Suspense>
-      )}
+      {/* Seamless fade-to-login overlay */}
+      <AnimatePresence>
+        {transitioning && (
+          <motion.div
+            className="fixed inset-0 z-50"
+            style={{ background: BG }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.45, ease: 'easeInOut' }}
+            onAnimationComplete={() => navigate('/login')}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
