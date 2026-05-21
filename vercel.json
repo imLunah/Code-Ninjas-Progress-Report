@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm install --prefix server && npm install --include=dev --prefix client && npm --prefix client run build",
+  "buildCommand": "npm install --prefix server && npm install --include=dev --legacy-peer-deps --prefix client && npm --prefix client run build",
   "outputDirectory": "client/dist",
 "rewrites": [
     { "source": "/api/:path*", "destination": "/api/index" }
