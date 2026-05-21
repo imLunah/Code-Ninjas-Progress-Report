@@ -24,22 +24,7 @@ import ParentDashboard from './pages/parent/ParentDashboard';
 import ParentStudentProfile from './pages/parent/ParentStudentProfile';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
-
-function RoleRedirect() {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-ninja-bg flex items-center justify-center">
-        <p className="text-ninja-muted font-ninja text-xl">Loading...</p>
-      </div>
-    );
-  }
-
-  if (!user) return <Navigate to="/login" replace />;
-  if (user.role === 'manager') return <Navigate to="/manager/dashboard" replace />;
-  return <Navigate to="/sensei/dashboard" replace />;
-}
+import LandingPage from './pages/LandingPage';
 
 export default function App() {
   return (
@@ -49,7 +34,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<RoleRedirect />} />
+          <Route path="/" element={<LandingPage />} />
 
           {/* Manager routes */}
           <Route
