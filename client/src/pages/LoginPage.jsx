@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useParentAuth } from '../context/ParentAuthContext';
@@ -279,6 +279,9 @@ export default function LoginPage() {
           </motion.button>
         </form>
       </motion.div>
+      <p className="text-center mt-6 text-ninja-muted font-ninja text-xs">
+        <Link to="/privacy" className="hover:text-ninja-blue transition-colors">Privacy Policy</Link>
+      </p>
     </div>
   );
 }
