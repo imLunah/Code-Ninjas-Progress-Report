@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useParentAuth } from '../context/ParentAuthContext';
@@ -40,6 +40,8 @@ export default function LoginPage() {
   const { login } = useAuth();
   const { login: parentLogin } = useParentAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromLanding = location.state?.fromLanding;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,6 +64,15 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-ninja-bg flex flex-col items-center justify-start sm:justify-center px-5 sm:px-6 py-8 sm:py-12">
+      {fromLanding && (
+        <motion.div
+          className="fixed inset-0 z-50 pointer-events-none"
+          style={{ background: '#1c2132' }}
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 0 }}
+          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+        />
+      )}
       <div className="fixed top-3 right-4 z-30"><ThemeToggle /></div>
 
 

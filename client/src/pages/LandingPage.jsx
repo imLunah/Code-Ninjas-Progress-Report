@@ -1,8 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import { usePageTransition } from '../context/TransitionContext';
 
 const BG    = '#1c2132';
 const BLUE  = 'rgb(56,161,255)';
@@ -18,9 +17,7 @@ const fadeUp = (delay = 0) => ({
 export default function LandingPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const { start } = usePageTransition();
-
-  useEffect(() => { import('../components/ui/TransitionScene'); }, []);
+  const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
@@ -31,7 +28,7 @@ export default function LandingPage() {
     }
   }, [user, loading, navigate]);
 
-  const handleSignIn = () => start('/login', { fromLanding: true });
+  const handleSignIn = () => setLeaving(true);
 
   if (loading || user) {
     return (
@@ -45,9 +42,12 @@ export default function LandingPage() {
   }
 
   return (
-    <div
+    <motion.div
       style={{ background: BG, color: TEXT }}
       className="min-h-screen flex flex-col font-ninja overflow-hidden relative"
+      animate={{ opacity: leaving ? 0 : 1 }}
+      transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+      onAnimationComplete={() => { if (leaving) navigate('/login', { state: { fromLanding: true } }); }}
     >
       {/* Background glow */}
       <div
@@ -151,6 +151,6 @@ export default function LandingPage() {
         <span style={{ opacity: 0.3 }}>·</span>
         <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
       </motion.footer>
-    </div>
+    </motion.div>
   );
 }

@@ -1,10 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { lazy, Suspense, useCallback } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { ParentAuthProvider } from './context/ParentAuthContext';
-import { TransitionProvider, usePageTransition } from './context/TransitionContext';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import ParentRoute from './components/layout/ParentRoute';
 
@@ -27,32 +25,12 @@ import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import LandingPage from './pages/LandingPage';
 
-const TransitionScene = lazy(() => import('./components/ui/TransitionScene'));
-
-// Rendered outside <Routes> so it survives route changes — fixes the cut
-function TransitionOverlay() {
-  const { pending, end } = usePageTransition();
-  const navigate = useNavigate();
-
-  const handleNavigate = useCallback(() => {
-    navigate(pending.to, { state: pending.state });
-  }, [pending, navigate]);
-
-  if (!pending) return null;
-  return (
-    <Suspense fallback={null}>
-      <TransitionScene onNavigate={handleNavigate} onComplete={end} />
-    </Suspense>
-  );
-}
-
 export default function App() {
   return (
     <BrowserRouter>
-      <TransitionProvider>
-        <ThemeProvider>
-        <ParentAuthProvider>
-        <AuthProvider>
+      <ThemeProvider>
+      <ParentAuthProvider>
+      <AuthProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/" element={<LandingPage />} />
@@ -88,13 +66,10 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-
-          <TransitionOverlay />
-        </AuthProvider>
-        </ParentAuthProvider>
-        </ThemeProvider>
-        <Analytics />
-      </TransitionProvider>
+      </AuthProvider>
+      </ParentAuthProvider>
+      </ThemeProvider>
+      <Analytics />
     </BrowserRouter>
   );
 }
