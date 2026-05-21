@@ -4,8 +4,10 @@ const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
   const [dark, setDark] = useState(() => {
-    try { return localStorage.getItem('dj-theme') === 'dark'; }
-    catch { return false; }
+    try {
+      const saved = localStorage.getItem('dj-theme');
+      return saved === null ? true : saved === 'dark';
+    } catch { return true; }
   });
 
   useEffect(() => {

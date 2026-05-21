@@ -82,17 +82,24 @@ export default function LoginPage() {
         initial="hidden"
         animate="show"
       >
+        {/* Back to landing */}
+        <motion.div variants={fadeUp} className="mb-5 sm:mb-6">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-ninja-muted hover:text-ninja-blue transition-colors font-ninja text-sm font-semibold"
+          >
+            ← Back
+          </Link>
+        </motion.div>
+
         {/* DojoLink logo — big and prominent */}
         <motion.div variants={fadeUp} className="mb-5 sm:mb-8">
           <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-11 sm:h-16 w-auto" />
         </motion.div>
 
         {/* Hero copy */}
-        <motion.p variants={fadeUp} className="text-ninja-blue font-ninja font-bold text-xs sm:text-sm uppercase tracking-widest mb-1.5 sm:mb-2">
-          Welcome back, Ninja
-        </motion.p>
         <motion.h1 variants={fadeUp} className="text-ninja-navy font-ninja font-black text-3xl sm:text-4xl lg:text-5xl leading-tight mb-2 sm:mb-3">
-          Sign in to your dojo.
+          Welcome Back
         </motion.h1>
         <AnimatePresence mode="wait">
           {tab === 'parent' && (
