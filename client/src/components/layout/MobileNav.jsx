@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 function LocationBar({ user, switchLocation }) {
-  if (user.role === 'manager') {
+  if (['manager', 'admin'].includes(user.role)) {
     return (
       <div className="px-4 py-1.5 border-b border-ninja-border bg-ninja-bg">
         <select
@@ -48,7 +48,7 @@ export default function MobileNav() {
   const { user, switchLocation } = useAuth();
   if (!user) return null;
 
-  const isManager = user.role === 'manager';
+  const isManager = ['manager', 'admin'].includes(user.role);
   const dashPath = isManager ? '/manager/dashboard' : '/sensei/dashboard';
   const initials = user.displayName?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || '?';
 
