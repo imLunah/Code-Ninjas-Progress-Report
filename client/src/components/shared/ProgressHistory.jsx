@@ -62,7 +62,7 @@ function CommentBox({ logId, onAdded }) {
 
 export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted }) {
   const { user, isReadOnly } = useAuth();
-  const isManager = user?.role === 'manager';
+  const isManager = ['manager', 'admin'].includes(user?.role);
 
   const programs = [...new Set(logs.map((l) => l.program).filter(Boolean))];
   const multiProgram = programs.length > 1;

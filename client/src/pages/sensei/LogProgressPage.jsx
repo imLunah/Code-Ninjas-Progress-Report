@@ -15,7 +15,7 @@ export default function LogProgressPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, isReadOnly } = useAuth();
-  const dashboardPath = user?.role === 'manager' ? '/manager/dashboard' : '/sensei/dashboard';
+  const dashboardPath = ['manager', 'admin'].includes(user?.role) ? '/manager/dashboard' : '/sensei/dashboard';
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

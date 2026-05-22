@@ -64,7 +64,7 @@ export default function LogClubPage() {
         notes: notes.trim() || undefined,
         student_ids: [...selectedIds],
       });
-      navigate(user?.role === 'manager' ? '/manager/dashboard' : '/sensei/dashboard');
+      navigate(['manager', 'admin'].includes(user?.role) ? '/manager/dashboard' : '/sensei/dashboard');
     } catch {
       setError('Failed to save. Please try again.');
     } finally {

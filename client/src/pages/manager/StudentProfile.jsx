@@ -446,7 +446,7 @@ export default function StudentProfile() {
   const [editingEnrollment, setEditingEnrollment] = useState(null);
   const [showAddProgram, setShowAddProgram] = useState(false);
 
-  const isManager = user?.role === 'manager';
+  const isManager = ['manager', 'admin'].includes(user?.role);
 
   useEffect(() => {
     const controller = new AbortController();

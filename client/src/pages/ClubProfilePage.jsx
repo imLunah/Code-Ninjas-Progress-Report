@@ -491,7 +491,7 @@ export default function ClubProfilePage() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user, isReadOnly } = useAuth();
-  const isManager = user?.role === 'manager';
+  const isManager = ['manager', 'admin'].includes(user?.role);
 
   const [clubDef, setClubDef] = useState(null);
   const [sessions, setSessions] = useState([]);

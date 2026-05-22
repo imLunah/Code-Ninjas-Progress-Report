@@ -121,7 +121,7 @@ export default function AccountPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white font-ninja font-bold text-lg leading-tight truncate">{user?.displayName}</p>
-              <p className="text-white/50 font-ninja text-xs mt-0.5 capitalize">{user?.role === 'manager' ? 'Center Director' : 'Sensei'}</p>
+              <p className="text-white/50 font-ninja text-xs mt-0.5 capitalize">{user?.role === 'manager' ? 'Center Director' : user?.role === 'admin' ? 'Admin' : 'Sensei'}</p>
               <p className="text-white/40 font-ninja text-xs">@{user?.username}</p>
             </div>
             <button
