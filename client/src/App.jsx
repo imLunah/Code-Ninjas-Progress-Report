@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ParentAuthProvider } from './context/ParentAuthContext';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import ParentRoute from './components/layout/ParentRoute';
+import AdminBar from './components/ui/AdminBar';
 
 import LoginPage from './pages/LoginPage';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
@@ -66,6 +67,7 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <AdminBar />
       </AuthProvider>
       </ParentAuthProvider>
       </ThemeProvider>

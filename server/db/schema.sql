@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   display_name TEXT NOT NULL,
-  role TEXT NOT NULL CHECK(role IN ('manager','sensei')),
+  role TEXT NOT NULL CHECK(role IN ('manager','sensei','admin')),
   location_id INTEGER REFERENCES locations(id),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
