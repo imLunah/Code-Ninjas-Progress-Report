@@ -132,14 +132,14 @@ export default function LandingPage() {
         </motion.button>
       </div>
 
-      {/* Celebrate ninja — desktop only */}
+      {/* Waving ninja — desktop only */}
       <motion.img
         src="/ninja_waving.png"
         alt=""
-        className="hidden lg:block absolute bottom-8 right-4 xl:right-14 h-60 xl:h-72 object-contain pointer-events-none select-none"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 0.8, y: 0 }}
-        transition={{ delay: 0.75, duration: 0.75, ease: 'easeOut' }}
+        className="hidden lg:block absolute right-0 xl:right-8 top-1/2 -translate-y-1/2 h-80 xl:h-96 object-contain pointer-events-none select-none"
+        initial={{ opacity: 0, x: 40 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.6, duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
       />
 
       {/* Footer */}
