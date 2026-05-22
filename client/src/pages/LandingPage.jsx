@@ -56,7 +56,7 @@ export default function LandingPage() {
           backgroundImage: 'url(/ninja_background.jpg)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          opacity: 0.04,
+          opacity: 0.12,
         }}
       />
 
