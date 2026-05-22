@@ -137,9 +137,9 @@ export default function LandingPage() {
         src="/ninja_waving.png"
         alt=""
         className="hidden lg:block absolute right-[10%] xl:right-[14%] top-1/2 -translate-y-1/2 h-80 xl:h-96 object-contain pointer-events-none select-none"
-        initial={{ opacity: 0, x: 40 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.6, duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
+        initial={{ x: '120%' }}
+        animate={{ x: 0 }}
+        transition={{ delay: 0.5, type: 'spring', damping: 28, stiffness: 180 }}
       />
 
       {/* Footer */}
