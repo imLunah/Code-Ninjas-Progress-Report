@@ -53,7 +53,7 @@ export default function LoginPage() {
         navigate('/parent/dashboard');
       } else {
         const user = await login(username, password, keepSignedIn);
-        navigate(user.role === 'manager' ? '/manager/dashboard' : '/sensei/dashboard');
+        navigate(['manager', 'admin'].includes(user.role) ? '/manager/dashboard' : '/sensei/dashboard');
       }
     } catch (err) {
       setError(err.message || 'Login failed');

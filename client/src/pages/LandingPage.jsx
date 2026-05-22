@@ -22,7 +22,7 @@ export default function LandingPage() {
   useEffect(() => {
     if (!loading && user) {
       navigate(
-        user.role === 'manager' ? '/manager/dashboard' : '/sensei/dashboard',
+        ['manager', 'admin'].includes(user.role) ? '/manager/dashboard' : '/sensei/dashboard',
         { replace: true }
       );
     }
