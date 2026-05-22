@@ -246,6 +246,25 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
     e.target.value = '';
   };
 
+  const handleRemoveCover = async () => {
+    setUploading(true);
+    setUploadError('');
+    try {
+      if (clubDef.cover_image_url) {
+        try {
+          const oldPath = new URL(clubDef.cover_image_url).pathname.split('/object/public/club-resources/')[1];
+          if (oldPath) await supabase.storage.from('club-resources').remove([oldPath]);
+        } catch {}
+      }
+      await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { cover_image_url: null });
+      onCoverUpdated(null);
+    } catch {
+      setUploadError('Remove failed. Try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleCropConfirm = async (blob) => {
     setCropSrc(null);
     setUploading(true);
@@ -284,17 +303,31 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
           </div>
         )}
         {canEditCover && (
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70 disabled:opacity-50 text-white text-xs font-ninja font-semibold px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
-          >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            {uploading ? 'Uploading…' : clubDef.cover_image_url ? 'Change photo' : 'Add photo'}
-          </button>
+          <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
+            {clubDef.cover_image_url && (
+              <button
+                onClick={handleRemoveCover}
+                disabled={uploading}
+                className="bg-black/50 hover:bg-red-600/80 disabled:opacity-50 text-white text-xs font-ninja font-semibold px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Remove
+              </button>
+            )}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="bg-black/50 hover:bg-black/70 disabled:opacity-50 text-white text-xs font-ninja font-semibold px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              {uploading ? 'Uploading…' : clubDef.cover_image_url ? 'Change photo' : 'Add photo'}
+            </button>
+          </div>
         )}
         {canEditCover && (
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
