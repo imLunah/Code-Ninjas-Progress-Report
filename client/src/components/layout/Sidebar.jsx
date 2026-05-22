@@ -41,7 +41,7 @@ export default function Sidebar() {
     { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
   ];
 
-  const navLinks = user?.role === 'manager' ? managerLinks : user?.role === 'sensei' ? senseiLinks : [];
+  const navLinks = ['manager', 'admin'].includes(user?.role) ? managerLinks : user?.role === 'sensei' ? senseiLinks : [];
 
   const initials = user?.displayName?.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase() || '?';
 
@@ -60,7 +60,7 @@ export default function Sidebar() {
       {/* Center switcher */}
       {user && (
         <div className="px-3 pt-3">
-          {user.role === 'manager' ? (
+          {['manager', 'admin'].includes(user.role) ? (
             <select
               value={user.activeLocation?.id ?? ''}
               onChange={(e) => switchLocation(Number(e.target.value))}
@@ -121,7 +121,7 @@ export default function Sidebar() {
             )}
             <div className="flex-1 min-w-0">
               <p className="font-ninja font-bold text-ninja-navy text-sm truncate">{user?.displayName}</p>
-              <p className="font-ninja text-ninja-muted text-xs capitalize">{user?.role === 'manager' ? 'Center Director' : user?.role}</p>
+              <p className="font-ninja text-ninja-muted text-xs capitalize">{user?.role === 'manager' ? 'Center Director' : user?.role === 'admin' ? 'Admin' : user?.role}</p>
             </div>
           </Link>
           <button

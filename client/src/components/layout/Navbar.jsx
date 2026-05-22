@@ -18,7 +18,7 @@ export default function Navbar() {
 
   const closeMenu = () => setMenuOpen(false);
 
-  const navLinks = user?.role === 'manager'
+  const navLinks = ['manager', 'admin'].includes(user?.role)
     ? [
         { to: '/manager/dashboard', label: 'Dashboard' },
         { to: '/manager/students', label: 'Ninjas' },
@@ -49,7 +49,7 @@ export default function Navbar() {
           {/* Desktop: Location switcher */}
           {user && (
             <div className="hidden lg:flex items-center">
-              {user.role === 'manager' ? (
+              {['manager', 'admin'].includes(user.role) ? (
                 <select
                   value={user.activeLocation?.id ?? ''}
                   onChange={(e) => switchLocation(Number(e.target.value))}
