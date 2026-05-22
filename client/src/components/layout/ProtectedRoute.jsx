@@ -16,11 +16,11 @@ export default function ProtectedRoute({ children, role }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (role === 'manager' && user.role !== 'manager') {
+  if (role === 'manager' && !['manager', 'admin'].includes(user.role)) {
     return <Navigate to="/" replace />;
   }
 
-  if (role === 'sensei' && !['manager', 'sensei'].includes(user.role)) {
+  if (role === 'sensei' && !['manager', 'sensei', 'admin'].includes(user.role)) {
     return <Navigate to="/" replace />;
   }
 
