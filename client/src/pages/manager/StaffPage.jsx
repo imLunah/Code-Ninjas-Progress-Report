@@ -104,7 +104,7 @@ export default function StaffPage() {
   const [editCredentialsSensei, setEditCredentialsSensei] = useState(null);
   const { user, isReadOnly } = useAuth();
 
-  const isManager = user?.role === 'manager';
+  const isManager = ['manager', 'admin'].includes(user?.role);
 
   useEffect(() => {
     setLoading(true);
