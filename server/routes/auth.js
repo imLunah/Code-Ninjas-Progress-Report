@@ -55,7 +55,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       'SELECT id, name, slug FROM locations WHERE id = $1',
       [user.location_id]
     );
-    const availableLocations = user.role === 'manager'
+    const availableLocations = ['manager', 'admin'].includes(user.role)
       ? (await pool.query('SELECT id, name, slug FROM locations ORDER BY name')).rows
       : [activeLocation];
 
@@ -129,7 +129,7 @@ router.get('/me', async (req, res) => {
       'SELECT id, name, slug FROM locations WHERE id = $1',
       [req.session.activeLocationId]
     );
-    const availableLocations = user.role === 'manager'
+    const availableLocations = ['manager', 'admin'].includes(user.role)
       ? (await pool.query('SELECT id, name, slug FROM locations ORDER BY name')).rows
       : [activeLocation];
 
