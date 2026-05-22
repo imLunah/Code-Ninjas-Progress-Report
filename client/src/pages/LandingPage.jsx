@@ -134,7 +134,7 @@ export default function LandingPage() {
 
       {/* Celebrate ninja — desktop only */}
       <motion.img
-        src="/CodeNinjasCelebrate.webp"
+        src="/ninja_waving.png"
         alt=""
         className="hidden lg:block absolute bottom-8 right-4 xl:right-14 h-60 xl:h-72 object-contain pointer-events-none select-none"
         initial={{ opacity: 0, y: 20 }}
