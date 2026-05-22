@@ -130,7 +130,7 @@ export default function Navbar() {
             </div>
 
             {/* Location */}
-            {user.role === 'manager' ? (
+            {['manager', 'admin'].includes(user.role) ? (
               <select
                 value={user.activeLocation?.id ?? ''}
                 onChange={(e) => { switchLocation(Number(e.target.value)); closeMenu(); }}
