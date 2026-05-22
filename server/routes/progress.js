@@ -57,13 +57,14 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     ? lesson_entries
     : [{ sub_program: sub_program || null, module_name: module_name || null, lesson_name: lesson_name || null }];
 
-  // Use the pending daily_assignment's session_date so the log matches the actual
-  // check-in date even if the sensei logs on a later day.
+  // Prefer today's pending assignment so logging clears the kid from the board.
+  // Fall back to oldest pending if there's no today assignment (sensei logging late).
+  const pacificToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
   const { rows: assignmentRows } = await pool.query(
     `SELECT id, session_date FROM daily_assignments
      WHERE student_id = $1 AND program = $2 AND completed = false
-     ORDER BY session_date ASC, created_at ASC LIMIT 1`,
-    [student_id, program]
+     ORDER BY (session_date = $3::date) DESC, session_date ASC, created_at ASC LIMIT 1`,
+    [student_id, program, pacificToday]
   );
   const date = assignmentRows[0]
     ? new Date(assignmentRows[0].session_date).toISOString().split('T')[0]
