@@ -51,7 +51,7 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
 
           <div className="flex flex-wrap items-center gap-2 mt-1">
             {[...new Set(assignments.map(a => a.program))].map((program) => (
-              <ProgramBadge key={program} program={program} size="xs" />
+              <ProgramBadge key={program} program={program} size="sm" />
             ))}
             {createAssignment.belt_level && (
               <BeltBadge
