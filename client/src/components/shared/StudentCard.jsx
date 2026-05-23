@@ -73,12 +73,6 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
             </p>
           )}
 
-          {student.current_project && (
-            <p className="text-ninja-muted text-sm font-ninja mt-1">
-              {student.current_project} — {student.project_status}
-            </p>
-          )}
-
           {student.sensei_name && (
             <p className="text-ninja-muted text-xs font-ninja mt-1">
               Sensei: {student.sensei_name}
