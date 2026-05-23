@@ -153,11 +153,6 @@ export default function TodayBoard({ assignments, onRemove }) {
                     <BeltBadge belt={a.belt_level} sublevel={a.belt_sublevel} size="xs" />
                   )}
                 </div>
-                {a.current_project && (
-                  <p className="text-ninja-muted font-ninja text-sm leading-snug">
-                    {a.current_project}{a.project_status ? ` · ${a.project_status}` : ''}
-                  </p>
-                )}
                 {a.sensei_name && (
                   <p className="text-ninja-muted font-ninja text-xs mt-1">
                     Sensei: {a.sensei_name}
@@ -217,9 +212,6 @@ export default function TodayBoard({ assignments, onRemove }) {
                 <ProgramBadge program={a.program} size="sm" />
                 {a.program === 'CREATE' && a.belt_level && <BeltBadge belt={a.belt_level} sublevel={a.belt_sublevel} size="xs" />}
               </div>
-              {a.current_project && (
-                <p className="text-ninja-muted font-ninja text-sm">{a.current_project}{a.project_status ? ` — ${a.project_status}` : ''}</p>
-              )}
               {a.completed ? (
                 <p className="text-green-600 font-ninja font-semibold text-xs">✓ Done</p>
               ) : isOverdue ? (
