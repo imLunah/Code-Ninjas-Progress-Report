@@ -59,108 +59,82 @@ function MobileBeltJourney({ enrollment }) {
   }, [beltIdx]);
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-ninja-border shadow-sm">
-      {/* Hero banner */}
-      <div style={{ background: 'linear-gradient(135deg, #003d87 0%, #005bcc 55%, #006ADD 100%)', padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <motion.div
-          style={{ flex: 1, minWidth: 0 }}
-          initial={{ opacity: 0, x: -12 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
-        >
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 3, fontFamily: 'Nunito, sans-serif' }}>
-            Code Ninjas
-          </p>
-          <h2 style={{ color: 'white', fontWeight: 800, fontSize: 18, lineHeight: 1.1, fontFamily: 'Nunito, sans-serif' }}>
-            CREATE
-          </h2>
-          {belt_level && (
-            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 3, fontFamily: 'Nunito, sans-serif' }}>
-              {belt_level} Belt · Level {belt_sublevel}{maxLevel ? ` of ${maxLevel}` : ''}
-            </p>
-          )}
-        </motion.div>
-        <motion.img
-          src={PROGRAM_LOGOS['CREATE']}
-          alt="CREATE"
-          initial={{ opacity: 0, scale: 0.7, x: 12 }}
-          animate={{ opacity: 1, scale: 1, x: 0 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
-          style={{ width: 64, height: 64, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))' }}
-        />
-      </div>
-
-      {/* Belt track + progress */}
-      <div className="bg-white p-4">
-        <div ref={scrollRef} className="overflow-x-auto -mx-4 px-4 no-scrollbar">
-          <div className="flex items-center" style={{ minWidth: 'max-content' }}>
-            {BELTS.map((b, i) => {
-              const isCurrent = i === beltIdx;
-              const isPast = i < beltIdx;
-              const size = isCurrent ? 52 : 36;
-              return (
-                <React.Fragment key={b.name}>
-                  {i > 0 && (
-                    <div className="h-0.5 flex-shrink-0" style={{ width: 16, backgroundColor: i <= beltIdx ? '#006ADD' : '#e2e8f0' }} />
-                  )}
-                  <div
-                    ref={isCurrent ? currentIconRef : null}
-                    className="relative flex-shrink-0"
-                    style={{ width: size, height: size }}
-                  >
-                    <img
-                      src={`/belts/belt-${b.name.toLowerCase()}.png`}
-                      alt={b.name}
-                      className={`w-full h-full object-contain ${!isPast && !isCurrent ? 'opacity-25 grayscale' : ''}`}
-                    />
-                  </div>
-                </React.Fragment>
-              );
-            })}
-          </div>
-          <div className="flex mt-1" style={{ minWidth: 'max-content' }}>
-            {BELTS.map((b, i) => {
-              const isCurrent = i === beltIdx;
-              const size = isCurrent ? 52 : 36;
-              return (
-                <React.Fragment key={b.name}>
-                  {i > 0 && <div className="flex-shrink-0" style={{ width: 16 }} />}
-                  <div className="flex justify-center flex-shrink-0" style={{ width: size }}>
-                    <span className={`font-ninja text-[10px] leading-none ${isCurrent ? 'font-bold text-ninja-navy' : 'text-ninja-muted'}`}>
-                      {b.name}
-                    </span>
-                  </div>
-                </React.Fragment>
-              );
-            })}
-          </div>
+    <div className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <img src={PROGRAM_LOGOS['CREATE']} alt="CREATE" className="w-9 h-9 object-contain flex-shrink-0" />
+          <h2 className="font-ninja font-bold text-ninja-navy">Belt Journey</h2>
         </div>
-
-        {progress !== null && (
-          <div className="mt-3">
-            <div className="flex justify-between text-xs font-ninja text-ninja-muted mb-1.5">
-              <span>{current_project || 'Progress'}</span>
-              <motion.span
-                className="font-bold text-ninja-navy"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.45 }}
-              >
-                {progress}%
-              </motion.span>
-            </div>
-            <div className="h-2.5 rounded-full overflow-hidden bg-gray-100">
-              <motion.div
-                className="h-full rounded-full"
-                style={{ backgroundColor: belt?.color || '#006ADD' }}
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
-              />
-            </div>
-          </div>
+        {maxLevel && (
+          <span className="text-ninja-muted font-ninja text-sm">
+            {belt_level} #{belt_sublevel} of {maxLevel}
+          </span>
         )}
       </div>
+
+      <div ref={scrollRef} className="overflow-x-auto -mx-4 px-4 no-scrollbar">
+        <div className="flex items-center" style={{ minWidth: 'max-content' }}>
+          {BELTS.map((b, i) => {
+            const isCurrent = i === beltIdx;
+            const isPast = i < beltIdx;
+            const size = isCurrent ? 52 : 36;
+            return (
+              <React.Fragment key={b.name}>
+                {i > 0 && (
+                  <div className="h-0.5 flex-shrink-0" style={{ width: 16, backgroundColor: i <= beltIdx ? '#006ADD' : '#e2e8f0' }} />
+                )}
+                <div
+                  ref={isCurrent ? currentIconRef : null}
+                  className="relative flex-shrink-0"
+                  style={{ width: size, height: size }}
+                >
+                  <img
+                    src={`/belts/belt-${b.name.toLowerCase()}.png`}
+                    alt={b.name}
+                    className={`w-full h-full object-contain ${!isPast && !isCurrent ? 'opacity-25 grayscale' : ''}`}
+                  />
+                </div>
+              </React.Fragment>
+            );
+          })}
+        </div>
+        <div className="flex mt-1" style={{ minWidth: 'max-content' }}>
+          {BELTS.map((b, i) => {
+            const isCurrent = i === beltIdx;
+            const size = isCurrent ? 52 : 36;
+            return (
+              <React.Fragment key={b.name}>
+                {i > 0 && <div className="flex-shrink-0" style={{ width: 16 }} />}
+                <div className="flex justify-center flex-shrink-0" style={{ width: size }}>
+                  <span className={`font-ninja text-[10px] leading-none ${isCurrent ? 'font-bold text-ninja-navy' : 'text-ninja-muted'}`}>
+                    {b.name}
+                  </span>
+                </div>
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+
+      {progress !== null && (
+        <div className="mt-3">
+          <div className="h-2.5 rounded-full overflow-hidden bg-gray-100">
+            <motion.div
+              className="h-full rounded-full"
+              style={{ backgroundColor: belt?.color || '#006ADD' }}
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
+            />
+          </div>
+          <div className="flex items-center justify-between mt-1.5">
+            <span className="text-ninja-muted font-ninja text-xs">
+              {current_project ? `Current project: ${current_project}` : ''}
+            </span>
+            <span className="font-ninja font-bold text-xs text-ninja-navy">{progress}%</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -301,111 +275,83 @@ function DesktopBeltJourney({ enrollment }) {
   const beltIdx = BELTS.findIndex((b) => b.name === belt_level);
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-ninja-border shadow-sm">
-      {/* Hero banner */}
-      <div style={{ background: 'linear-gradient(135deg, #003d87 0%, #005bcc 55%, #006ADD 100%)', padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-        <motion.div
-          style={{ flex: 1, minWidth: 0 }}
-          initial={{ opacity: 0, x: -12 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
-        >
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 3, fontFamily: 'Nunito, sans-serif' }}>
-            Code Ninjas
-          </p>
-          <h2 style={{ color: 'white', fontWeight: 800, fontSize: 20, lineHeight: 1.1, fontFamily: 'Nunito, sans-serif' }}>
-            CREATE
-          </h2>
-          {belt_level && (
-            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 4, fontFamily: 'Nunito, sans-serif' }}>
-              {belt_level} Belt · Level {belt_sublevel}{maxLevel ? ` of ${maxLevel}` : ''}
-            </p>
-          )}
-        </motion.div>
-        <motion.img
-          src={PROGRAM_LOGOS['CREATE']}
-          alt="CREATE"
-          initial={{ opacity: 0, scale: 0.7, x: 12 }}
-          animate={{ opacity: 1, scale: 1, x: 0 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
-          style={{ width: 72, height: 72, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))' }}
-        />
-      </div>
-
-      {/* Belt track + progress */}
-      <div className="bg-white p-5">
-        {/* Icon + connector row */}
-        <div className="flex items-center">
-          {BELTS.map((b, i) => {
-            const isCurrent = i === beltIdx;
-            const isPast = i < beltIdx;
-            const size = isCurrent ? 52 : 36;
-            return (
-              <React.Fragment key={b.name}>
-                {i > 0 && (
-                  <div
-                    className="h-0.5 flex-1"
-                    style={{ backgroundColor: i <= beltIdx ? '#006ADD' : '#e2e8f0' }}
-                  />
-                )}
-                <div className="flex-shrink-0" style={{ width: size, height: size }}>
-                  <img
-                    src={`/belts/belt-${b.name.toLowerCase()}.png`}
-                    alt={b.name}
-                    className={`w-full h-full object-contain ${!isPast && !isCurrent ? 'opacity-25 grayscale' : ''}`}
-                  />
-                </div>
-              </React.Fragment>
-            );
-          })}
+    <div className="bg-white rounded-2xl p-5 border border-ninja-border shadow-sm">
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <img src={PROGRAM_LOGOS['CREATE']} alt="CREATE" className="w-9 h-9 object-contain flex-shrink-0" />
+          <h2 className="font-ninja font-bold text-ninja-navy">Belt Journey</h2>
         </div>
-        {/* Label row */}
-        <div className="flex mt-1.5">
-          {BELTS.map((b, i) => {
-            const isCurrent = i === beltIdx;
-            const size = isCurrent ? 52 : 36;
-            return (
-              <React.Fragment key={b.name}>
-                {i > 0 && <div className="flex-1" />}
-                <div className="flex-shrink-0 flex justify-center" style={{ width: size }}>
-                  <span className={`font-ninja text-[10px] ${isCurrent ? 'font-bold text-ninja-navy' : 'text-ninja-muted'}`}>
-                    {b.name}
-                  </span>
-                </div>
-              </React.Fragment>
-            );
-          })}
-        </div>
-
-        {progress !== null && (
-          <div className="mt-5">
-            <div className="flex justify-between text-sm font-ninja text-ninja-muted mb-1.5">
-              <span>
-                {current_project
-                  ? `${current_project}${project_status ? ` — ${project_status}` : ''}`
-                  : 'Progress'}
-              </span>
-              <motion.span
-                className="font-bold text-ninja-navy"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.45 }}
-              >
-                {progress}% to next belt
-              </motion.span>
-            </div>
-            <div className="h-2.5 rounded-full overflow-hidden bg-gray-100">
-              <motion.div
-                className="h-full rounded-full"
-                style={{ backgroundColor: belt?.color || '#006ADD' }}
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.35 }}
-              />
-            </div>
-          </div>
+        {maxLevel && (
+          <span className="text-ninja-muted font-ninja text-sm">
+            {belt_level} #{belt_sublevel} of {maxLevel}
+          </span>
         )}
       </div>
+
+      {/* Icon + connector row */}
+      <div className="flex items-center">
+        {BELTS.map((b, i) => {
+          const isCurrent = i === beltIdx;
+          const isPast = i < beltIdx;
+          const size = isCurrent ? 52 : 36;
+          return (
+            <React.Fragment key={b.name}>
+              {i > 0 && (
+                <div
+                  className="h-0.5 flex-1"
+                  style={{ backgroundColor: i <= beltIdx ? '#006ADD' : '#e2e8f0' }}
+                />
+              )}
+              <div className="flex-shrink-0" style={{ width: size, height: size }}>
+                <img
+                  src={`/belts/belt-${b.name.toLowerCase()}.png`}
+                  alt={b.name}
+                  className={`w-full h-full object-contain ${!isPast && !isCurrent ? 'opacity-25 grayscale' : ''}`}
+                />
+              </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
+      {/* Label row */}
+      <div className="flex mt-1.5">
+        {BELTS.map((b, i) => {
+          const isCurrent = i === beltIdx;
+          const size = isCurrent ? 52 : 36;
+          return (
+            <React.Fragment key={b.name}>
+              {i > 0 && <div className="flex-1" />}
+              <div className="flex-shrink-0 flex justify-center" style={{ width: size }}>
+                <span className={`font-ninja text-[10px] ${isCurrent ? 'font-bold text-ninja-navy' : 'text-ninja-muted'}`}>
+                  {b.name}
+                </span>
+              </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
+
+      {progress !== null && (
+        <div className="mt-5">
+          <div className="h-2.5 rounded-full overflow-hidden bg-gray-100">
+            <motion.div
+              className="h-full rounded-full"
+              style={{ backgroundColor: belt?.color || '#006ADD' }}
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.35 }}
+            />
+          </div>
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-ninja-muted font-ninja text-sm">
+              {current_project
+                ? `Current project: ${current_project}${project_status ? ` — ${project_status}` : ''}`
+                : ''}
+            </span>
+            <span className="font-ninja font-bold text-sm text-ninja-navy">{progress}% to next belt</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
