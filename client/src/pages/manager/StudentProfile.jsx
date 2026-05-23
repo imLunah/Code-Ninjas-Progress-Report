@@ -11,7 +11,7 @@ import PinnedNote from '../../components/shared/PinnedNote';
 import EditStudentModal from '../../components/manager/EditStudentModal';
 import EnrollmentEditModal from '../../components/manager/EnrollmentEditModal';
 import { api } from '../../api/client';
-import { PROGRAMS, BELTS, PROJECTS, STATUSES, getMaxLevel, getBelt } from '../../utils/beltConfig';
+import { PROGRAMS, BELTS, PROJECTS, STATUSES, getMaxLevel, getBelt, PROGRAM_LOGOS } from '../../utils/beltConfig';
 
 // ── Animation variants ────────────────────────────────────────────────────────
 const fadeUp = {
@@ -61,7 +61,10 @@ function MobileBeltJourney({ enrollment }) {
   return (
     <div className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-ninja font-bold text-ninja-navy">Belt Journey</h2>
+        <div className="flex items-center gap-2">
+          <img src={PROGRAM_LOGOS['CREATE']} alt="CREATE" className="w-9 h-9 object-contain flex-shrink-0" />
+          <h2 className="font-ninja font-bold text-ninja-navy">Belt Journey</h2>
+        </div>
         {maxLevel && (
           <span className="text-ninja-muted font-ninja text-sm">
             {belt_level} #{belt_sublevel} of {maxLevel}
@@ -145,7 +148,12 @@ function MobileProgramCard({ enrollment }) {
   return (
     <div className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-ninja font-bold text-ninja-navy">{shortName}</h2>
+        <div className="flex items-center gap-2">
+          {PROGRAM_LOGOS[program] && (
+            <img src={PROGRAM_LOGOS[program]} alt={program} className="w-9 h-9 rounded overflow-hidden object-contain flex-shrink-0" />
+          )}
+          <h2 className="font-ninja font-bold text-ninja-navy">{shortName}</h2>
+        </div>
         <ProgramBadge program={program} size="xs" />
       </div>
 
@@ -230,7 +238,10 @@ function DesktopBeltJourney({ enrollment }) {
   return (
     <div className="bg-white rounded-2xl p-5 border border-ninja-border shadow-sm">
       <div className="flex items-center justify-between mb-5">
-        <h2 className="font-ninja font-bold text-ninja-navy">Belt Journey</h2>
+        <div className="flex items-center gap-2">
+          <img src={PROGRAM_LOGOS['CREATE']} alt="CREATE" className="w-9 h-9 object-contain flex-shrink-0" />
+          <h2 className="font-ninja font-bold text-ninja-navy">Belt Journey</h2>
+        </div>
         {maxLevel && (
           <span className="text-ninja-muted font-ninja text-sm">
             {belt_level} #{belt_sublevel} of {maxLevel}
