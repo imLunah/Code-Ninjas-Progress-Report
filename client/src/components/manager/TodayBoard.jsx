@@ -148,7 +148,7 @@ export default function TodayBoard({ assignments, onRemove }) {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <ProgramBadge program={a.program} size="xs" />
+                  <ProgramBadge program={a.program} size="sm" />
                   {a.belt_level && (
                     <BeltBadge belt={a.belt_level} sublevel={a.belt_sublevel} size="xs" />
                   )}
@@ -214,7 +214,7 @@ export default function TodayBoard({ assignments, onRemove }) {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <ProgramBadge program={a.program} size="xs" />
+                <ProgramBadge program={a.program} size="sm" />
                 {a.program === 'CREATE' && a.belt_level && <BeltBadge belt={a.belt_level} sublevel={a.belt_sublevel} size="xs" />}
               </div>
               {a.current_project && (

@@ -9,6 +9,7 @@ import PinnedNote from '../../components/shared/PinnedNote';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { formatDate } from '../../utils/dateUtils';
+import { PROGRAM_LOGOS } from '../../utils/beltConfig';
 
 export default function LogProgressPage() {
   const { id } = useParams();
@@ -141,6 +142,9 @@ export default function LogProgressPage() {
                           }`}
                         >
                           {isDone && !isSelected && <span className="text-green-600">✓</span>}
+                          {PROGRAM_LOGOS[p.program] && (
+                            <img src={PROGRAM_LOGOS[p.program]} alt="" className="w-5 h-5 rounded overflow-hidden object-contain flex-shrink-0" />
+                          )}
                           {p.program}
                           {isDone && !isSelected && <span className="text-xs font-normal opacity-75">logged</span>}
                         </button>

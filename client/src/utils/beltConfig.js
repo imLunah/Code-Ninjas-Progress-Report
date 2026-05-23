@@ -14,6 +14,13 @@ export const PROJECTS = ['Build 1', 'Build 2', 'Build 3', 'Build 4', 'Build 5', 
 export const STATUSES = ['Started', 'Working On', 'Completed'];
 export const PROGRAMS = ['CREATE', 'Robotics Academy', 'AI Academy', 'JR'];
 
+export const PROGRAM_LOGOS = {
+  'CREATE':           '/programs/create_logo.png',
+  'JR':               '/programs/jr_logo.png',
+  'Robotics Academy': '/programs/robotics_logo.png',
+  'AI Academy':       '/programs/robotics_logo.png',
+};
+
 // Project names per belt + level. Keyed by belt name → level number → ordered project options.
 // White–Blue list each Build/Solve/Adventure by its actual name.
 // Purple–Red list the game title + optional Prove Yourself variant.
