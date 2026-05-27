@@ -16,7 +16,7 @@ router.get('/locations', requireAdmin, async (req, res) => {
   const pool = req.app.get('db');
   try {
     const { rows } = await pool.query(`
-      SELECT l.id, l.name, l.slug, l.created_at,
+      SELECT l.id, l.name, l.slug, l.active, l.created_at,
              COUNT(DISTINCT s.id) FILTER (WHERE s.active = true)::int AS student_count,
              COUNT(DISTINCT u.id) FILTER (WHERE u.active = true AND u.role IN ('manager','sensei'))::int AS staff_count
       FROM locations l
@@ -84,26 +84,81 @@ router.post('/locations', requireAdmin, async (req, res) => {
   }
 });
 
-// DELETE /api/admin/locations/:id — only allowed if location has no active students/staff
+// PATCH /api/admin/locations/:id — rename or toggle active
+router.patch('/locations/:id', requireAdmin, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+  const { name, active } = req.body;
+
+  try {
+    const { rows: existing } = await pool.query('SELECT * FROM locations WHERE id = $1', [id]);
+    if (!existing[0]) return res.status(404).json({ error: 'Location not found' });
+
+    if (name !== undefined) {
+      const trimmed = name.trim();
+      if (!trimmed) return res.status(400).json({ error: 'Name cannot be empty' });
+      const { rows: conflict } = await pool.query('SELECT id FROM locations WHERE name = $1 AND id != $2', [trimmed, id]);
+      if (conflict[0]) return res.status(409).json({ error: 'A location with that name already exists' });
+    }
+
+    const { rows } = await pool.query(
+      `UPDATE locations SET
+         name   = COALESCE($1, name),
+         active = COALESCE($2, active)
+       WHERE id = $3
+       RETURNING id, name, slug, active, created_at`,
+      [name?.trim() ?? null, active ?? null, id]
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Error updating location:', err);
+    res.status(500).json({ error: 'Failed to update location' });
+  }
+});
+
+// DELETE /api/admin/locations/:id — cascade deletes all location data
 router.delete('/locations/:id', requireAdmin, async (req, res) => {
   const pool = req.app.get('db');
   const { id } = req.params;
+
+  const client = await pool.connect();
   try {
-    const { rows: deps } = await pool.query(
-      `SELECT
-         (SELECT COUNT(*) FROM students WHERE location_id = $1 AND active = true)::int AS students,
-         (SELECT COUNT(*) FROM users WHERE location_id = $1 AND active = true)::int AS staff`,
-      [id]
-    );
-    const { students, staff } = deps[0];
-    if (students > 0 || staff > 0) {
-      return res.status(409).json({ error: `Cannot delete — location has ${students} active student(s) and ${staff} active staff member(s)` });
-    }
-    await pool.query('DELETE FROM locations WHERE id = $1', [id]);
+    await client.query('BEGIN');
+
+    // Check location exists
+    const { rows: loc } = await client.query('SELECT id FROM locations WHERE id = $1', [id]);
+    if (!loc[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Location not found' }); }
+
+    // Club session dependents
+    await client.query(`DELETE FROM club_attendees WHERE club_session_id IN (SELECT id FROM club_sessions WHERE location_id = $1)`, [id]);
+    await client.query(`DELETE FROM club_session_comments WHERE session_id IN (SELECT id FROM club_sessions WHERE location_id = $1)`, [id]);
+    await client.query('DELETE FROM club_sessions WHERE location_id = $1', [id]);
+    await client.query('DELETE FROM club_profiles WHERE location_id = $1', [id]);
+    await client.query('DELETE FROM club_resources WHERE location_id = $1', [id]);
+    await client.query('DELETE FROM club_definitions WHERE location_id = $1', [id]);
+    // club_members has CASCADE on location_id — handled automatically
+
+    // Student dependents
+    await client.query(`DELETE FROM progress_log_comments WHERE log_id IN (SELECT id FROM progress_logs WHERE student_id IN (SELECT id FROM students WHERE location_id = $1))`, [id]);
+    await client.query(`DELETE FROM progress_logs WHERE student_id IN (SELECT id FROM students WHERE location_id = $1)`, [id]);
+    await client.query(`DELETE FROM daily_assignments WHERE student_id IN (SELECT id FROM students WHERE location_id = $1)`, [id]);
+    await client.query(`DELETE FROM student_programs WHERE student_id IN (SELECT id FROM students WHERE location_id = $1)`, [id]);
+    await client.query('DELETE FROM students WHERE location_id = $1', [id]);
+
+    // Nullify references from global records to users at this location before deleting them
+    await client.query(`UPDATE club_definitions SET created_by = NULL WHERE created_by IN (SELECT id FROM users WHERE location_id = $1)`, [id]);
+    await client.query(`UPDATE app_settings SET updated_by = NULL WHERE updated_by IN (SELECT id FROM users WHERE location_id = $1)`, [id]);
+    await client.query(`DELETE FROM users WHERE location_id = $1 AND role != 'admin'`, [id]);
+
+    await client.query('DELETE FROM locations WHERE id = $1', [id]);
+    await client.query('COMMIT');
     res.json({ ok: true });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error deleting location:', err);
     res.status(500).json({ error: 'Failed to delete location' });
+  } finally {
+    client.release();
   }
 });
 
