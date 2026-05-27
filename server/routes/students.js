@@ -348,6 +348,37 @@ router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
   }
 });
 
+// DELETE /api/students/:id/permanent — hard delete, cascades all related data
+router.delete('/:id/permanent', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'SELECT id FROM students WHERE id = $1 AND location_id = $2',
+      [id, req.session.activeLocationId]
+    );
+    if (!rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Student not found' }); }
+
+    await client.query(`DELETE FROM progress_log_comments WHERE log_id IN (SELECT id FROM progress_logs WHERE student_id = $1)`, [id]);
+    await client.query('DELETE FROM progress_logs WHERE student_id = $1', [id]);
+    await client.query('DELETE FROM daily_assignments WHERE student_id = $1', [id]);
+    await client.query('DELETE FROM student_programs WHERE student_id = $1', [id]);
+    // club_attendees and club_members cascade automatically
+    await client.query('DELETE FROM students WHERE id = $1', [id]);
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error permanently deleting student:', err);
+    res.status(500).json({ error: 'Failed to delete student' });
+  } finally {
+    client.release();
+  }
+});
+
 // PATCH /api/students/:id/restore
 router.patch('/:id/restore', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
