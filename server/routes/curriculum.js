@@ -51,6 +51,8 @@ router.get('/', async (req, res) => {
 
     res.json({ subPrograms, curriculum });
   } catch (err) {
+    // Table doesn't exist yet — migration hasn't been run; frontend falls back to static data
+    if (err.code === '42P01') return res.status(204).end();
     console.error('Error fetching curriculum:', err);
     res.status(500).json({ error: 'Failed to fetch curriculum' });
   }
