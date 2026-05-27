@@ -492,6 +492,8 @@ export default function StudentProfile() {
   const [showEdit, setShowEdit] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  const [confirmHardDelete, setConfirmHardDelete] = useState(false);
+  const [hardDeleting, setHardDeleting] = useState(false);
   const [confirmRemoveProgram, setConfirmRemoveProgram] = useState(null);
   const [editingEnrollment, setEditingEnrollment] = useState(null);
   const [showAddProgram, setShowAddProgram] = useState(false);
@@ -540,10 +542,23 @@ export default function StudentProfile() {
       await api.delete(`/students/${id}`);
       navigate('/manager/students');
     } catch {
-      setError('Failed to deactivate ninja');
+      setError('Failed to archive ninja');
       setDeactivating(false);
     } finally {
       setConfirmDeactivate(false);
+    }
+  };
+
+  const handleHardDelete = async () => {
+    setHardDeleting(true);
+    try {
+      await api.delete(`/students/${id}/permanent`);
+      navigate('/manager/students');
+    } catch {
+      setError('Failed to delete ninja');
+      setHardDeleting(false);
+    } finally {
+      setConfirmHardDelete(false);
     }
   };
 
@@ -1004,23 +1019,51 @@ export default function StudentProfile() {
                 </div>
               )}
 
-              {/* Deactivate */}
+              {/* Archive / Delete */}
               {isManager && !isReadOnly && (
-                <div className="bg-white rounded-2xl p-4 border border-ninja-border shadow-sm">
+                <div className="bg-white rounded-2xl p-4 border border-ninja-border shadow-sm space-y-3">
+                  {/* Archive */}
                   {confirmDeactivate ? (
                     <div className="flex gap-2">
                       <Button variant="danger" disabled={deactivating} onClick={handleDeactivate} size="sm">
-                        {deactivating ? 'Removing...' : 'Confirm Remove'}
+                        {deactivating ? 'Archiving...' : 'Confirm Archive'}
                       </Button>
                       <Button variant="secondary" onClick={() => setConfirmDeactivate(false)} size="sm">Cancel</Button>
                     </div>
                   ) : (
                     <button
-                      onClick={() => setConfirmDeactivate(true)}
-                      className="w-full text-red-500 font-ninja font-semibold text-sm hover:text-red-600 transition-colors"
+                      onClick={() => { setConfirmDeactivate(true); setConfirmHardDelete(false); }}
+                      className="w-full text-ninja-muted font-ninja font-semibold text-sm hover:text-ninja-navy transition-colors text-left"
                     >
-                      Remove Ninja
+                      Archive Ninja
                     </button>
+                  )}
+
+                  {/* Delete Permanently */}
+                  {!confirmDeactivate && (
+                    <>
+                      <div className="border-t border-ninja-border" />
+                      {confirmHardDelete ? (
+                        <div className="space-y-2">
+                          <p className="text-ninja-red font-ninja text-xs leading-relaxed">
+                            This permanently deletes all progress logs, programs, and session history. Cannot be undone.
+                          </p>
+                          <div className="flex gap-2">
+                            <Button variant="danger" disabled={hardDeleting} onClick={handleHardDelete} size="sm">
+                              {hardDeleting ? 'Deleting...' : 'Delete Permanently'}
+                            </Button>
+                            <Button variant="secondary" onClick={() => setConfirmHardDelete(false)} size="sm">Cancel</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmHardDelete(true)}
+                          className="w-full text-ninja-red font-ninja font-semibold text-sm hover:text-red-700 transition-colors text-left"
+                        >
+                          Delete Permanently
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               )}

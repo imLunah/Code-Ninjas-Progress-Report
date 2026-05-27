@@ -159,6 +159,19 @@ export default function StudentRoster() {
     }
   };
 
+  const [confirmPermanentId, setConfirmPermanentId] = useState(null);
+  const handlePermanentDelete = async (id) => {
+    try {
+      await api.delete(`/students/${id}/permanent`);
+      setStudents((prev) => prev.filter((s) => s.id !== id));
+      setTotalCount((c) => c - 1);
+    } catch (err) {
+      setError(err?.message || 'Failed to delete ninja');
+    } finally {
+      setConfirmPermanentId(null);
+    }
+  };
+
   const handleRowClick = (student) => {
     if (isLogMode) {
       const programs = (student.programs || []).map(p => p.program).join(',');
@@ -244,17 +257,17 @@ export default function StudentRoster() {
           {isManager && !isLogMode && (
             <div className="flex gap-2 flex-wrap">
               {!showArchived && selected.size > 0 && !confirmDelete && (
-                <Button variant="danger" onClick={() => setConfirmDelete(true)}>
-                  Delete ({selected.size})
+                <Button variant="secondary" onClick={() => setConfirmDelete(true)}>
+                  Archive ({selected.size})
                 </Button>
               )}
               {!showArchived && selected.size > 0 && confirmDelete && (
                 <>
-                  <span className="self-center text-ninja-red font-ninja text-sm font-semibold">
-                    Remove {selected.size} ninja{selected.size > 1 ? 's' : ''}?
+                  <span className="self-center text-ninja-muted font-ninja text-sm font-semibold">
+                    Archive {selected.size} ninja{selected.size > 1 ? 's' : ''}?
                   </span>
-                  <Button variant="danger" onClick={handleDeleteSelected} disabled={deleting}>
-                    {deleting ? 'Deleting...' : 'Confirm'}
+                  <Button variant="secondary" onClick={handleDeleteSelected} disabled={deleting}>
+                    {deleting ? 'Archiving...' : 'Confirm'}
                   </Button>
                   <Button variant="secondary" onClick={() => setConfirmDelete(false)}>Cancel</Button>
                 </>
@@ -357,12 +370,19 @@ export default function StudentRoster() {
                       <span className="text-ninja-blue font-ninja font-bold text-xs flex-shrink-0">Log →</span>
                     )}
                     {showArchived && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleRestore(s.id); }}
-                        className="text-xs font-ninja font-semibold text-green-700 border border-green-300 rounded-lg px-2 py-1 hover:bg-green-50 transition-colors flex-shrink-0"
-                      >
-                        Restore
-                      </button>
+                      <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                        {confirmPermanentId === s.id ? (
+                          <>
+                            <button onClick={() => handlePermanentDelete(s.id)} className="text-xs font-ninja font-semibold text-white bg-ninja-red rounded-lg px-2 py-1">Yes, delete</button>
+                            <button onClick={() => setConfirmPermanentId(null)} className="text-xs font-ninja text-ninja-muted">No</button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => handleRestore(s.id)} className="text-xs font-ninja font-semibold text-green-700 border border-green-300 rounded-lg px-2 py-1 hover:bg-green-50 transition-colors">Restore</button>
+                            <button onClick={() => setConfirmPermanentId(s.id)} className="text-xs font-ninja text-ninja-muted hover:text-ninja-red transition-colors">Delete</button>
+                          </>
+                        )}
+                      </div>
                     )}
                   </div>
                 );
@@ -525,12 +545,20 @@ export default function StudentRoster() {
                             Log
                           </button>
                         ) : showArchived ? (
-                          <button
-                            onClick={() => handleRestore(s.id)}
-                            className="text-xs font-ninja font-semibold text-green-700 border border-green-300 rounded-lg px-3 py-1.5 hover:bg-green-50 transition-colors"
-                          >
-                            Restore
-                          </button>
+                          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            {confirmPermanentId === s.id ? (
+                              <>
+                                <span className="text-ninja-red font-ninja text-xs">Delete?</span>
+                                <button onClick={() => handlePermanentDelete(s.id)} className="text-xs font-ninja font-semibold text-white bg-ninja-red rounded-lg px-2 py-1 hover:opacity-90">Yes</button>
+                                <button onClick={() => setConfirmPermanentId(null)} className="text-xs font-ninja text-ninja-muted hover:text-ninja-navy">No</button>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={() => handleRestore(s.id)} className="text-xs font-ninja font-semibold text-green-700 border border-green-300 rounded-lg px-2 py-1.5 hover:bg-green-50 transition-colors">Restore</button>
+                                <button onClick={() => setConfirmPermanentId(s.id)} className="text-xs font-ninja text-ninja-muted hover:text-ninja-red transition-colors">Delete</button>
+                              </>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-ninja-muted text-lg cursor-pointer hover:text-ninja-navy transition-colors">···</span>
                         )}
