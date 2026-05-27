@@ -223,6 +223,21 @@ router.get('/belt-projects', async (req, res) => {
 router.post('/belt-projects/seed', requireAdmin, async (req, res) => {
   const pool = req.app.get('db');
   try {
+    // Auto-create table if migration hasn't been run yet
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS belt_level_projects (
+        id SERIAL PRIMARY KEY,
+        belt_name TEXT NOT NULL,
+        sublevel INTEGER NOT NULL,
+        project_name TEXT NOT NULL,
+        project_order INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS belt_level_projects_idx ON belt_level_projects(belt_name, sublevel)
+    `);
+
     const { rows } = await pool.query('SELECT COUNT(*) FROM belt_level_projects');
     if (parseInt(rows[0].count) > 0) {
       return res.status(409).json({ error: 'Belt projects already seeded.' });
@@ -231,7 +246,6 @@ router.post('/belt-projects/seed', requireAdmin, async (req, res) => {
     execSync('node server/db/seed_belt_projects.js', { stdio: 'inherit', cwd: process.cwd() });
     res.json({ ok: true });
   } catch (err) {
-    if (err.code === '42P01') return res.status(503).json({ error: 'Run migration 004 first.' });
     console.error('Error seeding belt projects:', err);
     res.status(500).json({ error: 'Failed to seed belt projects' });
   }
