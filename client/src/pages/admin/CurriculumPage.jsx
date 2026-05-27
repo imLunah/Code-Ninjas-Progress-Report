@@ -3,9 +3,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import { api } from '../../api/client';
 import { useCurriculum, invalidateCurriculumCache } from '../../context/CurriculumContext';
+import { BELT_LEVEL_PROJECTS as STATIC_BELT_PROJECTS, BELTS } from '../../utils/beltConfig';
 
-// CREATE uses belt/project tracking, not module/lesson curriculum
-const PROGRAMS = ['AI Academy', 'Robotics Academy', 'JR'];
+const PROGRAMS = ['AI Academy', 'Robotics Academy', 'JR', 'CREATE'];
+
+const BELT_COLORS = {
+  White:  { bg: '#f8f8f8', border: '#d1d5db', text: '#111827' },
+  Yellow: { bg: '#fef9c3', border: '#fbbf24', text: '#78350f' },
+  Orange: { bg: '#fff7ed', border: '#f97316', text: '#7c2d12' },
+  Green:  { bg: '#f0fdf4', border: '#22c55e', text: '#14532d' },
+  Blue:   { bg: '#eff6ff', border: '#3b82f6', text: '#1e3a8a' },
+  Purple: { bg: '#faf5ff', border: '#a855f7', text: '#581c87' },
+  Brown:  { bg: '#fdf8f0', border: '#92400e', text: '#451a03' },
+  Red:    { bg: '#fef2f2', border: '#cc0000', text: '#7f1d1d' },
+};
 
 function AdminNav() {
   return (
@@ -90,7 +101,6 @@ function ModuleBlock({ mod, onRenameModule, onDeleteModule, onAddLesson, onRenam
     finally { setAddingLesson(false); }
   };
 
-  // Support both DB format (_lessons with ids) and static format (lessons as strings)
   const lessons = mod._lessons
     ? mod._lessons
     : (mod.lessons || []).map((l, i) => ({ id: null, lesson_name: l, lesson_order: i }));
@@ -186,20 +196,302 @@ function ModuleBlock({ mod, onRenameModule, onDeleteModule, onAddLesson, onRenam
   );
 }
 
+// ── Project row (belt editor equivalent of LessonRow) ────────────────────────
+function ProjectRow({ project, onRename, onDelete, readOnly }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(project.project_name);
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const save = async () => {
+    if (!name.trim() || name.trim() === project.project_name) { setEditing(false); return; }
+    setSaving(true);
+    try { await onRename(project.id, name.trim()); setEditing(false); }
+    catch { setName(project.project_name); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="flex items-center gap-2 py-1 pl-4 group">
+      <span className="text-ninja-muted text-xs">·</span>
+      {!readOnly && editing ? (
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={save}
+          onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') { setName(project.project_name); setEditing(false); } }}
+          className="flex-1 bg-white border border-ninja-blue rounded px-2 py-0.5 font-ninja text-sm text-ninja-navy focus:outline-none"
+          disabled={saving}
+        />
+      ) : (
+        <span
+          className={`flex-1 font-ninja text-sm text-ninja-navy ${!readOnly ? 'cursor-pointer hover:text-ninja-blue transition-colors' : ''}`}
+          onClick={() => !readOnly && setEditing(true)}
+        >
+          {project.project_name}
+        </span>
+      )}
+      {!readOnly && !editing && (
+        confirmDelete ? (
+          <span className="flex items-center gap-1">
+            <button onClick={() => onDelete(project.id)} className="text-[10px] font-ninja font-semibold text-white bg-ninja-red rounded px-2 py-0.5 hover:opacity-90">Delete</button>
+            <button onClick={() => setConfirmDelete(false)} className="text-[10px] font-ninja text-ninja-muted hover:text-ninja-navy">Cancel</button>
+          </span>
+        ) : (
+          <button onClick={() => setConfirmDelete(true)} className="opacity-0 group-hover:opacity-100 text-[10px] font-ninja text-ninja-muted hover:text-ninja-red transition-all">✕</button>
+        )
+      )}
+    </div>
+  );
+}
+
+// ── Sublevel block (belt editor equivalent of ModuleBlock) ───────────────────
+function SublevelBlock({ beltName, sublevel, projects, onAddProject, onRenameProject, onDeleteProject, readOnly }) {
+  const [expanded, setExpanded] = useState(false);
+  const [newProject, setNewProject] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!newProject.trim()) return;
+    setAdding(true);
+    try { await onAddProject(beltName, sublevel, newProject.trim()); setNewProject(''); }
+    finally { setAdding(false); }
+  };
+
+  return (
+    <div className="border border-ninja-border rounded-xl overflow-hidden mb-2">
+      <div
+        className="flex items-center gap-2 px-3 py-2.5 bg-ninja-bg cursor-pointer select-none"
+        onClick={() => setExpanded(e => !e)}
+      >
+        <span className="text-ninja-muted text-xs">{expanded ? '▾' : '▸'}</span>
+        <span className="flex-1 font-ninja text-sm font-semibold text-ninja-navy">Level {sublevel}</span>
+        <span className="text-ninja-muted font-ninja text-xs">{projects.length} project{projects.length !== 1 ? 's' : ''}</span>
+      </div>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white px-3 py-2 space-y-0.5">
+              {projects.map((p, i) => (
+                <ProjectRow
+                  key={p.id ?? `static-${i}`}
+                  project={p}
+                  onRename={onRenameProject}
+                  onDelete={onDeleteProject}
+                  readOnly={readOnly}
+                />
+              ))}
+              {!readOnly && (
+                <form onSubmit={submit} className="flex gap-2 mt-2 pl-4">
+                  <input
+                    value={newProject}
+                    onChange={(e) => setNewProject(e.target.value)}
+                    placeholder="Add project…"
+                    className="flex-1 bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-xs focus:outline-none focus:border-ninja-blue"
+                    disabled={adding}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newProject.trim() || adding}
+                    className="bg-ninja-blue text-white font-ninja font-semibold rounded-lg px-3 py-1.5 text-xs hover:opacity-90 disabled:opacity-50 transition-opacity"
+                  >
+                    Add
+                  </button>
+                </form>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── CREATE belt editor ────────────────────────────────────────────────────────
+function BeltEditor() {
+  const BELT_NAMES = BELTS.filter(b => b.name !== 'Black').map(b => b.name);
+  const [selectedBelt, setSelectedBelt] = useState('White');
+  const [beltData, setBeltData] = useState(null); // null = not yet fetched
+  const [isSeeded, setIsSeeded] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [seedError, setSeedError] = useState('');
+
+  useEffect(() => {
+    fetch('/api/curriculum/belt-projects', { credentials: 'include' })
+      .then(r => r.status === 204 ? null : r.json())
+      .then(data => {
+        if (data && Object.keys(data).length > 0) {
+          // Convert string sublevel keys to numbers for consistency
+          const normalized = {};
+          for (const [belt, sublevels] of Object.entries(data)) {
+            normalized[belt] = {};
+            for (const [lvl, projects] of Object.entries(sublevels)) {
+              normalized[belt][parseInt(lvl)] = projects;
+            }
+          }
+          setBeltData(normalized);
+          setIsSeeded(true);
+        } else {
+          // Fall back to static
+          const staticNorm = {};
+          for (const [belt, sublevels] of Object.entries(STATIC_BELT_PROJECTS)) {
+            staticNorm[belt] = {};
+            for (const [lvl, names] of Object.entries(sublevels)) {
+              staticNorm[belt][parseInt(lvl)] = names.map((n, i) => ({ id: null, project_name: n, project_order: i }));
+            }
+          }
+          setBeltData(staticNorm);
+          setIsSeeded(false);
+        }
+      })
+      .catch(() => {
+        const staticNorm = {};
+        for (const [belt, sublevels] of Object.entries(STATIC_BELT_PROJECTS)) {
+          staticNorm[belt] = {};
+          for (const [lvl, names] of Object.entries(sublevels)) {
+            staticNorm[belt][parseInt(lvl)] = names.map((n, i) => ({ id: null, project_name: n, project_order: i }));
+          }
+        }
+        setBeltData(staticNorm);
+        setIsSeeded(false);
+      });
+  }, []);
+
+  const refetch = async () => {
+    const r = await fetch('/api/curriculum/belt-projects', { credentials: 'include' });
+    if (r.status === 204) return;
+    const data = await r.json();
+    const normalized = {};
+    for (const [belt, sublevels] of Object.entries(data)) {
+      normalized[belt] = {};
+      for (const [lvl, projects] of Object.entries(sublevels)) {
+        normalized[belt][parseInt(lvl)] = projects;
+      }
+    }
+    setBeltData(normalized);
+  };
+
+  const handleSeed = async () => {
+    setSeedError('');
+    setSeeding(true);
+    try {
+      await api.post('/curriculum/belt-projects/seed', {});
+      setIsSeeded(true);
+      await refetch();
+    } catch (err) {
+      setSeedError(err?.message || 'Failed to initialize belt projects.');
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+  const handleAddProject = async (beltName, sublevel, projectName) => {
+    await api.post('/curriculum/belt-projects', { belt_name: beltName, sublevel, project_name: projectName });
+    await refetch();
+  };
+
+  const handleRenameProject = async (id, name) => {
+    await api.patch(`/curriculum/belt-projects/${id}`, { project_name: name });
+    await refetch();
+  };
+
+  const handleDeleteProject = async (id) => {
+    await api.delete(`/curriculum/belt-projects/${id}`);
+    await refetch();
+  };
+
+  const colors = BELT_COLORS[selectedBelt] || { bg: '#f8f8f8', border: '#d1d5db', text: '#111827' };
+  const sublevels = beltData?.[selectedBelt] ? Object.keys(beltData[selectedBelt]).map(Number).sort((a, b) => a - b) : [];
+
+  if (!beltData) {
+    return <div className="text-ninja-muted font-ninja text-sm py-8 text-center">Loading…</div>;
+  }
+
+  return (
+    <div>
+      {!isSeeded && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-ninja-navy font-ninja font-semibold text-sm">Viewing built-in defaults</p>
+            <p className="text-ninja-muted font-ninja text-xs mt-0.5">Initialize to enable editing — belt projects will be saved to the database.</p>
+            {seedError && <p className="text-ninja-red font-ninja text-xs mt-1">{seedError}</p>}
+          </div>
+          <button
+            onClick={handleSeed}
+            disabled={seeding}
+            className="flex-shrink-0 bg-ninja-blue text-white font-ninja font-semibold rounded-xl px-4 py-2 text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
+          >
+            {seeding ? 'Initializing…' : 'Initialize'}
+          </button>
+        </div>
+      )}
+
+      {/* Belt tabs */}
+      <div className="flex gap-2 flex-wrap mb-4">
+        {BELT_NAMES.map(belt => {
+          const c = BELT_COLORS[belt] || { bg: '#f8f8f8', border: '#d1d5db', text: '#111827' };
+          const active = selectedBelt === belt;
+          return (
+            <button
+              key={belt}
+              onClick={() => setSelectedBelt(belt)}
+              className="px-3 py-1.5 rounded-xl font-ninja text-sm font-semibold transition-colors"
+              style={{
+                background: active ? c.bg : 'transparent',
+                color: active ? c.text : 'var(--ninja-muted, #6b7280)',
+                border: `1px solid ${active ? c.border : 'var(--ninja-border, #e5e7eb)'}`,
+                fontWeight: active ? 700 : 500,
+              }}
+            >
+              {belt}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Sublevel blocks */}
+      <div>
+        {sublevels.length === 0 && (
+          <p className="text-ninja-muted font-ninja text-sm py-4 text-center">No levels defined for {selectedBelt} belt.</p>
+        )}
+        {sublevels.map(lvl => (
+          <SublevelBlock
+            key={lvl}
+            beltName={selectedBelt}
+            sublevel={lvl}
+            projects={beltData[selectedBelt][lvl] || []}
+            onAddProject={handleAddProject}
+            onRenameProject={handleRenameProject}
+            onDeleteProject={handleDeleteProject}
+            readOnly={!isSeeded}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function CurriculumPage() {
   const { subPrograms, curriculum } = useCurriculum();
 
-  const [selectedProgram, setSelectedProgram] = useState('AI Academy'); // CREATE omitted — belt/project based
+  const [selectedProgram, setSelectedProgram] = useState('AI Academy');
   const [selectedSubProgram, setSelectedSubProgram] = useState(null);
   const [localCurriculum, setLocalCurriculum] = useState(null);
-  const [isSeeded, setIsSeeded] = useState(false); // true once API confirms DB has data
+  const [isSeeded, setIsSeeded] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [seedError, setSeedError] = useState('');
   const [newModuleName, setNewModuleName] = useState('');
   const [addingModule, setAddingModule] = useState(false);
   const [error, setError] = useState('');
 
-  // Sync from context. If the first module has an `id`, the DB is seeded.
   useEffect(() => {
     setLocalCurriculum(curriculum);
     const firstKey = Object.keys(curriculum)[0];
@@ -291,23 +583,6 @@ export default function CurriculumPage() {
           </div>
         </div>
 
-        {readOnly && (
-          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5 flex items-center justify-between gap-4">
-            <div>
-              <p className="text-ninja-navy font-ninja font-semibold text-sm">Viewing built-in defaults</p>
-              <p className="text-ninja-muted font-ninja text-xs mt-0.5">Initialize to enable editing — modules and lessons will be saved to the database.</p>
-              {seedError && <p className="text-ninja-red font-ninja text-xs mt-1">{seedError}</p>}
-            </div>
-            <button
-              onClick={handleSeed}
-              disabled={seeding}
-              className="flex-shrink-0 bg-ninja-blue text-white font-ninja font-semibold rounded-xl px-4 py-2 text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
-            >
-              {seeding ? 'Initializing…' : 'Initialize'}
-            </button>
-          </div>
-        )}
-
         {/* Program tabs */}
         <div className="flex gap-2 flex-wrap mb-4">
           {PROGRAMS.map(p => (
@@ -326,63 +601,87 @@ export default function CurriculumPage() {
           ))}
         </div>
 
-        {/* Sub-program tabs */}
-        {subs && (
-          <div className="flex gap-2 flex-wrap mb-4">
-            {subs.map(sp => (
-              <button
-                key={sp}
-                onClick={() => setSelectedSubProgram(sp)}
-                className="px-3 py-1 rounded-lg font-ninja text-xs font-semibold transition-colors"
-                style={{
-                  background: activeKey === sp ? 'rgba(0,106,221,0.1)' : 'transparent',
-                  color: activeKey === sp ? 'rgb(0,106,221)' : 'var(--ninja-muted, #6b7280)',
-                  border: '1px solid',
-                  borderColor: activeKey === sp ? 'rgb(0,106,221)' : 'var(--ninja-border, #e5e7eb)',
-                }}
-              >
-                {sp}
-              </button>
-            ))}
-          </div>
+        {/* CREATE tab — belt/project editor */}
+        {selectedProgram === 'CREATE' ? (
+          <BeltEditor />
+        ) : (
+          <>
+            {readOnly && (
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-ninja-navy font-ninja font-semibold text-sm">Viewing built-in defaults</p>
+                  <p className="text-ninja-muted font-ninja text-xs mt-0.5">Initialize to enable editing — modules and lessons will be saved to the database.</p>
+                  {seedError && <p className="text-ninja-red font-ninja text-xs mt-1">{seedError}</p>}
+                </div>
+                <button
+                  onClick={handleSeed}
+                  disabled={seeding}
+                  className="flex-shrink-0 bg-ninja-blue text-white font-ninja font-semibold rounded-xl px-4 py-2 text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
+                >
+                  {seeding ? 'Initializing…' : 'Initialize'}
+                </button>
+              </div>
+            )}
+
+            {/* Sub-program tabs */}
+            {subs && (
+              <div className="flex gap-2 flex-wrap mb-4">
+                {subs.map(sp => (
+                  <button
+                    key={sp}
+                    onClick={() => setSelectedSubProgram(sp)}
+                    className="px-3 py-1 rounded-lg font-ninja text-xs font-semibold transition-colors"
+                    style={{
+                      background: activeKey === sp ? 'rgba(0,106,221,0.1)' : 'transparent',
+                      color: activeKey === sp ? 'rgb(0,106,221)' : 'var(--ninja-muted, #6b7280)',
+                      border: '1px solid',
+                      borderColor: activeKey === sp ? 'rgb(0,106,221)' : 'var(--ninja-border, #e5e7eb)',
+                    }}
+                  >
+                    {sp}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Modules */}
+            <div>
+              {modules.map(mod => (
+                <ModuleBlock
+                  key={mod.id || mod.module}
+                  mod={mod}
+                  readOnly={readOnly}
+                  onRenameModule={handleRenameModule}
+                  onDeleteModule={handleDeleteModule}
+                  onAddLesson={handleAddLesson}
+                  onRenameLesson={handleRenameLesson}
+                  onDeleteLesson={handleDeleteLesson}
+                />
+              ))}
+
+              {error && <p className="text-ninja-red font-ninja text-xs mb-2">{error}</p>}
+
+              {!readOnly && (
+                <form onSubmit={handleAddModule} className="flex gap-2 mt-3">
+                  <input
+                    value={newModuleName}
+                    onChange={(e) => setNewModuleName(e.target.value)}
+                    placeholder="New module name…"
+                    className="flex-1 bg-white border border-ninja-border text-ninja-navy rounded-xl px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
+                    disabled={addingModule}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newModuleName.trim() || addingModule}
+                    className="bg-ninja-blue text-white font-ninja font-semibold rounded-xl px-4 py-2 text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
+                  >
+                    {addingModule ? '…' : '+ Module'}
+                  </button>
+                </form>
+              )}
+            </div>
+          </>
         )}
-
-        {/* Modules */}
-        <div>
-          {modules.map(mod => (
-            <ModuleBlock
-              key={mod.id || mod.module}
-              mod={mod}
-              readOnly={readOnly}
-              onRenameModule={handleRenameModule}
-              onDeleteModule={handleDeleteModule}
-              onAddLesson={handleAddLesson}
-              onRenameLesson={handleRenameLesson}
-              onDeleteLesson={handleDeleteLesson}
-            />
-          ))}
-
-          {error && <p className="text-ninja-red font-ninja text-xs mb-2">{error}</p>}
-
-          {!readOnly && (
-            <form onSubmit={handleAddModule} className="flex gap-2 mt-3">
-              <input
-                value={newModuleName}
-                onChange={(e) => setNewModuleName(e.target.value)}
-                placeholder="New module name…"
-                className="flex-1 bg-white border border-ninja-border text-ninja-navy rounded-xl px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
-                disabled={addingModule}
-              />
-              <button
-                type="submit"
-                disabled={!newModuleName.trim() || addingModule}
-                className="bg-ninja-blue text-white font-ninja font-semibold rounded-xl px-4 py-2 text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
-              >
-                {addingModule ? '…' : '+ Module'}
-              </button>
-            </form>
-          )}
-        </div>
       </div>
     </Layout>
   );
