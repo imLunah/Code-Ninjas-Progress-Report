@@ -206,14 +206,133 @@ function AddLocationModal({ onClose, onAdded }) {
   );
 }
 
+function EditLocationModal({ loc, onClose, onSaved }) {
+  const [name, setName] = useState(loc.name);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim() || name.trim() === loc.name) return onClose();
+    setSaving(true);
+    setError('');
+    try {
+      const result = await api.patch(`/admin/locations/${loc.id}`, { name: name.trim() });
+      onSaved(result);
+    } catch (err) {
+      setError(err?.message || 'Failed to update location.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
+      >
+        <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-4">Rename Location</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1">Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoFocus
+              className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
+            />
+          </div>
+          {error && <p className="text-ninja-red text-xs font-ninja">{error}</p>}
+          <div className="flex gap-3">
+            <button type="submit" disabled={saving} className="flex-1 bg-ninja-blue text-white font-ninja font-semibold rounded-xl py-2 text-sm hover:opacity-90 disabled:opacity-50 transition-opacity">
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button type="button" onClick={onClose} className="flex-1 bg-ninja-bg text-ninja-navy font-ninja font-semibold rounded-xl py-2 text-sm border border-ninja-border hover:bg-ninja-border transition-colors">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+}
+
+function DeleteLocationModal({ loc, onClose, onDeleted }) {
+  const [typed, setTyped] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState('');
+  const confirmed = typed.trim() === loc.name;
+
+  const handleDelete = async () => {
+    if (!confirmed) return;
+    setDeleting(true);
+    setError('');
+    try {
+      await api.delete(`/admin/locations/${loc.id}`);
+      onDeleted(loc.id);
+    } catch (err) {
+      setError(err?.message || 'Failed to delete location.');
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
+      >
+        <h2 className="text-ninja-red font-ninja font-bold text-lg mb-1">Delete Location</h2>
+        <p className="text-ninja-muted font-ninja text-xs mb-4 leading-relaxed">
+          This permanently deletes all students, staff, progress logs, club sessions, and other data for this location. This cannot be undone.
+        </p>
+        <div className="bg-ninja-bg rounded-xl p-3 mb-4 text-sm font-ninja">
+          <span className="text-ninja-muted">Deleting:</span>{' '}
+          <span className="text-ninja-navy font-semibold">{loc.name}</span>
+          <span className="text-ninja-muted ml-2">· {loc.student_count} students · {loc.staff_count} staff</span>
+        </div>
+        <div className="mb-5">
+          <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1">
+            Type <span className="text-ninja-navy font-mono">{loc.name}</span> to confirm
+          </label>
+          <input
+            type="text"
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            autoFocus
+            className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-red"
+          />
+        </div>
+        {error && <p className="text-ninja-red font-ninja text-xs mb-3">{error}</p>}
+        <div className="flex gap-3">
+          <button
+            onClick={handleDelete}
+            disabled={!confirmed || deleting}
+            className="flex-1 bg-ninja-red text-white font-ninja font-semibold rounded-xl py-2 text-sm hover:opacity-90 disabled:opacity-40 transition-opacity"
+          >
+            {deleting ? 'Deleting…' : 'Delete Everything'}
+          </button>
+          <button onClick={onClose} className="flex-1 bg-ninja-bg text-ninja-navy font-ninja font-semibold rounded-xl py-2 text-sm border border-ninja-border hover:bg-ninja-border transition-colors">
+            Cancel
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function LocationsPage() {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [createdData, setCreatedData] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [deleteError, setDeleteError] = useState('');
+  const [editLoc, setEditLoc] = useState(null);
+  const [deleteLoc, setDeleteLoc] = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -235,17 +354,15 @@ export default function LocationsPage() {
     load();
   };
 
-  const handleDelete = async (id) => {
-    setDeleteError('');
-    setDeletingId(id);
+  const handleToggleActive = async (loc) => {
+    setTogglingId(loc.id);
     try {
-      await api.delete(`/admin/locations/${id}`);
-      setConfirmDeleteId(null);
-      load();
-    } catch (err) {
-      setDeleteError(err?.message || 'Failed to delete location.');
+      const result = await api.patch(`/admin/locations/${loc.id}`, { active: !loc.active });
+      setLocations((prev) => prev.map((l) => l.id === loc.id ? { ...l, ...result } : l));
+    } catch {
+      // ignore
     } finally {
-      setDeletingId(null);
+      setTogglingId(null);
     }
   };
 
@@ -277,10 +394,17 @@ export default function LocationsPage() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
-                  className="bg-white border border-ninja-border rounded-2xl p-4 flex items-center justify-between shadow-sm"
+                  className={`bg-white border rounded-2xl p-4 flex items-center justify-between shadow-sm ${loc.active ? 'border-ninja-border' : 'border-dashed border-ninja-border opacity-60'}`}
                 >
                   <div>
-                    <p className="text-ninja-navy font-ninja font-semibold">{loc.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-ninja-navy font-ninja font-semibold">{loc.name}</p>
+                      {!loc.active && (
+                        <span className="text-[10px] font-ninja font-bold uppercase tracking-wide bg-ninja-bg text-ninja-muted border border-ninja-border rounded-full px-2 py-0.5">
+                          Inactive
+                        </span>
+                      )}
+                    </div>
                     <p className="text-ninja-muted font-ninja text-xs mt-0.5">
                       slug: <span className="font-mono">{loc.slug}</span>
                       <span className="mx-2">·</span>
@@ -289,40 +413,30 @@ export default function LocationsPage() {
                       {loc.staff_count} staff
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {confirmDeleteId === loc.id ? (
-                      <>
-                        <span className="text-ninja-red font-ninja text-xs">Delete?</span>
-                        <button
-                          onClick={() => handleDelete(loc.id)}
-                          disabled={!!deletingId}
-                          className="text-xs font-ninja font-semibold text-white bg-ninja-red rounded-lg px-3 py-1 hover:opacity-90 transition-opacity disabled:opacity-50"
-                        >
-                          {deletingId === loc.id ? 'Deleting…' : 'Confirm'}
-                        </button>
-                        <button
-                          onClick={() => { setConfirmDeleteId(null); setDeleteError(''); }}
-                          className="text-xs font-ninja text-ninja-muted hover:text-ninja-navy transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => { setConfirmDeleteId(loc.id); setDeleteError(''); }}
-                        className="text-ninja-muted hover:text-ninja-red transition-colors font-ninja text-xs"
-                      >
-                        Delete
-                      </button>
-                    )}
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setEditLoc(loc)}
+                      className="text-xs font-ninja text-ninja-muted hover:text-ninja-blue transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleToggleActive(loc)}
+                      disabled={togglingId === loc.id}
+                      className="text-xs font-ninja text-ninja-muted hover:text-ninja-navy transition-colors disabled:opacity-50"
+                    >
+                      {loc.active ? 'Deactivate' : 'Activate'}
+                    </button>
+                    <button
+                      onClick={() => setDeleteLoc(loc)}
+                      className="text-xs font-ninja text-ninja-muted hover:text-ninja-red transition-colors"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </motion.div>
               ))}
             </AnimatePresence>
-
-            {deleteError && (
-              <p className="text-ninja-red font-ninja text-sm text-center">{deleteError}</p>
-            )}
 
             {locations.length === 0 && !loading && (
               <p className="text-ninja-muted font-ninja text-center py-12">No locations yet.</p>
@@ -333,6 +447,26 @@ export default function LocationsPage() {
 
       {showAdd && <AddLocationModal onClose={() => setShowAdd(false)} onAdded={handleAdded} />}
       {createdData && <TempPasswordModal data={createdData} onClose={() => setCreatedData(null)} />}
+      {editLoc && (
+        <EditLocationModal
+          loc={editLoc}
+          onClose={() => setEditLoc(null)}
+          onSaved={(updated) => {
+            setLocations((prev) => prev.map((l) => l.id === updated.id ? { ...l, ...updated } : l));
+            setEditLoc(null);
+          }}
+        />
+      )}
+      {deleteLoc && (
+        <DeleteLocationModal
+          loc={deleteLoc}
+          onClose={() => setDeleteLoc(null)}
+          onDeleted={(id) => {
+            setLocations((prev) => prev.filter((l) => l.id !== id));
+            setDeleteLoc(null);
+          }}
+        />
+      )}
     </Layout>
   );
 }
