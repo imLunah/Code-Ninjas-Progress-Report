@@ -4,7 +4,8 @@ import Layout from '../../components/layout/Layout';
 import { api } from '../../api/client';
 import { useCurriculum, invalidateCurriculumCache } from '../../context/CurriculumContext';
 
-const PROGRAMS = ['CREATE', 'AI Academy', 'Robotics Academy', 'JR'];
+// CREATE uses belt/project tracking, not module/lesson curriculum
+const PROGRAMS = ['AI Academy', 'Robotics Academy', 'JR'];
 
 function AdminNav() {
   return (
@@ -188,7 +189,7 @@ function ModuleBlock({ mod, onRenameModule, onDeleteModule, onAddLesson, onRenam
 export default function CurriculumPage() {
   const { subPrograms, curriculum } = useCurriculum();
 
-  const [selectedProgram, setSelectedProgram] = useState('AI Academy');
+  const [selectedProgram, setSelectedProgram] = useState('AI Academy'); // CREATE omitted — belt/project based
   const [selectedSubProgram, setSelectedSubProgram] = useState(null);
   const [localCurriculum, setLocalCurriculum] = useState(null);
   const [isSeeded, setIsSeeded] = useState(false); // true once API confirms DB has data
