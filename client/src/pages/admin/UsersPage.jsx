@@ -30,6 +30,78 @@ function AdminNav() {
   );
 }
 
+function HardDeleteModal({ user, onClose, onDeleted }) {
+  const [typed, setTyped] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState('');
+  const confirmed = typed.trim() === user.username;
+
+  const handleDelete = async () => {
+    if (!confirmed) return;
+    setDeleting(true);
+    setError('');
+    try {
+      await api.delete(`/admin/users/${user.id}`);
+      onDeleted(user.id);
+    } catch (err) {
+      setError(err?.message || 'Failed to delete user.');
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
+      >
+        <h2 className="text-ninja-red font-ninja font-bold text-lg mb-1">Permanently Delete Account</h2>
+        <p className="text-ninja-muted font-ninja text-xs mb-4 leading-relaxed">
+          This cannot be undone. All session assignments, club records, and progress log authorship linked to this account will be cleared.
+        </p>
+
+        <div className="bg-ninja-bg rounded-xl p-3 mb-5 font-mono text-sm">
+          <span className="text-ninja-muted">Deleting:</span>{' '}
+          <span className="text-ninja-navy font-semibold">{user.display_name}</span>{' '}
+          <span className="text-ninja-muted">(@{user.username})</span>
+        </div>
+
+        <div className="mb-5">
+          <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1">
+            Type <span className="text-ninja-navy font-mono">{user.username}</span> to confirm
+          </label>
+          <input
+            type="text"
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            autoFocus
+            className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-red"
+          />
+        </div>
+
+        {error && <p className="text-ninja-red font-ninja text-xs mb-3">{error}</p>}
+
+        <div className="flex gap-3">
+          <button
+            onClick={handleDelete}
+            disabled={!confirmed || deleting}
+            className="flex-1 bg-ninja-red text-white font-ninja font-semibold rounded-xl py-2 text-sm hover:opacity-90 disabled:opacity-40 transition-opacity"
+          >
+            {deleting ? 'Deleting…' : 'Delete Permanently'}
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 bg-ninja-bg text-ninja-navy font-ninja font-semibold rounded-xl py-2 text-sm border border-ninja-border hover:bg-ninja-border transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 function TempPasswordModal({ data, onClose }) {
   const [copied, setCopied] = useState(false);
   const copy = () => {
@@ -171,6 +243,7 @@ export default function UsersPage() {
   const [tempPasswordData, setTempPasswordData] = useState(null);
   const [confirmToggleId, setConfirmToggleId] = useState(null);
   const [confirmResetId, setConfirmResetId] = useState(null);
+  const [hardDeleteUser, setHardDeleteUser] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
   const [error, setError] = useState('');
 
@@ -318,7 +391,7 @@ export default function UsersPage() {
                       <p className="font-ninja text-sm text-ninja-navy truncate">{u.location_name}</p>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-2 justify-end min-w-[180px]">
+                      <div className="flex items-center gap-2 justify-end min-w-[220px]">
                         {confirmResetId === u.id ? (
                           <>
                             <span className="text-ninja-muted font-ninja text-xs">Reset password?</span>
@@ -363,6 +436,12 @@ export default function UsersPage() {
                             >
                               {u.active ? 'Deactivate' : 'Restore'}
                             </button>
+                            <button
+                              onClick={() => setHardDeleteUser(u)}
+                              className="text-xs font-ninja text-ninja-muted hover:text-ninja-red transition-colors"
+                            >
+                              Delete
+                            </button>
                           </>
                         )}
                       </div>
@@ -392,6 +471,16 @@ export default function UsersPage() {
       )}
       {tempPasswordData && (
         <TempPasswordModal data={tempPasswordData} onClose={() => setTempPasswordData(null)} />
+      )}
+      {hardDeleteUser && (
+        <HardDeleteModal
+          user={hardDeleteUser}
+          onClose={() => setHardDeleteUser(null)}
+          onDeleted={(id) => {
+            setUsers((prev) => prev.filter((u) => u.id !== id));
+            setHardDeleteUser(null);
+          }}
+        />
       )}
     </Layout>
   );

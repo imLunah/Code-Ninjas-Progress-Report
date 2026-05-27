@@ -216,6 +216,40 @@ router.patch('/users/:id/reset-password', requireAdmin, async (req, res) => {
   }
 });
 
+// DELETE /api/admin/users/:id — permanent hard delete, nullifies all FK references
+router.delete('/users/:id', requireAdmin, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+
+  try {
+    const { rows } = await pool.query("SELECT id, username, role FROM users WHERE id = $1 AND role != 'admin'", [id]);
+    if (!rows[0]) return res.status(404).json({ error: 'User not found' });
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('UPDATE progress_logs SET sensei_id = NULL WHERE sensei_id = $1', [id]);
+      await client.query('UPDATE progress_log_comments SET user_id = NULL WHERE user_id = $1', [id]);
+      await client.query('UPDATE club_sessions SET sensei_id = NULL WHERE sensei_id = $1', [id]);
+      await client.query('UPDATE club_session_comments SET user_id = NULL WHERE user_id = $1', [id]);
+      await client.query('UPDATE daily_assignments SET sensei_id = NULL WHERE sensei_id = $1', [id]);
+      await client.query('UPDATE club_definitions SET created_by = NULL WHERE created_by = $1', [id]);
+      await client.query('UPDATE app_settings SET updated_by = NULL WHERE updated_by = $1', [id]);
+      await client.query('DELETE FROM users WHERE id = $1', [id]);
+      await client.query('COMMIT');
+      res.json({ ok: true });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Error hard-deleting user:', err);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
 // GET /api/admin/settings
 router.get('/settings', requireAdmin, async (req, res) => {
   const pool = req.app.get('db');
