@@ -15,7 +15,7 @@ function AdminNav() {
   );
 }
 
-function LessonRow({ lesson, onRename, onDelete }) {
+function LessonRow({ lesson, onRename, onDelete, readOnly }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(lesson.lesson_name);
   const [saving, setSaving] = useState(false);
@@ -32,7 +32,7 @@ function LessonRow({ lesson, onRename, onDelete }) {
   return (
     <div className="flex items-center gap-2 py-1 pl-4 group">
       <span className="text-ninja-muted text-xs">·</span>
-      {editing ? (
+      {!readOnly && editing ? (
         <input
           autoFocus
           value={name}
@@ -44,13 +44,13 @@ function LessonRow({ lesson, onRename, onDelete }) {
         />
       ) : (
         <span
-          className="flex-1 font-ninja text-sm text-ninja-navy cursor-pointer hover:text-ninja-blue transition-colors"
-          onClick={() => setEditing(true)}
+          className={`flex-1 font-ninja text-sm text-ninja-navy ${!readOnly ? 'cursor-pointer hover:text-ninja-blue transition-colors' : ''}`}
+          onClick={() => !readOnly && setEditing(true)}
         >
           {lesson.lesson_name}
         </span>
       )}
-      {!editing && (
+      {!readOnly && !editing && (
         confirmDelete ? (
           <span className="flex items-center gap-1">
             <button onClick={() => onDelete(lesson.id)} className="text-[10px] font-ninja font-semibold text-white bg-ninja-red rounded px-2 py-0.5 hover:opacity-90">Delete</button>
@@ -64,7 +64,7 @@ function LessonRow({ lesson, onRename, onDelete }) {
   );
 }
 
-function ModuleBlock({ mod, onRenameModule, onDeleteModule, onAddLesson, onRenameLesson, onDeleteLesson }) {
+function ModuleBlock({ mod, onRenameModule, onDeleteModule, onAddLesson, onRenameLesson, onDeleteLesson, readOnly }) {
   const [expanded, setExpanded] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [moduleName, setModuleName] = useState(mod.module);
@@ -89,7 +89,10 @@ function ModuleBlock({ mod, onRenameModule, onDeleteModule, onAddLesson, onRenam
     finally { setAddingLesson(false); }
   };
 
-  const lessons = mod._lessons || [];
+  // Support both DB format (_lessons with ids) and static format (lessons as strings)
+  const lessons = mod._lessons
+    ? mod._lessons
+    : (mod.lessons || []).map((l, i) => ({ id: null, lesson_name: l, lesson_order: i }));
 
   return (
     <div className="border border-ninja-border rounded-xl overflow-hidden mb-2">
@@ -113,7 +116,7 @@ function ModuleBlock({ mod, onRenameModule, onDeleteModule, onAddLesson, onRenam
           <span className="flex-1 font-ninja text-sm font-semibold text-ninja-navy">{mod.module}</span>
         )}
         <span className="text-ninja-muted font-ninja text-xs">{lessons.length} lesson{lessons.length !== 1 ? 's' : ''}</span>
-        {!editingName && !confirmDelete && (
+        {!readOnly && !editingName && !confirmDelete && (
           <button
             onClick={(e) => { e.stopPropagation(); setEditingName(true); }}
             className="opacity-0 group-hover:opacity-100 text-[10px] font-ninja text-ninja-muted hover:text-ninja-blue transition-all px-1"
@@ -121,7 +124,7 @@ function ModuleBlock({ mod, onRenameModule, onDeleteModule, onAddLesson, onRenam
             Edit
           </button>
         )}
-        {!editingName && (
+        {!readOnly && !editingName && (
           confirmDelete ? (
             <span className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
               <button onClick={() => onDeleteModule(mod.id)} className="text-[10px] font-ninja font-semibold text-white bg-ninja-red rounded px-2 py-0.5">Delete</button>
@@ -147,30 +150,33 @@ function ModuleBlock({ mod, onRenameModule, onDeleteModule, onAddLesson, onRenam
             className="overflow-hidden"
           >
             <div className="bg-white px-3 py-2 space-y-0.5">
-              {lessons.map(l => (
+              {lessons.map((l, i) => (
                 <LessonRow
-                  key={l.id}
+                  key={l.id ?? `static-${i}`}
                   lesson={l}
                   onRename={onRenameLesson}
                   onDelete={onDeleteLesson}
+                  readOnly={readOnly}
                 />
               ))}
-              <form onSubmit={submitLesson} className="flex gap-2 mt-2 pl-4">
-                <input
-                  value={newLesson}
-                  onChange={(e) => setNewLesson(e.target.value)}
-                  placeholder="Add lesson…"
-                  className="flex-1 bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-xs focus:outline-none focus:border-ninja-blue"
-                  disabled={addingLesson}
-                />
-                <button
-                  type="submit"
-                  disabled={!newLesson.trim() || addingLesson}
-                  className="bg-ninja-blue text-white font-ninja font-semibold rounded-lg px-3 py-1.5 text-xs hover:opacity-90 disabled:opacity-50 transition-opacity"
-                >
-                  Add
-                </button>
-              </form>
+              {!readOnly && (
+                <form onSubmit={submitLesson} className="flex gap-2 mt-2 pl-4">
+                  <input
+                    value={newLesson}
+                    onChange={(e) => setNewLesson(e.target.value)}
+                    placeholder="Add lesson…"
+                    className="flex-1 bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-xs focus:outline-none focus:border-ninja-blue"
+                    disabled={addingLesson}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newLesson.trim() || addingLesson}
+                    className="bg-ninja-blue text-white font-ninja font-semibold rounded-lg px-3 py-1.5 text-xs hover:opacity-90 disabled:opacity-50 transition-opacity"
+                  >
+                    Add
+                  </button>
+                </form>
+              )}
             </div>
           </motion.div>
         )}
@@ -185,15 +191,19 @@ export default function CurriculumPage() {
   const [selectedProgram, setSelectedProgram] = useState('AI Academy');
   const [selectedSubProgram, setSelectedSubProgram] = useState(null);
   const [localCurriculum, setLocalCurriculum] = useState(null);
+  const [isSeeded, setIsSeeded] = useState(false); // true once API confirms DB has data
   const [seeding, setSeeding] = useState(false);
   const [seedError, setSeedError] = useState('');
   const [newModuleName, setNewModuleName] = useState('');
   const [addingModule, setAddingModule] = useState(false);
   const [error, setError] = useState('');
 
-  // Sync from context when it updates
+  // Sync from context. If the first module has an `id`, the DB is seeded.
   useEffect(() => {
     setLocalCurriculum(curriculum);
+    const firstKey = Object.keys(curriculum)[0];
+    const firstMod = firstKey && curriculum[firstKey]?.[0];
+    setIsSeeded(!!(firstMod?.id));
   }, [curriculum]);
 
   const subs = subPrograms[selectedProgram];
@@ -267,7 +277,7 @@ export default function CurriculumPage() {
     await refetch();
   };
 
-  const notSeeded = localCurriculum && Object.keys(localCurriculum).length === 0;
+  const readOnly = !isSeeded;
 
   return (
     <Layout>
@@ -280,17 +290,19 @@ export default function CurriculumPage() {
           </div>
         </div>
 
-        {notSeeded && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-5 mb-6">
-            <p className="text-ninja-navy font-ninja font-semibold text-sm mb-1">Curriculum not initialized</p>
-            <p className="text-ninja-muted font-ninja text-xs mb-3">Click below to populate from the built-in defaults.</p>
-            {seedError && <p className="text-ninja-red font-ninja text-xs mb-2">{seedError}</p>}
+        {readOnly && (
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-ninja-navy font-ninja font-semibold text-sm">Viewing built-in defaults</p>
+              <p className="text-ninja-muted font-ninja text-xs mt-0.5">Initialize to enable editing — modules and lessons will be saved to the database.</p>
+              {seedError && <p className="text-ninja-red font-ninja text-xs mt-1">{seedError}</p>}
+            </div>
             <button
               onClick={handleSeed}
               disabled={seeding}
-              className="bg-ninja-blue text-white font-ninja font-semibold rounded-xl px-4 py-2 text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
+              className="flex-shrink-0 bg-ninja-blue text-white font-ninja font-semibold rounded-xl px-4 py-2 text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
             >
-              {seeding ? 'Initializing…' : 'Initialize from Defaults'}
+              {seeding ? 'Initializing…' : 'Initialize'}
             </button>
           </div>
         )}
@@ -340,6 +352,7 @@ export default function CurriculumPage() {
             <ModuleBlock
               key={mod.id || mod.module}
               mod={mod}
+              readOnly={readOnly}
               onRenameModule={handleRenameModule}
               onDeleteModule={handleDeleteModule}
               onAddLesson={handleAddLesson}
@@ -350,22 +363,24 @@ export default function CurriculumPage() {
 
           {error && <p className="text-ninja-red font-ninja text-xs mb-2">{error}</p>}
 
-          <form onSubmit={handleAddModule} className="flex gap-2 mt-3">
-            <input
-              value={newModuleName}
-              onChange={(e) => setNewModuleName(e.target.value)}
-              placeholder="New module name…"
-              className="flex-1 bg-white border border-ninja-border text-ninja-navy rounded-xl px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
-              disabled={addingModule}
-            />
-            <button
-              type="submit"
-              disabled={!newModuleName.trim() || addingModule}
-              className="bg-ninja-blue text-white font-ninja font-semibold rounded-xl px-4 py-2 text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
-            >
-              {addingModule ? '…' : '+ Module'}
-            </button>
-          </form>
+          {!readOnly && (
+            <form onSubmit={handleAddModule} className="flex gap-2 mt-3">
+              <input
+                value={newModuleName}
+                onChange={(e) => setNewModuleName(e.target.value)}
+                placeholder="New module name…"
+                className="flex-1 bg-white border border-ninja-border text-ninja-navy rounded-xl px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
+                disabled={addingModule}
+              />
+              <button
+                type="submit"
+                disabled={!newModuleName.trim() || addingModule}
+                className="bg-ninja-blue text-white font-ninja font-semibold rounded-xl px-4 py-2 text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
+              >
+                {addingModule ? '…' : '+ Module'}
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </Layout>
