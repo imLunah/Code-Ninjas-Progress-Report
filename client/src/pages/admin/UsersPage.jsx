@@ -68,7 +68,7 @@ function HardDeleteModal({ user, onClose, onDeleted }) {
         </div>
 
         <div className="mb-5">
-          <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1">
+          <label className="block text-ninja-muted text-xs font-ninja font-semibold mb-1">
             Type <span className="text-ninja-navy font-mono">{user.username}</span> to confirm
           </label>
           <input

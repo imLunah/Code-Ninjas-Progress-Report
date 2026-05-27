@@ -296,7 +296,7 @@ function DeleteLocationModal({ loc, onClose, onDeleted }) {
           <span className="text-ninja-muted ml-2">· {loc.student_count} students · {loc.staff_count} staff</span>
         </div>
         <div className="mb-5">
-          <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1">
+          <label className="block text-ninja-muted text-xs font-ninja font-semibold mb-1">
             Type <span className="text-ninja-navy font-mono">{loc.name}</span> to confirm
           </label>
           <input
