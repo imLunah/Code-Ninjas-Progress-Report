@@ -194,4 +194,99 @@ router.post('/seed', requireAdmin, async (req, res) => {
   }
 });
 
+// ── Belt level projects (CREATE program) ─────────────────────────────────────
+
+// GET /api/curriculum/belt-projects — returns { [belt_name]: { [sublevel]: [{id, project_name}] } }
+router.get('/belt-projects', async (req, res) => {
+  const pool = req.app.get('db');
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, belt_name, sublevel, project_name, project_order FROM belt_level_projects ORDER BY belt_name ASC, sublevel ASC, project_order ASC'
+    );
+    if (!rows.length) return res.status(204).end();
+
+    const data = {};
+    for (const r of rows) {
+      if (!data[r.belt_name]) data[r.belt_name] = {};
+      if (!data[r.belt_name][r.sublevel]) data[r.belt_name][r.sublevel] = [];
+      data[r.belt_name][r.sublevel].push({ id: r.id, project_name: r.project_name, project_order: r.project_order });
+    }
+    res.json(data);
+  } catch (err) {
+    if (err.code === '42P01') return res.status(204).end();
+    console.error('Error fetching belt projects:', err);
+    res.status(500).json({ error: 'Failed to fetch belt projects' });
+  }
+});
+
+// POST /api/curriculum/belt-projects/seed — seed from defaults (admin only)
+router.post('/belt-projects/seed', requireAdmin, async (req, res) => {
+  const pool = req.app.get('db');
+  try {
+    const { rows } = await pool.query('SELECT COUNT(*) FROM belt_level_projects');
+    if (parseInt(rows[0].count) > 0) {
+      return res.status(409).json({ error: 'Belt projects already seeded.' });
+    }
+    const { execSync } = require('child_process');
+    execSync('node server/db/seed_belt_projects.js', { stdio: 'inherit', cwd: process.cwd() });
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.code === '42P01') return res.status(503).json({ error: 'Run migration 004 first.' });
+    console.error('Error seeding belt projects:', err);
+    res.status(500).json({ error: 'Failed to seed belt projects' });
+  }
+});
+
+// POST /api/curriculum/belt-projects — add a project to a belt+sublevel
+router.post('/belt-projects', requireAdmin, async (req, res) => {
+  const pool = req.app.get('db');
+  const { belt_name, sublevel, project_name } = req.body;
+  if (!belt_name || !sublevel || !project_name) return res.status(400).json({ error: 'belt_name, sublevel, and project_name are required' });
+  try {
+    const { rows: maxOrder } = await pool.query(
+      'SELECT COALESCE(MAX(project_order), -1) AS max FROM belt_level_projects WHERE belt_name = $1 AND sublevel = $2',
+      [belt_name, sublevel]
+    );
+    const { rows } = await pool.query(
+      'INSERT INTO belt_level_projects (belt_name, sublevel, project_name, project_order) VALUES ($1, $2, $3, $4) RETURNING *',
+      [belt_name, parseInt(sublevel), project_name, maxOrder[0].max + 1]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error('Error adding belt project:', err);
+    res.status(500).json({ error: 'Failed to add project' });
+  }
+});
+
+// PATCH /api/curriculum/belt-projects/:id — rename a project
+router.patch('/belt-projects/:id', requireAdmin, async (req, res) => {
+  const pool = req.app.get('db');
+  const { project_name } = req.body;
+  if (!project_name) return res.status(400).json({ error: 'project_name is required' });
+  try {
+    const { rows } = await pool.query(
+      'UPDATE belt_level_projects SET project_name = $1 WHERE id = $2 RETURNING *',
+      [project_name, req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Project not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Error renaming belt project:', err);
+    res.status(500).json({ error: 'Failed to rename project' });
+  }
+});
+
+// DELETE /api/curriculum/belt-projects/:id
+router.delete('/belt-projects/:id', requireAdmin, async (req, res) => {
+  const pool = req.app.get('db');
+  try {
+    const { rowCount } = await pool.query('DELETE FROM belt_level_projects WHERE id = $1', [req.params.id]);
+    if (!rowCount) return res.status(404).json({ error: 'Project not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error deleting belt project:', err);
+    res.status(500).json({ error: 'Failed to delete project' });
+  }
+});
+
 module.exports = router;
