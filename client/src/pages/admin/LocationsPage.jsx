@@ -4,10 +4,28 @@ import Layout from '../../components/layout/Layout';
 import { api } from '../../api/client';
 
 function AdminNav() {
+  const path = window.location.pathname;
+  const links = [
+    { to: '/admin/locations', label: 'Locations' },
+    { to: '/admin/users', label: 'Users' },
+    { to: '/admin/curriculum', label: 'Curriculum' },
+    { to: '/admin/settings', label: 'Settings' },
+  ];
   return (
     <div className="flex items-center gap-4 mb-6 border-b border-ninja-border pb-4">
-      <a href="/admin/locations" className="text-ninja-navy font-ninja text-sm font-semibold border-b-2 border-ninja-blue pb-0.5">Locations</a>
-      <a href="/admin/curriculum" className="text-ninja-muted hover:text-ninja-navy font-ninja text-sm transition-colors">Curriculum</a>
+      {links.map((l) => (
+        <a
+          key={l.to}
+          href={l.to}
+          className={`font-ninja text-sm font-semibold transition-colors ${
+            path === l.to
+              ? 'text-ninja-navy border-b-2 border-ninja-blue pb-0.5'
+              : 'text-ninja-muted hover:text-ninja-navy'
+          }`}
+        >
+          {l.label}
+        </a>
+      ))}
     </div>
   );
 }

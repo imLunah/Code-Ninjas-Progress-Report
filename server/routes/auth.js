@@ -133,6 +133,11 @@ router.get('/me', async (req, res) => {
       ? (await pool.query('SELECT id, name, slug FROM locations ORDER BY name')).rows
       : [activeLocation];
 
+    const { rows: annRows } = await pool.query(
+      `SELECT value FROM app_settings WHERE key = 'announcement'`
+    );
+    const announcement = annRows[0]?.value || null;
+
     res.json({
       id: user.id,
       username: user.username,
@@ -142,6 +147,7 @@ router.get('/me', async (req, res) => {
       profilePicUrl: user.profile_pic_url || null,
       activeLocation,
       availableLocations,
+      announcement,
     });
   } catch (err) {
     console.error('Me error:', err);

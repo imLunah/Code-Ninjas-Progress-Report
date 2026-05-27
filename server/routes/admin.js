@@ -107,4 +107,149 @@ router.delete('/locations/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// GET /api/admin/users
+router.get('/users', requireAdmin, async (req, res) => {
+  const pool = req.app.get('db');
+  const { location_id, role, inactive } = req.query;
+  const showInactive = inactive === 'true';
+
+  try {
+    let query = `
+      SELECT u.id, u.username, u.display_name, u.role, u.active, u.location_id, u.created_at,
+             l.name AS location_name
+      FROM users u
+      LEFT JOIN locations l ON u.location_id = l.id
+      WHERE u.role != 'admin'
+        AND u.active = ${showInactive ? 'false' : 'true'}
+    `;
+    const params = [];
+    let p = 0;
+
+    if (location_id) { p++; query += ` AND u.location_id = $${p}`; params.push(location_id); }
+    if (role && ['manager', 'sensei'].includes(role)) { p++; query += ` AND u.role = $${p}`; params.push(role); }
+
+    query += ` ORDER BY l.name ASC, u.role ASC, u.display_name ASC`;
+    const { rows } = await pool.query(query, params);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching admin users:', err);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// POST /api/admin/users
+router.post('/users', requireAdmin, async (req, res) => {
+  const pool = req.app.get('db');
+  const { username, display_name, role, location_id } = req.body;
+
+  if (!username?.trim() || !display_name?.trim() || !role || !location_id) {
+    return res.status(400).json({ error: 'username, display_name, role, and location_id are required' });
+  }
+  if (!['manager', 'sensei'].includes(role)) {
+    return res.status(400).json({ error: 'Invalid role' });
+  }
+
+  try {
+    const { rows: existing } = await pool.query('SELECT id FROM users WHERE username = $1', [username.trim()]);
+    if (existing[0]) return res.status(409).json({ error: 'Username already taken' });
+
+    const tempPassword = generateTempPassword();
+    const hash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
+    const { rows } = await pool.query(
+      'INSERT INTO users (username, password_hash, display_name, role, location_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, display_name, role, location_id, active, created_at',
+      [username.trim(), hash, display_name.trim(), role, location_id]
+    );
+    const { rows: locRows } = await pool.query('SELECT name FROM locations WHERE id = $1', [location_id]);
+    res.status(201).json({ ...rows[0], location_name: locRows[0]?.name, temp_password: tempPassword });
+  } catch (err) {
+    console.error('Error creating admin user:', err);
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+// PATCH /api/admin/users/:id
+router.patch('/users/:id', requireAdmin, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+  const { display_name, role, location_id, active } = req.body;
+
+  try {
+    const { rows: existing } = await pool.query("SELECT * FROM users WHERE id = $1 AND role != 'admin'", [id]);
+    if (!existing[0]) return res.status(404).json({ error: 'User not found' });
+    const u = existing[0];
+
+    const { rows } = await pool.query(
+      `UPDATE users SET display_name = $1, role = $2, location_id = $3, active = $4
+       WHERE id = $5 RETURNING id, username, display_name, role, location_id, active`,
+      [
+        display_name ?? u.display_name,
+        (role && ['manager', 'sensei'].includes(role)) ? role : u.role,
+        location_id ?? u.location_id,
+        active !== undefined ? active : u.active,
+        id,
+      ]
+    );
+    const { rows: locRows } = await pool.query('SELECT name FROM locations WHERE id = $1', [rows[0].location_id]);
+    res.json({ ...rows[0], location_name: locRows[0]?.name });
+  } catch (err) {
+    console.error('Error updating admin user:', err);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+// PATCH /api/admin/users/:id/reset-password
+router.patch('/users/:id/reset-password', requireAdmin, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+
+  try {
+    const { rows } = await pool.query("SELECT id, username FROM users WHERE id = $1 AND role != 'admin'", [id]);
+    if (!rows[0]) return res.status(404).json({ error: 'User not found' });
+
+    const tempPassword = generateTempPassword();
+    const hash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, id]);
+    res.json({ username: rows[0].username, temp_password: tempPassword });
+  } catch (err) {
+    console.error('Error resetting password:', err);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
+// GET /api/admin/settings
+router.get('/settings', requireAdmin, async (req, res) => {
+  const pool = req.app.get('db');
+  try {
+    const { rows } = await pool.query('SELECT key, value, updated_at FROM app_settings');
+    const settings = rows.reduce((acc, r) => ({ ...acc, [r.key]: r.value }), {});
+    res.json(settings);
+  } catch (err) {
+    console.error('Error fetching settings:', err);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+// PUT /api/admin/settings/:key
+router.put('/settings/:key', requireAdmin, async (req, res) => {
+  const pool = req.app.get('db');
+  const { key } = req.params;
+  const { value } = req.body;
+
+  const ALLOWED_KEYS = ['announcement'];
+  if (!ALLOWED_KEYS.includes(key)) return res.status(400).json({ error: 'Unknown setting key' });
+
+  try {
+    await pool.query(
+      `INSERT INTO app_settings (key, value, updated_by, updated_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (key) DO UPDATE SET value = $2, updated_by = $3, updated_at = NOW()`,
+      [key, value || null, req.session.userId]
+    );
+    res.json({ ok: true, key, value: value || null });
+  } catch (err) {
+    console.error('Error saving setting:', err);
+    res.status(500).json({ error: 'Failed to save setting' });
+  }
+});
+
 module.exports = router;

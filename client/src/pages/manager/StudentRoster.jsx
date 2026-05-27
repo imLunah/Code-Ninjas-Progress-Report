@@ -53,6 +53,8 @@ export default function StudentRoster() {
   const [programFilter, setProgramFilter] = useState('');
   const [sort, setSort] = useState('last_active');
 
+  const [showArchived, setShowArchived] = useState(false);
+
   // Bulk delete
   const [selected, setSelected] = useState(new Set());
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -85,13 +87,14 @@ export default function StudentRoster() {
     params.set('sort', sort);
     params.set('limit', PAGE_SIZE);
     params.set('offset', offset);
+    if (showArchived) params.set('inactive', 'true');
     if (append) setLoadingMore(true);
     else setLoading(true);
     api.get(`/students?${params.toString()}`)
       .then(({ students: page, total, programCounts: counts }) => {
         setStudents((prev) => append ? [...prev, ...page] : page);
         setTotalCount(total);
-        if (counts) setProgramCounts(counts);
+        if (counts && !showArchived) setProgramCounts(counts);
         setHasMore(page.length === PAGE_SIZE);
         if (!append) setSelected(new Set());
       })
@@ -99,7 +102,7 @@ export default function StudentRoster() {
       .finally(() => { setLoading(false); setLoadingMore(false); });
   };
 
-  useEffect(() => { loadStudents(0); }, [search, programFilter, sort, user?.activeLocation?.id]);
+  useEffect(() => { loadStudents(0); }, [search, programFilter, sort, showArchived, user?.activeLocation?.id]);
 
   useEffect(() => {
     if (!hasMore || loading || loadingMore) return;
@@ -144,6 +147,16 @@ export default function StudentRoster() {
     setSelected(new Set());
     loadStudents();
     if (failed > 0) setError(`${failed} ninja${failed > 1 ? 's' : ''} could not be removed. Please try again.`);
+  };
+
+  const handleRestore = async (id) => {
+    try {
+      await api.patch(`/students/${id}/restore`, {});
+      setStudents((prev) => prev.filter((s) => s.id !== id));
+      setTotalCount((c) => c - 1);
+    } catch (err) {
+      setError(err?.message || 'Failed to restore ninja');
+    }
   };
 
   const handleRowClick = (student) => {
@@ -218,22 +231,24 @@ export default function StudentRoster() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold font-ninja text-ninja-navy leading-tight">
-              {isLogMode ? 'Log Progress' : 'Ninjas'}
+              {isLogMode ? 'Log Progress' : showArchived ? 'Archived Ninjas' : 'Ninjas'}
             </h1>
             <p className="text-ninja-muted font-ninja text-sm mt-0.5">
               {isLogMode
                 ? 'Pick a ninja to log a session'
+                : showArchived
+                ? `${totalCount} archived ninja${totalCount !== 1 ? 's' : ''}`
                 : `${totalCount} active ninja${totalCount !== 1 ? 's' : ''}`}
             </p>
           </div>
           {isManager && !isLogMode && (
             <div className="flex gap-2 flex-wrap">
-              {selected.size > 0 && !confirmDelete && (
+              {!showArchived && selected.size > 0 && !confirmDelete && (
                 <Button variant="danger" onClick={() => setConfirmDelete(true)}>
                   Delete ({selected.size})
                 </Button>
               )}
-              {selected.size > 0 && confirmDelete && (
+              {!showArchived && selected.size > 0 && confirmDelete && (
                 <>
                   <span className="self-center text-ninja-red font-ninja text-sm font-semibold">
                     Remove {selected.size} ninja{selected.size > 1 ? 's' : ''}?
@@ -244,10 +259,20 @@ export default function StudentRoster() {
                   <Button variant="secondary" onClick={() => setConfirmDelete(false)}>Cancel</Button>
                 </>
               )}
-              <Button variant="secondary" onClick={() => { setImportModal(true); setImportResult(null); setImportError(''); }}>
-                Import CSV
+              <Button
+                variant="secondary"
+                onClick={() => { setShowArchived((v) => !v); setSelected(new Set()); setSearch(''); setProgramFilter(''); }}
+              >
+                {showArchived ? 'Active Ninjas' : 'Archived'}
               </Button>
-              <Button onClick={() => navigate('/manager/students/new')}>+ Add Ninja</Button>
+              {!showArchived && (
+                <>
+                  <Button variant="secondary" onClick={() => { setImportModal(true); setImportResult(null); setImportError(''); }}>
+                    Import CSV
+                  </Button>
+                  <Button onClick={() => navigate('/manager/students/new')}>+ Add Ninja</Button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -330,6 +355,14 @@ export default function StudentRoster() {
                     )}
                     {isLogMode && (
                       <span className="text-ninja-blue font-ninja font-bold text-xs flex-shrink-0">Log →</span>
+                    )}
+                    {showArchived && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleRestore(s.id); }}
+                        className="text-xs font-ninja font-semibold text-green-700 border border-green-300 rounded-lg px-2 py-1 hover:bg-green-50 transition-colors flex-shrink-0"
+                      >
+                        Restore
+                      </button>
                     )}
                   </div>
                 );
@@ -490,6 +523,13 @@ export default function StudentRoster() {
                             className="text-xs font-ninja font-bold text-ninja-blue border border-ninja-blue rounded-lg px-3 py-1.5 hover:bg-ninja-blue hover:text-white transition-colors"
                           >
                             Log
+                          </button>
+                        ) : showArchived ? (
+                          <button
+                            onClick={() => handleRestore(s.id)}
+                            className="text-xs font-ninja font-semibold text-green-700 border border-green-300 rounded-lg px-3 py-1.5 hover:bg-green-50 transition-colors"
+                          >
+                            Restore
                           </button>
                         ) : (
                           <span className="text-ninja-muted text-lg cursor-pointer hover:text-ninja-navy transition-colors">···</span>

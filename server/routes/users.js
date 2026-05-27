@@ -13,16 +13,18 @@ function validatePassword(pw) {
 router.get('/', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
   const { role } = req.query;
+  const showInactive = req.query.inactive === 'true' && ['manager', 'admin'].includes(req.session.role);
 
   try {
     if (role === 'sensei' || role === 'staff') {
       const roleFilter = role === 'staff' ? `u.role IN ('sensei', 'manager')` : `u.role = 'sensei'`;
+      const activeFilter = `AND u.active = ${showInactive ? 'false' : 'true'}`;
       const { rows } = await pool.query(`
         SELECT u.id, u.username, u.display_name, u.role, u.location_id, u.created_at,
-               u.profile_pic_url, COUNT(pl.id)::int AS progress_log_count
+               u.profile_pic_url, u.active, COUNT(pl.id)::int AS progress_log_count
         FROM users u
         LEFT JOIN progress_logs pl ON pl.sensei_id = u.id
-        WHERE ${roleFilter} AND u.location_id = $1 AND u.active = true
+        WHERE ${roleFilter} AND u.location_id = $1 ${activeFilter}
         GROUP BY u.id
         ORDER BY u.role ASC, u.display_name ASC
       `, [req.session.activeLocationId]);
@@ -206,6 +208,24 @@ router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
   } catch (err) {
     console.error('Error removing user:', err);
     res.status(500).json({ error: 'Failed to remove sensei' });
+  }
+});
+
+// PATCH /api/users/:id/restore
+router.patch('/:id/restore', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+  try {
+    const { rows } = await pool.query(
+      'SELECT id FROM users WHERE id = $1 AND active = false AND location_id = $2',
+      [id, req.session.activeLocationId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Archived user not found' });
+    await pool.query('UPDATE users SET active = true WHERE id = $1', [id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error restoring user:', err);
+    res.status(500).json({ error: 'Failed to restore user' });
   }
 });
 

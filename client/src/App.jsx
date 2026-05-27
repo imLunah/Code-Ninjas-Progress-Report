@@ -29,6 +29,8 @@ import TermsPage from './pages/TermsPage';
 import LandingPage from './pages/LandingPage';
 import LocationsPage from './pages/admin/LocationsPage';
 import CurriculumPage from './pages/admin/CurriculumPage';
+import UsersPage from './pages/admin/UsersPage';
+import SettingsPage from './pages/admin/SettingsPage';
 
 export default function App() {
   return (
@@ -66,7 +68,9 @@ export default function App() {
 
             {/* Admin */}
             <Route path="/admin/locations" element={<ProtectedRoute role="admin"><LocationsPage /></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute role="admin"><UsersPage /></ProtectedRoute>} />
             <Route path="/admin/curriculum" element={<ProtectedRoute role="admin"><CurriculumPage /></ProtectedRoute>} />
+            <Route path="/admin/settings" element={<ProtectedRoute role="admin"><SettingsPage /></ProtectedRoute>} />
 
             {/* Account */}
             <Route path="/account" element={<ProtectedRoute role="sensei"><AccountPage /></ProtectedRoute>} />

@@ -30,6 +30,7 @@ router.get('/', requireAuth, async (req, res) => {
   const fetchAll = req.query.all === 'true';
   const limit = fetchAll ? null : Math.min(parseInt(req.query.limit) || 100, 500);
   const offset = fetchAll ? null : Math.max(parseInt(req.query.offset) || 0, 0);
+  const showInactive = req.query.inactive === 'true' && ['manager', 'admin'].includes(req.session.role);
 
   const SORT_ORDERS = {
     last_active: `(SELECT MAX(pl2.session_date) FROM progress_logs pl2 WHERE pl2.student_id = s.id) DESC NULLS LAST, s.full_name ASC`,
@@ -44,7 +45,7 @@ router.get('/', requireAuth, async (req, res) => {
       (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id) AS last_activity,
       ${PROGRAMS_SUBQUERY}
     FROM students s
-    WHERE s.active = true AND s.location_id = $1
+    WHERE s.active = ${showInactive ? 'false' : 'true'} AND s.location_id = $1
   `;
   const params = [req.session.activeLocationId];
   let paramCount = 1;
@@ -344,6 +345,24 @@ router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
   } catch (err) {
     console.error('Error deleting student:', err);
     res.status(500).json({ error: 'Failed to delete student' });
+  }
+});
+
+// PATCH /api/students/:id/restore
+router.patch('/:id/restore', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+  try {
+    const { rows } = await pool.query(
+      'SELECT id FROM students WHERE id = $1 AND active = false AND location_id = $2',
+      [id, req.session.activeLocationId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Archived student not found' });
+    await pool.query('UPDATE students SET active = true WHERE id = $1', [id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error restoring student:', err);
+    res.status(500).json({ error: 'Failed to restore student' });
   }
 });
 
