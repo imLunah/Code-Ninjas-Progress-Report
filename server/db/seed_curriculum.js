@@ -1,15 +1,17 @@
-// Sub-programs for programs that split into multiple kits/curricula.
-// null means no sub-program selection needed.
-export const SUB_PROGRAMS = {
+// Run with: node server/db/seed_curriculum.js
+// Idempotent — skips entries that already exist.
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+const pool = require('./pool');
+
+const SUB_PROGRAMS = {
   'CREATE': null,
   'AI Academy': null,
   'Robotics Academy': ['LEGO Spike Essentials', 'LEGO Spike Prime', 'VEX GO', 'Ozobot Evo'],
   'JR': ['JR Coding', 'Snap Circuits'],
 };
 
-// Curriculum indexed by sub-program name (or program name for programs with no sub-programs).
-// Each entry is an array of { module, lessons[] }.
-export const CURRICULUM = {
+const CURRICULUM = {
   'AI Academy': [
     { module: 'Module 1', lessons: ['1. What is AI? How does it work?', '2. What are the different types of AI? What do they do?', '3. What is data? How does AI use data?', '4. What is an LLM? How does it work?', '5. How do I get what I want from AI?', '6. Can we trust AI?'] },
     { module: 'Module 2', lessons: ['1. Draw something with AI!', '2. How AI Creates Pictures', '3. Prompting an Image', '4. Image Fusion', '5. Animate your Drawings', '6. AI Music Generation', '7. AI Copyright and Ethics', '8. Choose your own AI Adventure!'] },
@@ -17,7 +19,7 @@ export const CURRICULUM = {
     { module: 'Module 4', lessons: ['1. How Is AI Transforming Life?', '2. How Is AI Transforming Life Online?', '3. Motion and Facial Recognition', '4. Image and Object Recognition', '5. How Is AI Used to Learn New Things?', '6. Create An AI Chatbot', '7. Making Predictions with AI', '8. Navigation and Pathfinding with AI'] },
     { module: 'Module 5', lessons: ['1. How AI Upgrades Coding', '2. Learn to Code with AI', '3. Debugging AI', '4. Pair Programming with AI', '5. What is Vibe Coding?', '6. Vibe Coding a Platformer Game', '7. Vibe Coding a Website', '8. Capping it Off (with a Capstone Project)'] },
     { module: 'Module 6', lessons: ['1. Introduction to AI in Gaming', '2. AI Computer Vision in Games', '3. Rule-Based AI and Finite State Machines', '4. AI Movement in Games', '5. AI Perception in Games', '6. Procedural Generation in Games', '7. NPCs, Memory, and Learning-Based AI', '8. Rule-Based vs Learning-Based AI'] },
-    { module: 'Module 7', lessons: ['1. How is AI Changing Robotics?', '2. AI-Powered Sensors (Micro:bit)', '3. AI Movement Tracker (Micro:bit)', '4. AI Robotic Friend (Micro:bit + Climate Action Kit)', '5. Exploring AI Ethics + Introduction to Ozobot Color Codes (Ozobot)', '6. Coding with the Ozobot Editor\'s LLM Block (Ozobot)', '7. Ozobot + Computer Vision (Ozobot)', '8. AI Quality Inspection on the Assembly Line (Ozobot)', '9. Autonomous Driving Intelligence (Ozobot)'] },
+    { module: 'Module 7', lessons: ["1. How is AI Changing Robotics?", "2. AI-Powered Sensors (Micro:bit)", "3. AI Movement Tracker (Micro:bit)", "4. AI Robotic Friend (Micro:bit + Climate Action Kit)", "5. Exploring AI Ethics + Introduction to Ozobot Color Codes (Ozobot)", "6. Coding with the Ozobot Editor's LLM Block (Ozobot)", "7. Ozobot + Computer Vision (Ozobot)", "8. AI Quality Inspection on the Assembly Line (Ozobot)", "9. Autonomous Driving Intelligence (Ozobot)"] },
     { module: 'Module 8', lessons: ['1. How has AI Changed Our Lives?', '2. Humans + AI, Working Together', '3. Can Humans Be Smarter than AI?', '4. Can AI Be Misleading?', '5. Can AI Harm Humans?', '6. Solving Future Problems with AI', '7. Solving Common AI Training Bugs', '8. Solving Problems with AI Assistants'] },
     { module: 'Module 9', lessons: ['1. Introduction To Design Thinking', '2. tldraw Computer', '3. The Ask Phase', '4. The Imagine Phase', '5. The Plan Phase', '6. The Prototype Phase', '7. The Test, Improve, Repeat Phase', '8. The Share Phase'] },
   ],
@@ -51,12 +53,12 @@ export const CURRICULUM = {
 
   'Ozobot Evo': [
     { module: 'O 1', lessons: ['1. Introduction to Color Codes: Basic Training', '2. Introduction to Color Codes: Speed', '3. Introduction to Color Codes: Special Moves & Win/Exit', '4. Introduction to Color Codes: Direction', '5. Write Your Name With Color Codes', '6. Loop My Day', '7. Ozobot Race Track', '8. Polar Animals', '9. Clean Energy Cruise'] },
-    { module: 'O 2', lessons: ['1. Introduction to Color Codes: Skills Check 1', '2. Introduction to Color Codes: Timers', '3. Introduction to Color Codes: Line Switch', '4. Introduction to Color Codes: Skills Check 2', '5. How to Make Earth Happy', '6. Stargazing with Ozobot', '7. Skater Safety', '8. Pollination Garden', '9. What\'s the Object?'] },
+    { module: 'O 2', lessons: ["1. Introduction to Color Codes: Skills Check 1", "2. Introduction to Color Codes: Timers", "3. Introduction to Color Codes: Line Switch", "4. Introduction to Color Codes: Skills Check 2", "5. How to Make Earth Happy", "6. Stargazing with Ozobot", "7. Skater Safety", "8. Pollination Garden", "9. What's the Object?"] },
   ],
 
   'JR Coding': [
     { module: 'Module 1', lessons: ['1. Dance Party', '2. Algorithms and Sequencing Lesson 1.1', '3. Dance Party (3 Stars)', '4. Algorithms and Sequencing Lesson 1.2', '5. Sound Farm', '6. Algorithms and Sequencing Lesson 1.2', '7. Unplugged Day', '8. Algorithms and Sequencing Lesson 1.3 (Unplugged Activities)', '9. My World', '10. Algorithms and Sequencing Lesson 1.3'] },
-    { module: 'Module 2', lessons: ['1. Bump, You\'re It!', '2. Debugging Lesson 2.1', '3. Bump, You\'re It! (3 Stars)', '4. Debugging Lesson 2.2', '5. Seasons', '6. Debugging Lesson 2.2', '7. Unplugged Day', '8. Debugging Lesson 2.3', '9. Ocean of Code', '10. Debugging Lesson 2.3'] },
+    { module: 'Module 2', lessons: ["1. Bump, You're It!", '2. Debugging Lesson 2.1', "3. Bump, You're It! (3 Stars)", '4. Debugging Lesson 2.2', '5. Seasons', '6. Debugging Lesson 2.2', '7. Unplugged Day', '8. Debugging Lesson 2.3', '9. Ocean of Code', '10. Debugging Lesson 2.3'] },
     { module: 'Module 3', lessons: ['1. Repeat Repeat Repeat', '2. Loops Lesson 3.1', '3. Unplugged Day!', '4. Loops Lesson 3.1', '5. Dribble Dribble', '6. Loops Lesson 3.2', '7. Close and Far', '8. Loops Lesson 3.2', '9. Close and Far (3 Stars)', '10. Loops Lesson 3.3'] },
     { module: 'Module 4', lessons: ['1. Unplugged Day!', '2. Decomposition 4.1', '3. Catch Me If You Can!', '4. Decomposition 4.2', '5. Custom Characters!', '6. Decomposition 4.2 (Go for 3 Stars!)', '7. Stage of Code', '8. Decomposition 4.2 (Go for 3 Stars!)', '9. Stage of Code (3 Stars)', '10. Decomposition 4.2 (Go for 3 Stars!)'] },
     { module: 'Module 5', lessons: ['1. My House', '2. Advanced Sequencing Lesson 5.1', '3. Unplugged Day!', '4. Advanced Sequencing Lesson 5.2', '5. Safari Adventure', '6. Advanced Sequencing Lesson 5.2', '7. Safari Adventure (3 Stars)', '8. Advanced Sequencing Lesson 5.2', '9. Where Am I?', '10. Advanced Sequencing Lesson 5.3'] },
@@ -72,7 +74,63 @@ export const CURRICULUM = {
   ],
 };
 
-export function getCurriculum(program, subProgram) {
-  if (subProgram) return CURRICULUM[subProgram] || null;
-  return CURRICULUM[program] || null;
+// Map sub-programs to their parent program
+const SUB_PROGRAM_TO_PROGRAM = {};
+for (const [prog, subs] of Object.entries(SUB_PROGRAMS)) {
+  if (subs) subs.forEach(s => { SUB_PROGRAM_TO_PROGRAM[s] = prog; });
 }
+
+async function run() {
+  const client = await pool.connect();
+  try {
+    let modulesInserted = 0;
+    let lessonsInserted = 0;
+
+    for (const [key, modules] of Object.entries(CURRICULUM)) {
+      const program = SUB_PROGRAM_TO_PROGRAM[key] || key;
+      const subProgram = SUB_PROGRAM_TO_PROGRAM[key] ? key : null;
+
+      for (let mIdx = 0; mIdx < modules.length; mIdx++) {
+        const { module: moduleName, lessons } = modules[mIdx];
+
+        const { rows: existing } = await client.query(
+          'SELECT id FROM curriculum_modules WHERE program = $1 AND module_name = $2 AND (sub_program = $3 OR (sub_program IS NULL AND $3 IS NULL))',
+          [program, moduleName, subProgram]
+        );
+
+        let moduleId;
+        if (existing.length) {
+          moduleId = existing[0].id;
+        } else {
+          const { rows } = await client.query(
+            'INSERT INTO curriculum_modules (program, sub_program, module_name, module_order) VALUES ($1, $2, $3, $4) RETURNING id',
+            [program, subProgram, moduleName, mIdx]
+          );
+          moduleId = rows[0].id;
+          modulesInserted++;
+        }
+
+        for (let lIdx = 0; lIdx < lessons.length; lIdx++) {
+          const { rows: existingLesson } = await client.query(
+            'SELECT id FROM curriculum_lessons WHERE module_id = $1 AND lesson_name = $2',
+            [moduleId, lessons[lIdx]]
+          );
+          if (!existingLesson.length) {
+            await client.query(
+              'INSERT INTO curriculum_lessons (module_id, lesson_name, lesson_order) VALUES ($1, $2, $3)',
+              [moduleId, lessons[lIdx], lIdx]
+            );
+            lessonsInserted++;
+          }
+        }
+      }
+    }
+
+    console.log(`Done. Modules inserted: ${modulesInserted}, Lessons inserted: ${lessonsInserted}`);
+  } finally {
+    client.release();
+    await pool.end();
+  }
+}
+
+run().catch(err => { console.error(err); process.exit(1); });

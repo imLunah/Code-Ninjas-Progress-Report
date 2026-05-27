@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { BELTS, PROGRAM_LOGOS } from '../../utils/beltConfig';
-import { SUB_PROGRAMS, CURRICULUM } from '../../utils/progressData';
+import { useCurriculum } from '../../context/CurriculumContext';
 import { formatDate } from '../../utils/dateUtils';
 
 const PROGRAM_GRADIENTS = {
@@ -442,6 +442,7 @@ function KitPath({ kitOrder, kitShort, currentKitIndex, barColor }) {
 }
 
 function ModuleProgress({ program, enrollment, logs }) {
+  const { curriculum: CURRICULUM } = useCurriculum();
   const totalSessions = logs.length;
   const lastDate = enrollment?.last_session_date;
   const barColor = PROGRAM_BAR_COLORS[program] || '#006ADD';

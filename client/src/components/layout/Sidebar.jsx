@@ -2,7 +2,12 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import ThemeToggle from '../ui/ThemeToggle';
 
+const ICON_FALLBACK = { reports: '📊' };
+
 function NavIcon({ id, isActive }) {
+  if (ICON_FALLBACK[id]) {
+    return <span className="w-9 h-9 flex-shrink-0 flex items-center justify-center text-xl">{ICON_FALLBACK[id]}</span>;
+  }
   return (
     <img
       src={`/icons/${id}.png`}
@@ -32,6 +37,7 @@ export default function Sidebar() {
     { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
     { to: '/clubs', label: 'Clubs', icon: 'clubs' },
     { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
+    { to: '/manager/reports', label: 'Reports', icon: 'reports' },
   ];
 
   const senseiLinks = [

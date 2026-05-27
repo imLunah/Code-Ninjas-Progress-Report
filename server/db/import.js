@@ -38,7 +38,7 @@ async function run() {
 
   if (!csvPath || !locationSlug) {
     console.error('Usage: node server/db/import.js <csv-path> <location-slug>');
-    console.error('  location-slug: yorba-linda | fullerton | cerritos');
+    console.error('  location-slug: use the slug from the locations table (e.g. yorba-linda)');
     process.exit(1);
   }
 
