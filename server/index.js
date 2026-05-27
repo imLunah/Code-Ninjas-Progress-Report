@@ -73,6 +73,9 @@ app.use('/api/daily', require('./routes/daily'));
 app.use('/api/progress', require('./routes/progress'));
 app.use('/api/clubs', require('./routes/clubs'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/curriculum', require('./routes/curriculum'));
+app.use('/api/reports', require('./routes/reports'));
 app.use('/api/bugs', require('./routes/bugs'));
 
 if (process.env.NODE_ENV === 'production') {

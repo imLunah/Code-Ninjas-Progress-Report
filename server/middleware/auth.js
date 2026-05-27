@@ -25,9 +25,15 @@ function requireOwnLocation(req, res, next) {
   next();
 }
 
+function requireAdmin(req, res, next) {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (req.session.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  next();
+}
+
 function requireParent(req, res, next) {
   if (!req.session.parentEmail) return res.status(401).json({ error: 'Not authenticated' });
   next();
 }
 
-module.exports = { requireAuth, requireManager, requireSensei, requireOwnLocation, requireParent };
+module.exports = { requireAuth, requireManager, requireSensei, requireOwnLocation, requireParent, requireAdmin };

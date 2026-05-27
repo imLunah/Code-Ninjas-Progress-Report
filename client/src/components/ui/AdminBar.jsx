@@ -10,6 +10,7 @@ export default function AdminBar() {
 
   const isManager = pathname.startsWith('/manager');
   const isSensei  = pathname.startsWith('/sensei');
+  const isAdmin   = pathname.startsWith('/admin');
 
   return (
     <div
@@ -43,6 +44,17 @@ export default function AdminBar() {
         }}
       >
         Sensei
+      </button>
+      <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
+      <button
+        onClick={() => navigate('/admin/locations')}
+        className="px-3 py-1 rounded-xl transition-colors"
+        style={{
+          background: isAdmin ? 'rgb(56,161,255)' : 'transparent',
+          color: isAdmin ? '#fff' : 'rgba(255,255,255,0.5)',
+        }}
+      >
+        Admin
       </button>
     </div>
   );
