@@ -87,7 +87,7 @@ export default function StudentRoster() {
     params.set('sort', sort);
     params.set('limit', PAGE_SIZE);
     params.set('offset', offset);
-    if (showArchived) params.set('inactive', 'true');
+    if (showArchived && isManager) params.set('inactive', 'true');
     if (append) setLoadingMore(true);
     else setLoading(true);
     api.get(`/students?${params.toString()}`)
@@ -369,7 +369,7 @@ export default function StudentRoster() {
                     {isLogMode && (
                       <span className="text-ninja-blue font-ninja font-bold text-xs flex-shrink-0">Log →</span>
                     )}
-                    {showArchived && (
+                    {showArchived && isManager && (
                       <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                         {confirmPermanentId === s.id ? (
                           <>
@@ -544,7 +544,7 @@ export default function StudentRoster() {
                           >
                             Log
                           </button>
-                        ) : showArchived ? (
+                        ) : (showArchived && isManager) ? (
                           <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                             {confirmPermanentId === s.id ? (
                               <>
