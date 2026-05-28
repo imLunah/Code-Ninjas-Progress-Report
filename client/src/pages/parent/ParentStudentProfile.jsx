@@ -107,7 +107,7 @@ export default function ParentStudentProfile() {
         </div>
 
         {/* Progress visualizations */}
-        {programs.length > 0 && (student.session_logs || []).length > 0 && (
+        {programs.length > 0 && (
           <ProgressVisuals programs={programs} sessionLogs={student.session_logs || []} />
         )}
 

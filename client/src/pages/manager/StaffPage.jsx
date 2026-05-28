@@ -124,10 +124,9 @@ export default function StaffPage() {
     try {
       await api.delete(`/users/${id}`);
       setSenseis((prev) => prev.filter((s) => s.id !== id));
+      setSelectedSensei(null);
     } catch (err) {
       setError(err.message || 'Failed to remove sensei');
-    } finally {
-      setConfirmRemoveId(null);
     }
   };
 
