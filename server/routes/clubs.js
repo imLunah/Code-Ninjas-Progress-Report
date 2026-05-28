@@ -420,10 +420,11 @@ router.post('/:id/comments', requireSensei, requireOwnLocation, async (req, res)
 router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   try {
-    await pool.query(
+    const result = await pool.query(
       'DELETE FROM club_sessions WHERE id = $1 AND location_id = $2',
       [req.params.id, req.session.activeLocationId]
     );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Club session not found' });
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete club session' });

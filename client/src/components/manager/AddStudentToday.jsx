@@ -27,7 +27,7 @@ export default function AddStudentToday({ isOpen, onClose, onAdded, existingEntr
     setLoading(true);
     try {
       const { students: data } = await api.get(`/students?search=${encodeURIComponent(q)}`);
-      setResults(data);
+      setResults(data ?? []);
     } catch (err) {
       setError('Failed to load ninjas');
     } finally {
