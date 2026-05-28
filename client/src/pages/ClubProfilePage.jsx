@@ -591,6 +591,7 @@ export default function ClubProfilePage() {
               initialAuthor={profile?.pinned_note_author}
               initialUpdatedAt={profile?.pinned_note_updated_at}
               isReadOnly={isReadOnly}
+              onUpdated={(note) => setProfile((prev) => ({ ...prev, pinned_note: note, pinned_note_author: user?.displayName, pinned_note_updated_at: new Date().toISOString() }))}
             />
             <SessionsSection
               sessions={sessions}
