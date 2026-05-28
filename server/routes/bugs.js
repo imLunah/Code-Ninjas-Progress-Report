@@ -1,13 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const nodemailer = require('nodemailer');
-const { requireSensei } = require('../middleware/auth');
-
 function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-router.post('/', requireSensei, async (req, res) => {
+// Allow both staff sessions (userId) and parent sessions (parentEmail)
+function requireAnySession(req, res, next) {
+  if (!req.session.userId && !req.session.parentEmail) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  next();
+}
+
+router.post('/', requireAnySession, async (req, res) => {
   const { category, description, screenshot, pageUrl, userAgent, screenSize, timestamp, consoleErrors, reporter } = req.body;
 
   if (!description?.trim()) {
