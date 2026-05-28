@@ -55,10 +55,12 @@ export default function StudentRoster() {
 
   const [showArchived, setShowArchived] = useState(false);
 
-  // Bulk delete
+  // Bulk actions
   const [selected, setSelected] = useState(new Set());
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmPermanentBulk, setConfirmPermanentBulk] = useState(false);
+  const [permanentDeleting, setPermanentDeleting] = useState(false);
 
   // CSV import
   const [importModal, setImportModal] = useState(false);
@@ -147,6 +149,18 @@ export default function StudentRoster() {
     setSelected(new Set());
     loadStudents();
     if (failed > 0) setError(`${failed} ninja${failed > 1 ? 's' : ''} could not be removed. Please try again.`);
+  };
+
+  const handlePermanentDeleteSelected = async () => {
+    setPermanentDeleting(true);
+    setError('');
+    const results = await Promise.allSettled([...selected].map((id) => api.delete(`/students/${id}/permanent`)));
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    setPermanentDeleting(false);
+    setConfirmPermanentBulk(false);
+    setSelected(new Set());
+    loadStudents();
+    if (failed > 0) setError(`${failed} ninja${failed > 1 ? 's' : ''} could not be permanently deleted. Please try again.`);
   };
 
   const handleRestore = async (id) => {
@@ -256,10 +270,15 @@ export default function StudentRoster() {
           </div>
           {isManager && !isLogMode && (
             <div className="flex gap-2 flex-wrap">
-              {!showArchived && selected.size > 0 && !confirmDelete && (
-                <Button variant="secondary" onClick={() => setConfirmDelete(true)}>
-                  Archive ({selected.size})
-                </Button>
+              {!showArchived && selected.size > 0 && !confirmDelete && !confirmPermanentBulk && (
+                <>
+                  <Button variant="secondary" onClick={() => setConfirmDelete(true)}>
+                    Archive ({selected.size})
+                  </Button>
+                  <Button variant="danger" onClick={() => setConfirmPermanentBulk(true)}>
+                    Delete ({selected.size})
+                  </Button>
+                </>
               )}
               {!showArchived && selected.size > 0 && confirmDelete && (
                 <>
@@ -270,6 +289,17 @@ export default function StudentRoster() {
                     {deleting ? 'Archiving...' : 'Confirm'}
                   </Button>
                   <Button variant="secondary" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+                </>
+              )}
+              {!showArchived && selected.size > 0 && confirmPermanentBulk && (
+                <>
+                  <span className="self-center text-ninja-red font-ninja text-sm font-semibold">
+                    Permanently delete {selected.size} ninja{selected.size > 1 ? 's' : ''}?
+                  </span>
+                  <Button variant="danger" onClick={handlePermanentDeleteSelected} disabled={permanentDeleting}>
+                    {permanentDeleting ? 'Deleting...' : 'Confirm'}
+                  </Button>
+                  <Button variant="secondary" onClick={() => setConfirmPermanentBulk(false)}>Cancel</Button>
                 </>
               )}
               <Button
