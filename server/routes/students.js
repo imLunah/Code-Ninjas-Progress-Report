@@ -97,13 +97,14 @@ router.get('/', requireAuth, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
   const pool = req.app.get('db');
   const { id } = req.params;
-  const isManager = req.session.role === 'manager';
+  const isManager = ['manager', 'admin'].includes(req.session.role);
 
   try {
     const params = isManager ? [id] : [id, req.session.activeLocationId];
     const locationClause = isManager ? '' : 'AND s.location_id = $2';
+    const activeClause  = isManager ? '' : 'AND s.active = true';
     const { rows } = await pool.query(
-      `SELECT s.*, ${PROGRAMS_SUBQUERY} FROM students s WHERE s.id = $1 AND s.active = true ${locationClause}`,
+      `SELECT s.*, ${PROGRAMS_SUBQUERY} FROM students s WHERE s.id = $1 ${activeClause} ${locationClause}`,
       params
     );
     const student = rows[0];

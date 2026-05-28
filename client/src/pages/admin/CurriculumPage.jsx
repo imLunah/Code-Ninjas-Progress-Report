@@ -413,17 +413,17 @@ function BeltEditor() {
 
   const handleAddProject = async (beltName, sublevel, projectName) => {
     await api.post('/curriculum/belt-projects', { belt_name: beltName, sublevel, project_name: projectName });
-    await refetch();
+    await refetch().catch(() => {});
   };
 
   const handleRenameProject = async (id, name) => {
     await api.patch(`/curriculum/belt-projects/${id}`, { project_name: name });
-    await refetch();
+    await refetch().catch(() => {});
   };
 
   const handleDeleteProject = async (id) => {
     await api.delete(`/curriculum/belt-projects/${id}`);
-    await refetch();
+    await refetch().catch(() => {});
   };
 
   const colors = BELT_COLORS[selectedBelt] || { bg: '#f8f8f8', border: '#d1d5db', text: '#111827' };
@@ -550,7 +550,7 @@ export default function CurriculumPage() {
     setError('');
     try {
       await api.post('/curriculum/modules', {
-        program: subs ? (selectedSubProgram ? subPrograms[selectedProgram][subPrograms[selectedProgram].indexOf(selectedSubProgram)] : subPrograms[selectedProgram][0]) : selectedProgram,
+        program: selectedProgram,
         sub_program: subs ? activeKey : null,
         module_name: newModuleName.trim(),
       });
@@ -565,27 +565,27 @@ export default function CurriculumPage() {
 
   const handleRenameModule = async (id, name) => {
     await api.patch(`/curriculum/modules/${id}`, { module_name: name });
-    await refetch();
+    await refetch().catch(() => {});
   };
 
   const handleDeleteModule = async (id) => {
     await api.delete(`/curriculum/modules/${id}`);
-    await refetch();
+    await refetch().catch(() => {});
   };
 
   const handleAddLesson = async (moduleId, name) => {
     await api.post(`/curriculum/modules/${moduleId}/lessons`, { lesson_name: name });
-    await refetch();
+    await refetch().catch(() => {});
   };
 
   const handleRenameLesson = async (id, name) => {
     await api.patch(`/curriculum/lessons/${id}`, { lesson_name: name });
-    await refetch();
+    await refetch().catch(() => {});
   };
 
   const handleDeleteLesson = async (id) => {
     await api.delete(`/curriculum/lessons/${id}`);
-    await refetch();
+    await refetch().catch(() => {});
   };
 
   const readOnly = !isSeeded;
