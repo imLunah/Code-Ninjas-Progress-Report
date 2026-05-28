@@ -7,7 +7,7 @@ import BugReportButton from '../ui/BugReportButton';
 import { useAuth } from '../../context/AuthContext';
 
 function AnnouncementBanner({ text }) {
-  const storageKey = `ann_dismissed_${btoa(text).slice(0, 16)}`;
+  const storageKey = `ann_dismissed_${encodeURIComponent(text).slice(0, 32)}`;
   const [dismissed, setDismissed] = useState(() => !!sessionStorage.getItem(storageKey));
 
   const dismiss = () => {

@@ -47,8 +47,8 @@ router.get('/overview', requireManager, async (req, res) => {
         FROM students s
         WHERE s.location_id = $1 AND s.active = true
           AND NOT EXISTS (
-            SELECT 1 FROM daily_assignments da
-            WHERE da.student_id = s.id AND da.session_date >= CURRENT_DATE - INTERVAL '30 days'
+            SELECT 1 FROM progress_logs pl
+            WHERE pl.student_id = s.id AND pl.session_date >= CURRENT_DATE - INTERVAL '30 days'
           )
         ORDER BY last_session ASC NULLS FIRST
         LIMIT 20
