@@ -33,9 +33,12 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
-    await api.post('/auth/logout', {});
-    invalidateCurriculumCache();
-    setUser(null);
+    try {
+      await api.post('/auth/logout', {});
+    } finally {
+      invalidateCurriculumCache();
+      setUser(null);
+    }
   }
 
   const switchLocation = async (locationId) => {
