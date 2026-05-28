@@ -125,7 +125,7 @@ export default function SenseiDashboard() {
                   const programInfo = {};
                   group.assignments.forEach(a => {
                     if (!a.completed) {
-                      const d = String(a.session_date).split('T')[0];
+                      const d = a.session_date ? String(a.session_date).split('T')[0] : null;
                       if (!programInfo[a.program]) programInfo[a.program] = { date: d, count: 0 };
                       programInfo[a.program].count++;
                     }

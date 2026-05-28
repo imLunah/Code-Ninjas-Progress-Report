@@ -325,8 +325,8 @@ router.get('/sessions/:id', requireAuth, async (req, res) => {
 router.patch('/:id/attendees', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { student_ids } = req.body;
-  if (!Array.isArray(student_ids) || student_ids.length === 0) {
-    return res.status(400).json({ error: 'At least one student is required' });
+  if (!Array.isArray(student_ids)) {
+    return res.status(400).json({ error: 'student_ids must be an array' });
   }
   const client = await pool.connect();
   try {
