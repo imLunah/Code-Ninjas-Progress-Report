@@ -604,9 +604,9 @@ function ModuleProgress({ program, enrollment, logs }) {
 
   // ── Robotics Academy ─────────────────────────────────────────────────────────
   if (program === 'Robotics Academy') {
-    const KIT_ORDER  = ['LEGO Spike Essentials', 'LEGO Spike Prime', 'VEX GO'];
-    const KIT_SHORT  = { 'LEGO Spike Essentials': 'Essentials', 'LEGO Spike Prime': 'Prime', 'VEX GO': 'VEX GO' };
-    const KIT_TOTALS = { 'LEGO Spike Essentials': 8, 'LEGO Spike Prime': 4, 'VEX GO': 4 };
+    const KIT_ORDER  = ['LEGO Spike Essentials', 'LEGO Spike Prime', 'VEX GO', 'Ozobot Evo'];
+    const KIT_SHORT  = { 'LEGO Spike Essentials': 'Essentials', 'LEGO Spike Prime': 'Prime', 'VEX GO': 'VEX GO', 'Ozobot Evo': 'Ozobot' };
+    const KIT_TOTALS = { 'LEGO Spike Essentials': 8, 'LEGO Spike Prime': 4, 'VEX GO': 4, 'Ozobot Evo': 2 };
 
     const currentKit = enrollment?.last_sub_program;
     const currentKitIndex = currentKit ? KIT_ORDER.indexOf(currentKit) : -1;
