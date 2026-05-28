@@ -17,7 +17,7 @@ function ClubBadge({ name }) {
 
 export { ClubBadge };
 
-export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpdated, onCheckIn }) {
+export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendeesUpdated, onCheckIn }) {
   const navigate = useNavigate();
   const { user, isReadOnly } = useAuth();
   const isManager = ['manager', 'admin'].includes(user?.role);
@@ -70,7 +70,6 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpda
   };
 
   const saveAttendees = async (session) => {
-    if (draftAttendeeIds.size === 0) return;
     setSavingAttendees(true);
     try {
       await api.patch(`/clubs/${session.id}/attendees`, { student_ids: [...draftAttendeeIds] });
