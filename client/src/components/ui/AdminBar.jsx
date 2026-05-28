@@ -10,8 +10,6 @@ export default function AdminBar() {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
-  if (user?.role !== 'admin') return null;
-
   const isManager = pathname.startsWith('/manager');
   const isSensei  = pathname.startsWith('/sensei');
   const isAdmin   = pathname.startsWith('/admin');
@@ -36,6 +34,8 @@ export default function AdminBar() {
     document.addEventListener('mousedown', onClick);
     return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onClick); };
   }, []);
+
+  if (user?.role !== 'admin') return null;
 
   return (
     <div ref={ref} className="fixed bottom-5 right-4 z-[9999] flex flex-col items-end gap-2">
