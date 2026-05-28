@@ -51,15 +51,15 @@ const sessionConfig = {
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'Lax',
+    sameSite: 'Strict',
     maxAge: 1000 * 60 * 60 * 24 * 7,
   },
 };
 
-// Staff session (connect.sid) — skipped for /api/parent so it can't be corrupted
+// Staff session (connect.sid) — skipped for /api/parent and /api/bugs (both get special session handling)
 const staffSession = session(sessionConfig);
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api/parent')) return next();
+  if (req.path.startsWith('/api/parent') || req.path.startsWith('/api/bugs')) return next();
   staffSession(req, res, next);
 });
 
@@ -76,7 +76,14 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/curriculum', require('./routes/curriculum'));
 app.use('/api/reports', require('./routes/reports'));
-app.use('/api/bugs', require('./routes/bugs'));
+// Bug reports — staff or parent session accepted; try staff first, fall back to parent
+app.use('/api/bugs',
+  (req, res, next) => staffSession(req, res, () => {
+    if (req.session?.userId) return next();
+    parentSession(req, res, next);
+  }),
+  require('./routes/bugs')
+);
 
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/dist')));

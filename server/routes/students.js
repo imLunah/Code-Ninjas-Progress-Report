@@ -38,6 +38,8 @@ router.get('/', requireAuth, async (req, res) => {
     name: `s.full_name ASC`,
   };
   const orderClause = SORT_ORDERS[sort] || SORT_ORDERS.name;
+  const params = [req.session.activeLocationId, !showInactive];
+  let paramCount = 2;
 
   let query = `
     SELECT s.*,
@@ -45,10 +47,8 @@ router.get('/', requireAuth, async (req, res) => {
       (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id) AS last_activity,
       ${PROGRAMS_SUBQUERY}
     FROM students s
-    WHERE s.active = ${showInactive ? 'false' : 'true'} AND s.location_id = $1
+    WHERE s.active = $2 AND s.location_id = $1
   `;
-  const params = [req.session.activeLocationId];
-  let paramCount = 1;
 
   if (search) {
     paramCount++;

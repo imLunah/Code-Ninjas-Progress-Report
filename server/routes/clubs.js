@@ -112,6 +112,16 @@ router.patch('/definitions/:id', requireManager, requireOwnLocation, async (req,
 router.patch('/definitions/:id/cover-image', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { cover_image_url } = req.body;
+  if (cover_image_url) {
+    try {
+      const parsed = new URL(cover_image_url);
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        return res.status(400).json({ error: 'Invalid URL' });
+      }
+    } catch {
+      return res.status(400).json({ error: 'Invalid URL' });
+    }
+  }
   try {
     const { rows: existing } = await pool.query(
       'SELECT id, location_id FROM club_definitions WHERE id = $1',

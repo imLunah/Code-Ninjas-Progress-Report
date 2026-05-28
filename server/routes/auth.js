@@ -22,7 +22,10 @@ router.post('/login', loginLimiter, async (req, res) => {
 
   try {
     const pool = req.app.get('db');
-    const { rows } = await pool.query('SELECT * FROM users WHERE LOWER(username) = LOWER($1) AND active = true', [username]);
+    const { rows } = await pool.query(
+      'SELECT id, username, display_name, role, location_id, profile_pic_url, password_hash FROM users WHERE LOWER(username) = LOWER($1) AND active = true',
+      [username]
+    );
     const user = rows[0];
 
     if (!user) {

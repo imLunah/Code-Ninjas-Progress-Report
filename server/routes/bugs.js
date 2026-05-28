@@ -35,10 +35,10 @@ router.post('/', requireAnySession, async (req, res) => {
     });
 
     const reporterLine = reporter
-      ? `${reporter.name || 'Unknown'} · ${reporter.role || 'unknown'}${reporter.location ? ' · ' + reporter.location : ''}`
+      ? `${escHtml(reporter.name || 'Unknown')} · ${escHtml(reporter.role || 'unknown')}${reporter.location ? ' · ' + escHtml(reporter.location) : ''}`
       : 'Unknown';
 
-    const cat = category || 'Other';
+    const cat = escHtml(category || 'Other');
     const subject = `[DojoLink Bug] [${cat}] ${description.trim().slice(0, 50)}${description.trim().length > 50 ? '…' : ''}`;
 
     const reportedAt = timestamp
@@ -56,13 +56,13 @@ router.post('/', requireAnySession, async (req, res) => {
         <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
           <tr><td style="padding:6px 0;color:#888;width:110px">Category</td><td style="padding:6px 0;font-weight:600;color:#1d4ed8">${cat}</td></tr>
           <tr><td style="padding:6px 0;color:#888">Reporter</td><td style="padding:6px 0;font-weight:600">${reporterLine}</td></tr>
-          <tr><td style="padding:6px 0;color:#888">Page</td><td style="padding:6px 0">${pageUrl || 'Unknown'}</td></tr>
+          <tr><td style="padding:6px 0;color:#888">Page</td><td style="padding:6px 0">${escHtml(pageUrl || 'Unknown')}</td></tr>
           <tr><td style="padding:6px 0;color:#888">Time</td><td style="padding:6px 0">${reportedAt}</td></tr>
-          <tr><td style="padding:6px 0;color:#888">Screen</td><td style="padding:6px 0">${screenSize || 'Unknown'}</td></tr>
-          <tr><td style="padding:6px 0;color:#888">Browser</td><td style="padding:6px 0;font-size:12px;color:#555">${userAgent || 'Unknown'}</td></tr>
+          <tr><td style="padding:6px 0;color:#888">Screen</td><td style="padding:6px 0">${escHtml(screenSize || 'Unknown')}</td></tr>
+          <tr><td style="padding:6px 0;color:#888">Browser</td><td style="padding:6px 0;font-size:12px;color:#555">${escHtml(userAgent || 'Unknown')}</td></tr>
         </table>
         <h3 style="color:#1a2e4a;margin-bottom:8px">Description</h3>
-        <p style="white-space:pre-wrap;background:#f5f7fa;padding:14px;border-radius:8px;line-height:1.6">${description.trim()}</p>
+        <p style="white-space:pre-wrap;background:#f5f7fa;padding:14px;border-radius:8px;line-height:1.6">${escHtml(description.trim())}</p>
         ${errorsHtml}
         ${screenshot ? '<p style="color:#888;font-size:13px;margin-top:16px">Screenshot attached.</p>' : ''}
       </div>
