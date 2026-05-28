@@ -5,7 +5,7 @@ import Layout from '../components/layout/Layout';
 import CropModal from '../components/ui/CropModal';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase, SIGNED_TTL } from '../lib/supabase';
 
 
 export default function AccountPage() {
@@ -48,10 +48,12 @@ export default function AccountPage() {
         .upload(path, blob, { upsert: true, cacheControl: '3600', contentType: 'image/jpeg' });
       if (uploadErr) throw new Error(uploadErr.message);
 
-      const { data: { publicUrl } } = supabase.storage.from('profile-pics').getPublicUrl(data.path);
-      const bustedUrl = `${publicUrl}?t=${Date.now()}`;
-      await api.patch('/users/me/avatar', { profile_pic_url: publicUrl });
-      setUser((prev) => ({ ...prev, profilePicUrl: bustedUrl }));
+      const { data: signedData, error: signedErr } = await supabase.storage
+        .from('profile-pics')
+        .createSignedUrl(data.path, SIGNED_TTL);
+      if (signedErr) throw new Error(signedErr.message);
+      await api.patch('/users/me/avatar', { profile_pic_url: signedData.signedUrl });
+      setUser((prev) => ({ ...prev, profilePicUrl: signedData.signedUrl }));
     } catch (err) {
       setPicError('Upload failed. Try again.');
     } finally {
