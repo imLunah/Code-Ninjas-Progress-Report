@@ -73,10 +73,12 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
     setSavingAttendees(true);
     try {
       await api.patch(`/clubs/${session.id}/attendees`, { student_ids: [...draftAttendeeIds] });
-      const updatedAttendees = allStudents
-        .filter((s) => draftAttendeeIds.has(s.id))
-        .map((s) => ({ id: s.id, full_name: s.full_name }));
-      onAttendeesUpdated && onAttendeesUpdated(session.id, updatedAttendees);
+      // Only derive display names from allStudents if it has actually loaded — otherwise
+      // pass null so the parent re-fetches rather than showing an empty list.
+      const updatedAttendees = allStudents.length > 0
+        ? allStudents.filter((s) => draftAttendeeIds.has(s.id)).map((s) => ({ id: s.id, full_name: s.full_name }))
+        : null;
+      if (updatedAttendees !== null) onAttendeesUpdated && onAttendeesUpdated(session.id, updatedAttendees);
       setEditingAttendeesId(null);
     } catch {
       alert('Failed to save attendees. Please try again.');

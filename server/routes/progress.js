@@ -163,7 +163,7 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
 
     await client.query('COMMIT');
     } catch (txErr) {
-      await client.query('ROLLBACK');
+      await client.query('ROLLBACK').catch(() => {});
       throw txErr;
     } finally {
       client.release();
