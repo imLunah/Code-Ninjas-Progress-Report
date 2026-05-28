@@ -180,10 +180,10 @@ router.get('/users', requireAdmin, async (req, res) => {
       FROM users u
       LEFT JOIN locations l ON u.location_id = l.id
       WHERE u.role != 'admin'
-        AND u.active = ${showInactive ? 'false' : 'true'}
+        AND u.active = $1
     `;
-    const params = [];
-    let p = 0;
+    const params = [!showInactive];
+    let p = 1;
 
     if (location_id) { p++; query += ` AND u.location_id = $${p}`; params.push(location_id); }
     if (role && ['manager', 'sensei'].includes(role)) { p++; query += ` AND u.role = $${p}`; params.push(role); }
