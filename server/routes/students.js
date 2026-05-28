@@ -204,10 +204,12 @@ router.patch('/:id/programs/:program', requireManager, requireOwnLocation, async
 
   try {
     const { rows } = await pool.query(`
-      UPDATE student_programs
+      UPDATE student_programs sp
       SET belt_level = $1, belt_sublevel = $2, current_project = $3, project_status = $4
-      WHERE student_id = $5 AND program = $6
-      RETURNING *
+      FROM students s
+      WHERE sp.student_id = $5 AND sp.program = $6
+        AND sp.student_id = s.id AND s.location_id = $7
+      RETURNING sp.*
     `, [
       belt_level !== undefined ? belt_level : null,
       belt_sublevel !== undefined ? belt_sublevel : null,
@@ -215,6 +217,7 @@ router.patch('/:id/programs/:program', requireManager, requireOwnLocation, async
       project_status !== undefined ? project_status : null,
       id,
       decodeURIComponent(program),
+      req.session.activeLocationId,
     ]);
     if (!rows[0]) return res.status(404).json({ error: 'Enrollment not found' });
     res.json(rows[0]);

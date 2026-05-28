@@ -374,7 +374,7 @@ router.patch('/:id/attendees', requireSensei, requireOwnLocation, async (req, re
 router.patch('/:id/notes', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { notes } = req.body;
-  const isManager = req.session.role === 'manager';
+  const isManager = ['manager', 'admin'].includes(req.session.role);
   try {
     const ownershipClause = isManager ? '' : 'AND (sensei_id IS NULL OR sensei_id = $3)';
     const params = isManager
