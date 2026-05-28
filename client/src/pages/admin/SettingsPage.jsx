@@ -102,9 +102,14 @@ export default function SettingsPage() {
               </div>
 
               {savedAnnouncement && !isDirty && (
-                <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                  <p className="text-amber-800 font-ninja text-xs font-semibold uppercase tracking-wide mb-1">Live now</p>
-                  <p className="text-amber-900 font-ninja text-sm">{savedAnnouncement}</p>
+                <div className="mb-4 border border-ninja-border rounded-xl px-4 py-3 flex items-center gap-3">
+                  <svg className="w-4 h-4 text-ninja-blue flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-ninja-blue font-ninja text-xs font-bold uppercase tracking-wide">Live </span>
+                    <span className="text-ninja-navy font-ninja text-sm">{savedAnnouncement}</span>
+                  </div>
                 </div>
               )}
 

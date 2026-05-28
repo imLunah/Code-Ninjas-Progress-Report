@@ -25,7 +25,9 @@ function AnnouncementBanner({ text }) {
           transition={{ duration: 0.2 }}
           className="border-b border-ninja-border px-4 sm:px-6 py-2.5 flex items-center gap-3"
         >
-          <div className="w-1 h-4 rounded-full bg-ninja-blue flex-shrink-0" />
+          <svg className="w-4 h-4 text-ninja-blue flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           <p className="flex-1 text-ninja-navy font-ninja text-sm leading-snug">{text}</p>
           <button
             onClick={dismiss}
