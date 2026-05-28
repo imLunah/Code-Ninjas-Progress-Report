@@ -16,12 +16,15 @@ export default function TodayBoard({ assignments, onRemove }) {
   const handleRemove = async (id) => {
     try {
       await api.delete(`/daily/${id}`);
-      onRemove && onRemove(id);
     } catch (err) {
-      console.error('Failed to remove:', err);
-    } finally {
-      setConfirmId(null);
+      if (!err.message?.toLowerCase().includes('not found')) {
+        console.error('Failed to remove:', err);
+        setConfirmId(null);
+        return;
+      }
     }
+    onRemove && onRemove(id);
+    setConfirmId(null);
   };
 
   if (assignments.length === 0) {

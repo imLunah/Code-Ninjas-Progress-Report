@@ -21,8 +21,11 @@ export function ParentAuthProvider({ children }) {
   }
 
   async function logout() {
-    await api.post('/parent/logout', {});
-    setParent(null);
+    try {
+      await api.post('/parent/logout', {});
+    } finally {
+      setParent(null);
+    }
   }
 
   return (

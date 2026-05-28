@@ -122,7 +122,6 @@ export default function ClubSessionPage() {
   };
 
   const handleSaveAttendees = async () => {
-    if (selectedIds.size === 0) return;
     setSavingAttendees(true);
     try {
       await api.patch(`/clubs/${id}/attendees`, { student_ids: [...selectedIds] });
@@ -215,7 +214,7 @@ export default function ClubSessionPage() {
                 })}
               </div>
               <div className="flex gap-2">
-                <Button size="sm" onClick={handleSaveAttendees} disabled={savingAttendees || selectedIds.size === 0}>
+                <Button size="sm" onClick={handleSaveAttendees} disabled={savingAttendees}>
                   {savingAttendees ? 'Saving...' : 'Save'}
                 </Button>
                 <Button size="sm" variant="secondary" onClick={() => {
