@@ -18,16 +18,15 @@ router.get('/', requireSensei, async (req, res) => {
   try {
     if (role === 'sensei' || role === 'staff') {
       const roleFilter = role === 'staff' ? `u.role IN ('sensei', 'manager')` : `u.role = 'sensei'`;
-      const activeFilter = `AND u.active = ${showInactive ? 'false' : 'true'}`;
       const { rows } = await pool.query(`
         SELECT u.id, u.username, u.display_name, u.role, u.location_id, u.created_at,
                u.profile_pic_url, u.active, COUNT(pl.id)::int AS progress_log_count
         FROM users u
         LEFT JOIN progress_logs pl ON pl.sensei_id = u.id
-        WHERE ${roleFilter} AND u.location_id = $1 ${activeFilter}
+        WHERE ${roleFilter} AND u.location_id = $1 AND u.active = $2
         GROUP BY u.id
         ORDER BY u.role ASC, u.display_name ASC
-      `, [req.session.activeLocationId]);
+      `, [req.session.activeLocationId, !showInactive]);
       return res.json(rows);
     }
 
