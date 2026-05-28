@@ -4,11 +4,11 @@ import { today, formatDate } from '../../utils/dateUtils';
 import Button from '../ui/Button';
 import BeltProgressFields from './BeltProgressFields';
 import ProjectFields from './ProjectFields';
-import { SUB_PROGRAMS, getCurriculum } from '../../utils/progressData';
+import { useCurriculum } from '../../context/CurriculumContext';
 
-function LessonEntryRow({ entry, index, total, program, onChange, onRemove }) {
-  const subProgramOptions = SUB_PROGRAMS[program] || null;
-  const curriculum = getCurriculum(program, entry.subProgram || null) || [];
+function LessonEntryRow({ entry, index, total, program, onChange, onRemove, subPrograms, curriculum: curriculumData }) {
+  const subProgramOptions = subPrograms[program] || null;
+  const curriculum = (entry.subProgram ? curriculumData[entry.subProgram] : curriculumData[program]) || [];
   const moduleOptions = curriculum;
   const isCustomModule = entry.moduleName === '__custom__';
   const lessonOptions = isCustomModule ? [] : (moduleOptions.find((m) => m.module === entry.moduleName)?.lessons || []);
@@ -133,6 +133,7 @@ function LessonEntryRow({ entry, index, total, program, onChange, onRemove }) {
 }
 
 export default function LogEntryForm({ student, program, enrollment, onLogged, sessionDate: sessionDateProp }) {
+  const { subPrograms, curriculum } = useCurriculum();
   const [notes, setNotes] = useState('');
   const [beltLevel, setBeltLevel] = useState(enrollment?.belt_level || '');
   const [beltSublevel, setBeltSublevel] = useState(enrollment?.belt_sublevel || '');
@@ -148,7 +149,7 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
 
   const isCreate = program === 'CREATE';
   const sessionDate = sessionDateProp || today();
-  const hasLessonFields = !!(SUB_PROGRAMS[program] || getCurriculum(program, null)?.length);
+  const hasLessonFields = !!(subPrograms[program] || curriculum[program]?.length);
 
   // Reset lesson entries when program changes
   useEffect(() => {
@@ -282,6 +283,8 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
               program={program}
               onChange={(field, value) => updateEntry(i, field, value)}
               onRemove={() => removeEntry(i)}
+              subPrograms={subPrograms}
+              curriculum={curriculum}
             />
           ))}
           <button

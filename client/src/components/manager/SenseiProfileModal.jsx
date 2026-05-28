@@ -183,9 +183,11 @@ export default function SenseiProfileModal({
                 className="px-5 pt-2 border-t border-ninja-border flex gap-2"
                 style={{ paddingBottom: 'max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 1.5rem))' }}
               >
-                <Button variant="secondary" className="flex-1" onClick={() => { handleClose(); onEditLogin(); }}>
-                  Edit Login
-                </Button>
+                {sensei.role !== 'manager' && (
+                  <Button variant="secondary" className="flex-1" onClick={() => { handleClose(); onEditLogin(); }}>
+                    Edit Login
+                  </Button>
+                )}
                 {sensei.role !== 'manager' && (
                   confirmingRemove ? (
                     <>

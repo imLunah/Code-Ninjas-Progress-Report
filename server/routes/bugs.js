@@ -1,8 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const nodemailer = require('nodemailer');
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
-router.post('/', async (req, res) => {
+// Allow both staff sessions (userId) and parent sessions (parentEmail)
+function requireAnySession(req, res, next) {
+  if (!req.session.userId && !req.session.parentEmail) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  next();
+}
+
+router.post('/', requireAnySession, async (req, res) => {
   const { category, description, screenshot, pageUrl, userAgent, screenSize, timestamp, consoleErrors, reporter } = req.body;
 
   if (!description?.trim()) {
@@ -36,7 +47,7 @@ router.post('/', async (req, res) => {
 
     const errorsHtml = Array.isArray(consoleErrors) && consoleErrors.length > 0
       ? `<h3 style="color:#1a2e4a;margin:20px 0 8px">Console Errors</h3>
-         <pre style="background:#fff8f8;border:1px solid #fca5a5;padding:12px;border-radius:8px;font-size:11px;white-space:pre-wrap;overflow-wrap:break-word;color:#991b1b">${consoleErrors.join('\n')}</pre>`
+         <pre style="background:#fff8f8;border:1px solid #fca5a5;padding:12px;border-radius:8px;font-size:11px;white-space:pre-wrap;overflow-wrap:break-word;color:#991b1b">${consoleErrors.map(escHtml).join('\n')}</pre>`
       : '';
 
     const html = `

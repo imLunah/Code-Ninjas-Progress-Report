@@ -17,7 +17,7 @@ function ClubBadge({ name }) {
 
 export { ClubBadge };
 
-export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpdated, onCheckIn }) {
+export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendeesUpdated, onCheckIn }) {
   const navigate = useNavigate();
   const { user, isReadOnly } = useAuth();
   const isManager = ['manager', 'admin'].includes(user?.role);
@@ -54,7 +54,7 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpda
       setLoadingStudents(true);
       try {
         const { students: data } = await api.get('/students?all=true');
-        setAllStudents(data.filter((s) => s.active !== false));
+        setAllStudents((data ?? []).filter((s) => s.active !== false));
       } catch { /* ignore */ } finally {
         setLoadingStudents(false);
       }
@@ -70,16 +70,19 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpda
   };
 
   const saveAttendees = async (session) => {
-    if (draftAttendeeIds.size === 0) return;
     setSavingAttendees(true);
     try {
       await api.patch(`/clubs/${session.id}/attendees`, { student_ids: [...draftAttendeeIds] });
-      const updatedAttendees = allStudents
-        .filter((s) => draftAttendeeIds.has(s.id))
-        .map((s) => ({ id: s.id, full_name: s.full_name }));
-      onAttendeesUpdated && onAttendeesUpdated(session.id, updatedAttendees);
+      // Only derive display names from allStudents if it has actually loaded — otherwise
+      // pass null so the parent re-fetches rather than showing an empty list.
+      const updatedAttendees = allStudents.length > 0
+        ? allStudents.filter((s) => draftAttendeeIds.has(s.id)).map((s) => ({ id: s.id, full_name: s.full_name }))
+        : null;
+      if (updatedAttendees !== null) onAttendeesUpdated && onAttendeesUpdated(session.id, updatedAttendees);
       setEditingAttendeesId(null);
-    } catch { /* ignore */ } finally {
+    } catch {
+      alert('Failed to save attendees. Please try again.');
+    } finally {
       setSavingAttendees(false);
     }
   };
@@ -88,7 +91,9 @@ export default function ClubSessionsPanel({ sessions, onDeleted, onAttendeesUpda
     try {
       await api.delete(`/clubs/${id}`);
       onDeleted && onDeleted(id);
-    } catch { /* ignore */ } finally {
+    } catch {
+      alert('Failed to delete session. Please try again.');
+    } finally {
       setConfirmId(null);
     }
   };

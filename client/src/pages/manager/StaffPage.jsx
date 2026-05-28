@@ -102,17 +102,19 @@ export default function StaffPage() {
   const [profileLogs, setProfileLogs] = useState([]);
   const [profileLoading, setProfileLoading] = useState(false);
   const [editCredentialsSensei, setEditCredentialsSensei] = useState(null);
+  const [showArchived, setShowArchived] = useState(false);
   const { user, isReadOnly } = useAuth();
 
   const isManager = ['manager', 'admin'].includes(user?.role);
 
   useEffect(() => {
     setLoading(true);
-    api.get('/users?role=staff')
+    const params = showArchived ? '?role=staff&inactive=true' : '?role=staff';
+    api.get(`/users${params}`)
       .then(setSenseis)
       .catch(() => setError('Failed to load staff'))
       .finally(() => setLoading(false));
-  }, [user?.activeLocation?.id]);
+  }, [user?.activeLocation?.id, showArchived]);
 
   const handleAdded = (newSensei) => {
     setSenseis((prev) => [...prev, { ...newSensei, progress_log_count: 0 }]);
@@ -122,10 +124,18 @@ export default function StaffPage() {
     try {
       await api.delete(`/users/${id}`);
       setSenseis((prev) => prev.filter((s) => s.id !== id));
+      setSelectedSensei(null);
     } catch (err) {
       setError(err.message || 'Failed to remove sensei');
-    } finally {
-      setConfirmRemoveId(null);
+    }
+  };
+
+  const handleRestore = async (id) => {
+    try {
+      await api.patch(`/users/${id}/restore`, {});
+      setSenseis((prev) => prev.filter((s) => s.id !== id));
+    } catch (err) {
+      setError(err.message || 'Failed to restore staff member');
     }
   };
 
@@ -152,13 +162,20 @@ export default function StaffPage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-4xl font-bold font-ninja text-ninja-navy tracking-wide">
-              Center <span className="text-ninja-blue">Staff</span>
+              Center <span className="text-ninja-blue">{showArchived ? 'Archive' : 'Staff'}</span>
             </h1>
             <p className="text-ninja-muted font-ninja mt-1">{user?.activeLocation?.name}</p>
           </div>
-          {isManager && !isReadOnly && (
-            <Button onClick={() => setShowAddModal(true)}>+ Add Staff</Button>
-          )}
+          <div className="flex gap-2">
+            {isManager && (
+              <Button variant="secondary" onClick={() => setShowArchived((v) => !v)}>
+                {showArchived ? 'Active Staff' : 'Archived'}
+              </Button>
+            )}
+            {isManager && !isReadOnly && !showArchived && (
+              <Button onClick={() => setShowAddModal(true)}>+ Add Staff</Button>
+            )}
+          </div>
         </div>
 
         {/* Stats */}
@@ -192,8 +209,10 @@ export default function StaffPage() {
           )}
           {!loading && !error && senseis.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-ninja-muted font-ninja">No staff at this location yet.</p>
-              {isManager && !isReadOnly && (
+              <p className="text-ninja-muted font-ninja">
+                {showArchived ? 'No archived staff.' : 'No staff at this location yet.'}
+              </p>
+              {!showArchived && isManager && !isReadOnly && (
                 <p className="text-ninja-muted font-ninja text-sm mt-1">
                   Use "+ Add Staff" to create an account.
                 </p>
@@ -205,7 +224,9 @@ export default function StaffPage() {
               <div className="grid grid-cols-3 border-b border-ninja-border bg-ninja-bg px-5 py-3">
                 <span className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest">Name</span>
                 <span className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest">Username</span>
-                <span className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest text-right">Progress Logs</span>
+                <span className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest text-right">
+                  {showArchived ? 'Action' : 'Progress Logs'}
+                </span>
               </div>
               <div className="divide-y divide-ninja-border">
                 {senseis.map((s, i) => (
@@ -215,7 +236,7 @@ export default function StaffPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.06, duration: 0.25, ease: 'easeOut' }}
                     className="grid grid-cols-3 items-center px-5 py-4 gap-2 hover:bg-ninja-bg cursor-pointer transition-colors"
-                    onClick={() => handleRowClick(s)}
+                    onClick={() => !showArchived && handleRowClick(s)}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       {s.profile_pic_url ? (
@@ -235,10 +256,19 @@ export default function StaffPage() {
                       </div>
                     </div>
                     <p className="font-ninja text-sm text-ninja-muted">@{s.username}</p>
-                    <div className="flex items-center justify-end">
-                      <span className={`text-lg font-bold font-ninja ${s.progress_log_count > 0 ? 'text-ninja-blue' : 'text-ninja-border'}`}>
-                        {s.progress_log_count || 0}
-                      </span>
+                    <div className="flex items-center justify-end gap-2">
+                      {showArchived ? (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleRestore(s.id); }}
+                          className="text-xs font-ninja font-semibold text-green-700 border border-green-300 rounded-lg px-3 py-1 hover:bg-green-50 transition-colors"
+                        >
+                          Restore
+                        </button>
+                      ) : (
+                        <span className={`text-lg font-bold font-ninja ${s.progress_log_count > 0 ? 'text-ninja-blue' : 'text-ninja-border'}`}>
+                          {s.progress_log_count || 0}
+                        </span>
+                      )}
                     </div>
                   </motion.div>
                 ))}

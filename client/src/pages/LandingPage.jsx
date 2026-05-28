@@ -153,6 +153,8 @@ export default function LandingPage() {
         <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
         <span style={{ opacity: 0.3 }}>·</span>
         <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
+        <span style={{ opacity: 0.3 }}>·</span>
+        <Link to="/accessibility" className="hover:text-white transition-colors">Accessibility</Link>
       </motion.footer>
     </motion.div>
   );

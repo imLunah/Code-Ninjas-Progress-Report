@@ -57,22 +57,22 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     ? lesson_entries
     : [{ sub_program: sub_program || null, module_name: module_name || null, lesson_name: lesson_name || null }];
 
-  // Prefer today's pending assignment so logging clears the kid from the board.
-  // Fall back to oldest pending if there's no today assignment (sensei logging late).
-  const pacificToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
-  const { rows: assignmentRows } = await pool.query(
-    `SELECT id, session_date FROM daily_assignments
-     WHERE student_id = $1 AND program = $2 AND completed = false
-     ORDER BY (session_date = $3::date) DESC, session_date ASC, created_at ASC LIMIT 1`,
-    [student_id, program, pacificToday]
-  );
-  const date = assignmentRows[0]
-    ? new Date(assignmentRows[0].session_date).toISOString().split('T')[0]
-    : (session_date || new Date().toISOString().split('T')[0]);
-  const assignmentId = assignmentRows[0]?.id || null;
   const senseiId = req.session.userId;
 
   try {
+    // Prefer today's pending assignment so logging clears the kid from the board.
+    const pacificToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+    const { rows: assignmentRows } = await pool.query(
+      `SELECT id, session_date FROM daily_assignments
+       WHERE student_id = $1 AND program = $2 AND completed = false
+       ORDER BY (session_date = $3::date) DESC, session_date ASC, created_at ASC LIMIT 1`,
+      [student_id, program, pacificToday]
+    );
+    const date = assignmentRows[0]
+      ? new Date(assignmentRows[0].session_date).toISOString().split('T')[0]
+      : (session_date || new Date().toISOString().split('T')[0]);
+    const assignmentId = assignmentRows[0]?.id || null;
+
     const { rows: studentRows } = await pool.query(
       'SELECT id FROM students WHERE id = $1 AND active = true AND location_id = $2',
       [student_id, req.session.activeLocationId]
@@ -80,10 +80,14 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     if (!studentRows[0]) return res.status(404).json({ error: 'Student not found' });
 
     let lastLogId = null;
+    let lastEntry = entries[entries.length - 1];
+    const client = await pool.connect();
 
     // Insert one progress_log row per lesson entry
+    try {
+      await client.query('BEGIN');
     for (const entry of entries) {
-      const { rows: logRows } = await pool.query(`
+      const { rows: logRows } = await client.query(`
         INSERT INTO progress_logs (student_id, program, sensei_id, session_date, belt_level_at, belt_sublevel_at, project_at, status_at, notes, sub_program, module_name, lesson_name)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         RETURNING id
@@ -104,18 +108,15 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
       lastLogId = logRows[0].id;
     }
 
-    // Use last entry's lesson fields for student_programs update
-    const lastEntry = entries[entries.length - 1];
-
     // Always update last_sub_program, last_module_name, last_lesson_name, last_session_date
-    const { rows: enrollmentRows } = await pool.query(
+    const { rows: enrollmentRows } = await client.query(
       'SELECT * FROM student_programs WHERE student_id = $1 AND program = $2',
       [student_id, program]
     );
     const enrollment = enrollmentRows[0];
     if (enrollment) {
       if (update_student) {
-        await pool.query(`
+        await client.query(`
           UPDATE student_programs
           SET belt_level = $1, belt_sublevel = $2, current_project = $3, project_status = $4,
               last_sub_program = $5, last_module_name = $6, last_lesson_name = $7, last_session_date = $8
@@ -134,7 +135,7 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
           program,
         ]);
       } else {
-        await pool.query(`
+        await client.query(`
           UPDATE student_programs
           SET last_sub_program = COALESCE($1, last_sub_program),
               last_module_name = COALESCE($2, last_module_name),
@@ -154,10 +155,18 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
 
     // Mark only the oldest pending assignment complete (not all — there may be multiple check-ins)
     if (assignmentId) {
-      await pool.query(
+      await client.query(
         'UPDATE daily_assignments SET completed = true WHERE id = $1',
         [assignmentId]
       );
+    }
+
+    await client.query('COMMIT');
+    } catch (txErr) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw txErr;
+    } finally {
+      client.release();
     }
 
     // Auto-compute percent_complete using the last lesson entry's fields

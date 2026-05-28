@@ -73,6 +73,9 @@ app.use('/api/daily', require('./routes/daily'));
 app.use('/api/progress', require('./routes/progress'));
 app.use('/api/clubs', require('./routes/clubs'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/curriculum', require('./routes/curriculum'));
+app.use('/api/reports', require('./routes/reports'));
 app.use('/api/bugs', require('./routes/bugs'));
 
 if (process.env.NODE_ENV === 'production') {
@@ -81,6 +84,16 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(__dirname, '../client/dist/index.html'));
   });
 }
+
+// Global error handler — catches next(err) and unhandled throws in sync middleware
+app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
+  console.error('Unhandled error:', err);
+  if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
+});
 
 if (require.main === module) {
   app.listen(PORT, () => {

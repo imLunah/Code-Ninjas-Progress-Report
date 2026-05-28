@@ -8,7 +8,8 @@
     "client": "cd client && npm run dev",
     "build": "cd client && npm run build",
     "seed": "node server/db/seed.js",
-    "import": "node server/db/import.js"
+    "import": "node server/db/import.js",
+    "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
-    "csv-parse": "^6.2.1"
+    "csv-parse": "^6.2.1",
+    "react-doctor": "^0.2.9"
   }
 }

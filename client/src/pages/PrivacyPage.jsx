@@ -7,7 +7,7 @@ export default function PrivacyPage() {
         <div className="mb-8">
           <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-10 w-auto mb-6" />
           <h1 className="text-3xl font-bold font-ninja text-ninja-navy">Privacy Policy</h1>
-          <p className="text-ninja-muted font-ninja text-sm mt-1">Last Updated: May 21, 2026</p>
+          <p className="text-ninja-muted font-ninja text-sm mt-1">Last Updated: May 28, 2026</p>
         </div>
 
         <div className="bg-white border border-ninja-border rounded-2xl p-8 shadow-sm space-y-6 font-ninja text-ninja-navy">
@@ -139,6 +139,46 @@ export default function PrivacyPage() {
             </p>
             <p className="text-sm text-ninja-muted leading-relaxed">
               Certain records may be retained where reasonably necessary for operational, legal, or security purposes.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold mb-2">Analytics and Local Storage</h2>
+            <p className="text-sm text-ninja-muted leading-relaxed mb-2">
+              DojoLink uses <strong>Vercel Analytics</strong> to collect anonymized, aggregated page-view data (such as page visited and general geographic region). No personally identifiable information is included in these analytics reports.
+            </p>
+            <p className="text-sm text-ninja-muted leading-relaxed mb-2">
+              DojoLink stores a small amount of data in your browser's local storage and session storage for functional purposes only:
+            </p>
+            <div className="text-sm text-ninja-muted leading-relaxed space-y-1 mb-2">
+              <p><strong>Theme preference</strong> (localStorage) — remembers whether you selected light or dark mode.</p>
+              <p><strong>Announcement dismissal</strong> (sessionStorage) — remembers that you dismissed a system announcement banner during your current session. This data is cleared when you close your browser tab.</p>
+            </div>
+            <p className="text-sm text-ninja-muted leading-relaxed">
+              No advertising cookies or cross-site tracking technologies are used.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold mb-2">Children's Privacy (COPPA)</h2>
+            <p className="text-sm text-ninja-muted leading-relaxed mb-2">
+              DojoLink stores information <em>about</em> children enrolled at participating franchise locations (such as names, belt levels, and attendance records). This information is entered and managed exclusively by authorized center staff — children do not create accounts, submit personal information, or directly interact with the platform.
+            </p>
+            <p className="text-sm text-ninja-muted leading-relaxed mb-2">
+              Student records are collected for internal educational and operational purposes only, consistent with the Children's Online Privacy Protection Act (COPPA). We do not use or disclose children's information for any commercial, advertising, or marketing purpose.
+            </p>
+            <p className="text-sm text-ninja-muted leading-relaxed">
+              Parents or guardians who wish to review, correct, or request deletion of their child's information should contact the Center Director of their participating franchise location.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold mb-2">California Privacy Rights</h2>
+            <p className="text-sm text-ninja-muted leading-relaxed mb-2">
+              California residents may have rights under the California Consumer Privacy Act (CCPA) regarding personal information collected about them. DojoLink is an internal operational platform used by franchise staff; it does not sell personal information to third parties.
+            </p>
+            <p className="text-sm text-ninja-muted leading-relaxed">
+              California residents may contact the Center Director of their participating franchise location to request access to, correction of, or deletion of personal information held about them, subject to applicable legal limitations.
             </p>
           </section>
 

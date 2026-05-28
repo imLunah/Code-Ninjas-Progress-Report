@@ -2,7 +2,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import ThemeToggle from '../ui/ThemeToggle';
 
-function NavIcon({ id, isActive }) {
+function NavIcon({ id }) {
   return (
     <img
       src={`/icons/${id}.png`}
@@ -32,6 +32,7 @@ export default function Sidebar() {
     { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
     { to: '/clubs', label: 'Clubs', icon: 'clubs' },
     { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
+    { to: '/manager/reports', label: 'Reports', icon: 'report' },
   ];
 
   const senseiLinks = [

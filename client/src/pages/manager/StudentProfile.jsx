@@ -139,56 +139,95 @@ function MobileBeltJourney({ enrollment }) {
   );
 }
 
+const PROGRAM_CARD_GRADIENTS = {
+  'Robotics Academy': 'linear-gradient(135deg, #0a0e21 0%, #1c1045 55%, #3b1f6e 100%)',
+  'AI Academy':       'linear-gradient(135deg, #090c27 0%, #111640 55%, #1e2a7a 100%)',
+  'JR':               'linear-gradient(135deg, #1a0533 0%, #2d1267 55%, #4c1d95 100%)',
+};
+const PROGRAM_CARD_BAR_COLORS = {
+  'Robotics Academy': '#7c3aed',
+  'AI Academy':       '#4338ca',
+  'JR':               '#16a34a',
+};
+
 // ── Mobile: Non-CREATE program card ──────────────────────────────────────────
 function MobileProgramCard({ enrollment }) {
   const { program, percent_complete, last_sub_program, last_module_name, last_lesson_name, last_session_date } = enrollment;
-  const shortName = program === 'Robotics Academy' ? 'Robotics Academy' : program === 'AI Academy' ? 'AI Academy' : program;
-  const barColor = program === 'Robotics Academy' ? '#f97316' : program === 'AI Academy' ? '#6366f1' : '#14b8a6';
+  const gradient = PROGRAM_CARD_GRADIENTS[program] || 'linear-gradient(135deg, #0f172a, #1e293b)';
+  const barColor = PROGRAM_CARD_BAR_COLORS[program] || '#006ADD';
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          {PROGRAM_LOGOS[program] && (
-            <img src={PROGRAM_LOGOS[program]} alt={program} className="w-9 h-9 rounded overflow-hidden object-contain flex-shrink-0" />
+    <div className="rounded-2xl overflow-hidden border border-ninja-border shadow-sm">
+      {/* Hero banner */}
+      <div style={{ background: gradient, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <motion.div
+          style={{ flex: 1, minWidth: 0 }}
+          initial={{ opacity: 0, x: -12 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
+        >
+          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 3, fontFamily: 'Nunito, sans-serif' }}>
+            Code Ninjas
+          </p>
+          <h2 style={{ color: 'white', fontWeight: 800, fontSize: 18, lineHeight: 1.1, fontFamily: 'Nunito, sans-serif' }}>
+            {program}
+          </h2>
+          {last_session_date && (
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 3, fontFamily: 'Nunito, sans-serif' }}>
+              Last: {new Date(String(last_session_date).split('T')[0] + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </p>
           )}
-          <h2 className="font-ninja font-bold text-ninja-navy">{shortName}</h2>
-        </div>
-        <ProgramBadge program={program} size="xs" />
+        </motion.div>
+        {PROGRAM_LOGOS[program] && (
+          <motion.img
+            src={PROGRAM_LOGOS[program]}
+            alt={program}
+            initial={{ opacity: 0, scale: 0.7, x: 12 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
+            style={{ width: 64, height: 64, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.45))' }}
+          />
+        )}
       </div>
 
-      {last_sub_program && (
-        <p className="text-ninja-muted font-ninja text-sm mb-1">
-          <span className="font-semibold text-ninja-navy">Kit:</span> {last_sub_program}
-        </p>
-      )}
-      {last_module_name && (
-        <p className="text-ninja-muted font-ninja text-sm mb-1">
-          <span className="font-semibold text-ninja-navy">Module:</span> {last_module_name}
-          {last_lesson_name && <span> · {last_lesson_name}</span>}
-        </p>
-      )}
-
-      {percent_complete != null && (
-        <div className="mt-2.5">
-          <div className="h-2.5 rounded-full overflow-hidden bg-gray-100">
-            <motion.div
-              className="h-full rounded-full"
-              style={{ backgroundColor: barColor }}
-              initial={{ width: 0 }}
-              animate={{ width: `${percent_complete}%` }}
-              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
-            />
+      {/* Card body */}
+      <div className="bg-white p-4">
+        {last_sub_program && (
+          <p className="text-ninja-muted font-ninja text-sm mb-1">
+            <span className="font-semibold text-ninja-navy">Kit:</span> {last_sub_program}
+          </p>
+        )}
+        {last_module_name && (
+          <p className="text-ninja-muted font-ninja text-sm mb-1">
+            <span className="font-semibold text-ninja-navy">Module:</span> {last_module_name}
+            {last_lesson_name && <span> · {last_lesson_name}</span>}
+          </p>
+        )}
+        {percent_complete != null && (
+          <div className="mt-3">
+            <div className="flex justify-between text-xs font-ninja text-ninja-muted mb-1.5">
+              <span>Progress</span>
+              <motion.span
+                className="font-bold text-ninja-navy"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.45 }}
+              >
+                {Math.round(percent_complete)}%
+              </motion.span>
+            </div>
+            <div className="h-2.5 rounded-full overflow-hidden bg-gray-100">
+              <motion.div
+                className="h-full rounded-full"
+                style={{ backgroundColor: barColor }}
+                initial={{ width: 0 }}
+                animate={{ width: `${percent_complete}%` }}
+                transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1], delay: 0.35 }}
+              />
+            </div>
           </div>
-          <p className="text-right text-xs font-ninja font-bold text-ninja-navy mt-1">{Math.round(percent_complete)}%</p>
-        </div>
-      )}
-
-      {last_session_date && (
-        <p className="text-ninja-muted font-ninja text-xs mt-2">
-          Last session: {new Date(String(last_session_date).split('T')[0] + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-        </p>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -453,6 +492,8 @@ export default function StudentProfile() {
   const [showEdit, setShowEdit] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  const [confirmHardDelete, setConfirmHardDelete] = useState(false);
+  const [hardDeleting, setHardDeleting] = useState(false);
   const [confirmRemoveProgram, setConfirmRemoveProgram] = useState(null);
   const [editingEnrollment, setEditingEnrollment] = useState(null);
   const [showAddProgram, setShowAddProgram] = useState(false);
@@ -501,10 +542,23 @@ export default function StudentProfile() {
       await api.delete(`/students/${id}`);
       navigate('/manager/students');
     } catch {
-      setError('Failed to deactivate ninja');
+      setError('Failed to archive ninja');
       setDeactivating(false);
     } finally {
       setConfirmDeactivate(false);
+    }
+  };
+
+  const handleHardDelete = async () => {
+    setHardDeleting(true);
+    try {
+      await api.delete(`/students/${id}/permanent`);
+      navigate('/manager/students');
+    } catch {
+      setError('Failed to delete ninja');
+      setHardDeleting(false);
+    } finally {
+      setConfirmHardDelete(false);
     }
   };
 
@@ -965,23 +1019,51 @@ export default function StudentProfile() {
                 </div>
               )}
 
-              {/* Deactivate */}
+              {/* Archive / Delete */}
               {isManager && !isReadOnly && (
-                <div className="bg-white rounded-2xl p-4 border border-ninja-border shadow-sm">
+                <div className="bg-white rounded-2xl p-4 border border-ninja-border shadow-sm space-y-3">
+                  {/* Archive */}
                   {confirmDeactivate ? (
                     <div className="flex gap-2">
                       <Button variant="danger" disabled={deactivating} onClick={handleDeactivate} size="sm">
-                        {deactivating ? 'Removing...' : 'Confirm Remove'}
+                        {deactivating ? 'Archiving...' : 'Confirm Archive'}
                       </Button>
                       <Button variant="secondary" onClick={() => setConfirmDeactivate(false)} size="sm">Cancel</Button>
                     </div>
                   ) : (
                     <button
-                      onClick={() => setConfirmDeactivate(true)}
-                      className="w-full text-red-500 font-ninja font-semibold text-sm hover:text-red-600 transition-colors"
+                      onClick={() => { setConfirmDeactivate(true); setConfirmHardDelete(false); }}
+                      className="w-full text-ninja-muted font-ninja font-semibold text-sm hover:text-ninja-navy transition-colors text-left"
                     >
-                      Remove Ninja
+                      Archive Ninja
                     </button>
+                  )}
+
+                  {/* Delete Permanently */}
+                  {!confirmDeactivate && (
+                    <>
+                      <div className="border-t border-ninja-border" />
+                      {confirmHardDelete ? (
+                        <div className="space-y-2">
+                          <p className="text-ninja-red font-ninja text-xs leading-relaxed">
+                            This permanently deletes all progress logs, programs, and session history. Cannot be undone.
+                          </p>
+                          <div className="flex gap-2">
+                            <Button variant="danger" disabled={hardDeleting} onClick={handleHardDelete} size="sm">
+                              {hardDeleting ? 'Deleting...' : 'Delete Permanently'}
+                            </Button>
+                            <Button variant="secondary" onClick={() => setConfirmHardDelete(false)} size="sm">Cancel</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmHardDelete(true)}
+                          className="w-full text-ninja-red font-ninja font-semibold text-sm hover:text-red-700 transition-colors text-left"
+                        >
+                          Delete Permanently
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               )}

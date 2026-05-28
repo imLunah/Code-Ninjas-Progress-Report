@@ -104,7 +104,7 @@ export default function ClubSessionPage() {
       await api.patch(`/clubs/${id}/notes`, { notes: notesDraft });
       setSession((prev) => ({ ...prev, notes: notesDraft, sensei_name: user?.displayName || prev.sensei_name }));
       setEditingNotes(false);
-    } catch { /* ignore */ } finally {
+    } catch { /* editing panel stays open so user can retry */ } finally {
       setSavingNotes(false);
     }
   };
@@ -116,20 +116,23 @@ export default function ClubSessionPage() {
       const c = await api.post(`/clubs/${id}/comments`, { body: commentBody.trim() });
       setComments((prev) => [...prev, c]);
       setCommentBody('');
-    } catch { /* ignore */ } finally {
+    } catch {
+      alert('Failed to post comment. Please try again.');
+    } finally {
       setPostingComment(false);
     }
   };
 
   const handleSaveAttendees = async () => {
-    if (selectedIds.size === 0) return;
     setSavingAttendees(true);
     try {
       await api.patch(`/clubs/${id}/attendees`, { student_ids: [...selectedIds] });
       const updated = allStudents.filter((s) => selectedIds.has(s.id)).map((s) => ({ id: s.id, full_name: s.full_name }));
       setSession((prev) => ({ ...prev, attendees: updated }));
       setEditingAttendees(false);
-    } catch { /* ignore */ } finally {
+    } catch {
+      alert('Failed to save attendees. Please try again.');
+    } finally {
       setSavingAttendees(false);
     }
   };
@@ -142,7 +145,7 @@ export default function ClubSessionPage() {
   };
 
   if (notFound) return <Layout><p className="text-ninja-red font-ninja text-center py-12">Session not found.</p></Layout>;
-  if (loading || !clubDef) return <Layout><p className="text-ninja-muted font-ninja text-center py-12">Loading...</p></Layout>;
+  if (loading || !clubDef || !session) return <Layout><p className="text-ninja-muted font-ninja text-center py-12">Loading...</p></Layout>;
 
   const c = getClubColors(clubDef);
   const filteredStudents = allStudents.filter((s) =>
@@ -215,7 +218,7 @@ export default function ClubSessionPage() {
                 })}
               </div>
               <div className="flex gap-2">
-                <Button size="sm" onClick={handleSaveAttendees} disabled={savingAttendees || selectedIds.size === 0}>
+                <Button size="sm" onClick={handleSaveAttendees} disabled={savingAttendees}>
                   {savingAttendees ? 'Saving...' : 'Save'}
                 </Button>
                 <Button size="sm" variant="secondary" onClick={() => {
