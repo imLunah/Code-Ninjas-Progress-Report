@@ -168,6 +168,7 @@ router.patch('/:id/credentials', requireManager, requireOwnLocation, async (req,
       [targetId, req.session.activeLocationId]
     );
     if (!rows[0]) return res.status(404).json({ error: 'User not found' });
+    if (rows[0].role !== 'sensei') return res.status(403).json({ error: 'Can only edit credentials of senseis' });
     if (username?.trim()) {
       const { rows: existing } = await pool.query(
         'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id != $2',

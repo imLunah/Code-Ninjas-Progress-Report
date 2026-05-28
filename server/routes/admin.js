@@ -145,7 +145,12 @@ router.delete('/locations/:id', requireAdmin, async (req, res) => {
     await client.query(`DELETE FROM student_programs WHERE student_id IN (SELECT id FROM students WHERE location_id = $1)`, [id]);
     await client.query('DELETE FROM students WHERE location_id = $1', [id]);
 
-    // Nullify references from global records to users at this location before deleting them
+    // Nullify all FK references to users at this location before deleting them
+    await client.query(`UPDATE progress_logs SET sensei_id = NULL WHERE sensei_id IN (SELECT id FROM users WHERE location_id = $1)`, [id]);
+    await client.query(`UPDATE progress_log_comments SET user_id = NULL WHERE user_id IN (SELECT id FROM users WHERE location_id = $1)`, [id]);
+    await client.query(`UPDATE club_sessions SET sensei_id = NULL WHERE sensei_id IN (SELECT id FROM users WHERE location_id = $1)`, [id]);
+    await client.query(`UPDATE club_session_comments SET user_id = NULL WHERE user_id IN (SELECT id FROM users WHERE location_id = $1)`, [id]);
+    await client.query(`UPDATE daily_assignments SET sensei_id = NULL WHERE sensei_id IN (SELECT id FROM users WHERE location_id = $1)`, [id]);
     await client.query(`UPDATE club_definitions SET created_by = NULL WHERE created_by IN (SELECT id FROM users WHERE location_id = $1)`, [id]);
     await client.query(`UPDATE app_settings SET updated_by = NULL WHERE updated_by IN (SELECT id FROM users WHERE location_id = $1)`, [id]);
     await client.query(`DELETE FROM users WHERE location_id = $1 AND role != 'admin'`, [id]);
