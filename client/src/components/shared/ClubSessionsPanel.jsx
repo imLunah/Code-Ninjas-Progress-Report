@@ -54,7 +54,7 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
       setLoadingStudents(true);
       try {
         const { students: data } = await api.get('/students?all=true');
-        setAllStudents(data.filter((s) => s.active !== false));
+        setAllStudents((data ?? []).filter((s) => s.active !== false));
       } catch { /* ignore */ } finally {
         setLoadingStudents(false);
       }
@@ -78,7 +78,9 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
         .map((s) => ({ id: s.id, full_name: s.full_name }));
       onAttendeesUpdated && onAttendeesUpdated(session.id, updatedAttendees);
       setEditingAttendeesId(null);
-    } catch { /* ignore */ } finally {
+    } catch {
+      alert('Failed to save attendees. Please try again.');
+    } finally {
       setSavingAttendees(false);
     }
   };
@@ -87,7 +89,9 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
     try {
       await api.delete(`/clubs/${id}`);
       onDeleted && onDeleted(id);
-    } catch { /* ignore */ } finally {
+    } catch {
+      alert('Failed to delete session. Please try again.');
+    } finally {
       setConfirmId(null);
     }
   };

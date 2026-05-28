@@ -497,6 +497,8 @@ router.post('/belt-projects', requireAdmin, async (req, res) => {
   const pool = req.app.get('db');
   const { belt_name, sublevel, project_name } = req.body;
   if (!belt_name || !sublevel || !project_name) return res.status(400).json({ error: 'belt_name, sublevel, and project_name are required' });
+  const sublevelInt = parseInt(sublevel, 10);
+  if (isNaN(sublevelInt) || sublevelInt < 0) return res.status(400).json({ error: 'sublevel must be a non-negative integer' });
   try {
     const { rows: maxOrder } = await pool.query(
       'SELECT COALESCE(MAX(project_order), -1) AS max FROM belt_level_projects WHERE belt_name = $1 AND sublevel = $2',
@@ -504,7 +506,7 @@ router.post('/belt-projects', requireAdmin, async (req, res) => {
     );
     const { rows } = await pool.query(
       'INSERT INTO belt_level_projects (belt_name, sublevel, project_name, project_order) VALUES ($1, $2, $3, $4) RETURNING *',
-      [belt_name, parseInt(sublevel), project_name, maxOrder[0].max + 1]
+      [belt_name, sublevelInt, project_name, maxOrder[0].max + 1]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
