@@ -419,57 +419,69 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
 
   const added = [];
   const duplicates = [];
+  const client = await pool.connect();
 
-  for (const row of incoming) {
-    const fullName = row.full_name?.trim();
-    const program = row.program?.trim();
-    if (!fullName || !program) continue;
+  try {
+    await client.query('BEGIN');
 
-    const beltLevel = BELT_MAP[row.belt_raw?.trim()] || null;
+    for (const row of incoming) {
+      const fullName = row.full_name?.trim();
+      const program = row.program?.trim();
+      if (!fullName || !program) continue;
 
-    // Check for existing student with same name + program at this location
-    const { rows: existing } = await pool.query(
-      `SELECT s.id FROM students s
-       JOIN student_programs sp ON sp.student_id = s.id
-       WHERE LOWER(s.full_name) = LOWER($1) AND s.location_id = $2 AND sp.program = $3 AND s.active = true`,
-      [fullName, locationId, program]
-    );
+      const beltLevel = BELT_MAP[row.belt_raw?.trim()] || null;
 
-    if (existing.length) {
-      duplicates.push(fullName);
-      continue;
-    }
-
-    // Find or create the student (they may exist but not in this program yet)
-    const { rows: existingStudent } = await pool.query(
-      'SELECT id FROM students WHERE LOWER(full_name) = LOWER($1) AND location_id = $2 AND active = true',
-      [fullName, locationId]
-    );
-
-    let studentId;
-    if (existingStudent.length) {
-      studentId = existingStudent[0].id;
-    } else {
-      const birthday = row.birthday ? (() => {
-        const d = new Date(row.birthday);
-        return isNaN(d) ? null : d.toISOString().split('T')[0];
-      })() : null;
-
-      const { rows: inserted } = await pool.query(
-        `INSERT INTO students (full_name, birthday, location_id, parent_name, parent_email, parent_phone)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-        [fullName, birthday, locationId, row.parent_name || null, row.parent_email || null, row.parent_phone || null]
+      // Check for existing student with same name + program at this location
+      const { rows: existing } = await client.query(
+        `SELECT s.id FROM students s
+         JOIN student_programs sp ON sp.student_id = s.id
+         WHERE LOWER(s.full_name) = LOWER($1) AND s.location_id = $2 AND sp.program = $3 AND s.active = true`,
+        [fullName, locationId, program]
       );
-      studentId = inserted[0].id;
+
+      if (existing.length) {
+        duplicates.push(fullName);
+        continue;
+      }
+
+      // Find or create the student (they may exist but not in this program yet)
+      const { rows: existingStudent } = await client.query(
+        'SELECT id FROM students WHERE LOWER(full_name) = LOWER($1) AND location_id = $2 AND active = true',
+        [fullName, locationId]
+      );
+
+      let studentId;
+      if (existingStudent.length) {
+        studentId = existingStudent[0].id;
+      } else {
+        const birthday = row.birthday ? (() => {
+          const d = new Date(row.birthday);
+          return isNaN(d) ? null : d.toISOString().split('T')[0];
+        })() : null;
+
+        const { rows: inserted } = await client.query(
+          `INSERT INTO students (full_name, birthday, location_id, parent_name, parent_email, parent_phone)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+          [fullName, birthday, locationId, row.parent_name || null, row.parent_email || null, row.parent_phone || null]
+        );
+        studentId = inserted[0].id;
+      }
+
+      await client.query(
+        `INSERT INTO student_programs (student_id, program, belt_level, belt_sublevel)
+         VALUES ($1, $2, $3, $4) ON CONFLICT (student_id, program) DO NOTHING`,
+        [studentId, program, beltLevel, beltLevel ? 1 : null]
+      );
+
+      added.push(fullName);
     }
 
-    await pool.query(
-      `INSERT INTO student_programs (student_id, program, belt_level, belt_sublevel)
-       VALUES ($1, $2, $3, $4) ON CONFLICT (student_id, program) DO NOTHING`,
-      [studentId, program, beltLevel, beltLevel ? 1 : null]
-    );
-
-    added.push(fullName);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
   }
 
   res.json({ added: added.length, duplicates });
