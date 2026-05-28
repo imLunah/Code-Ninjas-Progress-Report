@@ -43,7 +43,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       [email.trim()]
     );
     if (!rows.length) {
-      return res.status(401).json({ error: 'No students found linked to that email address.' });
+      return res.status(401).json({ error: 'Invalid email or no account found.' });
     }
 
     await new Promise((resolve, reject) => {
