@@ -80,6 +80,7 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     if (!studentRows[0]) return res.status(404).json({ error: 'Student not found' });
 
     let lastLogId = null;
+    let lastEntry = entries[entries.length - 1];
     const client = await pool.connect();
 
     // Insert one progress_log row per lesson entry
@@ -106,9 +107,6 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
       ]);
       lastLogId = logRows[0].id;
     }
-
-    // Use last entry's lesson fields for student_programs update
-    const lastEntry = entries[entries.length - 1];
 
     // Always update last_sub_program, last_module_name, last_lesson_name, last_session_date
     const { rows: enrollmentRows } = await client.query(
