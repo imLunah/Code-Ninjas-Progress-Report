@@ -30,6 +30,7 @@ router.get('/', requireAuth, async (req, res) => {
   const fetchAll = req.query.all === 'true';
   const limit = fetchAll ? null : Math.min(parseInt(req.query.limit) || 100, 500);
   const offset = fetchAll ? null : Math.max(parseInt(req.query.offset) || 0, 0);
+  const showInactive = req.query.inactive === 'true' && ['manager', 'admin'].includes(req.session.role);
 
   const SORT_ORDERS = {
     last_active: `(SELECT MAX(pl2.session_date) FROM progress_logs pl2 WHERE pl2.student_id = s.id) DESC NULLS LAST, s.full_name ASC`,
@@ -44,7 +45,7 @@ router.get('/', requireAuth, async (req, res) => {
       (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id) AS last_activity,
       ${PROGRAMS_SUBQUERY}
     FROM students s
-    WHERE s.active = true AND s.location_id = $1
+    WHERE s.active = ${showInactive ? 'false' : 'true'} AND s.location_id = $1
   `;
   const params = [req.session.activeLocationId];
   let paramCount = 1;
@@ -96,13 +97,14 @@ router.get('/', requireAuth, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
   const pool = req.app.get('db');
   const { id } = req.params;
-  const isManager = req.session.role === 'manager';
+  const isManager = ['manager', 'admin'].includes(req.session.role);
 
   try {
     const params = isManager ? [id] : [id, req.session.activeLocationId];
     const locationClause = isManager ? '' : 'AND s.location_id = $2';
+    const activeClause  = isManager ? '' : 'AND s.active = true';
     const { rows } = await pool.query(
-      `SELECT s.*, ${PROGRAMS_SUBQUERY} FROM students s WHERE s.id = $1 AND s.active = true ${locationClause}`,
+      `SELECT s.*, ${PROGRAMS_SUBQUERY} FROM students s WHERE s.id = $1 ${activeClause} ${locationClause}`,
       params
     );
     const student = rows[0];
@@ -202,10 +204,12 @@ router.patch('/:id/programs/:program', requireManager, requireOwnLocation, async
 
   try {
     const { rows } = await pool.query(`
-      UPDATE student_programs
+      UPDATE student_programs sp
       SET belt_level = $1, belt_sublevel = $2, current_project = $3, project_status = $4
-      WHERE student_id = $5 AND program = $6
-      RETURNING *
+      FROM students s
+      WHERE sp.student_id = $5 AND sp.program = $6
+        AND sp.student_id = s.id AND s.location_id = $7
+      RETURNING sp.*
     `, [
       belt_level !== undefined ? belt_level : null,
       belt_sublevel !== undefined ? belt_sublevel : null,
@@ -213,6 +217,7 @@ router.patch('/:id/programs/:program', requireManager, requireOwnLocation, async
       project_status !== undefined ? project_status : null,
       id,
       decodeURIComponent(program),
+      req.session.activeLocationId,
     ]);
     if (!rows[0]) return res.status(404).json({ error: 'Enrollment not found' });
     res.json(rows[0]);
@@ -347,6 +352,55 @@ router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
   }
 });
 
+// DELETE /api/students/:id/permanent — hard delete, cascades all related data
+router.delete('/:id/permanent', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'SELECT id FROM students WHERE id = $1 AND location_id = $2',
+      [id, req.session.activeLocationId]
+    );
+    if (!rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Student not found' }); }
+
+    await client.query(`DELETE FROM progress_log_comments WHERE log_id IN (SELECT id FROM progress_logs WHERE student_id = $1)`, [id]);
+    await client.query('DELETE FROM progress_logs WHERE student_id = $1', [id]);
+    await client.query('DELETE FROM daily_assignments WHERE student_id = $1', [id]);
+    await client.query('DELETE FROM student_programs WHERE student_id = $1', [id]);
+    // club_attendees and club_members cascade automatically
+    await client.query('DELETE FROM students WHERE id = $1', [id]);
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error permanently deleting student:', err);
+    res.status(500).json({ error: 'Failed to delete student' });
+  } finally {
+    client.release();
+  }
+});
+
+// PATCH /api/students/:id/restore
+router.patch('/:id/restore', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+  try {
+    const { rows } = await pool.query(
+      'SELECT id FROM students WHERE id = $1 AND active = false AND location_id = $2',
+      [id, req.session.activeLocationId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Archived student not found' });
+    await pool.query('UPDATE students SET active = true WHERE id = $1', [id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error restoring student:', err);
+    res.status(500).json({ error: 'Failed to restore student' });
+  }
+});
+
 // POST /api/students/import — bulk import from CSV data
 router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
@@ -365,57 +419,69 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
 
   const added = [];
   const duplicates = [];
+  const client = await pool.connect();
 
-  for (const row of incoming) {
-    const fullName = row.full_name?.trim();
-    const program = row.program?.trim();
-    if (!fullName || !program) continue;
+  try {
+    await client.query('BEGIN');
 
-    const beltLevel = BELT_MAP[row.belt_raw?.trim()] || null;
+    for (const row of incoming) {
+      const fullName = row.full_name?.trim();
+      const program = row.program?.trim();
+      if (!fullName || !program) continue;
 
-    // Check for existing student with same name + program at this location
-    const { rows: existing } = await pool.query(
-      `SELECT s.id FROM students s
-       JOIN student_programs sp ON sp.student_id = s.id
-       WHERE LOWER(s.full_name) = LOWER($1) AND s.location_id = $2 AND sp.program = $3 AND s.active = true`,
-      [fullName, locationId, program]
-    );
+      const beltLevel = BELT_MAP[row.belt_raw?.trim()] || null;
 
-    if (existing.length) {
-      duplicates.push(fullName);
-      continue;
-    }
-
-    // Find or create the student (they may exist but not in this program yet)
-    const { rows: existingStudent } = await pool.query(
-      'SELECT id FROM students WHERE LOWER(full_name) = LOWER($1) AND location_id = $2 AND active = true',
-      [fullName, locationId]
-    );
-
-    let studentId;
-    if (existingStudent.length) {
-      studentId = existingStudent[0].id;
-    } else {
-      const birthday = row.birthday ? (() => {
-        const d = new Date(row.birthday);
-        return isNaN(d) ? null : d.toISOString().split('T')[0];
-      })() : null;
-
-      const { rows: inserted } = await pool.query(
-        `INSERT INTO students (full_name, birthday, location_id, parent_name, parent_email, parent_phone)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-        [fullName, birthday, locationId, row.parent_name || null, row.parent_email || null, row.parent_phone || null]
+      // Check for existing student with same name + program at this location
+      const { rows: existing } = await client.query(
+        `SELECT s.id FROM students s
+         JOIN student_programs sp ON sp.student_id = s.id
+         WHERE LOWER(s.full_name) = LOWER($1) AND s.location_id = $2 AND sp.program = $3 AND s.active = true`,
+        [fullName, locationId, program]
       );
-      studentId = inserted[0].id;
+
+      if (existing.length) {
+        duplicates.push(fullName);
+        continue;
+      }
+
+      // Find or create the student (they may exist but not in this program yet)
+      const { rows: existingStudent } = await client.query(
+        'SELECT id FROM students WHERE LOWER(full_name) = LOWER($1) AND location_id = $2 AND active = true',
+        [fullName, locationId]
+      );
+
+      let studentId;
+      if (existingStudent.length) {
+        studentId = existingStudent[0].id;
+      } else {
+        const birthday = row.birthday ? (() => {
+          const d = new Date(row.birthday);
+          return isNaN(d) ? null : d.toISOString().split('T')[0];
+        })() : null;
+
+        const { rows: inserted } = await client.query(
+          `INSERT INTO students (full_name, birthday, location_id, parent_name, parent_email, parent_phone)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+          [fullName, birthday, locationId, row.parent_name || null, row.parent_email || null, row.parent_phone || null]
+        );
+        studentId = inserted[0].id;
+      }
+
+      await client.query(
+        `INSERT INTO student_programs (student_id, program, belt_level, belt_sublevel)
+         VALUES ($1, $2, $3, $4) ON CONFLICT (student_id, program) DO NOTHING`,
+        [studentId, program, beltLevel, beltLevel ? 1 : null]
+      );
+
+      added.push(fullName);
     }
 
-    await pool.query(
-      `INSERT INTO student_programs (student_id, program, belt_level, belt_sublevel)
-       VALUES ($1, $2, $3, $4) ON CONFLICT (student_id, program) DO NOTHING`,
-      [studentId, program, beltLevel, beltLevel ? 1 : null]
-    );
-
-    added.push(fullName);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
   }
 
   res.json({ added: added.length, duplicates });

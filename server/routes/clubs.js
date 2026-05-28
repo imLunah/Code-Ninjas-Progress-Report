@@ -325,8 +325,8 @@ router.get('/sessions/:id', requireAuth, async (req, res) => {
 router.patch('/:id/attendees', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { student_ids } = req.body;
-  if (!Array.isArray(student_ids) || student_ids.length === 0) {
-    return res.status(400).json({ error: 'At least one student is required' });
+  if (!Array.isArray(student_ids)) {
+    return res.status(400).json({ error: 'student_ids must be an array' });
   }
   const client = await pool.connect();
   try {
@@ -374,7 +374,7 @@ router.patch('/:id/attendees', requireSensei, requireOwnLocation, async (req, re
 router.patch('/:id/notes', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { notes } = req.body;
-  const isManager = req.session.role === 'manager';
+  const isManager = ['manager', 'admin'].includes(req.session.role);
   try {
     const ownershipClause = isManager ? '' : 'AND (sensei_id IS NULL OR sensei_id = $3)';
     const params = isManager
@@ -420,10 +420,11 @@ router.post('/:id/comments', requireSensei, requireOwnLocation, async (req, res)
 router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   try {
-    await pool.query(
+    const result = await pool.query(
       'DELETE FROM club_sessions WHERE id = $1 AND location_id = $2',
       [req.params.id, req.session.activeLocationId]
     );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Club session not found' });
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete club session' });

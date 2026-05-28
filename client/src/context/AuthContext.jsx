@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
+import { invalidateCurriculumCache } from './CurriculumContext';
 
 export const AuthContext = createContext(null);
 
@@ -32,8 +33,12 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
-    await api.post('/auth/logout', {});
-    setUser(null);
+    try {
+      await api.post('/auth/logout', {});
+    } finally {
+      invalidateCurriculumCache();
+      setUser(null);
+    }
   }
 
   const switchLocation = async (locationId) => {

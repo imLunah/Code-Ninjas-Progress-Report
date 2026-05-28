@@ -51,7 +51,7 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
 
           <div className="flex flex-wrap items-center gap-2 mt-1">
             {[...new Set(assignments.map(a => a.program))].map((program) => (
-              <ProgramBadge key={program} program={program} size="xs" />
+              <ProgramBadge key={program} program={program} size="sm" />
             ))}
             {createAssignment.belt_level && (
               <BeltBadge
@@ -70,12 +70,6 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
           {!allCompleted && !someCompleted && (
             <p className={`font-ninja text-xs mt-1 font-semibold ${isOverdue ? 'text-red-600' : 'text-yellow-600'}`}>
               {isOverdue ? 'Overdue' : 'Not logged yet'}
-            </p>
-          )}
-
-          {student.current_project && (
-            <p className="text-ninja-muted text-sm font-ninja mt-1">
-              {student.current_project} — {student.project_status}
             </p>
           )}
 

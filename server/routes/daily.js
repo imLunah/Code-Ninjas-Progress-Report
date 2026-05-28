@@ -119,6 +119,14 @@ router.patch('/:id/assign', requireManager, requireOwnLocation, async (req, res)
     `, [id, req.session.activeLocationId]);
     if (!existing[0]) return res.status(404).json({ error: 'Assignment not found' });
 
+    if (sensei_id) {
+      const { rows: senseiCheck } = await pool.query(
+        'SELECT id FROM users WHERE id = $1 AND location_id = $2 AND active = true',
+        [sensei_id, req.session.activeLocationId]
+      );
+      if (!senseiCheck[0]) return res.status(400).json({ error: 'Sensei not found at this location' });
+    }
+
     await pool.query(
       'UPDATE daily_assignments SET sensei_id = $1 WHERE id = $2',
       [sensei_id || null, id]

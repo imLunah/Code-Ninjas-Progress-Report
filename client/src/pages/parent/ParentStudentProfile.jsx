@@ -102,12 +102,12 @@ export default function ParentStudentProfile() {
             </p>
           )}
           <p className="text-ninja-muted font-ninja text-xs mt-1">
-            Member since {new Date(student.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            {student.created_at && `Member since ${new Date(student.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`}
           </p>
         </div>
 
         {/* Progress visualizations */}
-        {programs.length > 0 && (student.session_logs || []).length > 0 && (
+        {programs.length > 0 && (
           <ProgressVisuals programs={programs} sessionLogs={student.session_logs || []} />
         )}
 
