@@ -18,7 +18,7 @@
   --ninja-blue:        56 161 255;
   --ninja-blue-hover:  28 138 255;
   --ninja-navy:        208 218 234; /* #d0daed — cool near-white */
-  --ninja-muted:       96 112 140;  /* #60708c — cool blue-gray */
+  --ninja-muted:       138 155 184; /* #8a9bb8 — cool blue-gray, WCAG AA */
 }
 
 /* ── Base ── */
