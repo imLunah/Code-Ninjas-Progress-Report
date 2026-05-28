@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { MotionConfig } from 'framer-motion';
 import { Analytics } from '@vercel/analytics/react';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
@@ -26,6 +27,7 @@ import ParentDashboard from './pages/parent/ParentDashboard';
 import ParentStudentProfile from './pages/parent/ParentStudentProfile';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
+import AccessibilityPage from './pages/AccessibilityPage';
 import LandingPage from './pages/LandingPage';
 import LocationsPage from './pages/admin/LocationsPage';
 import CurriculumPage from './pages/admin/CurriculumPage';
@@ -34,6 +36,7 @@ import SettingsPage from './pages/admin/SettingsPage';
 
 export default function App() {
   return (
+    <MotionConfig reducedMotion="user">
     <BrowserRouter>
       <ThemeProvider>
       <CurriculumProvider>
@@ -76,8 +79,9 @@ export default function App() {
             <Route path="/account" element={<ProtectedRoute role="sensei"><AccountPage /></ProtectedRoute>} />
 
             {/* Public */}
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route path="/terms"   element={<TermsPage />} />
+            <Route path="/privacy"       element={<PrivacyPage />} />
+            <Route path="/terms"         element={<TermsPage />} />
+            <Route path="/accessibility" element={<AccessibilityPage />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
@@ -88,5 +92,6 @@ export default function App() {
       </ThemeProvider>
       <Analytics />
     </BrowserRouter>
+    </MotionConfig>
   );
 }

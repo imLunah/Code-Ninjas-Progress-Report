@@ -301,6 +301,8 @@ export default function LoginPage() {
         <Link to="/privacy" className="hover:text-ninja-blue transition-colors">Privacy Policy</Link>
         <span>·</span>
         <Link to="/terms" className="hover:text-ninja-blue transition-colors">Terms and Conditions</Link>
+        <span>·</span>
+        <Link to="/accessibility" className="hover:text-ninja-blue transition-colors">Accessibility</Link>
       </p>
     </div>
   );
