@@ -4,7 +4,7 @@ import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { BELTS, PROJECTS, STATUSES, getMaxLevel } from '../../utils/beltConfig';
 
-const UPPER_BELTS = ['Purple', 'Brown', 'Red', 'Black'];
+const UPPER_BELTS = ['Black'];
 
 export default function EnrollmentEditModal({ isOpen, onClose, studentId, enrollment, onSaved }) {
   const [form, setForm] = useState({

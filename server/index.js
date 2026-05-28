@@ -85,6 +85,16 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// Global error handler — catches next(err) and unhandled throws in sync middleware
+app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
+  console.error('Unhandled error:', err);
+  if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
+});
+
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`Code Ninjas server running on http://localhost:${PORT}`);
