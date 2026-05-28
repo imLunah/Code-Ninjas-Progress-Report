@@ -143,11 +143,13 @@ export default function AddStudentPage() {
     setLoading(true);
     setError('');
 
+    let createdStudentId = null;
     try {
       const student = await api.post('/students', {
         full_name: name,
         birthday: birthday || null,
       });
+      createdStudentId = student.id;
 
       for (const enrollment of valid) {
         const isCreate = enrollment.program === 'CREATE';
@@ -162,7 +164,12 @@ export default function AddStudentPage() {
 
       navigate(`/manager/students/${student.id}`);
     } catch (err) {
-      setError(err.message || 'Failed to create ninja');
+      if (createdStudentId) {
+        // Student was created but program enrollment failed — navigate to profile so the user can fix it there
+        navigate(`/manager/students/${createdStudentId}`);
+      } else {
+        setError(err.message || 'Failed to create ninja');
+      }
     } finally {
       setLoading(false);
     }
