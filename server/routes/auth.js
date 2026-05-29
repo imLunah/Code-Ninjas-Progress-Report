@@ -37,6 +37,16 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
+    // Verify location is still active before issuing a session (admin exempt — can switch locations)
+    const { rows: locationRows } = await pool.query(
+      'SELECT id, name, slug FROM locations WHERE id = $1 AND active = true',
+      [user.location_id]
+    );
+    const activeLocation = locationRows[0];
+    if (!activeLocation && user.role !== 'admin') {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
     await new Promise((resolve, reject) => {
       req.session.regenerate((err) => (err ? reject(err) : resolve()));
     });
@@ -53,11 +63,6 @@ router.post('/login', loginLimiter, async (req, res) => {
     await new Promise((resolve, reject) => {
       req.session.save((err) => (err ? reject(err) : resolve()));
     });
-
-    const { rows: [activeLocation] } = await pool.query(
-      'SELECT id, name, slug FROM locations WHERE id = $1 AND active = true',
-      [user.location_id]
-    );
     const availableLocations = ['manager', 'admin'].includes(user.role)
       ? (await pool.query('SELECT id, name, slug FROM locations WHERE active = true ORDER BY name')).rows
       : (activeLocation ? [activeLocation] : []);

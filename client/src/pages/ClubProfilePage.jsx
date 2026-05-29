@@ -250,13 +250,14 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
     setUploading(true);
     setUploadError('');
     try {
+      // PATCH DB first — if this fails, storage file is still intact
+      await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { cover_image_url: null });
       if (clubDef.cover_image_url) {
         try {
           const oldPath = extractStoragePath(clubDef.cover_image_url, 'club-resources');
           if (oldPath) await supabase.storage.from('club-resources').remove([oldPath]);
         } catch {}
       }
-      await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { cover_image_url: null });
       onCoverUpdated(null);
     } catch {
       setUploadError('Remove failed. Try again.');
@@ -279,13 +280,14 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
         .from('club-resources')
         .createSignedUrl(data.path, SIGNED_TTL);
       if (signedErr) throw new Error(signedErr.message);
+      // PATCH DB before deleting old file — if PATCH fails, old cover is still intact
+      await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { cover_image_url: signedData.signedUrl });
       if (clubDef.cover_image_url) {
         try {
           const oldPath = extractStoragePath(clubDef.cover_image_url, 'club-resources');
           if (oldPath) await supabase.storage.from('club-resources').remove([oldPath]);
         } catch {}
       }
-      await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { cover_image_url: signedData.signedUrl });
       onCoverUpdated(signedData.signedUrl);
     } catch {
       setUploadError('Upload failed. Try again.');
