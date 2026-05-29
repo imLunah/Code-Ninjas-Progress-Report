@@ -79,9 +79,9 @@ router.get('/', requireAuth, async (req, res) => {
         `SELECT sp.program, COUNT(DISTINCT sp.student_id)::int AS count
          FROM student_programs sp
          JOIN students s ON sp.student_id = s.id
-         WHERE s.active = true AND s.location_id = $1
+         WHERE s.active = $2 AND s.location_id = $1
          GROUP BY sp.program`,
-        [req.session.activeLocationId]
+        [req.session.activeLocationId, !showInactive]
       ),
     ]);
     const total = rows[0]?.total_count ?? 0;
