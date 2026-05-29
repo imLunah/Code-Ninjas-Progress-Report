@@ -51,7 +51,6 @@ router.get('/overview', requireManager, async (req, res) => {
             WHERE pl.student_id = s.id AND pl.session_date >= CURRENT_DATE - INTERVAL '30 days'
           )
         ORDER BY last_session ASC NULLS FIRST
-        LIMIT 20
       `, [locationId]),
 
       // Belt advancements in the last 30 days
@@ -66,7 +65,6 @@ router.get('/overview', requireManager, async (req, res) => {
           AND pl.belt_level_at IS NOT NULL
           AND pl.session_date >= CURRENT_DATE - INTERVAL '30 days'
         ORDER BY pl.student_id, pl.program, pl.belt_level_at, pl.session_date DESC
-        LIMIT 50
       `, [locationId]),
     ]);
 

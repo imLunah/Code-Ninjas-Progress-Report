@@ -122,7 +122,7 @@ function InactiveTable({ data }) {
   return (
     <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
       <h3 className="text-ninja-navy font-ninja font-bold text-base mb-1">No Check-Ins (Last 30 Days)</h3>
-      <p className="text-ninja-muted font-ninja text-xs mb-4">Showing up to 20 students</p>
+      <p className="text-ninja-muted font-ninja text-xs mb-4">{data.length} student{data.length !== 1 ? 's' : ''}</p>
       {data.length === 0 ? (
         <p className="text-ninja-muted font-ninja text-sm">All students active recently.</p>
       ) : (
