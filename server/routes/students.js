@@ -124,7 +124,7 @@ router.get('/:id', requireAuth, async (req, res) => {
     `, [id]);
 
     // Strip parent contact fields for senseis
-    if (req.session.role !== 'manager') {
+    if (!isManager) {
       delete student.parent_name;
       delete student.parent_email;
       delete student.parent_phone;
@@ -234,8 +234,12 @@ router.delete('/:id/programs/:program', requireManager, requireOwnLocation, asyn
 
   try {
     const { rows } = await pool.query(
-      'DELETE FROM student_programs WHERE student_id = $1 AND program = $2 RETURNING id',
-      [id, decodeURIComponent(program)]
+      `DELETE FROM student_programs sp
+       USING students s
+       WHERE sp.student_id = $1 AND sp.program = $2
+         AND sp.student_id = s.id AND s.location_id = $3
+       RETURNING sp.id`,
+      [id, decodeURIComponent(program), req.session.activeLocationId]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Enrollment not found' });
     res.json({ message: 'Program removed' });
