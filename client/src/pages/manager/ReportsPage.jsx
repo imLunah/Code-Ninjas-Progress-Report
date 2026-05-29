@@ -126,7 +126,7 @@ function InactiveTable({ data }) {
       {data.length === 0 ? (
         <p className="text-ninja-muted font-ninja text-sm">All students active recently.</p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
           {data.map(s => (
             <div key={s.id} className="flex items-center justify-between py-1.5 border-b border-ninja-border last:border-0">
               <a href={`/manager/students/${s.id}`} className="font-ninja text-sm text-ninja-navy hover:text-ninja-blue transition-colors">
@@ -150,7 +150,7 @@ function BeltLog({ data }) {
       {data.length === 0 ? (
         <p className="text-ninja-muted font-ninja text-sm">No belt advancements recorded yet.</p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
           {data.map((row, i) => (
             <div key={i} className="flex items-center gap-3 py-1.5 border-b border-ninja-border last:border-0">
               <span
