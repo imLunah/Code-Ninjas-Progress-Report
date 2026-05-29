@@ -62,7 +62,7 @@ router.get('/overview', requireManager, async (req, res) => {
         JOIN students s ON pl.student_id = s.id
         JOIN users u ON pl.sensei_id = u.id
         WHERE s.location_id = $1
-          AND pl.belt_level_at IS NOT NULL
+          AND pl.belt_level_at IN ('White','Yellow','Orange','Green','Blue','Purple','Brown','Red','Black')
           AND pl.session_date >= CURRENT_DATE - INTERVAL '30 days'
         ORDER BY pl.student_id, pl.program, pl.belt_level_at, pl.session_date DESC
       `, [locationId]),
