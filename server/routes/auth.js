@@ -101,11 +101,11 @@ router.post('/switch-location', requireManager, async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      'SELECT id, name, slug FROM locations WHERE id = $1',
+      'SELECT id, name, slug FROM locations WHERE id = $1 AND active = true',
       [locationId]
     );
     const location = rows[0];
-    if (!location) return res.status(404).json({ error: 'Location not found' });
+    if (!location) return res.status(403).json({ error: 'Location not found or inactive' });
     req.session.activeLocationId = location.id;
     res.json({ activeLocation: location });
   } catch (err) {
