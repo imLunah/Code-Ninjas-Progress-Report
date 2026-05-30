@@ -335,7 +335,7 @@ function SublevelBlock({ beltName, sublevel, projects, onAddProject, onRenamePro
 
 // ── CREATE belt editor ────────────────────────────────────────────────────────
 function BeltEditor() {
-  const BELT_NAMES = BELTS.filter(b => b.name !== 'Black').map(b => b.name);
+  const BELT_NAMES = BELTS.map(b => b.name);
   const [selectedBelt, setSelectedBelt] = useState('White');
   const [beltData, setBeltData] = useState(null); // null = not yet fetched
   const [isSeeded, setIsSeeded] = useState(false);
