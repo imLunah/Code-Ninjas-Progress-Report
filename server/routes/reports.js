@@ -7,7 +7,7 @@ router.get('/overview', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const locationId = req.session.activeLocationId;
   try {
-    const [enrollment, belts, activity, inactive, beltLog] = await Promise.all([
+    const [enrollment, belts, inactive, beltLog] = await Promise.all([
       // Students per program
       pool.query(`
         SELECT sp.program, COUNT(DISTINCT sp.student_id)::int AS count
@@ -26,18 +26,6 @@ router.get('/overview', requireManager, async (req, res) => {
         WHERE s.location_id = $1 AND s.active = true AND sp.program = 'CREATE' AND sp.belt_level IS NOT NULL
         GROUP BY sp.belt_level
         ORDER BY sp.belt_level ASC
-      `, [locationId]),
-
-      // Sessions per week (last 8 weeks)
-      pool.query(`
-        SELECT DATE_TRUNC('week', da.session_date::timestamp)::date AS week_start,
-               COUNT(*)::int AS session_count
-        FROM daily_assignments da
-        JOIN students s ON da.student_id = s.id
-        WHERE s.location_id = $1
-          AND da.session_date >= CURRENT_DATE - INTERVAL '56 days'
-        GROUP BY week_start
-        ORDER BY week_start ASC
       `, [locationId]),
 
       // Students with no activity in the last 30 days
@@ -71,7 +59,6 @@ router.get('/overview', requireManager, async (req, res) => {
     res.json({
       enrollment: enrollment.rows,
       belts: belts.rows,
-      activity: activity.rows,
       inactive: inactive.rows,
       beltLog: beltLog.rows,
     });
