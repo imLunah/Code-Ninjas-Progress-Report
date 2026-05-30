@@ -87,36 +87,6 @@ function BeltChart({ data }) {
   );
 }
 
-function ActivityChart({ data }) {
-  const max = Math.max(...data.map(r => r.session_count), 1);
-  return (
-    <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
-      <h3 className="text-ninja-navy font-ninja font-bold text-base mb-4">Sessions per Week (Last 8 Weeks)</h3>
-      {data.length === 0 ? (
-        <p className="text-ninja-muted font-ninja text-sm">No session data yet.</p>
-      ) : (
-        <div className="flex items-end gap-2 h-24">
-          {data.map((row, i) => {
-            const heightPct = Math.round((row.session_count / max) * 100);
-            const weekStr = formatDate(row.week_start);
-            return (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
-                <span className="font-ninja text-xs font-semibold text-ninja-navy">{row.session_count}</span>
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: `${heightPct}%` }}
-                  transition={{ duration: 0.4, delay: i * 0.05, ease: 'easeOut' }}
-                  className="w-full rounded-t-lg min-h-[4px] bg-ninja-blue"
-                />
-                <span className="font-ninja text-[9px] text-ninja-muted">{weekStr?.slice(0, 5)}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function InactiveTable({ data }) {
   return (
@@ -235,8 +205,6 @@ export default function ReportsPage() {
               <EnrollmentChart data={data.enrollment} />
               <BeltChart data={data.belts} />
             </div>
-
-            <ActivityChart data={data.activity} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <InactiveTable data={data.inactive} />
