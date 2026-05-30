@@ -423,12 +423,13 @@ function ResourcesSection({ clubName, clubSlug, locationId, resources: initial, 
 
   const handleDelete = async (r) => {
     try {
+      // DB first — if this fails, storage file is still intact
+      await api.delete(`/clubs/resources/${r.id}`);
+      setResources((prev) => prev.filter((x) => x.id !== r.id));
       if (r.resource_type === 'file' && r.url) {
         const storagePath = extractStoragePath(r.url, 'club-resources');
         if (storagePath) await supabase.storage.from('club-resources').remove([storagePath]);
       }
-      await api.delete(`/clubs/resources/${r.id}`);
-      setResources((prev) => prev.filter((x) => x.id !== r.id));
     } catch { } finally {
       setConfirmDelete(null);
     }
