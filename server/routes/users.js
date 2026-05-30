@@ -115,6 +115,16 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
 router.patch('/me/avatar', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
   const { profile_pic_url } = req.body;
+  if (profile_pic_url) {
+    try {
+      const parsed = new URL(profile_pic_url);
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        return res.status(400).json({ error: 'Invalid URL' });
+      }
+    } catch {
+      return res.status(400).json({ error: 'Invalid URL' });
+    }
+  }
   try {
     await pool.query('UPDATE users SET profile_pic_url = $1 WHERE id = $2', [profile_pic_url || null, req.session.userId]);
     res.json({ ok: true });

@@ -10,7 +10,7 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { formatDate, today } from '../utils/dateUtils';
 import { COLOR_SETS, getClubColors } from '../utils/clubUtils';
-import { supabase } from '../lib/supabase';
+import { supabase, SIGNED_TTL, extractStoragePath } from '../lib/supabase';
 
 const mdComponents = {
   h1: ({ children }) => <h1 className="text-lg font-bold text-ninja-navy mb-1">{children}</h1>,
@@ -250,13 +250,14 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
     setUploading(true);
     setUploadError('');
     try {
+      // PATCH DB first — if this fails, storage file is still intact
+      await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { cover_image_url: null });
       if (clubDef.cover_image_url) {
         try {
-          const oldPath = new URL(clubDef.cover_image_url).pathname.split('/object/public/club-resources/')[1];
+          const oldPath = extractStoragePath(clubDef.cover_image_url, 'club-resources');
           if (oldPath) await supabase.storage.from('club-resources').remove([oldPath]);
         } catch {}
       }
-      await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { cover_image_url: null });
       onCoverUpdated(null);
     } catch {
       setUploadError('Remove failed. Try again.');
@@ -275,15 +276,19 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
         .from('club-resources')
         .upload(path, blob, { cacheControl: '3600', upsert: false, contentType: 'image/jpeg' });
       if (error) throw new Error(error.message);
-      const { data: { publicUrl } } = supabase.storage.from('club-resources').getPublicUrl(data.path);
+      const { data: signedData, error: signedErr } = await supabase.storage
+        .from('club-resources')
+        .createSignedUrl(data.path, SIGNED_TTL);
+      if (signedErr) throw new Error(signedErr.message);
+      // PATCH DB before deleting old file — if PATCH fails, old cover is still intact
+      await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { cover_image_url: signedData.signedUrl });
       if (clubDef.cover_image_url) {
         try {
-          const oldPath = new URL(clubDef.cover_image_url).pathname.split('/object/public/club-resources/')[1];
+          const oldPath = extractStoragePath(clubDef.cover_image_url, 'club-resources');
           if (oldPath) await supabase.storage.from('club-resources').remove([oldPath]);
         } catch {}
       }
-      await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { cover_image_url: publicUrl });
-      onCoverUpdated(publicUrl);
+      onCoverUpdated(signedData.signedUrl);
     } catch {
       setUploadError('Upload failed. Try again.');
     } finally {
@@ -396,8 +401,11 @@ function ResourcesSection({ clubName, clubSlug, locationId, resources: initial, 
         const path = `${locationId}/${clubSlug}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
         const { data, error } = await supabase.storage.from('club-resources').upload(path, file, { cacheControl: '3600', upsert: false });
         if (error) throw new Error(error.message);
-        const { data: { publicUrl } } = supabase.storage.from('club-resources').getPublicUrl(data.path);
-        resourceUrl = publicUrl;
+        const { data: signedData, error: signedErr } = await supabase.storage
+          .from('club-resources')
+          .createSignedUrl(data.path, SIGNED_TTL);
+        if (signedErr) throw new Error(signedErr.message);
+        resourceUrl = signedData.signedUrl;
         fileName = file.name;
         setUploadProgress('Saving...');
       }
@@ -416,9 +424,8 @@ function ResourcesSection({ clubName, clubSlug, locationId, resources: initial, 
   const handleDelete = async (r) => {
     try {
       if (r.resource_type === 'file' && r.url) {
-        const urlObj = new URL(r.url);
-        const pathParts = urlObj.pathname.split('/object/public/club-resources/');
-        if (pathParts[1]) await supabase.storage.from('club-resources').remove([pathParts[1]]);
+        const storagePath = extractStoragePath(r.url, 'club-resources');
+        if (storagePath) await supabase.storage.from('club-resources').remove([storagePath]);
       }
       await api.delete(`/clubs/resources/${r.id}`);
       setResources((prev) => prev.filter((x) => x.id !== r.id));

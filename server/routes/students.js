@@ -38,6 +38,8 @@ router.get('/', requireAuth, async (req, res) => {
     name: `s.full_name ASC`,
   };
   const orderClause = SORT_ORDERS[sort] || SORT_ORDERS.name;
+  const params = [req.session.activeLocationId, !showInactive];
+  let paramCount = 2;
 
   let query = `
     SELECT s.*,
@@ -45,10 +47,8 @@ router.get('/', requireAuth, async (req, res) => {
       (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id) AS last_activity,
       ${PROGRAMS_SUBQUERY}
     FROM students s
-    WHERE s.active = ${showInactive ? 'false' : 'true'} AND s.location_id = $1
+    WHERE s.active = $2 AND s.location_id = $1
   `;
-  const params = [req.session.activeLocationId];
-  let paramCount = 1;
 
   if (search) {
     paramCount++;
@@ -79,9 +79,9 @@ router.get('/', requireAuth, async (req, res) => {
         `SELECT sp.program, COUNT(DISTINCT sp.student_id)::int AS count
          FROM student_programs sp
          JOIN students s ON sp.student_id = s.id
-         WHERE s.active = true AND s.location_id = $1
+         WHERE s.active = $2 AND s.location_id = $1
          GROUP BY sp.program`,
-        [req.session.activeLocationId]
+        [req.session.activeLocationId, !showInactive]
       ),
     ]);
     const total = rows[0]?.total_count ?? 0;
@@ -124,7 +124,7 @@ router.get('/:id', requireAuth, async (req, res) => {
     `, [id]);
 
     // Strip parent contact fields for senseis
-    if (req.session.role !== 'manager') {
+    if (!isManager) {
       delete student.parent_name;
       delete student.parent_email;
       delete student.parent_phone;
@@ -234,8 +234,12 @@ router.delete('/:id/programs/:program', requireManager, requireOwnLocation, asyn
 
   try {
     const { rows } = await pool.query(
-      'DELETE FROM student_programs WHERE student_id = $1 AND program = $2 RETURNING id',
-      [id, decodeURIComponent(program)]
+      `DELETE FROM student_programs sp
+       USING students s
+       WHERE sp.student_id = $1 AND sp.program = $2
+         AND sp.student_id = s.id AND s.location_id = $3
+       RETURNING sp.id`,
+      [id, decodeURIComponent(program), req.session.activeLocationId]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Enrollment not found' });
     res.json({ message: 'Program removed' });
