@@ -77,7 +77,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       role: user.role,
       homeLocationId: user.location_id,
       profilePicUrl: user.profile_pic_url || null,
-      activeLocation,
+      activeLocation: activeLocation ?? null,
       availableLocations,
       announcement,
     });
@@ -157,7 +157,7 @@ router.get('/me', async (req, res) => {
       role: user.role,
       homeLocationId: user.location_id,
       profilePicUrl: user.profile_pic_url || null,
-      activeLocation,
+      activeLocation: activeLocation ?? null,
       availableLocations,
       announcement,
     });
