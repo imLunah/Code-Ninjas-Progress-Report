@@ -261,7 +261,7 @@ router.patch('/:id', requireSensei, requireOwnLocation, async (req, res) => {
   const { notes } = req.body;
   if (!notes?.trim()) return res.status(400).json({ error: 'Notes are required' });
 
-  const isManager = req.session.role === 'manager';
+  const isManager = ['manager', 'admin'].includes(req.session.role);
   try {
     const ownershipClause = isManager ? '' : 'AND progress_logs.sensei_id = $4';
     const params = isManager

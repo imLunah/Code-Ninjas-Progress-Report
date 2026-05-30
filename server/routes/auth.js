@@ -22,7 +22,10 @@ router.post('/login', loginLimiter, async (req, res) => {
 
   try {
     const pool = req.app.get('db');
-    const { rows } = await pool.query('SELECT * FROM users WHERE LOWER(username) = LOWER($1) AND active = true', [username]);
+    const { rows } = await pool.query(
+      'SELECT id, username, display_name, role, location_id, profile_pic_url, password_hash FROM users WHERE LOWER(username) = LOWER($1) AND active = true',
+      [username]
+    );
     const user = rows[0];
 
     if (!user) {
@@ -31,6 +34,16 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    // Verify location is still active before issuing a session (admin exempt — can switch locations)
+    const { rows: locationRows } = await pool.query(
+      'SELECT id, name, slug FROM locations WHERE id = $1 AND active = true',
+      [user.location_id]
+    );
+    const activeLocation = locationRows[0];
+    if (!activeLocation && user.role !== 'admin') {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
@@ -50,11 +63,6 @@ router.post('/login', loginLimiter, async (req, res) => {
     await new Promise((resolve, reject) => {
       req.session.save((err) => (err ? reject(err) : resolve()));
     });
-
-    const { rows: [activeLocation] } = await pool.query(
-      'SELECT id, name, slug FROM locations WHERE id = $1 AND active = true',
-      [user.location_id]
-    );
     const availableLocations = ['manager', 'admin'].includes(user.role)
       ? (await pool.query('SELECT id, name, slug FROM locations WHERE active = true ORDER BY name')).rows
       : (activeLocation ? [activeLocation] : []);
@@ -98,11 +106,11 @@ router.post('/switch-location', requireManager, async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      'SELECT id, name, slug FROM locations WHERE id = $1',
+      'SELECT id, name, slug FROM locations WHERE id = $1 AND active = true',
       [locationId]
     );
     const location = rows[0];
-    if (!location) return res.status(404).json({ error: 'Location not found' });
+    if (!location) return res.status(403).json({ error: 'Location not found or inactive' });
     req.session.activeLocationId = location.id;
     res.json({ activeLocation: location });
   } catch (err) {
