@@ -4,15 +4,15 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 
 export default function AdminBar() {
-  const { user, setViewAs } = useAuth();
+  const { user, viewAs, setViewAs } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
-  const isManager = pathname.startsWith('/manager');
-  const isSensei  = pathname.startsWith('/sensei');
-  const isAdmin   = pathname.startsWith('/admin');
+  const isManager = viewAs === 'manager' || (!viewAs && pathname.startsWith('/manager'));
+  const isSensei  = viewAs === 'sensei'  || (!viewAs && pathname.startsWith('/sensei'));
+  const isAdmin   = viewAs === 'admin'   || (!viewAs && pathname.startsWith('/admin'));
 
   const activeLabel = isManager ? 'Manager' : isSensei ? 'Sensei' : isAdmin ? 'Admin' : null;
 
