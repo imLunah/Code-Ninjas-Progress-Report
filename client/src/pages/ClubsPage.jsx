@@ -319,8 +319,9 @@ function CreateClubModal({ onCreated, onClose }) {
 
 export default function ClubsPage() {
   const navigate = useNavigate();
-  const { user, isReadOnly } = useAuth();
-  const isManager = ['manager', 'admin'].includes(user?.role);
+  const { user, isReadOnly, viewAs } = useAuth();
+  const isSenseiView = user?.role === 'admin' && viewAs === 'sensei';
+  const isManager = ['manager', 'admin'].includes(user?.role) && !isSenseiView;
 
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
