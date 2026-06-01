@@ -177,6 +177,10 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
       setError('Notes are required');
       return;
     }
+    if (isCreate && !beltLevel) {
+      setError('Belt level is required for CREATE logs');
+      return;
+    }
     if (loading) return; // prevent double-submit
 
     setLoading(true);
