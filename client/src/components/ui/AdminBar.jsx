@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 
 export default function AdminBar() {
-  const { user } = useAuth();
+  const { user, setViewAs } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
@@ -17,12 +17,13 @@ export default function AdminBar() {
   const activeLabel = isManager ? 'Manager' : isSensei ? 'Sensei' : isAdmin ? 'Admin' : null;
 
   const options = [
-    { label: 'Manager', path: '/manager/dashboard', active: isManager },
-    { label: 'Sensei',  path: '/sensei/dashboard',  active: isSensei },
-    { label: 'Admin',   path: '/admin/locations',    active: isAdmin },
+    { label: 'Manager', path: '/manager/dashboard', view: 'manager', active: isManager },
+    { label: 'Sensei',  path: '/sensei/dashboard',  view: 'sensei',  active: isSensei },
+    { label: 'Admin',   path: '/admin/locations',    view: 'admin',   active: isAdmin },
   ];
 
-  function go(path) {
+  function go(path, view) {
+    setViewAs(view);
     navigate(path);
     setOpen(false);
   }
@@ -58,14 +59,14 @@ export default function AdminBar() {
         </span>
         <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
         <button
-          onClick={() => navigate('/manager/dashboard')}
+          onClick={() => go('/manager/dashboard', 'manager')}
           className="px-3 py-1 rounded-xl transition-colors"
           style={{ background: isManager ? 'rgb(56,161,255)' : 'transparent', color: isManager ? '#fff' : 'rgba(255,255,255,0.5)' }}
         >
           Manager
         </button>
         <button
-          onClick={() => navigate('/sensei/dashboard')}
+          onClick={() => go('/sensei/dashboard', 'sensei')}
           className="px-3 py-1 rounded-xl transition-colors"
           style={{ background: isSensei ? 'rgb(56,161,255)' : 'transparent', color: isSensei ? '#fff' : 'rgba(255,255,255,0.5)' }}
         >
@@ -73,7 +74,7 @@ export default function AdminBar() {
         </button>
         <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
         <button
-          onClick={() => navigate('/admin/locations')}
+          onClick={() => go('/admin/locations', 'admin')}
           className="px-3 py-1 rounded-xl transition-colors"
           style={{ background: isAdmin ? 'rgb(56,161,255)' : 'transparent', color: isAdmin ? '#fff' : 'rgba(255,255,255,0.5)' }}
         >
@@ -93,10 +94,10 @@ export default function AdminBar() {
               className="flex flex-col gap-1 p-1.5 rounded-2xl shadow-xl font-ninja text-xs font-bold"
               style={pillStyle}
             >
-              {options.map(({ label, path, active }) => (
+              {options.map(({ label, path, view, active }) => (
                 <button
                   key={label}
-                  onClick={() => go(path)}
+                  onClick={() => go(path, view)}
                   className="px-4 py-1.5 rounded-xl text-left transition-colors"
                   style={{
                     background: active ? 'rgb(56,161,255)' : 'transparent',

@@ -485,7 +485,7 @@ function AddProgramForm({ studentId, existingPrograms, onAdded, onCancel }) {
 export default function StudentProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, isReadOnly } = useAuth();
+  const { user, isReadOnly, viewAs } = useAuth();
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -498,7 +498,8 @@ export default function StudentProfile() {
   const [editingEnrollment, setEditingEnrollment] = useState(null);
   const [showAddProgram, setShowAddProgram] = useState(false);
 
-  const isManager = ['manager', 'admin'].includes(user?.role);
+  const isSenseiView = user?.role === 'admin' && viewAs === 'sensei';
+  const isManager = ['manager', 'admin'].includes(user?.role) && !isSenseiView;
 
   useEffect(() => {
     const controller = new AbortController();

@@ -23,7 +23,7 @@ function isLinkActive(link, pathname, search) {
 }
 
 export default function Sidebar() {
-  const { user, logout, switchLocation } = useAuth();
+  const { user, logout, switchLocation, viewAs } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -42,7 +42,8 @@ export default function Sidebar() {
     { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
   ];
 
-  const navLinks = ['manager', 'admin'].includes(user?.role) ? managerLinks : user?.role === 'sensei' ? senseiLinks : [];
+  const isSenseiView = user?.role === 'admin' && viewAs === 'sensei';
+  const navLinks = isSenseiView ? senseiLinks : ['manager', 'admin'].includes(user?.role) ? managerLinks : user?.role === 'sensei' ? senseiLinks : [];
 
   const initials = user?.displayName?.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase() || '?';
 
@@ -61,7 +62,7 @@ export default function Sidebar() {
       {/* Center switcher */}
       {user && (
         <div className="px-3 pt-3">
-          {['manager', 'admin'].includes(user.role) ? (
+          {['manager', 'admin'].includes(user.role) && !isSenseiView ? (
             <select
               value={user.activeLocation?.id ?? ''}
               onChange={(e) => switchLocation(Number(e.target.value))}
