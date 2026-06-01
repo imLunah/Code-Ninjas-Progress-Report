@@ -10,6 +10,7 @@ export default function AccountPage() {
   const navigate = useNavigate();
 
   const [username, setUsername] = useState(user?.username || '');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [saving, setSaving] = useState(false);
@@ -58,13 +59,17 @@ export default function AccountPage() {
 
     const payload = {};
     if (trimmedUsername && trimmedUsername !== user?.username) payload.username = trimmedUsername;
-    if (trimmedPassword) payload.new_password = trimmedPassword;
+    if (trimmedPassword) {
+      payload.new_password = trimmedPassword;
+      payload.current_password = currentPassword.trim();
+    }
     if (!Object.keys(payload).length) return setSuccess('No changes to save.');
 
     setSaving(true);
     try {
       await api.patch('/users/me', payload);
       if (payload.username) setUser((prev) => ({ ...prev, username: payload.username }));
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setSuccess('Account updated successfully.');
@@ -177,6 +182,19 @@ export default function AccountPage() {
                 className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
               />
             </div>
+            {newPassword && (
+              <div>
+                <label className="block text-ninja-muted text-xs font-ninja mb-1.5">Current Password</label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Confirm your current password"
+                  autoComplete="current-password"
+                  className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
+                />
+              </div>
+            )}
             <div>
               <label className="block text-ninja-muted text-xs font-ninja mb-1.5">Confirm New Password</label>
               <input
