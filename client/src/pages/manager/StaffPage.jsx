@@ -1,5 +1,20 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+
+function StaffAvatar({ url, name }) {
+  const [imgError, setImgError] = useState(false);
+  const initials = name?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase();
+  if (url && !imgError) {
+    return (
+      <img src={url} alt={name} onError={() => setImgError(true)} className="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-ninja-border" />
+    );
+  }
+  return (
+    <div className="w-9 h-9 rounded-full bg-ninja-blue flex-shrink-0 flex items-center justify-center border border-ninja-border">
+      <span className="text-white font-ninja font-bold text-sm leading-none">{initials}</span>
+    </div>
+  );
+}
 import Layout from '../../components/layout/Layout';
 import Button from '../../components/ui/Button';
 import AddSenseiModal from '../../components/manager/AddSenseiModal';
@@ -239,15 +254,7 @@ export default function StaffPage() {
                     onClick={() => !showArchived && handleRowClick(s)}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      {s.profile_pic_url ? (
-                        <img src={s.profile_pic_url} alt={s.display_name} className="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-ninja-border" />
-                      ) : (
-                        <div className="w-9 h-9 rounded-full bg-ninja-blue flex-shrink-0 flex items-center justify-center border border-ninja-border">
-                          <span className="text-white font-ninja font-bold text-sm leading-none">
-                            {s.display_name?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
+                      <StaffAvatar url={s.profile_pic_url} name={s.display_name} />
                         <div className="min-w-0 flex-1">
                         <p className="font-ninja font-bold text-ninja-navy truncate">{s.display_name}</p>
                         <span className={`text-[10px] font-ninja font-bold uppercase tracking-wide ${s.role === 'manager' ? 'text-ninja-blue' : 'text-ninja-muted'}`}>
