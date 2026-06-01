@@ -116,13 +116,16 @@ router.patch('/me/avatar', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
   const { profile_pic_url } = req.body;
   if (profile_pic_url) {
-    try {
-      const parsed = new URL(profile_pic_url);
-      if (!['http:', 'https:'].includes(parsed.protocol)) {
+    const isPreset = /^\/profile\/[\w\-]+\.png$/.test(profile_pic_url);
+    if (!isPreset) {
+      try {
+        const parsed = new URL(profile_pic_url);
+        if (!['http:', 'https:'].includes(parsed.protocol)) {
+          return res.status(400).json({ error: 'Invalid URL' });
+        }
+      } catch {
         return res.status(400).json({ error: 'Invalid URL' });
       }
-    } catch {
-      return res.status(400).json({ error: 'Invalid URL' });
     }
   }
   try {

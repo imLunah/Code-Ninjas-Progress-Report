@@ -25,6 +25,27 @@ export default function AccountPage() {
   const [picError, setPicError] = useState('');
   const [cropSrc, setCropSrc] = useState(null);
 
+  const PRESET_AVATARS = [
+    { src: '/profile/ninja-wave.png',     label: 'Wave'    },
+    { src: '/profile/ninja-coder.png',    label: 'Coder'   },
+    { src: '/profile/ninja-coder-2.png',  label: 'Coder 2' },
+    { src: '/profile/ninja-gamer.png',    label: 'Gamer'   },
+    { src: '/profile/ninja-hype.png',     label: 'Hype'    },
+  ];
+
+  const handlePresetSelect = async (src) => {
+    setUploadingPic(true);
+    setPicError('');
+    try {
+      await api.patch('/users/me/avatar', { profile_pic_url: src });
+      setUser((prev) => ({ ...prev, profilePicUrl: src }));
+    } catch {
+      setPicError('Failed to set avatar. Try again.');
+    } finally {
+      setUploadingPic(false);
+    }
+  };
+
   const initials = user?.displayName?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || '?';
 
   const handlePicChange = (e) => {
@@ -146,6 +167,41 @@ export default function AccountPage() {
               onCancel={() => { setCropSrc(null); }}
             />
           )}
+        </motion.div>
+
+        {/* Preset avatars */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08, duration: 0.3 }}
+          className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm"
+        >
+          <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">Choose Avatar</p>
+          <div className="flex gap-3 flex-wrap">
+            {PRESET_AVATARS.map(({ src, label }) => {
+              const isActive = user?.profilePicUrl === src;
+              return (
+                <button
+                  key={src}
+                  type="button"
+                  onClick={() => handlePresetSelect(src)}
+                  disabled={uploadingPic}
+                  className={`relative w-14 h-14 rounded-full overflow-hidden border-2 transition-all hover:scale-105 disabled:opacity-50 ${
+                    isActive ? 'border-ninja-blue ring-2 ring-ninja-blue/30' : 'border-ninja-border hover:border-ninja-blue'
+                  }`}
+                  title={label}
+                >
+                  <img src={src} alt={label} className="w-full h-full object-cover bg-ninja-bg" />
+                  {isActive && (
+                    <div className="absolute inset-0 bg-ninja-blue/20 flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">✓</span>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-ninja-muted font-ninja text-xs mt-3">Or use "Edit Photo" above to upload your own.</p>
         </motion.div>
 
         {/* Username + Password */}
