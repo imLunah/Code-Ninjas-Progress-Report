@@ -10,7 +10,6 @@ export default function AccountPage() {
   const navigate = useNavigate();
 
   const [username, setUsername] = useState(user?.username || '');
-  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [saving, setSaving] = useState(false);
@@ -52,22 +51,20 @@ export default function AccountPage() {
     const trimmedPassword = newPassword.trim();
 
     if (!trimmedUsername && !trimmedPassword) return setError('Enter a new username or password.');
-    if (!currentPassword.trim()) return setError('Current password is required.');
     if (trimmedPassword && trimmedPassword !== confirmPassword.trim()) return setError('Passwords do not match.');
     if (trimmedPassword && (trimmedPassword.length < 6 || !/[A-Z]/.test(trimmedPassword) || !/[^A-Za-z0-9]/.test(trimmedPassword))) {
       return setError('Password must be at least 6 characters and include an uppercase letter and a special character.');
     }
 
-    const payload = { current_password: currentPassword.trim() };
+    const payload = {};
     if (trimmedUsername && trimmedUsername !== user?.username) payload.username = trimmedUsername;
     if (trimmedPassword) payload.new_password = trimmedPassword;
-    if (Object.keys(payload).length === 1) return setSuccess('No changes to save.');
+    if (!Object.keys(payload).length) return setSuccess('No changes to save.');
 
     setSaving(true);
     try {
       await api.patch('/users/me', payload);
       if (payload.username) setUser((prev) => ({ ...prev, username: payload.username }));
-      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setSuccess('Account updated successfully.');
@@ -168,17 +165,6 @@ export default function AccountPage() {
           </div>
 
           <div className="border-t border-ninja-border pt-5 space-y-4">
-            <div>
-              <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1.5">Current Password</label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Required to save any changes"
-                autoComplete="current-password"
-                className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
-              />
-            </div>
             <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide">Change Password</p>
             <div>
               <label className="block text-ninja-muted text-xs font-ninja mb-1.5">New Password</label>
