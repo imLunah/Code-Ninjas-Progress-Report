@@ -1,17 +1,13 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Layout from '../components/layout/Layout';
-import CropModal from '../components/ui/CropModal';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { supabase, SIGNED_TTL } from '../lib/supabase';
-
 
 export default function AccountPage() {
   const { user, setUser, logout } = useAuth();
   const navigate = useNavigate();
-  const fileRef = useRef(null);
 
   const [username, setUsername] = useState(user?.username || '');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -21,67 +17,31 @@ export default function AccountPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const [uploadingPic, setUploadingPic] = useState(false);
-  const [picError, setPicError] = useState('');
-  const [cropSrc, setCropSrc] = useState(null);
+  const [savingAvatar, setSavingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
 
   const PRESET_AVATARS = [
-    { src: '/profile/ninja-wave.png',     label: 'Wave'    },
-    { src: '/profile/ninja-coder.png',    label: 'Coder'   },
-    { src: '/profile/ninja-coder-2.png',  label: 'Coder 2' },
-    { src: '/profile/ninja-gamer.png',    label: 'Gamer'   },
-    { src: '/profile/ninja-hype.png',     label: 'Hype'    },
+    { src: '/profile/ninja-wave.png',    label: 'Wave'    },
+    { src: '/profile/ninja-coder.png',   label: 'Coder'   },
+    { src: '/profile/ninja-coder-2.png', label: 'Coder 2' },
+    { src: '/profile/ninja-gamer.png',   label: 'Gamer'   },
+    { src: '/profile/ninja-hype.png',    label: 'Hype'    },
   ];
 
   const handlePresetSelect = async (src) => {
-    setUploadingPic(true);
-    setPicError('');
+    setSavingAvatar(true);
+    setAvatarError('');
     try {
       await api.patch('/users/me/avatar', { profile_pic_url: src });
       setUser((prev) => ({ ...prev, profilePicUrl: src }));
     } catch {
-      setPicError('Failed to set avatar. Try again.');
+      setAvatarError('Failed to set avatar. Try again.');
     } finally {
-      setUploadingPic(false);
+      setSavingAvatar(false);
     }
   };
 
   const initials = user?.displayName?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || '?';
-
-  const handlePicChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) return setPicError('Please select an image file.');
-    if (file.size > 5 * 1024 * 1024) return setPicError('Image must be under 5 MB.');
-    setPicError('');
-    const reader = new FileReader();
-    reader.onload = () => setCropSrc(reader.result);
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
-  const handleCropConfirm = async (blob) => {
-    setCropSrc(null);
-    setUploadingPic(true);
-    try {
-      const path = `users/${user.id}/avatar.jpg`;
-      const { data, error: uploadErr } = await supabase.storage
-        .from('profile-pics')
-        .upload(path, blob, { upsert: true, cacheControl: '3600', contentType: 'image/jpeg' });
-      if (uploadErr) throw new Error(uploadErr.message);
-
-      const { data: signedData, error: signedErr } = await supabase.storage
-        .from('profile-pics')
-        .createSignedUrl(data.path, SIGNED_TTL);
-      if (signedErr) throw new Error(signedErr.message);
-      await api.patch('/users/me/avatar', { profile_pic_url: signedData.signedUrl });
-      setUser((prev) => ({ ...prev, profilePicUrl: signedData.signedUrl }));
-    } catch (err) {
-      setPicError('Upload failed. Try again.');
-    } finally {
-      setUploadingPic(false);
-    }
-  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -139,7 +99,7 @@ export default function AccountPage() {
                   {initials}
                 </div>
               )}
-              {uploadingPic && (
+              {savingAvatar && (
                 <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 </div>
@@ -150,23 +110,8 @@ export default function AccountPage() {
               <p className="text-white/50 font-ninja text-xs mt-0.5 capitalize">{user?.role === 'manager' ? 'Center Director' : user?.role === 'admin' ? 'Admin' : 'Sensei'}</p>
               <p className="text-white/40 font-ninja text-xs">@{user?.username}</p>
             </div>
-            <button
-              onClick={() => fileRef.current?.click()}
-              disabled={uploadingPic}
-              className="flex-shrink-0 text-xs font-ninja font-semibold text-white/80 border border-white/20 rounded-xl px-3 py-1.5 hover:bg-white/10 transition-colors disabled:opacity-50"
-            >
-              {uploadingPic ? 'Uploading…' : 'Edit Photo'}
-            </button>
           </div>
-          {picError && <p className="text-red-300 font-ninja text-xs mt-2 relative z-10">{picError}</p>}
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePicChange} />
-          {cropSrc && (
-            <CropModal
-              imageSrc={cropSrc}
-              onConfirm={handleCropConfirm}
-              onCancel={() => { setCropSrc(null); }}
-            />
-          )}
+          {avatarError && <p className="text-red-300 font-ninja text-xs mt-2 relative z-10">{avatarError}</p>}
         </motion.div>
 
         {/* Preset avatars */}
@@ -185,7 +130,7 @@ export default function AccountPage() {
                   key={src}
                   type="button"
                   onClick={() => handlePresetSelect(src)}
-                  disabled={uploadingPic}
+                  disabled={savingAvatar}
                   className={`relative w-14 h-14 rounded-full overflow-hidden border-2 transition-all hover:scale-105 disabled:opacity-50 ${
                     isActive ? 'border-ninja-blue ring-2 ring-ninja-blue/30' : 'border-ninja-border hover:border-ninja-blue'
                   }`}
@@ -201,7 +146,6 @@ export default function AccountPage() {
               );
             })}
           </div>
-          <p className="text-ninja-muted font-ninja text-xs mt-3">Or use "Edit Photo" above to upload your own.</p>
         </motion.div>
 
         {/* Username + Password */}
