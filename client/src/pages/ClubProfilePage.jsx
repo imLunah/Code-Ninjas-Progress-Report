@@ -532,8 +532,9 @@ function ResourcesSection({ clubName, clubSlug, locationId, resources: initial, 
 export default function ClubProfilePage() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { user, isReadOnly } = useAuth();
-  const isManager = ['manager', 'admin'].includes(user?.role);
+  const { user, isReadOnly, viewAs } = useAuth();
+  const isSenseiView = user?.role === 'admin' && viewAs === 'sensei';
+  const isManager = ['manager', 'admin'].includes(user?.role) && !isSenseiView;
 
   const [clubDef, setClubDef] = useState(null);
   const [sessions, setSessions] = useState([]);

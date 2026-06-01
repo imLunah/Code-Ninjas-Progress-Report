@@ -19,8 +19,9 @@ export { ClubBadge };
 
 export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendeesUpdated, onCheckIn }) {
   const navigate = useNavigate();
-  const { user, isReadOnly } = useAuth();
-  const isManager = ['manager', 'admin'].includes(user?.role);
+  const { user, isReadOnly, viewAs } = useAuth();
+  const isSenseiView = user?.role === 'admin' && viewAs === 'sensei';
+  const isManager = ['manager', 'admin'].includes(user?.role) && !isSenseiView;
 
   const todayStr = today();
 

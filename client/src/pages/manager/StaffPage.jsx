@@ -118,9 +118,9 @@ export default function StaffPage() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [editCredentialsSensei, setEditCredentialsSensei] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
-  const { user, isReadOnly } = useAuth();
-
-  const isManager = ['manager', 'admin'].includes(user?.role);
+  const { user, isReadOnly, viewAs } = useAuth();
+  const isSenseiView = user?.role === 'admin' && viewAs === 'sensei';
+  const isManager = ['manager', 'admin'].includes(user?.role) && !isSenseiView;
 
   useEffect(() => {
     setLoading(true);
