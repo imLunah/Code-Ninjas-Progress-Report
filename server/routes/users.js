@@ -137,11 +137,18 @@ router.patch('/me/avatar', requireSensei, async (req, res) => {
 // PATCH /api/users/me — any staff can update their own username/password
 router.patch('/me', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
-  const { username, new_password } = req.body;
+  const { username, new_password, current_password } = req.body;
   if (!username?.trim() && !new_password?.trim()) {
     return res.status(400).json({ error: 'Nothing to update' });
   }
+  if (!current_password?.trim()) {
+    return res.status(400).json({ error: 'Current password is required' });
+  }
   try {
+    const { rows: self } = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.session.userId]);
+    const valid = await bcrypt.compare(current_password.trim(), self[0].password_hash);
+    if (!valid) return res.status(403).json({ error: 'Current password is incorrect' });
+
     if (username?.trim()) {
       const { rows } = await pool.query(
         'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id != $2',
