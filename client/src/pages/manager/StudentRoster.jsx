@@ -71,8 +71,9 @@ export default function StudentRoster() {
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, isReadOnly } = useAuth();
-  const isManager = ['manager', 'admin'].includes(user?.role) && !isReadOnly;
+  const { user, isReadOnly, viewAs } = useAuth();
+  const isSenseiView = user?.role === 'admin' && viewAs === 'sensei';
+  const isManager = ['manager', 'admin'].includes(user?.role) && !isReadOnly && !isSenseiView;
   const isLogMode = searchParams.get('mode') === 'log';
 
   const PAGE_SIZE = 25;

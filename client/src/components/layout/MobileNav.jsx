@@ -45,10 +45,11 @@ function AccountIcon({ profilePicUrl, initials }) {
 }
 
 export default function MobileNav() {
-  const { user, switchLocation } = useAuth();
+  const { user, switchLocation, viewAs } = useAuth();
   if (!user) return null;
 
-  const isManager = ['manager', 'admin'].includes(user.role);
+  const isSenseiView = user.role === 'admin' && viewAs === 'sensei';
+  const isManager = ['manager', 'admin'].includes(user.role) && !isSenseiView;
   const dashPath = isManager ? '/manager/dashboard' : '/sensei/dashboard';
   const initials = user.displayName?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || '?';
 
@@ -62,7 +63,7 @@ export default function MobileNav() {
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-ninja-border">
-      <LocationBar user={user} switchLocation={switchLocation} />
+      <LocationBar user={isSenseiView ? { ...user, role: 'sensei' } : user} switchLocation={switchLocation} />
       <div className="flex items-stretch">
         {tabs.map((tab) => (
           <NavLink

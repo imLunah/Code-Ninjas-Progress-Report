@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [viewAs, setViewAs] = useState(null);
 
   useEffect(() => {
     api.get('/auth/me')
@@ -37,6 +38,7 @@ export function AuthProvider({ children }) {
       await api.post('/auth/logout', {});
     } finally {
       invalidateCurriculumCache();
+      setViewAs(null);
       setUser(null);
     }
   }
@@ -49,7 +51,7 @@ export function AuthProvider({ children }) {
   const isReadOnly = user?.role === 'manager' && user?.activeLocation?.id !== user?.homeLocationId;
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, login, logout, switchLocation, isReadOnly }}>
+    <AuthContext.Provider value={{ user, setUser, loading, login, logout, switchLocation, isReadOnly, viewAs, setViewAs }}>
       {children}
       {sessionExpired && (
         <SessionTimeoutModal onDismiss={() => { setSessionExpired(false); setUser(null); }} />
