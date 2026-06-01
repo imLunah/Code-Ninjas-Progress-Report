@@ -161,14 +161,6 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
       );
     }
 
-    await client.query('COMMIT');
-    } catch (txErr) {
-      await client.query('ROLLBACK').catch(() => {});
-      throw txErr;
-    } finally {
-      client.release();
-    }
-
     // Auto-compute percent_complete using the last lesson entry's fields
     const lastModuleName = lastEntry.module_name;
     const lastSubProgram = lastEntry.sub_program;
@@ -176,12 +168,12 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     if (program === 'AI Academy' && lastModuleName) {
       const totalLessons = AI_MODULE_LESSON_COUNTS[lastModuleName];
       if (totalLessons) {
-        const { rows: cntRows } = await pool.query(
+        const { rows: cntRows } = await client.query(
           'SELECT COUNT(DISTINCT lesson_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name = $3 AND lesson_name IS NOT NULL',
           [student_id, program, lastModuleName]
         );
         const pct = Math.min(100, Math.round((parseInt(cntRows[0].cnt) / totalLessons) * 100));
-        await pool.query(
+        await client.query(
           'UPDATE student_programs SET percent_complete = $1 WHERE student_id = $2 AND program = $3',
           [pct, student_id, program]
         );
@@ -191,14 +183,14 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
       if (lastSubProgram === 'JR Coding' && lastModuleName) {
         const JR_CODING_MODULES = ['Module 1', 'Module 2', 'Module 3', 'Module 4', 'Module 5',
           'Module 6', 'Module 7', 'Module 8', 'Module 9', 'Module 10'];
-        const { rows: modRows } = await pool.query(
+        const { rows: modRows } = await client.query(
           'SELECT DISTINCT module_name FROM progress_logs WHERE student_id = $1 AND program = $2 AND sub_program = $3 AND module_name IS NOT NULL',
           [student_id, program, 'JR Coding']
         );
         const highestIdx = Math.max(-1, ...modRows.map((r) => JR_CODING_MODULES.indexOf(r.module_name)));
         if (highestIdx >= 0) {
           const pct = Math.round(((highestIdx + 1) / JR_CODING_MODULES.length) * 100);
-          await pool.query(
+          await client.query(
             'UPDATE student_programs SET percent_complete = $1 WHERE student_id = $2 AND program = $3',
             [pct, student_id, program]
           );
@@ -206,7 +198,7 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
       } else if (lastSubProgram === 'Snap Circuits') {
         const lastLessonName = lastEntry.lesson_name;
         if (lastLessonName) {
-          const { rows: lessonRows } = await pool.query(
+          const { rows: lessonRows } = await client.query(
             'SELECT lesson_name FROM progress_logs WHERE student_id = $1 AND program = $2 AND sub_program = $3 AND lesson_name IS NOT NULL',
             [student_id, program, 'Snap Circuits']
           );
@@ -217,7 +209,7 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
           const highest = nums.length > 0 ? Math.max(0, ...nums) : 0;
           if (highest > 0) {
             const pct = Math.min(100, Math.round((highest / 24) * 100));
-            await pool.query(
+            await client.query(
               'UPDATE student_programs SET percent_complete = $1 WHERE student_id = $2 AND program = $3',
               [pct, student_id, program]
             );
@@ -232,13 +224,21 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
           ? 'SELECT COUNT(DISTINCT module_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND sub_program = $3 AND module_name IS NOT NULL'
           : 'SELECT COUNT(DISTINCT module_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name IS NOT NULL';
         const cntParams = lastSubProgram ? [student_id, program, lastSubProgram] : [student_id, program];
-        const { rows: cntRows } = await pool.query(cntSql, cntParams);
+        const { rows: cntRows } = await client.query(cntSql, cntParams);
         const pct = Math.min(100, Math.round((parseInt(cntRows[0].cnt) / totalModules) * 100));
-        await pool.query(
+        await client.query(
           'UPDATE student_programs SET percent_complete = $1 WHERE student_id = $2 AND program = $3',
           [pct, student_id, program]
         );
       }
+    }
+
+    await client.query('COMMIT');
+    } catch (txErr) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw txErr;
+    } finally {
+      client.release();
     }
 
     const { rows } = await pool.query(`

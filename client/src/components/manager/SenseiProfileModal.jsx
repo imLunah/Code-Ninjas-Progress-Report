@@ -5,12 +5,14 @@ import Button from '../ui/Button';
 import { formatDate } from '../../utils/dateUtils';
 
 function Avatar({ url, name }) {
+  const [imgError, setImgError] = useState(false);
   const initials = name?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || '?';
-  if (url) {
+  if (url && !imgError) {
     return (
       <img
         src={url}
         alt={name}
+        onError={() => setImgError(true)}
         className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg"
       />
     );

@@ -61,7 +61,7 @@ export default function LogProgressPage() {
   }, [id]);
 
   const handleLogged = (newLog) => {
-    navigate(dashboardPath);
+    navigate(dashboardPath, { replace: true });
   };
 
   if (loading) {

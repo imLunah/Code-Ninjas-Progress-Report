@@ -220,6 +220,7 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [cropSrc, setCropSrc] = useState(null);
+  const [coverError, setCoverError] = useState(false);
   const fileInputRef = useRef(null);
 
   const initials = clubDef.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -300,8 +301,8 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
     <div className="bg-white border border-ninja-border rounded-2xl shadow-sm overflow-hidden">
       {/* Cover image / color banner */}
       <div className="relative h-28 w-full overflow-hidden">
-        {clubDef.cover_image_url ? (
-          <img src={clubDef.cover_image_url} alt={clubDef.name} className="w-full h-full object-cover" />
+        {clubDef.cover_image_url && !coverError ? (
+          <img src={clubDef.cover_image_url} alt={clubDef.name} onError={() => setCoverError(true)} className="w-full h-full object-cover" />
         ) : (
           <div className={`w-full h-full flex items-center justify-center ${colors.bg}`}>
             <span className={`font-ninja font-black text-4xl opacity-30 ${colors.text}`}>{initials}</span>

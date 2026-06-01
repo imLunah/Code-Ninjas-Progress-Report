@@ -22,6 +22,7 @@ const COLOR_OPTIONS = [
 function ClubCard({ club, onClick, onDelete, onEdit, canManage }) {
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [coverError, setCoverError] = useState(false);
   const c = COLOR_SETS[club.color_key] || COLOR_SETS.blue;
 
   const handleDelete = async (e) => {
@@ -37,9 +38,9 @@ function ClubCard({ club, onClick, onDelete, onEdit, canManage }) {
 
   return (
     <div className="relative bg-white border border-ninja-border rounded-2xl shadow-sm hover:border-ninja-blue hover:shadow-md transition-all group overflow-hidden">
-      {club.cover_image_url && (
+      {club.cover_image_url && !coverError && (
         <div className="h-28 w-full overflow-hidden bg-ninja-bg">
-          <img src={club.cover_image_url} alt={club.name} className="w-full h-full object-cover" />
+          <img src={club.cover_image_url} alt={club.name} onError={() => setCoverError(true)} className="w-full h-full object-cover" />
         </div>
       )}
       <button
