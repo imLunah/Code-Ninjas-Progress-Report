@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import StudentCard from '../../components/shared/StudentCard';
 import ClubSessionsPanel from '../../components/shared/ClubSessionsPanel';
-import AnnouncementsPanel from '../../components/shared/AnnouncementsPanel';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
@@ -76,8 +75,6 @@ export default function SenseiDashboard() {
             </p>
           )}
         </div>
-
-        <AnnouncementsPanel />
 
         {allGrouped.length > 0 && (
           <div className="grid grid-cols-3 gap-4">
