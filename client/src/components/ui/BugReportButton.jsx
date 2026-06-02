@@ -84,7 +84,7 @@ export default function BugReportButton({ reporter }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-40 bg-white border border-ninja-border text-ninja-muted hover:text-ninja-navy shadow-lg rounded-full px-3 py-2 font-ninja text-xs font-semibold flex items-center gap-1.5 transition-all hover:shadow-xl"
+        className="hidden lg:flex fixed bottom-6 right-6 z-40 bg-white border border-ninja-border text-ninja-muted hover:text-ninja-navy shadow-lg rounded-full px-3 py-2 font-ninja text-xs font-semibold items-center gap-1.5 transition-all hover:shadow-xl"
         title="Report a bug"
       >
         <BugIcon />
