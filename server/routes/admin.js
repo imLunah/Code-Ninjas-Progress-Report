@@ -299,7 +299,6 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
       await client.query('UPDATE club_sessions SET sensei_id = NULL WHERE sensei_id = $1', [id]);
       await client.query('UPDATE club_definitions SET created_by = NULL WHERE created_by = $1', [id]);
       await client.query('UPDATE app_settings SET updated_by = NULL WHERE updated_by = $1', [id]);
-      await client.query('UPDATE messages SET sender_id = NULL WHERE sender_id = $1', [id]);
       await client.query('UPDATE announcements SET created_by = NULL WHERE created_by = $1', [id]);
       await client.query('DELETE FROM users WHERE id = $1', [id]);
       await client.query('COMMIT');
