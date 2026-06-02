@@ -288,13 +288,19 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      await client.query('UPDATE progress_logs SET sensei_id = NULL WHERE sensei_id = $1', [id]);
-      await client.query('UPDATE progress_log_comments SET user_id = NULL WHERE user_id = $1', [id]);
-      await client.query('UPDATE club_sessions SET sensei_id = NULL WHERE sensei_id = $1', [id]);
-      await client.query('UPDATE club_session_comments SET user_id = NULL WHERE user_id = $1', [id]);
+      // Delete comments on OTHER senseis' logs authored by this user (not covered by cascade below)
+      await client.query('DELETE FROM progress_log_comments WHERE user_id = $1', [id]);
+      // Delete this sensei's logs — cascades to all remaining comments on those logs
+      await client.query('DELETE FROM progress_logs WHERE sensei_id = $1', [id]);
+      // Delete club session comments by this user (NOT NULL FK — cannot nullify)
+      await client.query('DELETE FROM club_session_comments WHERE user_id = $1', [id]);
+      // Nullify nullable FK references
       await client.query('UPDATE daily_assignments SET sensei_id = NULL WHERE sensei_id = $1', [id]);
+      await client.query('UPDATE club_sessions SET sensei_id = NULL WHERE sensei_id = $1', [id]);
       await client.query('UPDATE club_definitions SET created_by = NULL WHERE created_by = $1', [id]);
       await client.query('UPDATE app_settings SET updated_by = NULL WHERE updated_by = $1', [id]);
+      await client.query('UPDATE messages SET sender_id = NULL WHERE sender_id = $1', [id]);
+      await client.query('UPDATE announcements SET created_by = NULL WHERE created_by = $1', [id]);
       await client.query('DELETE FROM users WHERE id = $1', [id]);
       await client.query('COMMIT');
       res.json({ ok: true });
