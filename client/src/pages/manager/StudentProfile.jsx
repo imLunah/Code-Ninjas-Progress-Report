@@ -1020,7 +1020,7 @@ export default function StudentProfile() {
                     {showParentQR && (
                       <div className="pt-2 flex flex-col items-center gap-1.5">
                         <img
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(window.location.origin + '/login?tab=parent')}`}
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent('https://dojolink-neon.vercel.app/login?tab=parent')}`}
                           alt="Parent portal QR code"
                           className="rounded-lg border border-ninja-border"
                           width={160}
