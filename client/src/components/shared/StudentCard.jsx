@@ -2,6 +2,13 @@ import { today } from '../../utils/dateUtils';
 import BeltBadge from '../ui/BeltBadge';
 import ProgramBadge from '../ui/ProgramBadge';
 
+function isBirthdayToday(birthday) {
+  if (!birthday) return false;
+  const bday = String(birthday).split('T')[0];
+  const todayMMDD = today().slice(5);
+  return bday.slice(5) === todayMMDD;
+}
+
 export default function StudentCard({ student, onClick, onLogProgress }) {
   // Support both single-assignment (TodayBoard) and grouped (SenseiDashboard) views.
   // When grouped, student.assignments contains all of today's assignments for this student.
@@ -24,6 +31,7 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
 
   // For CREATE badge details, pull from the primary assignment or the student object
   const createAssignment = assignments.find((a) => a.program === 'CREATE') || {};
+  const isBirthday = isBirthdayToday(student.birthday);
 
   return (
     <div
@@ -37,6 +45,7 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <h3 className="text-ninja-navy font-ninja font-bold text-lg truncate">
               {student.student_name || student.full_name}
+              {isBirthday && <span className="ml-1.5" title="Birthday today!">🎂</span>}
             </h3>
             {allCompleted && (
               <span className="text-green-500 text-lg" title="All done">✓</span>

@@ -310,40 +310,4 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
   }
 });
 
-// GET /api/admin/settings
-router.get('/settings', requireAdmin, async (req, res) => {
-  const pool = req.app.get('db');
-  try {
-    const { rows } = await pool.query('SELECT key, value, updated_at FROM app_settings');
-    const settings = rows.reduce((acc, r) => ({ ...acc, [r.key]: r.value }), {});
-    res.json(settings);
-  } catch (err) {
-    console.error('Error fetching settings:', err);
-    res.status(500).json({ error: 'Failed to fetch settings' });
-  }
-});
-
-// PUT /api/admin/settings/:key
-router.put('/settings/:key', requireAdmin, async (req, res) => {
-  const pool = req.app.get('db');
-  const { key } = req.params;
-  const { value } = req.body;
-
-  const ALLOWED_KEYS = ['announcement'];
-  if (!ALLOWED_KEYS.includes(key)) return res.status(400).json({ error: 'Unknown setting key' });
-
-  try {
-    await pool.query(
-      `INSERT INTO app_settings (key, value, updated_by, updated_at)
-       VALUES ($1, $2, $3, NOW())
-       ON CONFLICT (key) DO UPDATE SET value = $2, updated_by = $3, updated_at = NOW()`,
-      [key, value || null, req.session.userId]
-    );
-    res.json({ ok: true, key, value: value || null });
-  } catch (err) {
-    console.error('Error saving setting:', err);
-    res.status(500).json({ error: 'Failed to save setting' });
-  }
-});
-
 module.exports = router;
