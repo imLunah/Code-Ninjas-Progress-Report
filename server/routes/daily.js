@@ -16,6 +16,7 @@ const ASSIGNMENT_SELECT = `
     da.completed,
     da.program,
     s.full_name as student_name,
+    s.birthday,
     sp.belt_level,
     sp.belt_sublevel,
     sp.current_project,
