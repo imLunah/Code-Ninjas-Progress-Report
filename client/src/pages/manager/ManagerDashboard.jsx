@@ -5,6 +5,7 @@ import TodayBoard from '../../components/manager/TodayBoard';
 import AddStudentToday from '../../components/manager/AddStudentToday';
 import CheckInClubModal from '../../components/manager/CheckInClubModal';
 import ClubSessionsPanel from '../../components/shared/ClubSessionsPanel';
+import AnnouncementsPanel from '../../components/shared/AnnouncementsPanel';
 import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
@@ -77,6 +78,8 @@ export default function ManagerDashboard() {
             </Button>
           )}
         </div>
+
+        <AnnouncementsPanel isManager={!isReadOnly} />
 
 {/* Desktop stat strip */}
         {!loading && !error && (
