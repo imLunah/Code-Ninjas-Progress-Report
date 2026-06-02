@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
@@ -47,6 +48,15 @@ function AnnouncementBanner({ text }) {
 export default function Layout({ children }) {
   const { user } = useAuth();
   const [bugOpen, setBugOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (user?.mustResetPassword && location.pathname !== '/account') {
+      navigate('/account', { replace: true });
+    }
+  }, [user?.mustResetPassword, location.pathname, navigate]);
+
   return (
     <div className="min-h-[100dvh] bg-ninja-bg lg:flex">
       <Sidebar onOpenBug={() => setBugOpen(true)} />

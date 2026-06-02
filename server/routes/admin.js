@@ -216,7 +216,7 @@ router.post('/users', requireAdmin, async (req, res) => {
     const tempPassword = generateTempPassword();
     const hash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
     const { rows } = await pool.query(
-      'INSERT INTO users (username, password_hash, display_name, role, location_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, display_name, role, location_id, active, created_at',
+      'INSERT INTO users (username, password_hash, display_name, role, location_id, must_reset_password) VALUES ($1, $2, $3, $4, $5, true) RETURNING id, username, display_name, role, location_id, active, created_at',
       [username.trim(), hash, display_name.trim(), role, location_id]
     );
     const { rows: locRows } = await pool.query('SELECT name FROM locations WHERE id = $1', [location_id]);
@@ -268,7 +268,7 @@ router.patch('/users/:id/reset-password', requireAdmin, async (req, res) => {
 
     const tempPassword = generateTempPassword();
     const hash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
-    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, id]);
+    await pool.query('UPDATE users SET password_hash = $1, must_reset_password = true WHERE id = $2', [hash, id]);
     res.json({ username: rows[0].username, temp_password: tempPassword });
   } catch (err) {
     console.error('Error resetting password:', err);
