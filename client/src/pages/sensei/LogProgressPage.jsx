@@ -8,6 +8,7 @@ import LogEntryForm from '../../components/sensei/LogEntryForm';
 import PinnedNote from '../../components/shared/PinnedNote';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import BirthdayConfetti, { isBirthdayToday } from '../../components/shared/BirthdayConfetti';
 import { formatDate } from '../../utils/dateUtils';
 import { PROGRAM_LOGOS } from '../../utils/beltConfig';
 
@@ -87,8 +88,11 @@ export default function LogProgressPage() {
 
   const enrollment = availablePrograms.find((p) => p.program === selectedProgram);
 
+  const isStudentBirthday = isBirthdayToday(student.birthday);
+
   return (
     <Layout>
+      {isStudentBirthday && <BirthdayConfetti />}
       <div className="max-w-2xl mx-auto lg:max-w-none">
         <button
           onClick={() => navigate(dashboardPath)}
@@ -103,7 +107,7 @@ export default function LogProgressPage() {
             <Card>
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex-1">
-                  <h1 className="text-2xl font-bold font-ninja text-ninja-navy">{student.full_name}</h1>
+                  <h1 className="text-2xl font-bold font-ninja text-ninja-navy">{student.full_name}{isStudentBirthday && <span className="ml-2">🎂</span>}</h1>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     {availablePrograms.map((p) => (
                       <ProgramBadge key={p.program} program={p.program} />

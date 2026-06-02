@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import BirthdayConfetti, { isBirthdayToday } from '../../components/shared/BirthdayConfetti';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import Layout from '../../components/layout/Layout';
@@ -481,44 +482,6 @@ function AddProgramForm({ studentId, existingPrograms, onAdded, onCancel }) {
   );
 }
 
-// ── Birthday confetti ─────────────────────────────────────────────────────────
-const CONFETTI_COLORS = ['#38a1ff','#f59e0b','#22c55e','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
-const CONFETTI_COUNT = 48;
-
-function BirthdayConfetti() {
-  const pieces = useRef(
-    Array.from({ length: CONFETTI_COUNT }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      size: 6 + Math.random() * 8,
-      color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-      delay: Math.random() * 1.2,
-      duration: 2.2 + Math.random() * 1.4,
-      rotate: Math.random() * 360,
-      drift: (Math.random() - 0.5) * 60,
-    }))
-  );
-
-  return (
-    <div className="fixed inset-0 pointer-events-none z-[9998] overflow-hidden">
-      {pieces.current.map((p) => (
-        <motion.div
-          key={p.id}
-          initial={{ y: -20, x: `calc(${p.x}vw + 0px)`, opacity: 1, rotate: p.rotate }}
-          animate={{ y: '110vh', x: `calc(${p.x}vw + ${p.drift}px)`, opacity: 0, rotate: p.rotate + 360 }}
-          transition={{ duration: p.duration, delay: p.delay, ease: 'easeIn' }}
-          style={{ position: 'absolute', top: 0, width: p.size, height: p.size, borderRadius: Math.random() > 0.5 ? '50%' : 2, backgroundColor: p.color }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function isBirthdayToday(birthday) {
-  if (!birthday) return false;
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
-  return String(birthday).split('T')[0].slice(5) === today.slice(5);
-}
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function StudentProfile() {
