@@ -68,38 +68,5 @@ router.get('/overview', requireManager, async (req, res) => {
   }
 });
 
-// GET /api/reports/export — CSV of all active students with program + belt info
-router.get('/export', requireManager, async (req, res) => {
-  const pool = req.app.get('db');
-  const locationId = req.session.activeLocationId;
-  try {
-    const { rows } = await pool.query(`
-      SELECT s.full_name, s.birthday,
-             sp.program, sp.belt_level, sp.belt_sublevel, sp.current_project, sp.project_status,
-             sp.percent_complete,
-             (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id AND pl.program = sp.program) AS last_session
-      FROM students s
-      JOIN student_programs sp ON sp.student_id = s.id
-      WHERE s.location_id = $1 AND s.active = true
-      ORDER BY s.full_name ASC, sp.program ASC
-    `, [locationId]);
-
-    const header = 'Name,Birthday,Program,Belt,Sublevel,Project,Status,Progress %,Last Session\n';
-    const csvRows = rows.map(r =>
-      [r.full_name, r.birthday?.toISOString?.()?.split('T')[0] || '', r.program, r.belt_level || '',
-       r.belt_sublevel || '', r.current_project || '', r.project_status || '',
-       r.percent_complete || 0, r.last_session?.toISOString?.()?.split('T')[0] || '']
-        .map(v => `"${String(v).replace(/"/g, '""')}"`)
-        .join(',')
-    ).join('\n');
-
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename="students-export.csv"');
-    res.send(header + csvRows);
-  } catch (err) {
-    console.error('Error exporting:', err);
-    res.status(500).json({ error: 'Failed to export' });
-  }
-});
 
 module.exports = router;
