@@ -122,12 +122,21 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
             const borderClass = isPast ? 'border-red-400' : 'border-yellow-300';
 
             return (
-              <div key={s.id} className={`bg-white border ${borderClass} rounded-xl shadow-sm p-4 flex flex-col gap-3`}>
+              <div key={s.id} className={`relative bg-white border ${borderClass} rounded-xl shadow-sm p-4 flex flex-col gap-3`}>
+                {/* X delete button */}
+                {isManager && !isReadOnly && confirmId !== s.id && (
+                  <button
+                    onClick={() => setConfirmId(s.id)}
+                    className="absolute top-2 right-2 text-ninja-muted hover:text-red-400 transition-colors text-sm leading-none p-1"
+                  >
+                    ✕
+                  </button>
+                )}
                 {/* Header */}
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <ClubBadge name={s.club_name} />
-                    <span className="text-ninja-muted font-ninja text-xs">{s.attendees?.length ?? 0} students</span>
+                    <span className="text-ninja-muted font-ninja text-xs pr-4">{s.attendees?.length ?? 0} students</span>
                   </div>
                   <p className="text-ninja-muted font-ninja text-xs mt-1">{formatDate(s.session_date)}</p>
                 </div>
@@ -219,17 +228,11 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
                   </button>
                 )}
 
-                {/* Manager delete */}
-                {isManager && !isReadOnly && (
+                {/* Manager delete confirm */}
+                {isManager && !isReadOnly && confirmId === s.id && (
                   <div className="flex items-center gap-2">
-                    {confirmId === s.id ? (
-                      <>
-                        <Button variant="danger" size="sm" onClick={() => handleDelete(s.id)}>Confirm</Button>
-                        <Button variant="secondary" size="sm" onClick={() => setConfirmId(null)}>Cancel</Button>
-                      </>
-                    ) : (
-                      <Button variant="danger" size="sm" onClick={() => setConfirmId(s.id)}>Delete</Button>
-                    )}
+                    <Button variant="danger" size="sm" onClick={() => handleDelete(s.id)}>Confirm</Button>
+                    <Button variant="secondary" size="sm" onClick={() => setConfirmId(null)}>Cancel</Button>
                   </div>
                 )}
               </div>
