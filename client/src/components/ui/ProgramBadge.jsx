@@ -2,9 +2,9 @@ import { PROGRAM_LOGOS } from '../../utils/beltConfig';
 
 const PROGRAM_COLORS = {
   'CREATE': 'bg-blue-100 text-blue-700',
-  'Robotics Academy': 'bg-purple-100 text-purple-700',
-  'AI Academy': 'bg-indigo-100 text-indigo-700',
-  'JR': 'bg-green-100 text-green-700',
+  'Robotics Academy': 'bg-blue-100 text-blue-700',
+  'AI Academy': 'bg-blue-100 text-blue-700',
+  'JR': 'bg-purple-100 text-purple-700',
 };
 
 export default function ProgramBadge({ program, size = 'sm' }) {
