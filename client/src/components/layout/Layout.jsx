@@ -23,19 +23,19 @@ function AnnouncementBanner({ text }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.2 }}
-          className="border-b border-ninja-border px-4 sm:px-6 py-2.5 flex items-center gap-3"
+          className="bg-amber-400 px-4 sm:px-6 py-3 flex items-center gap-3"
         >
-          <svg className="w-4 h-4 text-ninja-blue flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg className="w-5 h-5 text-amber-900 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+            <path fillRule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0112 8zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
           </svg>
-          <p className="flex-1 text-ninja-navy font-ninja text-sm leading-snug">{text}</p>
+          <p className="flex-1 text-amber-900 font-ninja font-bold text-sm leading-snug">{text}</p>
           <button
             onClick={dismiss}
-            className="text-ninja-muted hover:text-ninja-navy transition-colors flex-shrink-0"
+            className="text-amber-800 hover:text-amber-900 transition-colors flex-shrink-0"
             aria-label="Dismiss announcement"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </motion.div>
