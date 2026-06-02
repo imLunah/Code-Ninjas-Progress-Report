@@ -7,13 +7,13 @@ import { formatDate } from '../../utils/dateUtils';
 const PROGRAM_GRADIENTS = {
   'Robotics Academy': 'linear-gradient(135deg, #060d1a 0%, #0a1e3d 55%, #0d3070 100%)',
   'AI Academy':       'linear-gradient(135deg, #060c1f 0%, #091840 55%, #0e2a7a 100%)',
-  'JR':               'linear-gradient(135deg, #061a10 0%, #0a2d1a 55%, #0f4a2a 100%)',
+  'JR':               'linear-gradient(135deg, #1a0533 0%, #2d1267 55%, #4c1d95 100%)',
 };
 
 const PROGRAM_BAR_COLORS = {
   'Robotics Academy': '#2563eb',
   'AI Academy':       '#1d4ed8',
-  'JR':               '#16a34a',
+  'JR':               '#7c3aed',
 };
 
 const BELT_IMAGES = {
