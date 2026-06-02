@@ -1,11 +1,21 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import ThemeToggle from '../ui/ThemeToggle';
 import BugReportButton from '../ui/BugReportButton';
 
+function BugIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+  );
+}
+
 export default function ParentLayout({ children }) {
   const { parent, logout } = useParentAuth();
   const navigate = useNavigate();
+  const [bugOpen, setBugOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -37,7 +47,14 @@ export default function ParentLayout({ children }) {
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
         {children}
       </main>
-      <BugReportButton reporter={{ name: parent?.parentName, role: 'parent' }} />
+      <button
+        onClick={() => setBugOpen(true)}
+        title="Report a bug"
+        className="fixed bottom-6 right-6 z-40 bg-white border border-ninja-border text-ninja-muted hover:text-ninja-red shadow-lg rounded-full w-9 h-9 flex items-center justify-center transition-all hover:shadow-xl"
+      >
+        <BugIcon />
+      </button>
+      <BugReportButton open={bugOpen} onClose={() => setBugOpen(false)} reporter={{ name: parent?.parentName, role: 'parent' }} />
     </div>
   );
 }

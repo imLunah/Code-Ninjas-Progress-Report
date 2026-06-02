@@ -22,8 +22,7 @@ console.error = (...args) => {
   _origConsoleError(...args);
 };
 
-export default function BugReportButton({ reporter }) {
-  const [open, setOpen] = useState(false);
+export default function BugReportButton({ reporter, open, onClose }) {
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [screenshot, setScreenshot] = useState(null);
@@ -71,7 +70,7 @@ export default function BugReportButton({ reporter }) {
   };
 
   const handleClose = () => {
-    setOpen(false);
+    onClose();
     setCategory('');
     setDescription('');
     setScreenshot(null);
@@ -82,15 +81,6 @@ export default function BugReportButton({ reporter }) {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="hidden lg:flex fixed bottom-6 right-6 z-40 bg-white border border-ninja-border text-ninja-muted hover:text-ninja-navy shadow-lg rounded-full px-3 py-2 font-ninja text-xs font-semibold items-center gap-1.5 transition-all hover:shadow-xl"
-        title="Report a bug"
-      >
-        <BugIcon />
-        <span>Report Bug</span>
-      </button>
-
       {open && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={handleClose} />

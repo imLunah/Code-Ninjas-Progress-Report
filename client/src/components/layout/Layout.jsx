@@ -46,9 +46,10 @@ function AnnouncementBanner({ text }) {
 
 export default function Layout({ children }) {
   const { user } = useAuth();
+  const [bugOpen, setBugOpen] = useState(false);
   return (
     <div className="min-h-[100dvh] bg-ninja-bg lg:flex">
-      <Sidebar />
+      <Sidebar onOpenBug={() => setBugOpen(true)} />
       <div className="flex-1 flex flex-col min-w-0 relative">
         {user?.announcement && <AnnouncementBanner text={user.announcement} />}
         {/* Mobile theme toggle — fixed top-right, hidden on desktop (sidebar has it) */}
@@ -60,7 +61,11 @@ export default function Layout({ children }) {
         </main>
       </div>
       <MobileNav />
-      <BugReportButton reporter={{ name: user?.displayName, role: user?.role, location: user?.activeLocation?.name }} />
+      <BugReportButton
+        open={bugOpen}
+        onClose={() => setBugOpen(false)}
+        reporter={{ name: user?.displayName, role: user?.role, location: user?.activeLocation?.name }}
+      />
     </div>
   );
 }
