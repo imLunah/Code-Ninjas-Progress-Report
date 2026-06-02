@@ -365,7 +365,8 @@ export default function UsersPage() {
               </p>
             ) : (
               <>
-                <div className="grid grid-cols-[2fr_1.5fr_1fr_1.2fr_auto] gap-4 px-5 py-3 border-b border-ninja-border bg-ninja-bg font-ninja font-bold text-xs text-ninja-muted uppercase tracking-widest">
+                {/* Desktop header */}
+                <div className="hidden lg:grid grid-cols-[2fr_1.5fr_1fr_1.2fr_auto] gap-4 px-5 py-3 border-b border-ninja-border bg-ninja-bg font-ninja font-bold text-xs text-ninja-muted uppercase tracking-widest">
                   <div>Name</div>
                   <div>Username</div>
                   <div>Role</div>
@@ -373,80 +374,69 @@ export default function UsersPage() {
                   <div />
                 </div>
                 <AnimatePresence>
-                  {users.map((u) => (
-                    <motion.div
-                      key={u.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="grid grid-cols-[2fr_1.5fr_1fr_1.2fr_auto] gap-4 px-5 py-3.5 items-center border-b border-ninja-border/60 last:border-b-0 hover:bg-ninja-bg transition-colors"
-                    >
-                      <p className="font-ninja font-semibold text-ninja-navy text-sm truncate">{u.display_name}</p>
-                      <p className="font-ninja text-sm text-ninja-muted">@{u.username}</p>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-ninja font-bold w-fit ${
-                        u.role === 'manager' ? 'bg-blue-100 text-ninja-blue' : 'bg-ninja-bg text-ninja-muted'
+                  {users.map((u) => {
+                    const roleBadge = (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-ninja font-bold w-fit flex-shrink-0 ${
+                        u.role === 'manager' ? 'bg-blue-100 text-ninja-blue' : 'bg-ninja-bg text-ninja-muted border border-ninja-border'
                       }`}>
                         {ROLE_LABELS[u.role] || u.role}
                       </span>
-                      <p className="font-ninja text-sm text-ninja-navy truncate">{u.location_name}</p>
+                    );
 
-                      {/* Actions */}
-                      <div className="flex items-center gap-2 justify-end min-w-[220px]">
-                        {confirmResetId === u.id ? (
-                          <>
-                            <span className="text-ninja-muted font-ninja text-xs">Reset password?</span>
-                            <button
-                              onClick={() => handleResetPassword(u)}
-                              disabled={actionLoading === u.id}
-                              className="text-xs font-ninja font-semibold text-white bg-amber-500 rounded-lg px-2 py-1 hover:opacity-90 disabled:opacity-50"
-                            >
-                              {actionLoading === u.id ? '…' : 'Yes'}
-                            </button>
-                            <button onClick={() => setConfirmResetId(null)} className="text-xs font-ninja text-ninja-muted hover:text-ninja-navy">No</button>
-                          </>
-                        ) : confirmToggleId === u.id ? (
-                          <>
-                            <span className="text-ninja-muted font-ninja text-xs">{u.active ? 'Deactivate?' : 'Restore?'}</span>
-                            <button
-                              onClick={() => handleToggleActive(u)}
-                              disabled={actionLoading === u.id}
-                              className={`text-xs font-ninja font-semibold text-white rounded-lg px-2 py-1 hover:opacity-90 disabled:opacity-50 ${u.active ? 'bg-ninja-red' : 'bg-green-600'}`}
-                            >
-                              {actionLoading === u.id ? '…' : 'Yes'}
-                            </button>
-                            <button onClick={() => setConfirmToggleId(null)} className="text-xs font-ninja text-ninja-muted hover:text-ninja-navy">No</button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => setConfirmResetId(u.id)}
-                              className="text-xs font-ninja text-ninja-muted hover:text-amber-600 transition-colors"
-                            >
-                              Reset PW
-                            </button>
-                            <button
-                              onClick={() => setEditUser(u)}
-                              className="text-xs font-ninja text-ninja-muted hover:text-ninja-blue transition-colors"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => setConfirmToggleId(u.id)}
-                              className={`text-xs font-ninja transition-colors ${u.active ? 'text-ninja-muted hover:text-ninja-red' : 'text-ninja-muted hover:text-green-600'}`}
-                            >
-                              {u.active ? 'Deactivate' : 'Restore'}
-                            </button>
-                            <button
-                              onClick={() => setHardDeleteUser(u)}
-                              className="text-xs font-ninja text-ninja-muted hover:text-ninja-red transition-colors"
-                            >
-                              Delete
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </motion.div>
-                  ))}
+                    const actions = confirmResetId === u.id ? (
+                      <>
+                        <span className="text-ninja-muted font-ninja text-xs">Reset password?</span>
+                        <button onClick={() => handleResetPassword(u)} disabled={actionLoading === u.id} className="text-xs font-ninja font-semibold text-white bg-amber-500 rounded-lg px-2 py-1 hover:opacity-90 disabled:opacity-50">
+                          {actionLoading === u.id ? '…' : 'Yes'}
+                        </button>
+                        <button onClick={() => setConfirmResetId(null)} className="text-xs font-ninja text-ninja-muted hover:text-ninja-navy">No</button>
+                      </>
+                    ) : confirmToggleId === u.id ? (
+                      <>
+                        <span className="text-ninja-muted font-ninja text-xs">{u.active ? 'Deactivate?' : 'Restore?'}</span>
+                        <button onClick={() => handleToggleActive(u)} disabled={actionLoading === u.id} className={`text-xs font-ninja font-semibold text-white rounded-lg px-2 py-1 hover:opacity-90 disabled:opacity-50 ${u.active ? 'bg-ninja-red' : 'bg-green-600'}`}>
+                          {actionLoading === u.id ? '…' : 'Yes'}
+                        </button>
+                        <button onClick={() => setConfirmToggleId(null)} className="text-xs font-ninja text-ninja-muted hover:text-ninja-navy">No</button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => setConfirmResetId(u.id)} className="text-xs font-ninja text-ninja-muted hover:text-amber-600 transition-colors">Reset PW</button>
+                        <button onClick={() => setEditUser(u)} className="text-xs font-ninja text-ninja-muted hover:text-ninja-blue transition-colors">Edit</button>
+                        <button onClick={() => setConfirmToggleId(u.id)} className={`text-xs font-ninja transition-colors ${u.active ? 'text-ninja-muted hover:text-ninja-red' : 'text-ninja-muted hover:text-green-600'}`}>
+                          {u.active ? 'Deactivate' : 'Restore'}
+                        </button>
+                        <button onClick={() => setHardDeleteUser(u)} className="text-xs font-ninja text-ninja-muted hover:text-ninja-red transition-colors">Delete</button>
+                      </>
+                    );
+
+                    return (
+                      <motion.div
+                        key={u.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      >
+                        {/* Desktop row */}
+                        <div className="hidden lg:grid grid-cols-[2fr_1.5fr_1fr_1.2fr_auto] gap-4 px-5 py-3.5 items-center border-b border-ninja-border/60 last:border-b-0 hover:bg-ninja-bg transition-colors">
+                          <p className="font-ninja font-semibold text-ninja-navy text-sm truncate">{u.display_name}</p>
+                          <p className="font-ninja text-sm text-ninja-muted">@{u.username}</p>
+                          {roleBadge}
+                          <p className="font-ninja text-sm text-ninja-navy truncate">{u.location_name}</p>
+                          <div className="flex items-center gap-2 justify-end min-w-[220px]">{actions}</div>
+                        </div>
+                        {/* Mobile card */}
+                        <div className="lg:hidden px-4 py-3.5 border-b border-ninja-border/60 last:border-b-0">
+                          <div className="flex items-start justify-between gap-2 mb-0.5">
+                            <p className="font-ninja font-semibold text-ninja-navy text-sm leading-snug">{u.display_name}</p>
+                            {roleBadge}
+                          </div>
+                          <p className="font-ninja text-xs text-ninja-muted mb-2.5">@{u.username} · {u.location_name}</p>
+                          <div className="flex items-center gap-3 flex-wrap">{actions}</div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </AnimatePresence>
               </>
             )}
