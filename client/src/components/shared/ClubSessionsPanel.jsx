@@ -113,126 +113,122 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
       {pendingSessions.length === 0 ? (
         <p className="text-ninja-muted font-ninja text-sm text-center py-6 italic">No pending club sessions.</p>
       ) : (
-        <div className={pendingSessions.length === 1 ? 'flex flex-col gap-3' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {pendingSessions.map((s) => {
             const isOpen = expanded === s.id;
             const isEditingAttendees = editingAttendeesId === s.id;
             const sessionDateStr = String(s.session_date).split('T')[0];
             const isPast = sessionDateStr < todayStr;
             const borderClass = isPast ? 'border-red-400' : 'border-yellow-300';
-            const isSingle = pendingSessions.length === 1;
 
             return (
-              <div key={s.id} className={`bg-white border ${borderClass} rounded-xl shadow-sm p-4 ${isSingle ? 'flex items-start gap-6' : 'flex flex-col gap-3'}`}>
-                {/* Info column */}
-                <div className={`flex flex-col gap-3 ${isSingle ? 'flex-1 min-w-0' : ''}`}>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <ClubBadge name={s.club_name} />
-                      {isPast && <span className="text-red-400 font-ninja text-xs font-semibold">Overdue</span>}
-                      <span className="text-ninja-muted font-ninja text-xs ml-auto">{s.attendees?.length ?? 0} students</span>
-                    </div>
-                    <p className="text-ninja-muted font-ninja text-xs mt-1">{formatDate(s.session_date)}</p>
+              <div key={s.id} className={`bg-white border ${borderClass} rounded-xl shadow-sm p-4 flex flex-col gap-3`}>
+                {/* Header */}
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <ClubBadge name={s.club_name} />
+                    <span className="text-ninja-muted font-ninja text-xs">{s.attendees?.length ?? 0} students</span>
                   </div>
-
-                  {/* Attendees toggle */}
-                  <button
-                    type="button"
-                    onClick={() => setExpanded(isOpen ? null : s.id)}
-                    className="text-ninja-blue font-ninja text-xs font-semibold text-left hover:underline"
-                  >
-                    {isOpen ? 'Hide attendees ▲' : 'View attendees ▼'}
-                  </button>
-
-                  {isOpen && (
-                    isEditingAttendees ? (
-                      <div className="space-y-2">
-                        <input
-                          type="text"
-                          placeholder="Search ninjas..."
-                          value={attendeeSearch}
-                          onChange={(e) => setAttendeeSearch(e.target.value)}
-                          className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
-                        />
-                        {loadingStudents ? (
-                          <p className="text-ninja-muted font-ninja text-xs">Loading...</p>
-                        ) : (
-                          <div className="space-y-1 max-h-48 overflow-y-auto">
-                            {allStudents
-                              .filter((st) => st.full_name.toLowerCase().includes(attendeeSearch.toLowerCase()))
-                              .map((st) => {
-                                const checked = draftAttendeeIds.has(st.id);
-                                return (
-                                  <button
-                                    key={st.id}
-                                    type="button"
-                                    onClick={() => toggleAttendee(st.id)}
-                                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors ${
-                                      checked ? 'bg-ninja-blue text-white' : 'bg-ninja-bg text-ninja-navy hover:bg-blue-50'
-                                    }`}
-                                  >
-                                    <div className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center ${
-                                      checked ? 'bg-white border-white' : 'border-ninja-border bg-white'
-                                    }`}>
-                                      {checked && <span className="text-ninja-blue text-xs font-bold leading-none">✓</span>}
-                                    </div>
-                                    <span className="font-ninja text-xs">{st.full_name}</span>
-                                  </button>
-                                );
-                              })}
-                          </div>
-                        )}
-                        <div className="flex gap-2 pt-1">
-                          <Button size="sm" onClick={() => saveAttendees(s)} disabled={savingAttendees || draftAttendeeIds.size === 0}>
-                            {savingAttendees ? 'Saving...' : `Save (${draftAttendeeIds.size})`}
-                          </Button>
-                          <Button size="sm" variant="secondary" onClick={() => setEditingAttendeesId(null)}>Cancel</Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {s.attendees?.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {s.attendees.map((a) => (
-                              <span key={a.id} className="text-xs font-ninja bg-ninja-bg border border-ninja-border text-ninja-navy px-2 py-0.5 rounded-md">
-                                {a.full_name}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {!isReadOnly && (
-                          <button
-                            onClick={() => startEditAttendees(s)}
-                            className="text-ninja-blue font-ninja text-xs hover:underline"
-                          >
-                            Edit attendees
-                          </button>
-                        )}
-                      </div>
-                    )
-                  )}
+                  <p className="text-ninja-muted font-ninja text-xs mt-1">{formatDate(s.session_date)}</p>
                 </div>
 
-                {/* Actions — right column for single, inline for grid */}
-                {!isReadOnly && (
-                  <div className={`flex ${isSingle ? 'flex-col items-end gap-2 flex-shrink-0' : 'flex-col gap-3'}`}>
-                    <button
-                      onClick={() => navigate(`/clubs/${toSlug(s.club_name)}/sessions/${s.id}`)}
-                      className={`font-ninja font-bold text-ninja-blue border border-ninja-blue rounded-lg hover:bg-ninja-blue hover:text-white transition-colors ${isSingle ? 'px-5 py-2 text-sm whitespace-nowrap' : 'w-full text-sm py-1.5'}`}
-                    >
-                      Log Progress
-                    </button>
-                    {isManager && (
-                      <div className="flex items-center gap-2">
-                        {confirmId === s.id ? (
-                          <>
-                            <Button variant="danger" size="sm" onClick={() => handleDelete(s.id)}>Confirm</Button>
-                            <Button variant="secondary" size="sm" onClick={() => setConfirmId(null)}>Cancel</Button>
-                          </>
-                        ) : (
-                          <Button variant="danger" size="sm" onClick={() => setConfirmId(s.id)}>Delete</Button>
-                        )}
+                {/* Attendees toggle */}
+                <button
+                  type="button"
+                  onClick={() => setExpanded(isOpen ? null : s.id)}
+                  className="text-ninja-blue font-ninja text-xs font-semibold text-left hover:underline"
+                >
+                  {isOpen ? 'Hide attendees ▲' : 'View attendees ▼'}
+                </button>
+
+                {isOpen && (
+                  isEditingAttendees ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        placeholder="Search ninjas..."
+                        value={attendeeSearch}
+                        onChange={(e) => setAttendeeSearch(e.target.value)}
+                        className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
+                      />
+                      {loadingStudents ? (
+                        <p className="text-ninja-muted font-ninja text-xs">Loading...</p>
+                      ) : (
+                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                          {allStudents
+                            .filter((st) => st.full_name.toLowerCase().includes(attendeeSearch.toLowerCase()))
+                            .map((st) => {
+                              const checked = draftAttendeeIds.has(st.id);
+                              return (
+                                <button
+                                  key={st.id}
+                                  type="button"
+                                  onClick={() => toggleAttendee(st.id)}
+                                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors ${
+                                    checked ? 'bg-ninja-blue text-white' : 'bg-ninja-bg text-ninja-navy hover:bg-blue-50'
+                                  }`}
+                                >
+                                  <div className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center ${
+                                    checked ? 'bg-white border-white' : 'border-ninja-border bg-white'
+                                  }`}>
+                                    {checked && <span className="text-ninja-blue text-xs font-bold leading-none">✓</span>}
+                                  </div>
+                                  <span className="font-ninja text-xs">{st.full_name}</span>
+                                </button>
+                              );
+                            })}
+                        </div>
+                      )}
+                      <div className="flex gap-2 pt-1">
+                        <Button size="sm" onClick={() => saveAttendees(s)} disabled={savingAttendees || draftAttendeeIds.size === 0}>
+                          {savingAttendees ? 'Saving...' : `Save (${draftAttendeeIds.size})`}
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={() => setEditingAttendeesId(null)}>Cancel</Button>
                       </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {s.attendees?.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {s.attendees.map((a) => (
+                            <span key={a.id} className="text-xs font-ninja bg-ninja-bg border border-ninja-border text-ninja-navy px-2 py-0.5 rounded-md">
+                              {a.full_name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {!isReadOnly && (
+                        <button
+                          onClick={() => startEditAttendees(s)}
+                          className="text-ninja-blue font-ninja text-xs hover:underline"
+                        >
+                          Edit attendees
+                        </button>
+                      )}
+                    </div>
+                  )
+                )}
+
+                {/* Log Progress — opens session detail with notes + comment thread */}
+                {!isReadOnly && (
+                  <button
+                    onClick={() => navigate(`/clubs/${toSlug(s.club_name)}/sessions/${s.id}`)}
+                    className="w-full text-sm font-ninja font-bold text-ninja-blue border border-ninja-blue rounded-lg py-1.5 hover:bg-ninja-blue hover:text-white transition-colors"
+                  >
+                    Log Progress
+                  </button>
+                )}
+
+                {/* Manager delete */}
+                {isManager && !isReadOnly && (
+                  <div className="flex items-center gap-2">
+                    {confirmId === s.id ? (
+                      <>
+                        <Button variant="danger" size="sm" onClick={() => handleDelete(s.id)}>Confirm</Button>
+                        <Button variant="secondary" size="sm" onClick={() => setConfirmId(null)}>Cancel</Button>
+                      </>
+                    ) : (
+                      <Button variant="danger" size="sm" onClick={() => setConfirmId(s.id)}>Delete</Button>
                     )}
                   </div>
                 )}
