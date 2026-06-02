@@ -143,8 +143,6 @@ export default function ReportsPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [exporting, setExporting] = useState(false);
-
   useEffect(() => {
     api.get('/reports/overview')
       .then(d => setData(d))
@@ -152,41 +150,14 @@ export default function ReportsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleExport = async () => {
-    setExporting(true);
-    try {
-      const res = await fetch('/api/reports/export', { credentials: 'include', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'students-export.csv';
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      // ignore
-    } finally {
-      setExporting(false);
-    }
-  };
-
   const totalStudents = data?.enrollment.reduce((s, r) => s + r.count, 0) ?? 0;
 
   return (
     <Layout>
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-ninja-navy font-ninja font-bold text-2xl">Reports</h1>
-            <p className="text-ninja-muted font-ninja text-sm mt-0.5">Enrollment and activity overview</p>
-          </div>
-          <button
-            onClick={handleExport}
-            disabled={exporting || loading}
-            className="bg-ninja-bg border border-ninja-border text-ninja-navy font-ninja font-semibold rounded-xl px-4 py-2 text-sm hover:bg-ninja-border transition-colors disabled:opacity-50"
-          >
-            {exporting ? 'Exporting…' : 'Export CSV'}
-          </button>
+        <div className="mb-6">
+          <h1 className="text-ninja-navy font-ninja font-bold text-2xl">Reports</h1>
+          <p className="text-ninja-muted font-ninja text-sm mt-0.5">Enrollment and activity overview</p>
         </div>
 
         {loading && <p className="text-ninja-muted font-ninja text-center py-12">Loading…</p>}
