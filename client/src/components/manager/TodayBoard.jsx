@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { today } from '../../utils/dateUtils';
 import BeltBadge from '../ui/BeltBadge';
 import ProgramBadge from '../ui/ProgramBadge';
+import { isBirthdayToday } from '../shared/BirthdayConfetti';
 
 export default function TodayBoard({ assignments, onRemove }) {
   const { isReadOnly } = useAuth();
@@ -107,7 +108,7 @@ export default function TodayBoard({ assignments, onRemove }) {
                 <div className="flex items-start justify-between gap-2 mb-2.5">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-ninja-navy font-ninja font-bold text-lg leading-tight">
-                      {a.student_name}
+                      {a.student_name}{isBirthdayToday(a.birthday) && <span className="ml-1.5">🎂</span>}
                     </span>
                     {parseInt(a.session_number) > 1 && (
                       <span className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
@@ -189,7 +190,7 @@ export default function TodayBoard({ assignments, onRemove }) {
                     onClick={() => navigate(`/manager/students/${a.student_id}`)}
                     className="text-ninja-navy font-ninja font-bold text-lg leading-tight hover:text-ninja-blue transition-colors text-left"
                   >
-                    {a.student_name}
+                    {a.student_name}{isBirthdayToday(a.birthday) && <span className="ml-1.5">🎂</span>}
                   </button>
                   {parseInt(a.session_number) > 1 && (
                     <span className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
