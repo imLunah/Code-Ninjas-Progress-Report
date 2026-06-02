@@ -129,7 +129,7 @@ export default function AccountPage() {
           className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm"
         >
           <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">Choose Avatar</p>
-          <div className="flex gap-3 flex-wrap">
+          <div className="grid grid-cols-5 gap-3">
             {PRESET_AVATARS.map(({ src, label }) => {
               const isActive = user?.profilePicUrl === src;
               return (
