@@ -144,7 +144,7 @@ router.patch('/me', requireSensei, async (req, res) => {
   if (!username?.trim() && !new_password?.trim()) {
     return res.status(400).json({ error: 'Nothing to update' });
   }
-  if (new_password?.trim()) {
+  if (new_password?.trim() && !req.session.mustResetPassword) {
     if (!current_password?.trim()) return res.status(400).json({ error: 'Current password is required to set a new password' });
     const { rows: self } = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.session.userId]);
     if (!self[0] || !(await bcrypt.compare(current_password.trim(), self[0].password_hash))) {
@@ -163,7 +163,8 @@ router.patch('/me', requireSensei, async (req, res) => {
     if (new_password?.trim()) {
       if (!validatePassword(new_password.trim())) return res.status(400).json({ error: 'Password must be at least 6 characters and include an uppercase letter and a special character' });
       const hash = await bcrypt.hash(new_password.trim(), SALT_ROUNDS);
-      await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.session.userId]);
+      await pool.query('UPDATE users SET password_hash = $1, must_reset_password = false WHERE id = $2', [hash, req.session.userId]);
+      req.session.mustResetPassword = false;
     }
     res.json({ ok: true, username: username?.trim() || undefined });
   } catch (err) {

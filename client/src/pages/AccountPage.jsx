@@ -48,6 +48,12 @@ export default function AccountPage() {
 
   const initials = user?.displayName?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || '?';
 
+  const isForced = !!user?.mustResetPassword;
+
+  const dashPath = user?.role === 'sensei' ? '/sensei/dashboard'
+    : user?.role === 'admin' ? '/admin/locations'
+    : '/manager/dashboard';
+
   const handleSave = async (e) => {
     e.preventDefault();
     setError('');
@@ -56,17 +62,21 @@ export default function AccountPage() {
     const trimmedUsername = username.trim();
     const trimmedPassword = newPassword.trim();
 
-    if (!trimmedUsername && !trimmedPassword) return setError('Enter a new username or password.');
+    if (isForced) {
+      if (!trimmedPassword) return setError('You must set a new password to continue.');
+    } else {
+      if (!trimmedUsername && !trimmedPassword) return setError('Enter a new username or password.');
+    }
     if (trimmedPassword && trimmedPassword !== confirmPassword.trim()) return setError('Passwords do not match.');
     if (trimmedPassword && (trimmedPassword.length < 6 || !/[A-Z]/.test(trimmedPassword) || !/[^A-Za-z0-9]/.test(trimmedPassword))) {
       return setError('Password must be at least 6 characters and include an uppercase letter and a special character.');
     }
 
     const payload = {};
-    if (trimmedUsername && trimmedUsername !== user?.username) payload.username = trimmedUsername;
+    if (!isForced && trimmedUsername && trimmedUsername !== user?.username) payload.username = trimmedUsername;
     if (trimmedPassword) {
       payload.new_password = trimmedPassword;
-      payload.current_password = currentPassword.trim();
+      if (!isForced) payload.current_password = currentPassword.trim();
     }
     if (!Object.keys(payload).length) return setSuccess('No changes to save.');
 
@@ -77,7 +87,12 @@ export default function AccountPage() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      setSuccess('Account updated successfully.');
+      if (isForced) {
+        setUser((prev) => ({ ...prev, mustResetPassword: false }));
+        navigate(dashPath);
+      } else {
+        setSuccess('Account updated successfully.');
+      }
     } catch (err) {
       setError(err?.message || 'Failed to update account.');
     } finally {
@@ -121,8 +136,26 @@ export default function AccountPage() {
           {avatarError && <p className="text-red-300 font-ninja text-xs mt-2 relative z-10">{avatarError}</p>}
         </motion.div>
 
+        {/* Forced reset banner */}
+        {isForced && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+            className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3"
+          >
+            <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <div>
+              <p className="text-amber-800 font-ninja font-semibold text-sm">Password reset required</p>
+              <p className="text-amber-700 font-ninja text-xs mt-0.5">Your password was reset by an admin. Set a new password to continue.</p>
+            </div>
+          </motion.div>
+        )}
+
         {/* Preset avatars */}
-        <motion.div
+        {!isForced && <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08, duration: 0.3 }}
@@ -153,7 +186,7 @@ export default function AccountPage() {
               );
             })}
           </div>
-        </motion.div>
+        </motion.div>}
 
         {/* Username + Password */}
         <motion.form
@@ -163,18 +196,20 @@ export default function AccountPage() {
           transition={{ delay: 0.1, duration: 0.3 }}
           className="bg-white border border-ninja-border rounded-2xl p-6 shadow-sm space-y-5"
         >
-          <div>
-            <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1.5">Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username"
-              className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
-            />
-          </div>
+          {!isForced && (
+            <div>
+              <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1.5">Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
+              />
+            </div>
+          )}
 
-          <div className="border-t border-ninja-border pt-5 space-y-4">
+          <div className={`${isForced ? '' : 'border-t border-ninja-border pt-5 '}space-y-4`}>
             <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide">Change Password</p>
             <div>
               <label className="block text-ninja-muted text-xs font-ninja mb-1.5">New Password</label>
@@ -187,7 +222,7 @@ export default function AccountPage() {
                 className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
               />
             </div>
-            {newPassword && (
+            {newPassword && !isForced && (
               <div>
                 <label className="block text-ninja-muted text-xs font-ninja mb-1.5">Current Password</label>
                 <input

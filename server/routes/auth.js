@@ -23,7 +23,7 @@ router.post('/login', loginLimiter, async (req, res) => {
   try {
     const pool = req.app.get('db');
     const { rows } = await pool.query(
-      'SELECT id, username, display_name, role, location_id, profile_pic_url, password_hash FROM users WHERE LOWER(username) = LOWER($1) AND active = true',
+      'SELECT id, username, display_name, role, location_id, profile_pic_url, password_hash, must_reset_password FROM users WHERE LOWER(username) = LOWER($1) AND active = true',
       [username]
     );
     const user = rows[0];
@@ -56,6 +56,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     req.session.displayName = user.display_name;
     req.session.activeLocationId = user.location_id;
     req.session.homeLocationId = user.location_id;
+    req.session.mustResetPassword = !!user.must_reset_password;
     req.session.cookie.maxAge = keep_signed_in
       ? 30 * 24 * 60 * 60 * 1000  // 30 days
       : null;                       // session cookie — expires when browser closes
@@ -80,6 +81,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       activeLocation: activeLocation ?? null,
       availableLocations,
       announcement,
+      mustResetPassword: !!user.must_reset_password,
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -128,7 +130,7 @@ router.get('/me', async (req, res) => {
   try {
     const pool = req.app.get('db');
     const { rows } = await pool.query(
-      'SELECT id, username, display_name, role, location_id, profile_pic_url FROM users WHERE id = $1',
+      'SELECT id, username, display_name, role, location_id, profile_pic_url, must_reset_password FROM users WHERE id = $1',
       [req.session.userId]
     );
     const user = rows[0];
@@ -158,6 +160,7 @@ router.get('/me', async (req, res) => {
       activeLocation: activeLocation ?? null,
       availableLocations,
       announcement,
+      mustResetPassword: req.session.mustResetPassword ?? false,
     });
   } catch (err) {
     console.error('Me error:', err);

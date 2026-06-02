@@ -105,7 +105,7 @@ function HardDeleteModal({ user, onClose, onDeleted }) {
 function TempPasswordModal({ data, onClose }) {
   const [copied, setCopied] = useState(false);
   const copy = () => {
-    navigator.clipboard.writeText(`Username: ${data.username}\nTemp Password: ${data.temp_password}`);
+    navigator.clipboard.writeText(data.temp_password);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
