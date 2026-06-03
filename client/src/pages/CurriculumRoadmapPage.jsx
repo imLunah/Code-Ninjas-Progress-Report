@@ -43,12 +43,39 @@ function getConfig(program) {
   return PROGRAM_CONFIG[program] || { ...defaultConfig, label: program };
 }
 
-function LessonList({ lessons }) {
+const TAG_STYLES = {
+  'Build':          'bg-emerald-50 text-emerald-700 border-emerald-200',
+  'Adventure':      'bg-violet-50 text-violet-700 border-violet-200',
+  'Solve':          'bg-amber-50 text-amber-700 border-amber-200',
+  'Belt-Up':        'bg-yellow-50 text-yellow-700 border-yellow-200',
+  'Prove Yourself': 'bg-sky-50 text-sky-700 border-sky-200',
+};
+
+function taggedLessons(lessons) {
+  let nonDebugCount = 0;
+  return lessons.map(l => {
+    const lower = l.lesson_name.toLowerCase();
+    let tag = null;
+    if (lower.includes('belt-up')) tag = 'Belt-Up';
+    else if (lower.startsWith('prove yourself')) tag = 'Prove Yourself';
+    else if (lower.startsWith('debugging')) tag = 'Solve';
+    else { tag = nonDebugCount === 0 ? 'Build' : 'Adventure'; nonDebugCount++; }
+    return { ...l, tag };
+  });
+}
+
+function LessonList({ lessons, isCreate }) {
+  const items = isCreate ? taggedLessons(lessons) : lessons;
   return (
-    <ul className="mt-3 space-y-1 pl-1">
-      {lessons.map((l, i) => (
+    <ul className="mt-3 space-y-1.5 pl-1">
+      {items.map((l, i) => (
         <li key={l.id ?? i} className="flex items-start gap-2.5 text-sm font-ninja text-ninja-navy/80">
           <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-ninja-border" />
+          {isCreate && l.tag && (
+            <span className={`shrink-0 text-[10px] font-ninja font-bold px-1.5 py-0.5 rounded border mt-0.5 ${TAG_STYLES[l.tag] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+              {l.tag}
+            </span>
+          )}
           {l.lesson_name}
         </li>
       ))}
@@ -98,7 +125,7 @@ function ModuleCard({ mod, accentColor, isCreate }) {
               {mod.description && (
                 <p className="text-sm font-ninja text-ninja-muted leading-relaxed mb-2">{mod.description}</p>
               )}
-              {mod.lessons.length > 0 && <LessonList lessons={mod.lessons} />}
+              {mod.lessons.length > 0 && <LessonList lessons={mod.lessons} isCreate={isCreate} />}
             </div>
           </motion.div>
         )}
