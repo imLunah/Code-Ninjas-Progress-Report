@@ -2,7 +2,16 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import ThemeToggle from '../ui/ThemeToggle';
 
-function NavIcon({ id }) {
+function NavIcon({ id, svg }) {
+  if (svg) {
+    return (
+      <span className="w-9 h-9 flex-shrink-0 flex items-center justify-center">
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d={svg} />
+        </svg>
+      </span>
+    );
+  }
   return (
     <img
       src={`/icons/${id}.png`}
@@ -35,12 +44,15 @@ export default function Sidebar({ onOpenBug }) {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const ROADMAP_LINK = { to: '/curriculum-roadmap', label: 'Roadmap', svg: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' };
+
   const managerLinks = [
     { to: '/manager/dashboard', label: "Today's Board", icon: 'today' },
     { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
     { to: '/clubs', label: 'Clubs', icon: 'clubs' },
     { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
     { to: '/manager/reports', label: 'Reports', icon: 'report' },
+    ROADMAP_LINK,
   ];
 
   const senseiLinks = [
@@ -48,6 +60,7 @@ export default function Sidebar({ onOpenBug }) {
     { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
     { to: '/clubs', label: 'Clubs', icon: 'clubs' },
     { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
+    ROADMAP_LINK,
   ];
 
   const isSenseiView = user?.role === 'admin' && viewAs === 'sensei';
@@ -105,7 +118,7 @@ export default function Sidebar({ onOpenBug }) {
               {isActive && (
                 <span className="absolute left-0 inset-y-2 w-0.5 bg-ninja-blue rounded-r-full" />
               )}
-              <NavIcon id={link.icon} isActive={isActive} />
+              <NavIcon id={link.icon} svg={link.svg} />
               <span>{link.label}</span>
             </Link>
           );

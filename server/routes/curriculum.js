@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { requireAdmin } = require('../middleware/auth');
+const { requireAdmin, requireSensei } = require('../middleware/auth');
 
 // GET /api/curriculum — public, returns { subPrograms, curriculum } matching progressData.js shape
 router.get('/', async (req, res) => {
@@ -58,6 +58,49 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/curriculum/roadmap — all programs, sub-programs, modules+descriptions, lessons (sensei+)
+router.get('/roadmap', requireSensei, async (req, res) => {
+  const pool = req.app.get('db');
+  try {
+    const { rows } = await pool.query(`
+      SELECT m.id, m.program, m.sub_program, m.module_name, m.module_order, m.description,
+        COALESCE(json_agg(
+          json_build_object('id', l.id, 'lesson_name', l.lesson_name, 'lesson_order', l.lesson_order)
+          ORDER BY l.lesson_order ASC
+        ) FILTER (WHERE l.id IS NOT NULL), '[]') AS lessons
+      FROM curriculum_modules m
+      LEFT JOIN curriculum_lessons l ON l.module_id = m.id
+      GROUP BY m.id
+      ORDER BY m.program ASC, m.sub_program ASC NULLS FIRST, m.module_order ASC
+    `);
+
+    const programOrder = ['CREATE', 'JR', 'AI Academy', 'Robotics Academy'];
+    const programMap = {};
+    for (const m of rows) {
+      if (!programMap[m.program]) programMap[m.program] = { program: m.program, sub_programs: [], modules: [] };
+      if (m.sub_program && !programMap[m.program].sub_programs.includes(m.sub_program)) {
+        programMap[m.program].sub_programs.push(m.sub_program);
+      }
+      programMap[m.program].modules.push({
+        id: m.id,
+        module_name: m.module_name,
+        module_order: m.module_order,
+        sub_program: m.sub_program || null,
+        description: m.description || null,
+        lessons: m.lessons.map(l => ({ id: l.id, lesson_name: l.lesson_name })),
+      });
+    }
+    const sorted = [
+      ...programOrder.filter(p => programMap[p]).map(p => programMap[p]),
+      ...Object.values(programMap).filter(p => !programOrder.includes(p.program)),
+    ];
+    res.json(sorted);
+  } catch (err) {
+    console.error('Roadmap fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch roadmap' });
+  }
+});
+
 // POST /api/curriculum/modules — add a module
 router.post('/modules', requireAdmin, async (req, res) => {
   const pool = req.app.get('db');
@@ -88,16 +131,21 @@ router.post('/modules', requireAdmin, async (req, res) => {
   }
 });
 
-// PATCH /api/curriculum/modules/:id — rename a module
+// PATCH /api/curriculum/modules/:id — rename a module or update description
 router.patch('/modules/:id', requireAdmin, async (req, res) => {
   const pool = req.app.get('db');
-  const { module_name } = req.body;
-  if (!module_name) return res.status(400).json({ error: 'module_name is required' });
+  const { module_name, description } = req.body;
+  if (!module_name && description === undefined) return res.status(400).json({ error: 'module_name or description required' });
 
   try {
+    const updates = [];
+    const params = [];
+    if (module_name) { params.push(module_name); updates.push(`module_name = $${params.length}`); }
+    if (description !== undefined) { params.push(description || null); updates.push(`description = $${params.length}`); }
+    params.push(req.params.id);
     const { rows } = await pool.query(
-      'UPDATE curriculum_modules SET module_name = $1 WHERE id = $2 RETURNING *',
-      [module_name, req.params.id]
+      `UPDATE curriculum_modules SET ${updates.join(', ')} WHERE id = $${params.length} RETURNING *`,
+      params
     );
     if (!rows.length) return res.status(404).json({ error: 'Module not found' });
     res.json(rows[0]);

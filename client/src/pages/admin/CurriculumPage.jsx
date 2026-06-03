@@ -94,10 +94,12 @@ function LessonRow({ lesson, onRename, onDelete, readOnly }) {
   );
 }
 
-function ModuleBlock({ mod, onRenameModule, onDeleteModule, onAddLesson, onRenameLesson, onDeleteLesson, readOnly }) {
+function ModuleBlock({ mod, onRenameModule, onUpdateDescription, onDeleteModule, onAddLesson, onRenameLesson, onDeleteLesson, readOnly }) {
   const [expanded, setExpanded] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [moduleName, setModuleName] = useState(mod.module);
+  const [description, setDescription] = useState(mod.description || '');
+  const [editingDesc, setEditingDesc] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newLesson, setNewLesson] = useState('');
   const [addingLesson, setAddingLesson] = useState(false);
@@ -109,6 +111,13 @@ function ModuleBlock({ mod, onRenameModule, onDeleteModule, onAddLesson, onRenam
     try { await onRenameModule(mod.id, moduleName.trim()); setEditingName(false); }
     catch { setModuleName(mod.module); }
     finally { setSaving(false); }
+  };
+
+  const saveDescription = async () => {
+    setEditingDesc(false);
+    if (description === (mod.description || '')) return;
+    try { await onUpdateDescription(mod.id, description); }
+    catch { setDescription(mod.description || ''); }
   };
 
   const submitLesson = async (e) => {
@@ -178,7 +187,30 @@ function ModuleBlock({ mod, onRenameModule, onDeleteModule, onAddLesson, onRenam
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-white px-3 py-2 space-y-0.5">
+            <div className="bg-white px-3 py-2">
+              {/* Description */}
+              <div className="mb-2 pb-2 border-b border-ninja-border/60">
+                {!readOnly && editingDesc ? (
+                  <textarea
+                    autoFocus
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    onBlur={saveDescription}
+                    onKeyDown={(e) => { if (e.key === 'Escape') { setDescription(mod.description || ''); setEditingDesc(false); } }}
+                    rows={3}
+                    placeholder="Module description…"
+                    className="w-full bg-ninja-bg border border-ninja-blue rounded-lg px-3 py-2 font-ninja text-xs text-ninja-navy focus:outline-none resize-none"
+                  />
+                ) : (
+                  <div
+                    className={`font-ninja text-xs text-ninja-muted leading-relaxed ${!readOnly ? 'cursor-pointer hover:text-ninja-navy transition-colors' : ''}`}
+                    onClick={() => !readOnly && setEditingDesc(true)}
+                  >
+                    {description || (!readOnly ? <span className="italic opacity-50">Add description…</span> : null)}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-0.5">
               {lessons.map((l, i) => (
                 <LessonRow
                   key={l.id ?? `static-${i}`}
@@ -206,6 +238,7 @@ function ModuleBlock({ mod, onRenameModule, onDeleteModule, onAddLesson, onRenam
                   </button>
                 </form>
               )}
+              </div>
             </div>
           </motion.div>
         )}
@@ -568,6 +601,11 @@ export default function CurriculumPage() {
     await refetch().catch(() => {});
   };
 
+  const handleUpdateDescription = async (id, description) => {
+    await api.patch(`/curriculum/modules/${id}`, { description });
+    await refetch().catch(() => {});
+  };
+
   const handleDeleteModule = async (id) => {
     await api.delete(`/curriculum/modules/${id}`);
     await refetch().catch(() => {});
@@ -670,6 +708,7 @@ export default function CurriculumPage() {
                   mod={mod}
                   readOnly={readOnly}
                   onRenameModule={handleRenameModule}
+                  onUpdateDescription={handleUpdateDescription}
                   onDeleteModule={handleDeleteModule}
                   onAddLesson={handleAddLesson}
                   onRenameLesson={handleRenameLesson}
