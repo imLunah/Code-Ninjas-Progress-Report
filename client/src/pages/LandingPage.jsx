@@ -44,7 +44,7 @@ export default function LandingPage() {
   return (
     <motion.div
       style={{ background: BG, color: TEXT }}
-      className="min-h-screen flex flex-col font-ninja overflow-hidden relative"
+      className="min-h-screen flex flex-col font-ninja overflow-x-hidden relative"
       animate={{ opacity: leaving ? 0 : 1 }}
       transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
       onAnimationComplete={() => { if (leaving) navigate('/login', { state: { fromLanding: true } }); }}
@@ -127,10 +127,10 @@ export default function LandingPage() {
       <motion.img
         src="/CodeNinjasCelebrate.webp"
         alt=""
-        className="hidden lg:block absolute top-[44%] -translate-y-1/2 object-contain pointer-events-none select-none"
+        className="hidden lg:block absolute top-1/2 -translate-y-1/2 object-contain pointer-events-none select-none"
         style={{
-          right: '5%',
-          height: 'min(72vh, 580px)',
+          right: '4%',
+          height: 'min(68vh, 520px)',
           filter: 'drop-shadow(0 30px 50px rgba(0,0,0,0.55))',
         }}
         initial={{ x: 600, opacity: 0 }}
