@@ -9,7 +9,7 @@ const TEXT  = '#d0daed';
 const MUTED = '#8a9ab8';
 
 const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 26 },
+  initial: { opacity: 0, y: 24 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.65, delay, ease: [0.16, 1, 0.3, 1] },
 });
@@ -49,95 +49,90 @@ export default function LandingPage() {
       transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
       onAnimationComplete={() => { if (leaving) navigate('/login', { state: { fromLanding: true } }); }}
     >
-      {/* Background image */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: 'url(/ninja_background.jpg)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          opacity: 0.12,
-        }}
-      />
-
       {/* Background glow */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'radial-gradient(ellipse 65% 50% at 50% 42%, rgba(56,161,255,0.07) 0%, transparent 70%)',
+            'radial-gradient(ellipse 60% 55% at 36% 46%, rgba(56,161,255,0.10) 0%, transparent 70%), ' +
+            'radial-gradient(ellipse 45% 40% at 88% 78%, rgba(56,161,255,0.08) 0%, transparent 72%)',
         }}
       />
 
-      {/* Hero */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 text-center relative z-10 py-8">
+      {/* Main content */}
+      <div className="flex-1 flex items-center relative z-10 px-10 sm:px-16 lg:px-[84px]">
+        <div className="w-full max-w-[540px]">
 
-        {/* Logo */}
-        <motion.div className="mb-5" {...fadeUp(0)}>
-          <img
-            src="/DojoLinkLogoH.svg"
-            alt="DojoLink"
-            className="h-16 sm:h-20 md:h-28 mx-auto"
-            style={{ filter: 'drop-shadow(0 0 32px rgba(56,161,255,0.35))' }}
-          />
-        </motion.div>
-
-        {/* Tagline */}
-        <motion.h1
-          className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-[1.12] tracking-tight mb-4"
-          {...fadeUp(0.15)}
-        >
-          Dojo management{' '}
-          <span style={{ color: BLUE, textShadow: '0 0 40px rgba(56,161,255,0.35)' }}>
-            for staff and parents.
-          </span>
-        </motion.h1>
-
-        {/* Subtext */}
-        <motion.p
-          className="text-base md:text-lg max-w-sm leading-relaxed mb-7"
-          style={{ color: MUTED }}
-          {...fadeUp(0.28)}
-        >
-          Check ins, belt progress, clubs and parent updates all in one place.
-        </motion.p>
-
-        {/* CTA */}
-        <motion.button
-          onClick={handleSignIn}
-          className="px-10 py-4 rounded-2xl text-base font-extrabold tracking-wide text-white relative overflow-hidden group"
-          style={{
-            background: `linear-gradient(135deg, rgb(56,161,255), rgb(22,128,240))`,
-            boxShadow: '0 0 32px rgba(56,161,255,0.25), 0 4px 14px rgba(0,0,0,0.3)',
-          }}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.42, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          whileHover={{ scale: 1.05, boxShadow: '0 0 48px rgba(56,161,255,0.4), 0 6px 20px rgba(0,0,0,0.35)' }}
-          whileTap={{ scale: 0.97 }}
-        >
-          <span
-            className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out pointer-events-none"
-            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)', transform: 'skewX(-20deg)' }}
-          />
-          <span className="relative z-10 flex items-center gap-2.5">
-            Get Started
-            <motion.span
-              animate={{ x: [0, 5, 0] }}
-              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+          {/* Wordmark */}
+          <motion.div className="mb-6" {...fadeUp(0)}>
+            <span
+              className="font-black leading-none"
+              style={{ fontSize: 'clamp(56px, 7vw, 88px)', letterSpacing: '-0.01em' }}
             >
-              →
-            </motion.span>
-          </span>
-        </motion.button>
+              <span style={{ color: BLUE }}>DOJO</span>
+              <span style={{ color: '#ffffff' }}>LINK</span>
+            </span>
+          </motion.div>
+
+          {/* Headline */}
+          <motion.h1
+            className="font-extrabold leading-[1.18] tracking-tight mb-9"
+            style={{ fontSize: 'clamp(30px, 3.8vw, 50px)', color: TEXT }}
+            {...fadeUp(0.15)}
+          >
+            Dojo management<br />
+            for{' '}
+            <span style={{ color: BLUE }}>staff and parents.</span>
+          </motion.h1>
+
+          {/* CTA */}
+          <motion.button
+            onClick={handleSignIn}
+            className="relative overflow-hidden group font-ninja font-extrabold text-white"
+            style={{
+              padding: '18px 52px',
+              borderRadius: '16px',
+              fontSize: '20px',
+              letterSpacing: '0.01em',
+              background: 'linear-gradient(160deg, rgb(82,178,255) 0%, rgb(40,148,255) 100%)',
+              boxShadow:
+                '0 0 40px rgba(56,161,255,0.32), 0 6px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25)',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.32, duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+            whileHover={{ scale: 1.04, boxShadow: '0 0 56px rgba(56,161,255,0.45), 0 8px 24px rgba(0,0,0,0.35)' }}
+            whileTap={{ scale: 0.97 }}
+          >
+            <span
+              className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out pointer-events-none"
+              style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)', transform: 'skewX(-20deg)' }}
+            />
+            <span className="relative z-10 flex items-center gap-3">
+              Get Started
+              <motion.span
+                animate={{ x: [0, 5, 0] }}
+                transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                →
+              </motion.span>
+            </span>
+          </motion.button>
+        </div>
       </div>
 
-      {/* Celebrating ninja — desktop only */}
+      {/* Ninja — desktop right side */}
       <motion.img
         src="/CodeNinjasCelebrate.webp"
         alt=""
-        className="hidden lg:block absolute right-[6%] xl:right-[10%] bottom-0 h-[340px] xl:h-[420px] object-contain pointer-events-none select-none"
-        style={{ filter: 'drop-shadow(0 24px 40px rgba(0,0,0,0.5))' }}
+        className="hidden lg:block absolute top-1/2 -translate-y-1/2 object-contain pointer-events-none select-none"
+        style={{
+          right: '5%',
+          height: 'min(72vh, 580px)',
+          filter: 'drop-shadow(0 30px 50px rgba(0,0,0,0.55))',
+        }}
         initial={{ x: 600, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ delay: 0.5, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
@@ -145,11 +140,11 @@ export default function LandingPage() {
 
       {/* Footer */}
       <motion.footer
-        className="relative z-20 flex items-center justify-center gap-4 pb-5 text-xs"
+        className="relative z-20 flex items-center gap-4 pb-6 px-10 sm:px-16 lg:px-[84px] text-xs"
         style={{ color: MUTED }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.85, duration: 0.6 }}
+        transition={{ delay: 0.75, duration: 0.6 }}
       >
         <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
         <span style={{ opacity: 0.3 }}>·</span>
