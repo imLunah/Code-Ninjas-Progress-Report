@@ -93,16 +93,24 @@ export default function ProjectFields({ project, setProject, status, setStatus, 
         <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
           Status
         </label>
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-        >
-          <option value="">Select status...</option>
+        <div className="flex flex-wrap gap-2">
           {STATUSES.map((s) => (
-            <option key={s} value={s}>{s}</option>
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStatus(status === s ? '' : s)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-ninja font-semibold transition-colors ${
+                status === s
+                  ? s === 'Completed'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-ninja-blue text-white'
+                  : 'bg-white border border-ninja-border text-ninja-navy hover:border-ninja-blue'
+              }`}
+            >
+              {s}
+            </button>
           ))}
-        </select>
+        </div>
       </div>
     </div>
   );

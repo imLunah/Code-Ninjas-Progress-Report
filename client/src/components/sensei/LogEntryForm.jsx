@@ -224,6 +224,7 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
           sub_program: e.subProgram || null,
           module_name: e.moduleName === '__custom__' ? (e.customModule || null) : (e.moduleName || null),
           lesson_name: e.moduleName === '__custom__' ? (e.customLesson || null) : (e.lessonName || null),
+          status: e.status || null,
         }));
 
       const payload = {
@@ -240,12 +241,7 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
           : (filledEntries.length <= 1 ? (filledEntries[0]?.status || null) : null),
         update_student: true,
         ...(filledEntries.length > 1
-          ? { lesson_entries: filledEntries.map(e => ({
-              sub_program: e.sub_program,
-              module_name: e.module_name,
-              lesson_name: e.lesson_name,
-              status: e.status || null,
-            })) }
+          ? { lesson_entries: filledEntries }
           : {
               sub_program: filledEntries[0]?.sub_program || null,
               module_name: filledEntries[0]?.module_name || null,
