@@ -121,7 +121,7 @@ export default function LogProgressPage() {
                   )}
                   {enrollment && enrollment.program !== 'CREATE' && (enrollment.last_module_name || enrollment.last_lesson_name) && (
                     <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                      <span className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide">Last:</span>
+                      <span className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide">Previous:</span>
                       {enrollment.last_sub_program && (
                         <span className="text-xs font-ninja font-semibold text-ninja-muted bg-ninja-bg border border-ninja-border px-2 py-0.5 rounded-md">{enrollment.last_sub_program}</span>
                       )}
