@@ -4,29 +4,6 @@ const { requireSensei, requireManager, requireOwnLocation } = require('../middle
 
 const STANDARD_BELTS = new Set(['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black']);
 
-// For Robotics/JR: distinct modules visited vs total in that sub-program
-const CURRICULUM_MODULE_COUNTS = {
-  'JR Coding': 10,
-  'Snap Circuits': 1,
-  'Ozobot Evo': 2,
-  'LEGO Spike Essentials': 8,
-  'LEGO Spike Prime': 4,
-  'VEX GO': 4,
-};
-
-// For AI Academy: lessons visited within the current module
-const AI_MODULE_LESSON_COUNTS = {
-  'Module 1': 6,
-  'Module 2': 8,
-  'Module 3': 8,
-  'Module 4': 8,
-  'Module 5': 8,
-  'Module 6': 8,
-  'Module 7': 9,
-  'Module 8': 8,
-  'Module 9': 8,
-};
-
 // POST /api/progress
 // Accepts either single-lesson fields OR lesson_entries array for multi-lesson sessions.
 router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
@@ -161,71 +138,26 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
       );
     }
 
-    // Auto-compute percent_complete using the last lesson entry's fields
+    // Auto-compute percent_complete: lessons done in current module / total lessons in that module
     const lastModuleName = lastEntry.module_name;
     const lastSubProgram = lastEntry.sub_program;
 
-    if (program === 'AI Academy' && lastModuleName) {
-      const totalLessons = AI_MODULE_LESSON_COUNTS[lastModuleName];
-      if (totalLessons) {
-        const { rows: cntRows } = await client.query(
-          'SELECT COUNT(DISTINCT lesson_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name = $3 AND lesson_name IS NOT NULL',
-          [student_id, program, lastModuleName]
-        );
-        const pct = Math.min(100, Math.round((parseInt(cntRows[0].cnt) / totalLessons) * 100));
-        await client.query(
-          'UPDATE student_programs SET percent_complete = $1 WHERE student_id = $2 AND program = $3',
-          [pct, student_id, program]
-        );
-      }
-    } else if (program === 'JR' && lastSubProgram) {
-      // JR: sequential position — if student reaches Module 5, credit modules 1-5 as complete
-      if (lastSubProgram === 'JR Coding' && lastModuleName) {
-        const JR_CODING_MODULES = ['Module 1', 'Module 2', 'Module 3', 'Module 4', 'Module 5',
-          'Module 6', 'Module 7', 'Module 8', 'Module 9', 'Module 10'];
-        const { rows: modRows } = await client.query(
-          'SELECT DISTINCT module_name FROM progress_logs WHERE student_id = $1 AND program = $2 AND sub_program = $3 AND module_name IS NOT NULL',
-          [student_id, program, 'JR Coding']
-        );
-        const highestIdx = Math.max(-1, ...modRows.map((r) => JR_CODING_MODULES.indexOf(r.module_name)));
-        if (highestIdx >= 0) {
-          const pct = Math.round(((highestIdx + 1) / JR_CODING_MODULES.length) * 100);
-          await client.query(
-            'UPDATE student_programs SET percent_complete = $1 WHERE student_id = $2 AND program = $3',
-            [pct, student_id, program]
-          );
-        }
-      } else if (lastSubProgram === 'Snap Circuits') {
-        const lastLessonName = lastEntry.lesson_name;
-        if (lastLessonName) {
-          const { rows: lessonRows } = await client.query(
-            'SELECT lesson_name FROM progress_logs WHERE student_id = $1 AND program = $2 AND sub_program = $3 AND lesson_name IS NOT NULL',
-            [student_id, program, 'Snap Circuits']
-          );
-          const nums = lessonRows.map((r) => {
-            const m = r.lesson_name?.match(/Project\s+(\d+)/i);
-            return m ? parseInt(m[1], 10) : 0;
-          });
-          const highest = nums.length > 0 ? Math.max(0, ...nums) : 0;
-          if (highest > 0) {
-            const pct = Math.min(100, Math.round((highest / 24) * 100));
-            await client.query(
-              'UPDATE student_programs SET percent_complete = $1 WHERE student_id = $2 AND program = $3',
-              [pct, student_id, program]
-            );
-          }
-        }
-      }
-    } else if (program !== 'CREATE' && program !== 'AI Academy' && program !== 'JR' && lastModuleName) {
-      const lookupKey = lastSubProgram || program;
-      const totalModules = CURRICULUM_MODULE_COUNTS[lookupKey];
-      if (totalModules) {
-        const cntSql = lastSubProgram
-          ? 'SELECT COUNT(DISTINCT module_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND sub_program = $3 AND module_name IS NOT NULL'
-          : 'SELECT COUNT(DISTINCT module_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name IS NOT NULL';
-        const cntParams = lastSubProgram ? [student_id, program, lastSubProgram] : [student_id, program];
-        const { rows: cntRows } = await client.query(cntSql, cntParams);
-        const pct = Math.min(100, Math.round((parseInt(cntRows[0].cnt) / totalModules) * 100));
+    if (program !== 'CREATE' && lastModuleName && lastEntry.lesson_name) {
+      const { rows: doneRows } = await client.query(
+        'SELECT COUNT(DISTINCT lesson_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name = $3 AND lesson_name IS NOT NULL',
+        [student_id, program, lastModuleName]
+      );
+      const { rows: totalRows } = await client.query(
+        `SELECT COUNT(cl.id) AS total
+         FROM curriculum_lessons cl
+         JOIN curriculum_modules cm ON cl.module_id = cm.id
+         WHERE cm.program = $1 AND cm.module_name = $2
+           AND (cm.sub_program = $3 OR (cm.sub_program IS NULL AND $3::text IS NULL))`,
+        [program, lastModuleName, lastSubProgram || null]
+      );
+      const totalLessons = parseInt(totalRows[0].total);
+      if (totalLessons > 0) {
+        const pct = Math.min(100, Math.round((parseInt(doneRows[0].cnt) / totalLessons) * 100));
         await client.query(
           'UPDATE student_programs SET percent_complete = $1 WHERE student_id = $2 AND program = $3',
           [pct, student_id, program]

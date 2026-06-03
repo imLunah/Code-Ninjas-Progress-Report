@@ -405,6 +405,144 @@ router.patch('/:id/restore', requireManager, requireOwnLocation, async (req, res
   }
 });
 
+// GET /api/students/:id/roadmap — full curriculum with per-lesson completion flags
+router.get('/:id/roadmap', requireSensei, async (req, res) => {
+  const pool = req.app.get('db');
+  const { program, sub_program } = req.query;
+  if (!program) return res.status(400).json({ error: 'program is required' });
+
+  try {
+    const isManager = ['manager', 'admin'].includes(req.session.role);
+    const { rows: studentRows } = await pool.query(
+      isManager
+        ? 'SELECT id FROM students WHERE id = $1'
+        : 'SELECT id FROM students WHERE id = $1 AND location_id = $2 AND active = true',
+      isManager ? [req.params.id] : [req.params.id, req.session.activeLocationId]
+    );
+    if (!studentRows[0]) return res.status(404).json({ error: 'Student not found' });
+
+    const { rows: modules } = await pool.query(`
+      SELECT m.id, m.module_name, m.module_order,
+        COALESCE(json_agg(
+          json_build_object('id', l.id, 'lesson_name', l.lesson_name, 'lesson_order', l.lesson_order)
+          ORDER BY l.lesson_order ASC
+        ) FILTER (WHERE l.id IS NOT NULL), '[]') AS lessons
+      FROM curriculum_modules m
+      LEFT JOIN curriculum_lessons l ON l.module_id = m.id
+      WHERE m.program = $1
+        AND (m.sub_program = $2 OR (m.sub_program IS NULL AND $2::text IS NULL))
+      GROUP BY m.id
+      ORDER BY m.module_order ASC
+    `, [program, sub_program || null]);
+
+    if (!modules.length) return res.status(404).json({ error: 'No curriculum found for this program' });
+
+    const subParam = sub_program || null;
+    const { rows: completedRows } = await pool.query(
+      `SELECT DISTINCT module_name, lesson_name FROM progress_logs
+       WHERE student_id = $1 AND program = $2
+         AND module_name IS NOT NULL AND lesson_name IS NOT NULL
+         ${subParam ? 'AND sub_program = $3' : ''}`,
+      subParam ? [req.params.id, program, subParam] : [req.params.id, program]
+    );
+    const completedSet = new Set(completedRows.map(r => `${r.module_name}\x00${r.lesson_name}`));
+
+    res.json(modules.map(m => ({
+      id: m.id,
+      module_name: m.module_name,
+      module_order: m.module_order,
+      lessons: m.lessons.map(l => ({
+        id: l.id,
+        lesson_name: l.lesson_name,
+        lesson_order: l.lesson_order,
+        completed: completedSet.has(`${m.module_name}\x00${l.lesson_name}`),
+      })),
+    })));
+  } catch (err) {
+    console.error('Roadmap fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch roadmap' });
+  }
+});
+
+// POST /api/students/:id/roadmap/complete — batch-mark lessons complete from roadmap
+router.post('/:id/roadmap/complete', requireSensei, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { program, sub_program, entries } = req.body;
+  if (!program || !Array.isArray(entries) || !entries.length) {
+    return res.status(400).json({ error: 'program and entries array are required' });
+  }
+
+  try {
+    const { rows: studentRows } = await pool.query(
+      'SELECT id FROM students WHERE id = $1 AND active = true AND location_id = $2',
+      [req.params.id, req.session.activeLocationId]
+    );
+    if (!studentRows[0]) return res.status(404).json({ error: 'Student not found' });
+
+    // Dedup: skip lessons already in progress_logs for this student+program
+    const { rows: existingRows } = await pool.query(
+      'SELECT DISTINCT module_name, lesson_name FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name IS NOT NULL AND lesson_name IS NOT NULL',
+      [req.params.id, program]
+    );
+    const existingSet = new Set(existingRows.map(r => `${r.module_name}\x00${r.lesson_name}`));
+    const newEntries = entries.filter(e => !existingSet.has(`${e.module_name}\x00${e.lesson_name}`));
+    if (!newEntries.length) return res.json({ inserted: 0 });
+
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const entry of newEntries) {
+        await client.query(
+          `INSERT INTO progress_logs (student_id, program, sensei_id, session_date, notes, sub_program, module_name, lesson_name)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [req.params.id, program, req.session.userId, today, 'Marked complete from roadmap', sub_program || null, entry.module_name, entry.lesson_name]
+        );
+      }
+
+      // Recompute percent_complete for current module
+      const { rows: spRows } = await client.query(
+        'SELECT last_module_name, last_sub_program FROM student_programs WHERE student_id = $1 AND program = $2',
+        [req.params.id, program]
+      );
+      const currentModule = spRows[0]?.last_module_name;
+      const currentSubProgram = spRows[0]?.last_sub_program;
+      if (currentModule) {
+        const { rows: doneRows } = await client.query(
+          'SELECT COUNT(DISTINCT lesson_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name = $3 AND lesson_name IS NOT NULL',
+          [req.params.id, program, currentModule]
+        );
+        const { rows: totalRows } = await client.query(
+          `SELECT COUNT(cl.id) AS total FROM curriculum_lessons cl
+           JOIN curriculum_modules cm ON cl.module_id = cm.id
+           WHERE cm.program = $1 AND cm.module_name = $2
+             AND (cm.sub_program = $3 OR (cm.sub_program IS NULL AND $3::text IS NULL))`,
+          [program, currentModule, currentSubProgram || null]
+        );
+        const totalLessons = parseInt(totalRows[0].total);
+        if (totalLessons > 0) {
+          const pct = Math.min(100, Math.round((parseInt(doneRows[0].cnt) / totalLessons) * 100));
+          await client.query(
+            'UPDATE student_programs SET percent_complete = $1 WHERE student_id = $2 AND program = $3',
+            [pct, req.params.id, program]
+          );
+        }
+      }
+      await client.query('COMMIT');
+    } catch (txErr) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw txErr;
+    } finally {
+      client.release();
+    }
+
+    res.json({ inserted: newEntries.length });
+  } catch (err) {
+    console.error('Roadmap complete error:', err);
+    res.status(500).json({ error: 'Failed to mark lessons complete' });
+  }
+});
+
 // POST /api/students/import — bulk import from CSV data
 router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
