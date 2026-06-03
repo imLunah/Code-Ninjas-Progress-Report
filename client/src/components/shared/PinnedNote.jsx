@@ -35,7 +35,6 @@ export default function PinnedNote({ studentId, initialNote, onUpdated }) {
     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="text-amber-500">📌</span>
           <h3 className="text-sm font-ninja font-semibold text-amber-800 uppercase tracking-wide">Pinned Note</h3>
         </div>
         {!isReadOnly && !editing && (

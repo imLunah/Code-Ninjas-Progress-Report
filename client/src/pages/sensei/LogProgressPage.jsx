@@ -171,10 +171,7 @@ export default function LogProgressPage() {
             />
             {student.special_instructions && (
               <div className="rounded-2xl border border-ninja-border bg-ninja-bg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-base">📌</span>
-                  <h2 className="font-ninja font-bold text-sm uppercase tracking-wide text-ninja-muted">Note from Parent</h2>
-                </div>
+                <h2 className="font-ninja font-bold text-sm uppercase tracking-wide text-ninja-muted mb-2">Note From Parent</h2>
                 <p className="font-ninja text-sm leading-relaxed whitespace-pre-wrap text-ninja-blue">
                   {student.special_instructions}
                 </p>
