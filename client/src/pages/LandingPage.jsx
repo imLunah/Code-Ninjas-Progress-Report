@@ -49,6 +49,17 @@ export default function LandingPage() {
       transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
       onAnimationComplete={() => { if (leaving) navigate('/login', { state: { fromLanding: true } }); }}
     >
+      {/* Background texture */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: 'url(/ninja_background.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: 0.12,
+        }}
+      />
+
       {/* Background glow */}
       <div
         className="absolute inset-0 pointer-events-none"
