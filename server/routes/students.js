@@ -442,6 +442,7 @@ router.get('/:id/roadmap', requireSensei, async (req, res) => {
       `SELECT DISTINCT module_name, lesson_name FROM progress_logs
        WHERE student_id = $1 AND program = $2
          AND module_name IS NOT NULL AND lesson_name IS NOT NULL
+         AND status_at = 'Completed'
          ${subParam ? 'AND sub_program = $3' : ''}`,
       subParam ? [req.params.id, program, subParam] : [req.params.id, program]
     );
@@ -479,9 +480,9 @@ router.post('/:id/roadmap/complete', requireSensei, requireOwnLocation, async (r
     );
     if (!studentRows[0]) return res.status(404).json({ error: 'Student not found' });
 
-    // Dedup: skip lessons already in progress_logs for this student+program
+    // Dedup: skip lessons already completed (status_at = 'Completed') for this student+program
     const { rows: existingRows } = await pool.query(
-      'SELECT DISTINCT module_name, lesson_name FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name IS NOT NULL AND lesson_name IS NOT NULL',
+      "SELECT DISTINCT module_name, lesson_name FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name IS NOT NULL AND lesson_name IS NOT NULL AND status_at = 'Completed'",
       [req.params.id, program]
     );
     const existingSet = new Set(existingRows.map(r => `${r.module_name}\x00${r.lesson_name}`));
@@ -494,9 +495,9 @@ router.post('/:id/roadmap/complete', requireSensei, requireOwnLocation, async (r
       await client.query('BEGIN');
       for (const entry of newEntries) {
         await client.query(
-          `INSERT INTO progress_logs (student_id, program, sensei_id, session_date, notes, sub_program, module_name, lesson_name)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [req.params.id, program, req.session.userId, today, 'Marked complete from roadmap', sub_program || null, entry.module_name, entry.lesson_name]
+          `INSERT INTO progress_logs (student_id, program, sensei_id, session_date, notes, status_at, sub_program, module_name, lesson_name)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [req.params.id, program, req.session.userId, today, 'Marked complete from roadmap', 'Completed', sub_program || null, entry.module_name, entry.lesson_name]
         );
       }
 
@@ -509,7 +510,7 @@ router.post('/:id/roadmap/complete', requireSensei, requireOwnLocation, async (r
       const currentSubProgram = spRows[0]?.last_sub_program;
       if (currentModule) {
         const { rows: doneRows } = await client.query(
-          'SELECT COUNT(DISTINCT lesson_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name = $3 AND lesson_name IS NOT NULL',
+          "SELECT COUNT(DISTINCT lesson_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name = $3 AND lesson_name IS NOT NULL AND status_at = 'Completed'",
           [req.params.id, program, currentModule]
         );
         const { rows: totalRows } = await client.query(
