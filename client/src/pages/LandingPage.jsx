@@ -60,14 +60,14 @@ export default function LandingPage() {
       />
 
       {/* Main content */}
-      <div className="flex-1 flex items-center relative z-10 px-10 sm:px-16 lg:px-[84px]">
-        <div className="w-full max-w-[540px]">
+      <div className="flex-1 flex items-center relative z-10 px-8 sm:px-12 lg:px-[84px]">
+        <div className="w-full max-w-[540px] mx-auto lg:mx-0 text-center lg:text-left">
 
           {/* Wordmark */}
-          <motion.div className="mb-6" {...fadeUp(0)}>
+          <motion.div className="mb-5 sm:mb-6" {...fadeUp(0)}>
             <span
               className="font-black leading-none"
-              style={{ fontSize: 'clamp(56px, 7vw, 88px)', letterSpacing: '-0.01em' }}
+              style={{ fontSize: 'clamp(48px, 12vw, 88px)', letterSpacing: '-0.01em' }}
             >
               <span style={{ color: BLUE }}>DOJO</span>
               <span style={{ color: '#ffffff' }}>LINK</span>
@@ -76,8 +76,8 @@ export default function LandingPage() {
 
           {/* Headline */}
           <motion.h1
-            className="font-extrabold leading-[1.18] tracking-tight mb-9"
-            style={{ fontSize: 'clamp(30px, 3.8vw, 50px)', color: TEXT }}
+            className="font-extrabold leading-[1.18] tracking-tight mb-7 sm:mb-9"
+            style={{ fontSize: 'clamp(24px, 6vw, 50px)', color: TEXT }}
             {...fadeUp(0.15)}
           >
             Dojo management<br />
@@ -86,40 +86,44 @@ export default function LandingPage() {
           </motion.h1>
 
           {/* CTA */}
-          <motion.button
-            onClick={handleSignIn}
-            className="relative overflow-hidden group font-ninja font-extrabold text-white"
-            style={{
-              padding: '18px 52px',
-              borderRadius: '16px',
-              fontSize: '20px',
-              letterSpacing: '0.01em',
-              background: 'linear-gradient(160deg, rgb(82,178,255) 0%, rgb(40,148,255) 100%)',
-              boxShadow:
-                '0 0 40px rgba(56,161,255,0.32), 0 6px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25)',
-              border: 'none',
-              cursor: 'pointer',
-            }}
+          <motion.div
+            className="flex justify-center lg:justify-start"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.32, duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
-            whileHover={{ scale: 1.04, boxShadow: '0 0 56px rgba(56,161,255,0.45), 0 8px 24px rgba(0,0,0,0.35)' }}
-            whileTap={{ scale: 0.97 }}
           >
-            <span
-              className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out pointer-events-none"
-              style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)', transform: 'skewX(-20deg)' }}
-            />
-            <span className="relative z-10 flex items-center gap-3">
-              Get Started
-              <motion.span
-                animate={{ x: [0, 5, 0] }}
-                transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                →
-              </motion.span>
-            </span>
-          </motion.button>
+            <motion.button
+              onClick={handleSignIn}
+              className="relative overflow-hidden group font-ninja font-extrabold text-white w-full sm:w-auto"
+              style={{
+                padding: '16px 48px',
+                borderRadius: '16px',
+                fontSize: '18px',
+                letterSpacing: '0.01em',
+                background: 'linear-gradient(160deg, rgb(82,178,255) 0%, rgb(40,148,255) 100%)',
+                boxShadow:
+                  '0 0 40px rgba(56,161,255,0.32), 0 6px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25)',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+              whileHover={{ scale: 1.04, boxShadow: '0 0 56px rgba(56,161,255,0.45), 0 8px 24px rgba(0,0,0,0.35)' }}
+              whileTap={{ scale: 0.97 }}
+            >
+              <span
+                className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out pointer-events-none"
+                style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)', transform: 'skewX(-20deg)' }}
+              />
+              <span className="relative z-10 flex items-center justify-center gap-3">
+                Get Started
+                <motion.span
+                  animate={{ x: [0, 5, 0] }}
+                  transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  →
+                </motion.span>
+              </span>
+            </motion.button>
+          </motion.div>
         </div>
       </div>
 
@@ -143,7 +147,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <motion.footer
-        className="relative z-20 flex items-center gap-4 pb-6 px-10 sm:px-16 lg:px-[84px] text-xs"
+        className="relative z-20 flex items-center justify-center lg:justify-start flex-wrap gap-3 pb-6 px-8 sm:px-12 lg:px-[84px] text-xs"
         style={{ color: MUTED }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
