@@ -76,7 +76,7 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
         belt_level_at || null,
         belt_sublevel_at || null,
         project_at || null,
-        status_at || null,
+        entry.status ?? status_at ?? null,
         notes,
         entry.sub_program || null,
         entry.module_name || null,
@@ -144,7 +144,7 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
 
     if (program !== 'CREATE' && lastModuleName && lastEntry.lesson_name) {
       const { rows: doneRows } = await client.query(
-        'SELECT COUNT(DISTINCT lesson_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name = $3 AND lesson_name IS NOT NULL',
+        "SELECT COUNT(DISTINCT lesson_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name = $3 AND lesson_name IS NOT NULL AND status_at = 'Completed'",
         [student_id, program, lastModuleName]
       );
       const { rows: totalRows } = await client.query(

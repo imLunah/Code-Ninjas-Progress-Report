@@ -128,6 +128,32 @@ function LessonEntryRow({ entry, index, total, program, onChange, onRemove, subP
           </select>
         </div>
       )}
+
+      {(entry.lessonName || (isCustomModule && (entry.customModule || entry.customLesson))) && (
+        <div>
+          <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
+            Status
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {['Started', 'Working On', 'Completed'].map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => onChange('status', entry.status === s ? '' : s)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-ninja font-semibold transition-colors ${
+                  entry.status === s
+                    ? s === 'Completed'
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-ninja-blue text-white'
+                    : 'bg-white border border-ninja-border text-ninja-navy hover:border-ninja-blue'
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -140,7 +166,7 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
   const [project, setProject] = useState(enrollment?.current_project || '');
   const [status, setStatus] = useState(enrollment?.project_status || '');
 
-  const emptyEntry = { subProgram: '', moduleName: '', lessonName: '', customModule: '', customLesson: '' };
+  const emptyEntry = { subProgram: '', moduleName: '', lessonName: '', customModule: '', customLesson: '', status: '' };
   const [lessonEntries, setLessonEntries] = useState([{ ...emptyEntry }]);
 
   const [loading, setLoading] = useState(false);
@@ -208,11 +234,18 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
         belt_level_at: isCreate ? (beltLevel || null) : null,
         belt_sublevel_at: isCreate && beltSublevel ? parseInt(beltSublevel) : null,
         project_at: isCreate ? (project || null) : null,
-        status_at: isCreate ? (status || null) : null,
+        // For CREATE: top-level status from belt fields. For non-Create single entry: from lesson entry.
+        status_at: isCreate
+          ? (status || null)
+          : (filledEntries.length <= 1 ? (filledEntries[0]?.status || null) : null),
         update_student: true,
-        // Use lesson_entries array if multiple; fall back to single-lesson fields
         ...(filledEntries.length > 1
-          ? { lesson_entries: filledEntries }
+          ? { lesson_entries: filledEntries.map(e => ({
+              sub_program: e.sub_program,
+              module_name: e.module_name,
+              lesson_name: e.lesson_name,
+              status: e.status || null,
+            })) }
           : {
               sub_program: filledEntries[0]?.sub_program || null,
               module_name: filledEntries[0]?.module_name || null,
