@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import BirthdayConfetti, { isBirthdayToday } from '../../components/shared/BirthdayConfetti';
+import RoadmapModal from '../../components/shared/RoadmapModal';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import Layout from '../../components/layout/Layout';
@@ -152,7 +153,7 @@ const PROGRAM_CARD_BAR_COLORS = {
 };
 
 // ── Mobile: Non-CREATE program card ──────────────────────────────────────────
-function MobileProgramCard({ enrollment }) {
+function MobileProgramCard({ enrollment, onOpenRoadmap }) {
   const { program, percent_complete, last_sub_program, last_module_name, last_lesson_name, last_session_date } = enrollment;
   const gradient = PROGRAM_CARD_GRADIENTS[program] || 'linear-gradient(135deg, #0f172a, #1e293b)';
   const barColor = PROGRAM_CARD_BAR_COLORS[program] || '#006ADD';
@@ -207,7 +208,7 @@ function MobileProgramCard({ enrollment }) {
         {percent_complete != null && (
           <div className="mt-3">
             <div className="flex justify-between text-xs font-ninja text-ninja-muted mb-1.5">
-              <span>Progress</span>
+              <span>Module Progress</span>
               <motion.span
                 className="font-bold text-ninja-navy"
                 initial={{ opacity: 0 }}
@@ -228,6 +229,15 @@ function MobileProgramCard({ enrollment }) {
             </div>
           </div>
         )}
+        <button
+          onClick={onOpenRoadmap}
+          className="mt-3 w-full flex items-center justify-center gap-1.5 text-ninja-blue font-ninja font-semibold text-sm py-2 rounded-xl border border-ninja-blue/25 hover:bg-ninja-blue/5 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+          </svg>
+          View Roadmap
+        </button>
       </div>
     </div>
   );
@@ -500,6 +510,7 @@ export default function StudentProfile() {
   const [editingEnrollment, setEditingEnrollment] = useState(null);
   const [showAddProgram, setShowAddProgram] = useState(false);
   const [showParentQR, setShowParentQR] = useState(false);
+  const [roadmapEnrollment, setRoadmapEnrollment] = useState(null);
 
   const isSenseiView = user?.role === 'admin' && viewAs === 'sensei';
   const isManager = ['manager', 'admin'].includes(user?.role) && !isSenseiView;
@@ -672,7 +683,7 @@ export default function StudentProfile() {
           {/* Other program cards */}
           {nonCreatePrograms.map((enrollment) => (
             <motion.div key={enrollment.program} variants={fadeUp}>
-              <MobileProgramCard enrollment={enrollment} />
+              <MobileProgramCard enrollment={enrollment} onOpenRoadmap={() => setRoadmapEnrollment(enrollment)} />
             </motion.div>
           ))}
 
@@ -814,7 +825,7 @@ export default function StudentProfile() {
               {/* Non-CREATE programs */}
               {nonCreatePrograms.map((enrollment) => (
                 <motion.div key={enrollment.program} variants={fadeUp}>
-                  <MobileProgramCard enrollment={enrollment} />
+                  <MobileProgramCard enrollment={enrollment} onOpenRoadmap={() => setRoadmapEnrollment(enrollment)} />
                 </motion.div>
               ))}
 
@@ -1105,6 +1116,16 @@ export default function StudentProfile() {
 
       <EditStudentModal isOpen={showEdit} onClose={() => setShowEdit(false)} student={student} onSaved={handleSaved} />
       <EnrollmentEditModal isOpen={!!editingEnrollment} onClose={() => setEditingEnrollment(null)} studentId={student.id} enrollment={editingEnrollment} onSaved={handleEnrollmentSaved} />
+      <RoadmapModal
+        open={!!roadmapEnrollment}
+        onClose={() => setRoadmapEnrollment(null)}
+        student={student}
+        enrollment={roadmapEnrollment}
+        onUpdate={() => {
+          setRoadmapEnrollment(null);
+          api.get(`/students/${student.id}`).then(data => setStudent(data)).catch(() => {});
+        }}
+      />
     </Layout>
   );
 }
