@@ -13,7 +13,8 @@ import PinnedNote from '../../components/shared/PinnedNote';
 import EditStudentModal from '../../components/manager/EditStudentModal';
 import EnrollmentEditModal from '../../components/manager/EnrollmentEditModal';
 import { api } from '../../api/client';
-import { PROGRAMS, BELTS, PROJECTS, STATUSES, getMaxLevel, getBelt, PROGRAM_LOGOS } from '../../utils/beltConfig';
+import { PROGRAMS as STATIC_PROGRAMS, BELTS, PROJECTS, STATUSES, getMaxLevel, getBelt, PROGRAM_LOGOS } from '../../utils/beltConfig';
+import { useCurriculum } from '../../context/CurriculumContext';
 
 // ── Animation variants ────────────────────────────────────────────────────────
 const fadeUp = {
@@ -419,9 +420,16 @@ function AddProgramForm({ studentId, existingPrograms, onAdded, onCancel }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const { subPrograms } = useCurriculum();
+  // Merge dynamic programs from curriculum with static fallback, deduplicated
+  const allPrograms = [
+    ...STATIC_PROGRAMS,
+    ...Object.keys(subPrograms || {}).filter(p => !STATIC_PROGRAMS.includes(p)),
+  ];
+
   const isCreate = program === 'CREATE';
   const maxLevel = getMaxLevel(beltLevel);
-  const available = PROGRAMS.filter((p) => !existingPrograms.includes(p));
+  const available = allPrograms.filter((p) => !existingPrograms.includes(p));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
