@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import BeltBadge from '../../components/ui/BeltBadge';
-import ProgramBadge from '../../components/ui/ProgramBadge';
 import Card from '../../components/ui/Card';
 import LogEntryForm from '../../components/sensei/LogEntryForm';
 import PinnedNote from '../../components/shared/PinnedNote';
@@ -108,19 +107,35 @@ export default function LogProgressPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex-1">
                   <h1 className="text-2xl font-bold font-ninja text-ninja-navy">{student.full_name}{isStudentBirthday && <span className="ml-2">🎂</span>}</h1>
-                  <div className="flex flex-wrap items-center gap-2 mt-2">
-                    {availablePrograms.map((p) => (
-                      <ProgramBadge key={p.program} program={p.program} />
-                    ))}
-                    {enrollment?.program === 'CREATE' && enrollment.belt_level && (
-                      <BeltBadge belt={enrollment.belt_level} sublevel={enrollment.belt_sublevel} />
-                    )}
-                    {enrollment?.current_project && (
-                      <span className="text-ninja-muted font-ninja text-sm">
-                        {enrollment.current_project}{enrollment.project_status ? ` — ${enrollment.project_status}` : ''}
-                      </span>
-                    )}
-                  </div>
+                  {enrollment?.program === 'CREATE' && (
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                      {enrollment.belt_level && (
+                        <BeltBadge belt={enrollment.belt_level} sublevel={enrollment.belt_sublevel} />
+                      )}
+                      {enrollment.current_project && (
+                        <span className="text-ninja-muted font-ninja text-sm">
+                          {enrollment.current_project}{enrollment.project_status ? ` — ${enrollment.project_status}` : ''}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {enrollment && enrollment.program !== 'CREATE' && (enrollment.last_module_name || enrollment.last_lesson_name) && (
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                      <span className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide">Last:</span>
+                      {enrollment.last_sub_program && (
+                        <span className="text-xs font-ninja font-semibold text-ninja-muted bg-ninja-bg border border-ninja-border px-2 py-0.5 rounded-md">{enrollment.last_sub_program}</span>
+                      )}
+                      {enrollment.last_module_name && (
+                        <span className="text-xs font-ninja text-ninja-muted">{enrollment.last_module_name}</span>
+                      )}
+                      {enrollment.last_module_name && enrollment.last_lesson_name && (
+                        <span className="text-ninja-muted/50 font-ninja text-xs">·</span>
+                      )}
+                      {enrollment.last_lesson_name && (
+                        <span className="text-xs font-ninja text-ninja-navy font-semibold">{enrollment.last_lesson_name}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
