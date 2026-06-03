@@ -29,6 +29,7 @@ import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import AccessibilityPage from './pages/AccessibilityPage';
 import LandingPage from './pages/LandingPage';
+import CurriculumRoadmapPage from './pages/CurriculumRoadmapPage';
 import LocationsPage from './pages/admin/LocationsPage';
 import CurriculumPage from './pages/admin/CurriculumPage';
 import UsersPage from './pages/admin/UsersPage';
@@ -74,6 +75,9 @@ export default function App() {
             <Route path="/admin/users" element={<ProtectedRoute role="admin"><UsersPage /></ProtectedRoute>} />
             <Route path="/admin/curriculum" element={<ProtectedRoute role="admin"><CurriculumPage /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute role="admin"><SettingsPage /></ProtectedRoute>} />
+
+            {/* Curriculum Roadmap */}
+            <Route path="/curriculum-roadmap" element={<ProtectedRoute role="sensei"><CurriculumRoadmapPage /></ProtectedRoute>} />
 
             {/* Account */}
             <Route path="/account" element={<ProtectedRoute role="sensei"><AccountPage /></ProtectedRoute>} />
