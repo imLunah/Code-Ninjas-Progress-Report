@@ -127,7 +127,7 @@ export default function LandingPage() {
       <motion.img
         src="/CodeNinjasCelebrate.webp"
         alt=""
-        className="hidden lg:block absolute top-1/2 -translate-y-1/2 object-contain pointer-events-none select-none"
+        className="hidden lg:block absolute top-[44%] -translate-y-1/2 object-contain pointer-events-none select-none"
         style={{
           right: '5%',
           height: 'min(72vh, 580px)',
