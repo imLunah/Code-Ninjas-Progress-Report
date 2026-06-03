@@ -26,6 +26,8 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
 
   useEffect(() => {
     if (!open || !enrollment) return;
+    // If program has sub-programs, wait for selectedSubProgram to be initialized
+    if (PROGRAM_SUB_PROGRAMS[enrollment.program] && !selectedSubProgram) return;
     setLoading(true);
     setError(null);
     setPending(new Set());
