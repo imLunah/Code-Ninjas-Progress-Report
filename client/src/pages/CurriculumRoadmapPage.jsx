@@ -43,42 +43,33 @@ function getConfig(program) {
   return PROGRAM_CONFIG[program] || { ...defaultConfig, label: program };
 }
 
-const TAG_STYLES = {
-  'Build':          'bg-emerald-50 text-emerald-700 border-emerald-200',
-  'Adventure':      'bg-violet-50 text-violet-700 border-violet-200',
-  'Solve':          'bg-amber-50 text-amber-700 border-amber-200',
-  'Belt-Up':        'bg-yellow-50 text-yellow-700 border-yellow-200',
-  'Prove Yourself': 'bg-sky-50 text-sky-700 border-sky-200',
-};
-
-function taggedLessons(lessons) {
-  let nonDebugCount = 0;
-  return lessons.map(l => {
-    const lower = l.lesson_name.toLowerCase();
-    let tag = null;
-    if (lower.includes('belt-up')) tag = 'Belt-Up';
-    else if (lower.startsWith('prove yourself')) tag = 'Prove Yourself';
-    else if (lower.startsWith('debugging')) tag = 'Solve';
-    else { tag = nonDebugCount === 0 ? 'Build' : 'Adventure'; nonDebugCount++; }
-    return { ...l, tag };
-  });
+function getProjectPrefix(name, index, total) {
+  const lower = name.toLowerCase();
+  if (lower.includes('belt-up')) return 'Belt-Up';
+  if (lower.startsWith('prove yourself')) return null; // name already contains it
+  if (lower.startsWith('debugging')) {
+    const solveNum = Math.ceil((index + 1) / 2);
+    return `Solve ${solveNum}`;
+  }
+  // count non-debug, non-belt-up projects before this one
+  return index === total - 1 ? 'Adventure' : `Build ${Math.floor(index / 2) + 1}`;
 }
 
 function LessonList({ lessons, isCreate }) {
-  const items = isCreate ? taggedLessons(lessons) : lessons;
   return (
-    <ul className="mt-3 space-y-1.5 pl-1">
-      {items.map((l, i) => (
-        <li key={l.id ?? i} className="flex items-start gap-2.5 text-sm font-ninja text-ninja-navy/80">
-          <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-ninja-border" />
-          {isCreate && l.tag && (
-            <span className={`shrink-0 text-[10px] font-ninja font-bold px-1.5 py-0.5 rounded border mt-0.5 ${TAG_STYLES[l.tag] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-              {l.tag}
-            </span>
-          )}
-          {l.lesson_name}
-        </li>
-      ))}
+    <ul className="mt-3 space-y-1 pl-1">
+      {lessons.map((l, i) => {
+        const prefix = isCreate ? getProjectPrefix(l.lesson_name, i, lessons.length) : null;
+        return (
+          <li key={l.id ?? i} className="flex items-start gap-2 text-sm font-ninja text-ninja-navy/80">
+            <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-ninja-border" />
+            {prefix && (
+              <span className="shrink-0 font-ninja font-semibold text-ninja-muted text-xs mt-0.5 min-w-[52px]">{prefix}:</span>
+            )}
+            {l.lesson_name}
+          </li>
+        );
+      })}
     </ul>
   );
 }

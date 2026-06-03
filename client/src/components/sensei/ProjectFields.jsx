@@ -9,17 +9,27 @@ function getSectionLabel(index, total) {
   return index % 2 === 0 ? `Build ${num}` : `Solve ${num}`;
 }
 
-export default function ProjectFields({ project, setProject, status, setStatus, beltLevel, beltSublevel }) {
+export default function ProjectFields({ project, setProject, status, setStatus, beltLevel, beltSublevel, beltProjects }) {
   const [isCustomProject, setIsCustomProject] = useState(false);
   const enteringCustomRef = useRef(false);
 
   const isUpperBelt = UPPER_BELTS.includes(beltLevel);
-  const levelProjects = getLevelProjects(beltLevel, beltSublevel);
-  const allUpperBeltProjects = isUpperBelt && BELT_LEVEL_PROJECTS[beltLevel]
+
+  // Dynamic data takes precedence over static config when available
+  const dynBelt = beltProjects?.[beltLevel];
+  const dynLevel = dynBelt ? Object.fromEntries(
+    Object.entries(dynBelt).map(([sub, projs]) => [sub, projs.map(p => p.project_name)])
+  ) : null;
+  const dynLevelProjects = dynLevel?.[beltSublevel] ?? null;
+  const dynAllUpper = isUpperBelt && dynBelt ? Object.values(dynBelt).flat().map(p => p.project_name) : null;
+
+  const levelProjects = dynLevelProjects ?? getLevelProjects(beltLevel, beltSublevel);
+  const allUpperBeltProjects = dynAllUpper ?? (isUpperBelt && BELT_LEVEL_PROJECTS[beltLevel]
     ? Object.values(BELT_LEVEL_PROJECTS[beltLevel]).flat()
-    : null;
+    : null);
+
   const projectOptions = isUpperBelt ? (allUpperBeltProjects ?? PROJECTS) : (levelProjects ?? PROJECTS);
-  const hasBeltProjects = beltLevel && !!BELT_LEVEL_PROJECTS[beltLevel];
+  const hasBeltProjects = beltLevel && !!(dynBelt || BELT_LEVEL_PROJECTS[beltLevel]);
   const needsSublevel = !isUpperBelt && hasBeltProjects && (!beltSublevel || parseInt(beltSublevel) < 1);
   const showLabels = levelProjects && !isUpperBelt;
 
