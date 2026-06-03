@@ -128,14 +128,15 @@ export default function LandingPage() {
         <motion.img
           src="/CodeNinjasCelebrate.webp"
           alt=""
-          className="absolute top-1/2 -translate-y-1/2 object-contain select-none"
+          className="absolute object-contain select-none"
           style={{
             right: '4%',
+            top: '50%',
             height: 'min(70vh, 540px)',
             filter: 'drop-shadow(0 30px 50px rgba(0,0,0,0.55))',
           }}
-          initial={{ x: 600, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
+          initial={{ x: 600, opacity: 0, y: '-50%' }}
+          animate={{ x: 0, opacity: 1, y: '-50%' }}
           transition={{ delay: 0.5, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
         />
       </div>
