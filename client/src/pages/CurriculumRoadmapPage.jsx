@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import { api } from '../api/client';
+import { PROGRAM_LOGOS, BELTS } from '../utils/beltConfig';
+
+const BELT_COLOR = Object.fromEntries(BELTS.map(b => [b.name, { color: b.color, text: b.textColor }]));
 
 const PROGRAM_CONFIG = {
   'CREATE': {
@@ -53,7 +56,7 @@ function LessonList({ lessons }) {
   );
 }
 
-function ModuleCard({ mod, accentColor }) {
+function ModuleCard({ mod, accentColor, isCreate }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -77,7 +80,7 @@ function ModuleCard({ mod, accentColor }) {
           <span className="font-ninja font-bold text-sm text-ninja-navy truncate">{mod.module_name}</span>
         </div>
         <span className="shrink-0 text-xs font-ninja text-ninja-muted ml-3">
-          {mod.lessons.length} lesson{mod.lessons.length !== 1 ? 's' : ''}
+          {mod.lessons.length} {isCreate ? 'project' : 'lesson'}{mod.lessons.length !== 1 ? 's' : ''}
         </span>
       </button>
 
@@ -104,36 +107,44 @@ function ModuleCard({ mod, accentColor }) {
   );
 }
 
-function SubProgramView({ modules, subPrograms, accentColor }) {
+function SubProgramView({ modules, subPrograms, accentColor, program }) {
   const [activeTab, setActiveTab] = useState(subPrograms?.[0] ?? null);
 
   const visibleModules = activeTab
     ? modules.filter(m => m.sub_program === activeTab)
     : modules;
 
+  const isCreate = program === 'CREATE';
+
   return (
     <div>
       {subPrograms?.length > 0 && (
-        <div className="flex gap-1.5 mb-4">
-          {subPrograms.map(sub => (
-            <button
-              key={sub}
-              onClick={() => setActiveTab(sub)}
-              className={`font-ninja font-semibold text-sm px-3.5 py-1.5 rounded-lg transition-colors ${
-                activeTab === sub
-                  ? 'text-white'
-                  : 'text-ninja-muted hover:text-ninja-navy bg-ninja-bg border border-ninja-border hover:border-ninja-blue/40'
-              }`}
-              style={activeTab === sub ? { background: accentColor } : {}}
-            >
-              {sub}
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {subPrograms.map(sub => {
+            const isActive = activeTab === sub;
+            const beltC = isCreate ? BELT_COLOR[sub] : null;
+            const activeBg = isCreate && beltC ? beltC.color : accentColor;
+            const activeText = isCreate && beltC ? beltC.text : '#fff';
+            return (
+              <button
+                key={sub}
+                onClick={() => setActiveTab(sub)}
+                className={`font-ninja font-semibold text-sm px-3.5 py-1.5 rounded-lg transition-colors ${
+                  isActive
+                    ? ''
+                    : 'text-ninja-muted hover:text-ninja-navy bg-ninja-bg border border-ninja-border hover:border-ninja-blue/40'
+                }`}
+                style={isActive ? { background: activeBg, color: activeText } : {}}
+              >
+                {sub}
+              </button>
+            );
+          })}
         </div>
       )}
       <div className="space-y-2">
         {visibleModules.map(mod => (
-          <ModuleCard key={mod.id} mod={mod} accentColor={accentColor} />
+          <ModuleCard key={mod.id} mod={mod} accentColor={accentColor} isCreate={isCreate} />
         ))}
         {visibleModules.length === 0 && (
           <p className="text-ninja-muted font-ninja text-sm py-4 text-center">No modules yet.</p>
@@ -186,17 +197,19 @@ export default function CurriculumRoadmapPage() {
               {programs.map(p => {
                 const c = getConfig(p.program);
                 const isActive = p.program === activeProgram;
+                const logo = PROGRAM_LOGOS[p.program];
                 return (
                   <button
                     key={p.program}
                     onClick={() => setActiveProgram(p.program)}
-                    className={`font-ninja font-bold text-sm px-4 py-2 rounded-xl border transition-all ${
+                    className={`font-ninja font-bold text-sm px-4 py-2 rounded-xl border transition-all flex items-center gap-2 ${
                       isActive
                         ? 'text-white border-transparent shadow-sm'
                         : 'bg-white border-ninja-border text-ninja-navy hover:border-ninja-blue/40'
                     }`}
                     style={isActive ? { background: c.color, borderColor: c.color } : {}}
                   >
+                    {logo && <img src={logo} alt="" className="w-5 h-5 object-contain rounded" />}
                     {p.program}
                   </button>
                 );
@@ -215,23 +228,29 @@ export default function CurriculumRoadmapPage() {
                 >
                   {/* Program header strip */}
                   <div
-                    className="rounded-2xl px-5 py-4 mb-5 border"
+                    className="rounded-2xl px-5 py-4 mb-5 border flex items-center gap-3"
                     style={{ background: cfg.bg, borderColor: cfg.border }}
                   >
-                    <h2 className="font-ninja font-extrabold text-lg" style={{ color: cfg.color }}>
-                      {current.program}
-                    </h2>
-                    <p className="text-sm font-ninja mt-0.5" style={{ color: cfg.color, opacity: 0.7 }}>
-                      {current.modules.length} module{current.modules.length !== 1 ? 's' : ''}
-                      {' · '}
-                      {current.modules.reduce((n, m) => n + m.lessons.length, 0)} total lessons
-                    </p>
+                    {PROGRAM_LOGOS[current.program] && (
+                      <img src={PROGRAM_LOGOS[current.program]} alt="" className="w-10 h-10 object-contain shrink-0" />
+                    )}
+                    <div>
+                      <h2 className="font-ninja font-extrabold text-lg" style={{ color: cfg.color }}>
+                        {current.program}
+                      </h2>
+                      <p className="text-sm font-ninja mt-0.5" style={{ color: cfg.color, opacity: 0.7 }}>
+                        {current.modules.length} module{current.modules.length !== 1 ? 's' : ''}
+                        {' · '}
+                        {current.modules.reduce((n, m) => n + m.lessons.length, 0)} total {current.program === 'CREATE' ? 'projects' : 'lessons'}
+                      </p>
+                    </div>
                   </div>
 
                   <SubProgramView
                     modules={current.modules}
                     subPrograms={current.sub_programs.length > 0 ? current.sub_programs : null}
                     accentColor={cfg.color}
+                    program={current.program}
                   />
                 </motion.div>
               )}

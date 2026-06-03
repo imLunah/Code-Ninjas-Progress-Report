@@ -62,20 +62,30 @@ router.get('/', async (req, res) => {
 router.get('/roadmap', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
   try {
-    const { rows } = await pool.query(`
-      SELECT m.id, m.program, m.sub_program, m.module_name, m.module_order, m.description,
-        COALESCE(json_agg(
-          json_build_object('id', l.id, 'lesson_name', l.lesson_name, 'lesson_order', l.lesson_order)
-          ORDER BY l.lesson_order ASC
-        ) FILTER (WHERE l.id IS NOT NULL), '[]') AS lessons
-      FROM curriculum_modules m
-      LEFT JOIN curriculum_lessons l ON l.module_id = m.id
-      GROUP BY m.id
-      ORDER BY m.program ASC, m.sub_program ASC NULLS FIRST, m.module_order ASC
-    `);
+    const [{ rows }, { rows: beltRows }] = await Promise.all([
+      pool.query(`
+        SELECT m.id, m.program, m.sub_program, m.module_name, m.module_order, m.description,
+          COALESCE(json_agg(
+            json_build_object('id', l.id, 'lesson_name', l.lesson_name, 'lesson_order', l.lesson_order)
+            ORDER BY l.lesson_order ASC
+          ) FILTER (WHERE l.id IS NOT NULL), '[]') AS lessons
+        FROM curriculum_modules m
+        LEFT JOIN curriculum_lessons l ON l.module_id = m.id
+        GROUP BY m.id
+        ORDER BY m.program ASC, m.sub_program ASC NULLS FIRST, m.module_order ASC
+      `),
+      pool.query(`
+        SELECT id, belt_name, sublevel, project_name
+        FROM belt_level_projects
+        ORDER BY sublevel ASC, id ASC
+      `),
+    ]);
 
+    const BELT_ORDER = ['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black'];
     const programOrder = ['CREATE', 'JR', 'AI Academy', 'Robotics Academy'];
     const programMap = {};
+
+    // Non-CREATE programs from curriculum_modules
     for (const m of rows) {
       if (!programMap[m.program]) programMap[m.program] = { program: m.program, sub_programs: [], modules: [] };
       if (m.sub_program && !programMap[m.program].sub_programs.includes(m.sub_program)) {
@@ -90,6 +100,36 @@ router.get('/roadmap', requireSensei, async (req, res) => {
         lessons: m.lessons.map(l => ({ id: l.id, lesson_name: l.lesson_name })),
       });
     }
+
+    // CREATE from belt_level_projects — belts as sub_programs, sublevels as modules
+    const createBelts = {};
+    for (const r of beltRows) {
+      if (!createBelts[r.belt_name]) createBelts[r.belt_name] = {};
+      if (!createBelts[r.belt_name][r.sublevel]) createBelts[r.belt_name][r.sublevel] = [];
+      createBelts[r.belt_name][r.sublevel].push({ id: r.id, lesson_name: r.project_name });
+    }
+    const createModules = [];
+    let mOrder = 0;
+    for (const belt of BELT_ORDER) {
+      if (!createBelts[belt]) continue;
+      const sublevels = Object.keys(createBelts[belt]).map(Number).sort((a, b) => a - b);
+      for (const sub of sublevels) {
+        createModules.push({
+          id: `belt_${belt}_${sub}`,
+          module_name: `Level ${sub}`,
+          module_order: mOrder++,
+          sub_program: belt,
+          description: null,
+          lessons: createBelts[belt][sub],
+        });
+      }
+    }
+    programMap['CREATE'] = {
+      program: 'CREATE',
+      sub_programs: BELT_ORDER.filter(b => createBelts[b]),
+      modules: createModules,
+    };
+
     const sorted = [
       ...programOrder.filter(p => programMap[p]).map(p => programMap[p]),
       ...Object.values(programMap).filter(p => !programOrder.includes(p.program)),
