@@ -656,11 +656,12 @@ export default function StudentProfile() {
 
           {/* Special Instructions */}
           {student.special_instructions && (
-            <motion.div variants={fadeUp} className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm">
-              <h2 className="text-ninja-navy font-ninja font-bold text-sm mb-1.5 flex items-center gap-2">
-                <span className="text-amber-500">⚠</span> Special Instructions from Parent
-              </h2>
-              <p className="text-ninja-navy font-ninja text-sm leading-relaxed whitespace-pre-wrap">{student.special_instructions}</p>
+            <motion.div variants={fadeUp} className="rounded-2xl border border-ninja-border bg-ninja-bg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-base">📌</span>
+                <h2 className="font-ninja font-bold text-sm uppercase tracking-wide text-ninja-muted">Special Instructions from Parent</h2>
+              </div>
+              <p className="font-ninja text-sm leading-relaxed whitespace-pre-wrap text-ninja-blue">{student.special_instructions}</p>
             </motion.div>
           )}
 
@@ -1053,11 +1054,12 @@ export default function StudentProfile() {
 
               {/* Special instructions */}
               {student.special_instructions && (
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm">
-                  <h3 className="text-ninja-navy font-ninja font-bold text-sm mb-1.5 flex items-center gap-2">
-                    <span className="text-amber-500">⚠</span> Special Instructions
-                  </h3>
-                  <p className="text-ninja-navy font-ninja text-sm leading-relaxed whitespace-pre-wrap">{student.special_instructions}</p>
+                <div className="rounded-2xl border border-ninja-border bg-ninja-bg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-base">📌</span>
+                    <h3 className="font-ninja font-bold text-sm uppercase tracking-wide text-ninja-muted">Special Instructions from Parent</h3>
+                  </div>
+                  <p className="font-ninja text-sm leading-relaxed whitespace-pre-wrap text-ninja-blue">{student.special_instructions}</p>
                 </div>
               )}
 
