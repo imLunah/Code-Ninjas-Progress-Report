@@ -159,7 +159,7 @@ function LessonEntryRow({ entry, index, total, program, onChange, onRemove, subP
 }
 
 export default function LogEntryForm({ student, program, enrollment, onLogged, sessionDate: sessionDateProp }) {
-  const { subPrograms, curriculum } = useCurriculum();
+  const { subPrograms, curriculum, beltProjects } = useCurriculum();
   const [notes, setNotes] = useState('');
   const [beltLevel, setBeltLevel] = useState(enrollment?.belt_level || '');
   const [beltSublevel, setBeltSublevel] = useState(enrollment?.belt_sublevel || '');
@@ -363,6 +363,7 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
             setStatus={setStatus}
             beltLevel={beltLevel}
             beltSublevel={beltSublevel}
+            beltProjects={beltProjects}
           />
 
         </div>
