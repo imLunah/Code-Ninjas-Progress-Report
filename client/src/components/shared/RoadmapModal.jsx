@@ -4,13 +4,6 @@ import { api } from '../../api/client';
 
 const PROGRAM_SUB_PROGRAMS = { JR: ['JR Coding', 'Snap Circuits'] };
 
-function getInitialSubProgram(enrollment) {
-  if (!enrollment) return null;
-  const options = PROGRAM_SUB_PROGRAMS[enrollment.program];
-  if (options) return enrollment.last_sub_program ?? options[0];
-  return enrollment.last_sub_program ?? null;
-}
-
 export default function RoadmapModal({ open, onClose, student, enrollment, onUpdate }) {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -18,25 +11,31 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
   const [error, setError] = useState(null);
   const [expandedModules, setExpandedModules] = useState(new Set());
   const [pending, setPending] = useState(new Set());
-  const [selectedSubProgram, setSelectedSubProgram] = useState(() => getInitialSubProgram(enrollment));
+  // tabSubProgram: only set when user manually picks a JR tab; null means "use enrollment default"
+  const [tabSubProgram, setTabSubProgram] = useState(null);
 
+  // Reset tab when modal closes so next open starts fresh
   useEffect(() => {
-    setSelectedSubProgram(getInitialSubProgram(enrollment));
-  }, [enrollment?.program, enrollment?.last_sub_program]);
+    if (!open) setTabSubProgram(null);
+  }, [open]);
+
+  const subProgramOptions = PROGRAM_SUB_PROGRAMS[enrollment?.program] ?? null;
+  // Synchronously computed — no timing race
+  const effectiveSubProgram = subProgramOptions
+    ? (tabSubProgram ?? enrollment?.last_sub_program ?? subProgramOptions[0])
+    : (enrollment?.last_sub_program ?? null);
 
   useEffect(() => {
     if (!open || !enrollment) return;
-    // If program has sub-programs, wait for selectedSubProgram to be initialized
-    if (PROGRAM_SUB_PROGRAMS[enrollment.program] && !selectedSubProgram) return;
     setLoading(true);
     setError(null);
     setPending(new Set());
     const params = new URLSearchParams({ program: enrollment.program });
-    if (selectedSubProgram) params.set('sub_program', selectedSubProgram);
+    if (effectiveSubProgram) params.set('sub_program', effectiveSubProgram);
     api.get(`/students/${student.id}/roadmap?${params}`)
       .then(data => {
         setModules(data);
-        const isActiveSub = selectedSubProgram === enrollment.last_sub_program;
+        const isActiveSub = effectiveSubProgram === enrollment.last_sub_program;
         if (isActiveSub && enrollment.last_module_name) {
           setExpandedModules(new Set([enrollment.last_module_name]));
         } else {
@@ -45,7 +44,7 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
       })
       .catch(() => setError('Failed to load roadmap'))
       .finally(() => setLoading(false));
-  }, [open, enrollment?.program, selectedSubProgram]);
+  }, [open, enrollment?.program, effectiveSubProgram]);
 
   const toggleExpand = (moduleName) => {
     setExpandedModules(prev => {
@@ -78,7 +77,7 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
       });
       await api.post(`/students/${student.id}/roadmap/complete`, {
         program: enrollment.program,
-        sub_program: selectedSubProgram || undefined,
+        sub_program: effectiveSubProgram || undefined,
         entries,
       });
       onUpdate?.();
@@ -111,7 +110,7 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
           <div>
             <h2 className="font-ninja font-extrabold text-xl text-ninja-navy">Curriculum Roadmap</h2>
             <p className="text-ninja-muted font-ninja text-sm mt-0.5">
-              {enrollment?.program}{selectedSubProgram ? ` · ${selectedSubProgram}` : ''}
+              {enrollment?.program}{effectiveSubProgram ? ` · ${effectiveSubProgram}` : ''}
             </p>
             {totalLessons > 0 && (
               <p className="text-ninja-muted font-ninja text-xs mt-1">
@@ -138,9 +137,9 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
             {PROGRAM_SUB_PROGRAMS[enrollment.program].map(sub => (
               <button
                 key={sub}
-                onClick={() => { if (sub !== selectedSubProgram) { setPending(new Set()); setSelectedSubProgram(sub); } }}
+                onClick={() => { if (sub !== effectiveSubProgram) { setPending(new Set()); setTabSubProgram(sub); } }}
                 className={`font-ninja font-semibold text-sm px-3.5 py-1.5 rounded-lg transition-colors ${
-                  selectedSubProgram === sub
+                  effectiveSubProgram === sub
                     ? 'bg-ninja-blue text-white'
                     : 'text-ninja-muted hover:text-ninja-navy hover:bg-gray-100'
                 }`}
@@ -165,7 +164,7 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
             const expanded = expandedModules.has(mod.module_name);
             const completedInModule = mod.lessons.filter(l => l.completed).length;
             const pendingInModule = mod.lessons.filter(l => pending.has(`${mod.module_name}\x00${l.lesson_name}`)).length;
-            const isCurrent = selectedSubProgram === enrollment?.last_sub_program && mod.module_name === enrollment?.last_module_name;
+            const isCurrent = effectiveSubProgram === enrollment?.last_sub_program && mod.module_name === enrollment?.last_module_name;
             const allDone = mod.lessons.length > 0 && (completedInModule === mod.lessons.length);
 
             return (
