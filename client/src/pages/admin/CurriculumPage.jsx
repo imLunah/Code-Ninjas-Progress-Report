@@ -368,6 +368,7 @@ function SublevelBlock({ beltName, sublevel, projects, onAddProject, onRenamePro
 
 // ── CREATE belt editor ────────────────────────────────────────────────────────
 function BeltEditor() {
+  const { refresh: refreshCurriculum } = useCurriculum();
   const BELT_NAMES = BELTS.map(b => b.name);
   const [selectedBelt, setSelectedBelt] = useState('White');
   const [beltData, setBeltData] = useState(null); // null = not yet fetched
@@ -428,6 +429,7 @@ function BeltEditor() {
       }
     }
     setBeltData(normalized);
+    refreshCurriculum().catch(() => {}); // keep context beltProjects in sync
   };
 
   const handleSeed = async () => {
@@ -531,7 +533,7 @@ function BeltEditor() {
 }
 
 export default function CurriculumPage() {
-  const { subPrograms, curriculum } = useCurriculum();
+  const { subPrograms, curriculum, refresh: refreshCurriculum } = useCurriculum();
 
   const [selectedProgram, setSelectedProgram] = useState('AI Academy');
   const [selectedSubProgram, setSelectedSubProgram] = useState(null);
@@ -569,11 +571,8 @@ export default function CurriculumPage() {
   };
 
   const refetch = async () => {
-    invalidateCurriculumCache();
-    const res = await fetch('/api/curriculum', { credentials: 'include' });
-    if (res.status === 204) return;
-    const data = await res.json();
-    if (data?.curriculum) setLocalCurriculum(data.curriculum);
+    await refreshCurriculum();
+    setLocalCurriculum(null); // fall back to freshly updated context
   };
 
   const handleAddModule = async (e) => {
