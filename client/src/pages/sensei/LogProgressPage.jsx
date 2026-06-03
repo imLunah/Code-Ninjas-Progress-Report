@@ -170,16 +170,14 @@ export default function LogProgressPage() {
               onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
             />
             {student.special_instructions && (
-              <div className="rounded-2xl overflow-hidden" style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe' }}>
-                <div className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-base">📌</span>
-                    <h2 className="font-ninja font-bold text-sm uppercase tracking-wide" style={{ color: '#1e3a5f' }}>Note from Parent</h2>
-                  </div>
-                  <p className="font-ninja text-sm leading-relaxed whitespace-pre-wrap" style={{ color: '#1e40af' }}>
-                    {student.special_instructions}
-                  </p>
+              <div className="rounded-2xl border border-ninja-border bg-ninja-bg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-base">📌</span>
+                  <h2 className="font-ninja font-bold text-sm uppercase tracking-wide text-ninja-muted">Note from Parent</h2>
                 </div>
+                <p className="font-ninja text-sm leading-relaxed whitespace-pre-wrap text-ninja-blue">
+                  {student.special_instructions}
+                </p>
               </div>
             )}
           </div>
