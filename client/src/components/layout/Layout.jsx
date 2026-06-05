@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from './Sidebar';
@@ -6,6 +6,43 @@ import MobileNav from './MobileNav';
 import ThemeToggle from '../ui/ThemeToggle';
 import BugReportButton from '../ui/BugReportButton';
 import { useAuth } from '../../context/AuthContext';
+import { getMobileNavTabs } from '../../lib/navTabs';
+
+import ManagerDashboard from '../../pages/manager/ManagerDashboard';
+import SenseiDashboard from '../../pages/sensei/SenseiDashboard';
+import StudentRoster from '../../pages/manager/StudentRoster';
+import ClubsPage from '../../pages/ClubsPage';
+import StaffPage from '../../pages/manager/StaffPage';
+import AccountPage from '../../pages/AccountPage';
+
+const SKIP_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON']);
+
+function touchTargetShouldScroll(el) {
+  let node = el;
+  while (node && node !== document.body) {
+    if (SKIP_TAGS.has(node.tagName)) return true;
+    const style = window.getComputedStyle(node);
+    const ox = style.overflowX;
+    if ((ox === 'auto' || ox === 'scroll') && node.scrollWidth > node.clientWidth) return true;
+    if (style.position === 'fixed' && parseInt(style.zIndex, 10) >= 50) return true;
+    node = node.parentElement;
+  }
+  return false;
+}
+
+const PAGE_MAP = {
+  '/manager/dashboard': ManagerDashboard,
+  '/sensei/dashboard': SenseiDashboard,
+  '/manager/students': StudentRoster,
+  '/clubs': ClubsPage,
+  '/manager/staff': StaffPage,
+  '/account': AccountPage,
+};
+
+function AdjacentPage({ tabPath }) {
+  const Comp = PAGE_MAP[tabPath];
+  return Comp ? <Comp /> : null;
+}
 
 function AnnouncementBanner({ text }) {
   const storageKey = `ann_dismissed_${encodeURIComponent(text).slice(0, 32)}`;
@@ -46,10 +83,20 @@ function AnnouncementBanner({ text }) {
 }
 
 export default function Layout({ children }) {
-  const { user } = useAuth();
+  const { user, viewAs } = useAuth();
   const [bugOpen, setBugOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const dragRef = useRef(null);
+  const previewRef = useRef(null);
+  const touchStart = useRef(null);
+  const isHorizontalSwipe = useRef(false);
+  const swipeDirRef = useRef(null);
+  const dxAtPreviewMount = useRef(0);
+  const animating = useRef(false);
+  const swipeBlocked = useRef(false);
+  const [previewTabPath, setPreviewTabPath] = useState(null);
 
   useEffect(() => {
     if (user?.mustResetPassword && location.pathname !== '/account') {
@@ -57,18 +104,193 @@ export default function Layout({ children }) {
     }
   }, [user?.mustResetPassword, location.pathname, navigate]);
 
+  // Set preview initial position synchronously before first paint — no flash
+  useLayoutEffect(() => {
+    if (previewTabPath && previewRef.current) {
+      const dx = dxAtPreviewMount.current;
+      const adjOffset = dx < 0
+        ? window.innerWidth + dx
+        : -window.innerWidth + dx;
+      previewRef.current.style.transform = `translateX(${adjOffset}px)`;
+      previewRef.current.style.transition = 'none';
+    }
+  }, [previewTabPath]);
+
+  useEffect(() => {
+    const handleStart = (e) => {
+      if (animating.current) return;
+      if (touchTargetShouldScroll(e.target)) return;
+      touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      isHorizontalSwipe.current = false;
+      swipeDirRef.current = null;
+      swipeBlocked.current = false;
+    };
+
+    const handleMove = (e) => {
+      if (!touchStart.current || !dragRef.current || animating.current) return;
+      const dx = e.touches[0].clientX - touchStart.current.x;
+      const dy = e.touches[0].clientY - touchStart.current.y;
+
+      if (!isHorizontalSwipe.current) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        if (Math.abs(dy) >= Math.abs(dx)) return;
+        isHorizontalSwipe.current = true;
+        swipeDirRef.current = dx < 0 ? 'left' : 'right';
+
+        const tabs = getMobileNavTabs(user, viewAs);
+        const idx = tabs.findIndex(t => t.to === location.pathname);
+        if (idx === -1 && dx < 0) {
+          swipeBlocked.current = true;
+          return;
+        }
+        if (idx !== -1) {
+          const adjIdx = dx < 0 ? idx + 1 : idx - 1;
+          if (adjIdx >= 0 && adjIdx < tabs.length) {
+            dxAtPreviewMount.current = dx;
+            setPreviewTabPath(tabs[adjIdx].to);
+          }
+        }
+      }
+
+      if (swipeBlocked.current) return;
+
+      e.preventDefault();
+      dragRef.current.style.transform = `translateX(${dx}px)`;
+      dragRef.current.style.transition = 'none';
+
+      if (previewRef.current) {
+        const adjOffset = dx < 0
+          ? window.innerWidth + dx
+          : -window.innerWidth + dx;
+        previewRef.current.style.transform = `translateX(${adjOffset}px)`;
+        previewRef.current.style.transition = 'none';
+      }
+    };
+
+    const handleEnd = (e) => {
+      if (!touchStart.current || animating.current) return;
+      const dx = e.changedTouches[0].clientX - touchStart.current.x;
+      const dy = e.changedTouches[0].clientY - touchStart.current.y;
+      touchStart.current = null;
+      isHorizontalSwipe.current = false;
+      const dir = swipeDirRef.current;
+      swipeDirRef.current = null;
+
+      const el = dragRef.current;
+      if (!el) return;
+
+      if (swipeBlocked.current) {
+        swipeBlocked.current = false;
+        return;
+      }
+
+      const SPRING = 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1)';
+
+      if (Math.abs(dx) >= 60 && Math.abs(dx) >= Math.abs(dy) * 1.5) {
+        const tabs = getMobileNavTabs(user, viewAs);
+        const idx = tabs.findIndex(t => t.to === location.pathname);
+        if (idx === -1 && dx > 0) {
+          animating.current = true;
+          el.style.transition = SPRING;
+          el.style.transform = 'translateX(100%)';
+          setTimeout(() => {
+            el.style.transform = '';
+            el.style.transition = '';
+            animating.current = false;
+            navigate(-1);
+          }, 280);
+          return;
+        }
+        if (idx !== -1) {
+          const canGoNext = dx < 0 && idx < tabs.length - 1;
+          const canGoPrev = dx > 0 && idx > 0;
+          if (canGoNext || canGoPrev) {
+            animating.current = true;
+            const nextPath = canGoNext ? tabs[idx + 1].to : tabs[idx - 1].to;
+
+            el.style.transition = SPRING;
+            el.style.transform = `translateX(${dx < 0 ? '-100%' : '100%'})`;
+
+            if (previewRef.current) {
+              previewRef.current.style.transition = SPRING;
+              previewRef.current.style.transform = 'translateX(0)';
+            }
+
+            setTimeout(() => {
+              el.style.transform = '';
+              el.style.transition = '';
+              animating.current = false;
+              setPreviewTabPath(null);
+              navigate(nextPath, { state: { swipeDir: dir, fromSwipe: true } });
+            }, 280);
+            return;
+          }
+        }
+      }
+
+      const SNAP = 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1)';
+      el.style.transition = SNAP;
+      el.style.transform = 'translateX(0)';
+
+      if (previewRef.current && dir) {
+        previewRef.current.style.transition = SNAP;
+        previewRef.current.style.transform = `translateX(${dir === 'left' ? '100%' : '-100%'})`;
+      }
+      setTimeout(() => setPreviewTabPath(null), 380);
+    };
+
+    document.addEventListener('touchstart', handleStart, { passive: true });
+    document.addEventListener('touchmove', handleMove, { passive: false });
+    document.addEventListener('touchend', handleEnd, { passive: true });
+    return () => {
+      document.removeEventListener('touchstart', handleStart);
+      document.removeEventListener('touchmove', handleMove);
+      document.removeEventListener('touchend', handleEnd);
+    };
+  }, [user, viewAs, location.pathname, navigate]);
+
+  const fromSwipe = location.state?.fromSwipe;
+  const swipeDir = location.state?.swipeDir;
+  const enterX = fromSwipe ? 0 : (swipeDir === 'left' ? '100%' : swipeDir === 'right' ? '-100%' : 0);
+
   return (
     <div className="min-h-[100dvh] bg-ninja-bg lg:flex">
       <Sidebar onOpenBug={() => setBugOpen(true)} />
       <div className="flex-1 flex flex-col min-w-0 relative">
         {user?.announcement && <AnnouncementBanner text={user.announcement} />}
-        {/* Mobile theme toggle — fixed top-right, hidden on desktop (sidebar has it) */}
         <div className="lg:hidden fixed top-3 right-4 z-30">
           <ThemeToggle />
         </div>
         <main className="max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-32 lg:pb-8">
-          {children}
+          <div
+            ref={dragRef}
+            className="overflow-x-hidden lg:overflow-x-visible"
+          >
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.div
+                key={location.key}
+                initial={{ x: enterX }}
+                animate={{ x: 0 }}
+                transition={fromSwipe ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 36, mass: 0.8 }}
+                style={{ width: '100%' }}
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </main>
+
+        {previewTabPath && (
+          <div
+            ref={previewRef}
+            className="lg:hidden fixed inset-0 bg-ninja-bg overflow-auto pointer-events-none"
+            style={{ zIndex: 35 }}
+          >
+            <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-8 pb-32">
+              <AdjacentPage tabPath={previewTabPath} />
+            </div>
+          </div>
+        )}
       </div>
       <MobileNav />
       <BugReportButton
