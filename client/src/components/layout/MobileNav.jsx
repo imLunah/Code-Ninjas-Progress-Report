@@ -62,7 +62,7 @@ export default function MobileNav() {
   ];
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-ninja-border" style={{ willChange: 'transform' }}>
+    <nav className="lg:hidden flex-shrink-0 bg-white border-t border-ninja-border">
       <LocationBar user={isSenseiView ? { ...user, role: 'sensei' } : user} switchLocation={switchLocation} />
       <div className="flex items-stretch">
         {tabs.map((tab) => (
