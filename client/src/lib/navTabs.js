@@ -8,9 +8,10 @@ export function getMobileNavTabs(user, viewAs) {
     { to: '/manager/students', label: 'Ninjas', iconId: 'roster' },
     { to: '/clubs', label: 'Clubs', iconId: 'clubs' },
     { to: '/manager/staff', label: 'Staff', iconId: 'staff' },
+    { to: '/manager/reports', label: 'Reports', iconId: 'report' },
+    { to: '/curriculum-roadmap', label: 'Roadmap', iconId: null },
+    { to: '/account', label: 'Account', iconId: null },
   ];
-  if (isManager) tabs.push({ to: '/manager/reports', label: 'Reports', iconId: 'report' });
-  tabs.push({ to: '/account', label: 'Account', iconId: null });
   return tabs;
 }
 
