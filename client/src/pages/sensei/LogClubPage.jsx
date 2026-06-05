@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+};
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
+};
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { ClubBadge } from '../../components/shared/ClubSessionsPanel';
@@ -89,7 +99,7 @@ export default function LogClubPage() {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-2xl mx-auto">
+      <motion.div className="space-y-6 max-w-2xl mx-auto" variants={stagger} initial="hidden" animate="show">
         <button
           onClick={() => navigate(-1)}
           className="text-ninja-muted hover:text-ninja-blue font-ninja text-sm flex items-center gap-1 transition-colors"
@@ -98,7 +108,7 @@ export default function LogClubPage() {
         </button>
 
         {/* Club selector card */}
-        <Card>
+        <motion.div variants={fadeUp}><Card>
           <h1 className="text-2xl font-bold font-ninja text-ninja-navy mb-1">Log Club Session</h1>
           <p className="text-ninja-muted font-ninja text-sm mb-4">Select a club and mark who attended.</p>
           <div className="border-t border-ninja-border pt-4">
@@ -122,7 +132,7 @@ export default function LogClubPage() {
               ))}
             </div>
           </div>
-        </Card>
+        </Card></motion.div>
 
         {/* Recent sessions for this club */}
         {clubName && clubSessions.length > 0 && (
@@ -235,7 +245,7 @@ export default function LogClubPage() {
             <p className="text-ninja-muted font-ninja">Select a club above to log a session.</p>
           </div>
         )}
-      </div>
+      </motion.div>
     </Layout>
   );
 }

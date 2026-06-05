@@ -1,6 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+};
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
+};
 import remarkGfm from 'remark-gfm';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
@@ -569,9 +579,9 @@ export default function ClubProfilePage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <motion.div className="space-y-6" variants={stagger} initial="hidden" animate="show">
         {/* Header */}
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <motion.div variants={fadeUp} className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <button onClick={() => navigate('/clubs')}
               className="text-ninja-muted hover:text-ninja-blue font-ninja text-sm flex items-center gap-1 transition-colors mb-2">
@@ -589,10 +599,10 @@ export default function ClubProfilePage() {
               + New session
             </Button>
           )}
-        </div>
+        </motion.div>
 
         {/* Two-column body */}
-        <div className="lg:flex lg:gap-6 lg:items-start space-y-5 lg:space-y-0">
+        <motion.div variants={fadeUp} className="lg:flex lg:gap-6 lg:items-start space-y-5 lg:space-y-0">
           {/* Left: pinned note + sessions */}
           <div className="flex-1 min-w-0 space-y-5">
             <PinnedNoteSection
@@ -630,8 +640,8 @@ export default function ClubProfilePage() {
               isReadOnly={isReadOnly}
             />
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </Layout>
   );
 }

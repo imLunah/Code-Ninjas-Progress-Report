@@ -1,6 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+};
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
+};
 import remarkGfm from 'remark-gfm';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
@@ -154,7 +164,7 @@ export default function ClubSessionPage() {
 
   return (
     <Layout>
-      <div className="space-y-5 max-w-3xl mx-auto">
+      <motion.div className="space-y-5 max-w-3xl mx-auto" variants={stagger} initial="hidden" animate="show">
         <button
           onClick={() => navigate(`/clubs/${slug}`)}
           className="text-ninja-muted hover:text-ninja-blue font-ninja text-sm flex items-center gap-1 transition-colors"
@@ -163,7 +173,7 @@ export default function ClubSessionPage() {
         </button>
 
         {/* Header */}
-        <div className="bg-white border border-ninja-border rounded-xl p-5 shadow-sm">
+        <motion.div variants={fadeUp} className="bg-white border border-ninja-border rounded-xl p-5 shadow-sm">
           <div className="flex flex-wrap items-center gap-3 mb-1">
             <span className={`text-sm font-ninja font-bold px-3 py-1 rounded-full border ${c.bg} ${c.text} ${c.border}`}>
               {clubDef.name}
@@ -173,10 +183,10 @@ export default function ClubSessionPage() {
           {session.sensei_name && (
             <p className="text-ninja-muted font-ninja text-sm mt-1">Notes by {session.sensei_name}</p>
           )}
-        </div>
+        </motion.div>
 
         {/* Attendees */}
-        <div className="bg-white border border-ninja-border rounded-xl p-5 shadow-sm">
+        <motion.div variants={fadeUp} className="bg-white border border-ninja-border rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-ninja-navy font-ninja font-bold text-lg">
               Attendees <span className="text-ninja-muted font-normal text-base">({session.attendees?.length ?? 0})</span>
@@ -240,10 +250,10 @@ export default function ClubSessionPage() {
               </div>
             )
           )}
-        </div>
+        </motion.div>
 
         {/* Session Notes */}
-        <div className="bg-white border border-ninja-border rounded-xl p-5 shadow-sm">
+        <motion.div variants={fadeUp} className="bg-white border border-ninja-border rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-ninja-navy font-ninja font-bold text-lg">Session Notes</h2>
             {!isReadOnly && !editingNotes && (
@@ -309,7 +319,7 @@ export default function ClubSessionPage() {
               ) : 'No notes added yet.'}
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Comments — only available once session notes have been written */}
         {!session.notes && (
@@ -354,7 +364,7 @@ export default function ClubSessionPage() {
             </div>
           )}
         </div>}
-      </div>
+      </motion.div>
     </Layout>
   );
 }
