@@ -111,7 +111,7 @@ export default function Layout({ children }) {
       const adjOffset = dx < 0
         ? window.innerWidth + dx
         : -window.innerWidth + dx;
-      previewRef.current.style.transform = `translateX(${adjOffset}px)`;
+      previewRef.current.style.transform = `translate3d(${adjOffset}px, 0, 0)`;
       previewRef.current.style.transition = 'none';
     }
   }, [previewTabPath]);
@@ -155,14 +155,14 @@ export default function Layout({ children }) {
       if (swipeBlocked.current) return;
 
       e.preventDefault();
-      dragRef.current.style.transform = `translateX(${dx}px)`;
+      dragRef.current.style.transform = `translate3d(${dx}px, 0, 0)`;
       dragRef.current.style.transition = 'none';
 
       if (previewRef.current) {
         const adjOffset = dx < 0
           ? window.innerWidth + dx
           : -window.innerWidth + dx;
-        previewRef.current.style.transform = `translateX(${adjOffset}px)`;
+        previewRef.current.style.transform = `translate3d(${adjOffset}px, 0, 0)`;
         previewRef.current.style.transition = 'none';
       }
     };
@@ -192,7 +192,7 @@ export default function Layout({ children }) {
         if (idx === -1 && dx > 0) {
           animating.current = true;
           el.style.transition = SPRING;
-          el.style.transform = 'translateX(100%)';
+          el.style.transform = 'translate3d(100%, 0, 0)';
           setTimeout(() => {
             el.style.transform = '';
             el.style.transition = '';
@@ -209,11 +209,11 @@ export default function Layout({ children }) {
             const nextPath = canGoNext ? tabs[idx + 1].to : tabs[idx - 1].to;
 
             el.style.transition = SPRING;
-            el.style.transform = `translateX(${dx < 0 ? '-100%' : '100%'})`;
+            el.style.transform = `translate3d(${dx < 0 ? '-100%' : '100%'}, 0, 0)`;
 
             if (previewRef.current) {
               previewRef.current.style.transition = SPRING;
-              previewRef.current.style.transform = 'translateX(0)';
+              previewRef.current.style.transform = 'translate3d(0, 0, 0)';
             }
 
             setTimeout(() => {
@@ -230,11 +230,11 @@ export default function Layout({ children }) {
 
       const SNAP = 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1)';
       el.style.transition = SNAP;
-      el.style.transform = 'translateX(0)';
+      el.style.transform = 'translate3d(0, 0, 0)';
 
       if (previewRef.current && dir) {
         previewRef.current.style.transition = SNAP;
-        previewRef.current.style.transform = `translateX(${dir === 'left' ? '100%' : '-100%'})`;
+        previewRef.current.style.transform = `translate3d(${dir === 'left' ? '100%' : '-100%'}, 0, 0)`;
       }
       setTimeout(() => setPreviewTabPath(null), 380);
     };
