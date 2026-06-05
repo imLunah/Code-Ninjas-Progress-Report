@@ -81,6 +81,8 @@ export default function Layout({ children }) {
   }, [user?.mustResetPassword, location.pathname, navigate]);
 
   useEffect(() => {
+    const unlockScroll = () => { document.documentElement.style.overflow = ''; };
+
     const handleStart = (e) => {
       if (animating.current) return;
       if (touchTargetShouldScroll(e.target)) return;
@@ -88,6 +90,8 @@ export default function Layout({ children }) {
       isHorizontalSwipe.current = false;
       swipeDirRef.current = null;
       swipeBlocked.current = false;
+      // Lock body scroll from first touch so iOS URL bar can't shift viewport
+      document.documentElement.style.overflow = 'hidden';
     };
 
     const handleMove = (e) => {
@@ -96,13 +100,10 @@ export default function Layout({ children }) {
       const dy = e.touches[0].clientY - touchStart.current.y;
 
       if (!isHorizontalSwipe.current) {
-        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
-          // Block URL bar show/hide during gesture detection
-          if (e.cancelable) e.preventDefault();
-          return;
-        }
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
         if (Math.abs(dy) >= Math.abs(dx)) {
-          // Vertical scroll confirmed — stop tracking so we don't block scroll
+          // Vertical scroll confirmed — unlock and stop tracking
+          unlockScroll();
           touchStart.current = null;
           return;
         }
@@ -127,6 +128,8 @@ export default function Layout({ children }) {
     };
 
     const handleEnd = (e) => {
+      // Always restore scroll — fired for vertical scrolls too (touchStart already null)
+      unlockScroll();
       if (!touchStart.current || animating.current) return;
       const dx = e.changedTouches[0].clientX - touchStart.current.x;
       const dy = e.changedTouches[0].clientY - touchStart.current.y;
@@ -181,13 +184,18 @@ export default function Layout({ children }) {
       el.style.transform = 'translate3d(0, 0, 0)';
     };
 
+    const handleCancel = () => { unlockScroll(); touchStart.current = null; };
+
     document.addEventListener('touchstart', handleStart, { passive: true });
     document.addEventListener('touchmove', handleMove, { passive: false });
     document.addEventListener('touchend', handleEnd, { passive: true });
+    document.addEventListener('touchcancel', handleCancel, { passive: true });
     return () => {
       document.removeEventListener('touchstart', handleStart);
       document.removeEventListener('touchmove', handleMove);
       document.removeEventListener('touchend', handleEnd);
+      document.removeEventListener('touchcancel', handleCancel);
+      unlockScroll();
     };
   }, [user, viewAs, location.pathname, navigate]);
 
@@ -206,7 +214,7 @@ export default function Layout({ children }) {
         <main className="max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-32 lg:pb-8">
           <div
             ref={dragRef}
-            className="overflow-x-hidden lg:overflow-x-visible touch-pan-y lg:touch-auto"
+            className="overflow-x-hidden lg:overflow-x-visible"
           >
             <AnimatePresence mode="popLayout" initial={false}>
               <motion.div
