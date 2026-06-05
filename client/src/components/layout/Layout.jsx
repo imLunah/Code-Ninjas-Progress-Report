@@ -96,8 +96,16 @@ export default function Layout({ children }) {
       const dy = e.touches[0].clientY - touchStart.current.y;
 
       if (!isHorizontalSwipe.current) {
-        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-        if (Math.abs(dy) >= Math.abs(dx)) return;
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
+          // Block URL bar show/hide during gesture detection
+          if (e.cancelable) e.preventDefault();
+          return;
+        }
+        if (Math.abs(dy) >= Math.abs(dx)) {
+          // Vertical scroll confirmed — stop tracking so we don't block scroll
+          touchStart.current = null;
+          return;
+        }
         e.preventDefault();
         isHorizontalSwipe.current = true;
         swipeDirRef.current = dx < 0 ? 'left' : 'right';
