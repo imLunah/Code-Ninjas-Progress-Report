@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Papa from 'papaparse';
 import Layout from '../../components/layout/Layout';
 import BeltBadge from '../../components/ui/BeltBadge';
@@ -9,6 +10,15 @@ import { api } from '../../api/client';
 import { PROGRAMS, getBelt } from '../../utils/beltConfig';
 import { formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+};
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06, delayChildren: 0.04 } },
+};
 
 function parseProgram(membership) {
   if (!membership) return null;
@@ -253,10 +263,10 @@ export default function StudentRoster() {
 
   return (
     <Layout>
-      <div className="space-y-4 lg:h-[calc(100dvh-64px)] lg:flex lg:flex-col lg:space-y-0 lg:gap-4">
+      <motion.div className="space-y-4 lg:h-[calc(100dvh-64px)] lg:flex lg:flex-col lg:space-y-0 lg:gap-4" variants={stagger} initial="hidden" animate="show">
 
         {/* ── Header ── */}
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <motion.div variants={fadeUp} className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold font-ninja text-ninja-navy leading-tight">
               {isLogMode ? 'Log Progress' : showArchived ? 'Archived Ninjas' : 'Ninjas'}
@@ -319,7 +329,7 @@ export default function StudentRoster() {
               )}
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* ── Mobile: search + chips ── */}
         <div className="lg:hidden space-y-2.5">
@@ -606,7 +616,7 @@ export default function StudentRoster() {
             )}
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* CSV Import Modal */}
       {importModal && (

@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+};
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
+};
 import { api } from '../../api/client';
 
 function AdminNav() {
@@ -82,16 +92,18 @@ export default function SettingsPage() {
 
   return (
     <Layout>
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <motion.div className="max-w-2xl mx-auto px-4 py-8" variants={stagger} initial="hidden" animate="show">
         <AdminNav />
 
-        <h1 className="text-ninja-navy font-ninja font-bold text-2xl mb-1">Settings</h1>
-        <p className="text-ninja-muted font-ninja text-sm mb-8">Global configuration for all centers</p>
+        <motion.div variants={fadeUp}>
+          <h1 className="text-ninja-navy font-ninja font-bold text-2xl mb-1">Settings</h1>
+          <p className="text-ninja-muted font-ninja text-sm mb-8">Global configuration for all centers</p>
+        </motion.div>
 
         {loading ? (
           <p className="text-ninja-muted font-ninja text-center py-12">Loading…</p>
         ) : (
-          <div className="space-y-6">
+          <motion.div variants={fadeUp} className="space-y-6">
             <div className="bg-white border border-ninja-border rounded-2xl p-6 shadow-sm">
               <div className="mb-4">
                 <h2 className="text-ninja-navy font-ninja font-bold text-base">Announcement Banner</h2>
@@ -146,9 +158,9 @@ export default function SettingsPage() {
                 {status === 'error' && <span className="text-ninja-red font-ninja text-sm">Failed to save</span>}
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
     </Layout>
   );
 }

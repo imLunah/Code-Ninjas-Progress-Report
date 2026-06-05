@@ -1,6 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+};
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
+};
 import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
 import { BELTS, PROJECTS, STATUSES, PROGRAMS, getMaxLevel } from '../../utils/beltConfig';
@@ -177,8 +187,8 @@ export default function AddStudentPage() {
 
   return (
     <Layout>
-      <div className="max-w-xl mx-auto">
-        <div className="mb-6">
+      <motion.div className="max-w-xl mx-auto" variants={stagger} initial="hidden" animate="show">
+        <motion.div variants={fadeUp} className="mb-6">
           <button
             onClick={() => navigate('/manager/students')}
             className="text-ninja-muted hover:text-ninja-blue font-ninja text-sm mb-4 flex items-center gap-1 transition-colors"
@@ -188,9 +198,9 @@ export default function AddStudentPage() {
           <h1 className="text-2xl sm:text-4xl font-bold font-ninja text-ninja-navy">
             New <span className="text-ninja-blue">Ninja</span>
           </h1>
-        </div>
+        </motion.div>
 
-        <div className="bg-white border border-ninja-border rounded-xl p-6 shadow-sm">
+        <motion.div variants={fadeUp} className="bg-white border border-ninja-border rounded-xl p-6 shadow-sm">
           {error && (
             <div className="bg-red-50 border border-red-200 text-ninja-red rounded-lg p-3 mb-4 text-sm font-ninja">
               {error}
@@ -277,8 +287,8 @@ export default function AddStudentPage() {
               </Button>
             </div>
           </form>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </Layout>
   );
 }
