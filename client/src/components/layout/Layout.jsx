@@ -209,9 +209,9 @@ export default function Layout({ children }) {
             <AnimatePresence mode="popLayout" initial={false}>
               <motion.div
                 key={location.key}
-                initial={{ x: enterX }}
-                animate={{ x: 0 }}
-                transition={fromSwipe ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 36, mass: 0.8 }}
+                initial={{ x: enterX, opacity: fromSwipe ? 1 : 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={fromSwipe ? { duration: 0 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                 style={{ width: '100%' }}
               >
                 {children}
