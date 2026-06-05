@@ -206,7 +206,7 @@ export default function Layout({ children }) {
             ref={dragRef}
             className="overflow-x-hidden lg:overflow-x-visible touch-pan-y lg:touch-auto"
           >
-            <AnimatePresence mode="popLayout" initial={false}>
+            <AnimatePresence mode="popLayout">
               <motion.div
                 key={location.key}
                 initial={{ x: enterX, opacity: fromSwipe ? 1 : 0 }}
