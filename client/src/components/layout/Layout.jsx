@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from './Sidebar';
@@ -7,13 +7,6 @@ import ThemeToggle from '../ui/ThemeToggle';
 import BugReportButton from '../ui/BugReportButton';
 import { useAuth } from '../../context/AuthContext';
 import { getMobileNavTabs } from '../../lib/navTabs';
-
-import ManagerDashboard from '../../pages/manager/ManagerDashboard';
-import SenseiDashboard from '../../pages/sensei/SenseiDashboard';
-import StudentRoster from '../../pages/manager/StudentRoster';
-import ClubsPage from '../../pages/ClubsPage';
-import StaffPage from '../../pages/manager/StaffPage';
-import AccountPage from '../../pages/AccountPage';
 
 const SKIP_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON']);
 
@@ -28,20 +21,6 @@ function touchTargetShouldScroll(el) {
     node = node.parentElement;
   }
   return false;
-}
-
-const PAGE_MAP = {
-  '/manager/dashboard': ManagerDashboard,
-  '/sensei/dashboard': SenseiDashboard,
-  '/manager/students': StudentRoster,
-  '/clubs': ClubsPage,
-  '/manager/staff': StaffPage,
-  '/account': AccountPage,
-};
-
-function AdjacentPage({ tabPath }) {
-  const Comp = PAGE_MAP[tabPath];
-  return Comp ? <Comp /> : null;
 }
 
 function AnnouncementBanner({ text }) {
@@ -89,32 +68,17 @@ export default function Layout({ children }) {
   const location = useLocation();
 
   const dragRef = useRef(null);
-  const previewRef = useRef(null);
   const touchStart = useRef(null);
   const isHorizontalSwipe = useRef(false);
   const swipeDirRef = useRef(null);
-  const dxAtPreviewMount = useRef(0);
   const animating = useRef(false);
   const swipeBlocked = useRef(false);
-  const [previewTabPath, setPreviewTabPath] = useState(null);
 
   useEffect(() => {
     if (user?.mustResetPassword && location.pathname !== '/account') {
       navigate('/account', { replace: true });
     }
   }, [user?.mustResetPassword, location.pathname, navigate]);
-
-  // Set preview initial position synchronously before first paint — no flash
-  useLayoutEffect(() => {
-    if (previewTabPath && previewRef.current) {
-      const dx = dxAtPreviewMount.current;
-      const adjOffset = dx < 0
-        ? window.innerWidth + dx
-        : -window.innerWidth + dx;
-      previewRef.current.style.transform = `translate3d(${adjOffset}px, 0, 0)`;
-      previewRef.current.style.transition = 'none';
-    }
-  }, [previewTabPath]);
 
   useEffect(() => {
     const handleStart = (e) => {
@@ -134,24 +98,16 @@ export default function Layout({ children }) {
       if (!isHorizontalSwipe.current) {
         if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
         if (Math.abs(dy) >= Math.abs(dx)) return;
-        // Confirmed horizontal — prevent default NOW, before any early returns,
-        // so iOS never gets an un-cancelled touchmove to trigger URL-bar resize.
         e.preventDefault();
         isHorizontalSwipe.current = true;
         swipeDirRef.current = dx < 0 ? 'left' : 'right';
 
         const tabs = getMobileNavTabs(user, viewAs);
         const idx = tabs.findIndex(t => t.to === location.pathname);
-        if (idx === -1 && dx < 0) {
-          swipeBlocked.current = true;
-          return;
-        }
+        if (idx === -1 && dx < 0) { swipeBlocked.current = true; return; }
         if (idx !== -1) {
           const adjIdx = dx < 0 ? idx + 1 : idx - 1;
-          if (adjIdx >= 0 && adjIdx < tabs.length) {
-            dxAtPreviewMount.current = dx;
-            setPreviewTabPath(tabs[adjIdx].to);
-          }
+          if (adjIdx < 0 || adjIdx >= tabs.length) { swipeBlocked.current = true; return; }
         }
       }
 
@@ -160,14 +116,6 @@ export default function Layout({ children }) {
       e.preventDefault();
       dragRef.current.style.transform = `translate3d(${dx}px, 0, 0)`;
       dragRef.current.style.transition = 'none';
-
-      if (previewRef.current) {
-        const adjOffset = dx < 0
-          ? window.innerWidth + dx
-          : -window.innerWidth + dx;
-        previewRef.current.style.transform = `translate3d(${adjOffset}px, 0, 0)`;
-        previewRef.current.style.transition = 'none';
-      }
     };
 
     const handleEnd = (e) => {
@@ -182,10 +130,7 @@ export default function Layout({ children }) {
       const el = dragRef.current;
       if (!el) return;
 
-      if (swipeBlocked.current) {
-        swipeBlocked.current = false;
-        return;
-      }
+      if (swipeBlocked.current) { swipeBlocked.current = false; return; }
 
       const SPRING = 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1)';
 
@@ -210,20 +155,12 @@ export default function Layout({ children }) {
           if (canGoNext || canGoPrev) {
             animating.current = true;
             const nextPath = canGoNext ? tabs[idx + 1].to : tabs[idx - 1].to;
-
             el.style.transition = SPRING;
             el.style.transform = `translate3d(${dx < 0 ? '-100%' : '100%'}, 0, 0)`;
-
-            if (previewRef.current) {
-              previewRef.current.style.transition = SPRING;
-              previewRef.current.style.transform = 'translate3d(0, 0, 0)';
-            }
-
             setTimeout(() => {
               el.style.transform = '';
               el.style.transition = '';
               animating.current = false;
-              setPreviewTabPath(null);
               navigate(nextPath, { state: { swipeDir: dir, fromSwipe: true } });
             }, 280);
             return;
@@ -234,12 +171,6 @@ export default function Layout({ children }) {
       const SNAP = 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1)';
       el.style.transition = SNAP;
       el.style.transform = 'translate3d(0, 0, 0)';
-
-      if (previewRef.current && dir) {
-        previewRef.current.style.transition = SNAP;
-        previewRef.current.style.transform = `translate3d(${dir === 'left' ? '100%' : '-100%'}, 0, 0)`;
-      }
-      setTimeout(() => setPreviewTabPath(null), 380);
     };
 
     document.addEventListener('touchstart', handleStart, { passive: true });
@@ -283,17 +214,6 @@ export default function Layout({ children }) {
           </div>
         </main>
 
-        {previewTabPath && (
-          <div
-            ref={previewRef}
-            className="lg:hidden fixed top-0 left-0 right-0 bottom-28 bg-ninja-bg overflow-hidden pointer-events-none"
-            style={{ zIndex: 35 }}
-          >
-            <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-8 pb-32">
-              <AdjacentPage tabPath={previewTabPath} />
-            </div>
-          </div>
-        )}
       </div>
       <MobileNav />
       <BugReportButton
