@@ -11,14 +11,6 @@ import { PROGRAMS, getBelt } from '../../utils/beltConfig';
 import { formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 14 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
-};
-const stagger = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.06, delayChildren: 0.04 } },
-};
 
 function parseProgram(membership) {
   if (!membership) return null;
@@ -263,10 +255,10 @@ export default function StudentRoster() {
 
   return (
     <Layout>
-      <motion.div className="space-y-4 lg:h-[calc(100dvh-64px)] lg:flex lg:flex-col lg:space-y-0 lg:gap-4" variants={stagger} initial="hidden" animate="show">
+      <div className="space-y-4 lg:h-[calc(100dvh-64px)] lg:flex lg:flex-col lg:space-y-0 lg:gap-4">
 
         {/* ── Header ── */}
-        <motion.div variants={fadeUp} className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold font-ninja text-ninja-navy leading-tight">
               {isLogMode ? 'Log Progress' : showArchived ? 'Archived Ninjas' : 'Ninjas'}
@@ -329,7 +321,7 @@ export default function StudentRoster() {
               )}
             </div>
           )}
-        </motion.div>
+        </div>
 
         {/* ── Mobile: search + chips ── */}
         <div className="lg:hidden space-y-2.5">
@@ -371,15 +363,17 @@ export default function StudentRoster() {
               {sorted.length === 0 && (
                 <p className="text-center text-ninja-muted font-ninja py-12">No ninjas found</p>
               )}
-              {sorted.map((s) => {
+              {sorted.map((s, i) => {
                 const create = (s.programs || []).find((p) => p.program === 'CREATE');
                 const belt = create?.belt_level ? getBelt(create.belt_level) : null;
                 return (
-                  <div
+                  <motion.div
                     key={s.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: Math.min(i, 12) * 0.04, duration: 0.25, ease: 'easeOut' }}
                     className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-ninja-bg transition-colors"
                     onClick={() => handleRowClick(s)}
-
                   >
                     <div
                       className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-white font-ninja font-bold text-sm"
@@ -425,7 +419,7 @@ export default function StudentRoster() {
                         )}
                       </div>
                     )}
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>
@@ -520,12 +514,15 @@ export default function StudentRoster() {
                 {sorted.length === 0 && (
                   <p className="text-center text-ninja-muted font-ninja py-12">No ninjas found</p>
                 )}
-                {sorted.map((s) => {
+                {sorted.map((s, i) => {
                   const create = (s.programs || []).find((p) => p.program === 'CREATE');
                   const isSelected = selected.has(s.id);
                   return (
-                    <div
+                    <motion.div
                       key={s.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: Math.min(i, 12) * 0.04, duration: 0.22, ease: 'easeOut' }}
                       onClick={() => handleRowClick(s)}
                       className={`grid gap-4 px-5 py-3.5 items-center cursor-pointer transition-colors border-b border-ninja-border/60 last:border-b-0 ${
                         isSelected ? 'bg-blue-50' : 'hover:bg-ninja-bg'
@@ -604,7 +601,7 @@ export default function StudentRoster() {
                           <span className="text-ninja-muted text-lg cursor-pointer hover:text-ninja-navy transition-colors">···</span>
                         )}
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
                 <div ref={desktopSentinelRef} className="h-1" />
@@ -616,7 +613,7 @@ export default function StudentRoster() {
             )}
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* CSV Import Modal */}
       {importModal && (
