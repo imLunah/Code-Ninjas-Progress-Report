@@ -24,7 +24,7 @@ function touchTargetShouldScroll(el) {
     const style = window.getComputedStyle(node);
     const ox = style.overflowX;
     if ((ox === 'auto' || ox === 'scroll') && node.scrollWidth > node.clientWidth) return true;
-    if (style.position === 'fixed' && parseInt(style.zIndex, 10) >= 50) return true;
+    if (style.position === 'fixed') return true;
     node = node.parentElement;
   }
   return false;
