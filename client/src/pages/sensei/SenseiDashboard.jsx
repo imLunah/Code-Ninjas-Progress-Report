@@ -1,11 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import StudentCard from '../../components/shared/StudentCard';
 import ClubSessionsPanel from '../../components/shared/ClubSessionsPanel';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+};
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
+};
 
 export default function SenseiDashboard() {
   const [assignments, setAssignments] = useState([]);
@@ -57,8 +67,8 @@ export default function SenseiDashboard() {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div>
+      <motion.div className="space-y-6" variants={stagger} initial="hidden" animate="show">
+        <motion.div variants={fadeUp}>
           <h1 className="text-2xl sm:text-4xl font-bold font-ninja text-ninja-navy tracking-wide">
             Today's <span className="text-ninja-blue">Ninjas</span>
           </h1>
@@ -74,23 +84,23 @@ export default function SenseiDashboard() {
               })()}
             </p>
           )}
-        </div>
+        </motion.div>
 
         {allGrouped.length > 0 && (
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
+          <motion.div className="grid grid-cols-3 gap-4" variants={stagger}>
+            <motion.div variants={fadeUp} className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
               <p className="text-3xl font-bold font-ninja text-ninja-blue">{allGrouped.length}</p>
               <p className="text-ninja-muted font-ninja text-sm mt-1">Total</p>
-            </div>
-            <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
+            </motion.div>
+            <motion.div variants={fadeUp} className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
               <p className="text-3xl font-bold font-ninja text-green-500">{completedCount}</p>
               <p className="text-ninja-muted font-ninja text-sm mt-1">Logged</p>
-            </div>
-            <div className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
+            </motion.div>
+            <motion.div variants={fadeUp} className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
               <p className="text-3xl font-bold font-ninja text-ninja-muted">{groupedList.length}</p>
               <p className="text-ninja-muted font-ninja text-sm mt-1">Remaining</p>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
 
         {error && <p className="text-ninja-red font-ninja text-center py-8">{error}</p>}
@@ -114,8 +124,9 @@ export default function SenseiDashboard() {
         )}
 
         {!loading && !error && groupedList.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <motion.div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" variants={stagger}>
             {groupedList.map((group) => (
+              <motion.div key={group.student_id} variants={fadeUp}>
               <StudentCard
                 key={group.student_id}
                 student={group}
@@ -145,8 +156,9 @@ export default function SenseiDashboard() {
                   );
                 }}
               />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
 
         {/* Clubs */}
@@ -155,7 +167,7 @@ export default function SenseiDashboard() {
           onDeleted={(id) => setClubSessions((prev) => prev.filter((s) => s.id !== id))}
           onAttendeesUpdated={(id, attendees) => setClubSessions((prev) => prev.map((s) => s.id === id ? { ...s, attendees } : s))}
         />
-      </div>
+      </motion.div>
     </Layout>
   );
 }

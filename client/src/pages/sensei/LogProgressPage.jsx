@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import BeltBadge from '../../components/ui/BeltBadge';
 import Card from '../../components/ui/Card';
@@ -92,7 +93,12 @@ export default function LogProgressPage() {
   return (
     <Layout>
       {isStudentBirthday && <BirthdayConfetti />}
-      <div className="max-w-2xl mx-auto lg:max-w-none">
+      <motion.div
+        className="max-w-2xl mx-auto lg:max-w-none"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      >
         <button
           onClick={() => navigate(dashboardPath)}
           className="text-ninja-muted hover:text-ninja-blue font-ninja text-sm flex items-center gap-1 transition-colors mb-6"
@@ -228,7 +234,7 @@ export default function LogProgressPage() {
             )}
           </div>
         </div>
-      </div>
+      </motion.div>
     </Layout>
   );
 }
