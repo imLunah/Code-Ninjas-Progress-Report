@@ -134,6 +134,9 @@ export default function Layout({ children }) {
       if (!isHorizontalSwipe.current) {
         if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
         if (Math.abs(dy) >= Math.abs(dx)) return;
+        // Confirmed horizontal — prevent default NOW, before any early returns,
+        // so iOS never gets an un-cancelled touchmove to trigger URL-bar resize.
+        e.preventDefault();
         isHorizontalSwipe.current = true;
         swipeDirRef.current = dx < 0 ? 'left' : 'right';
 
@@ -264,9 +267,9 @@ export default function Layout({ children }) {
         <main className="max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-32 lg:pb-8">
           <div
             ref={dragRef}
-            className="overflow-x-hidden lg:overflow-x-visible"
+            className="overflow-x-hidden lg:overflow-x-visible touch-pan-y lg:touch-auto"
           >
-            <AnimatePresence mode="sync" initial={false}>
+            <AnimatePresence mode="popLayout" initial={false}>
               <motion.div
                 key={location.key}
                 initial={{ x: enterX }}
