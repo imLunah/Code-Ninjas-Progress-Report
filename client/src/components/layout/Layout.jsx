@@ -266,7 +266,7 @@ export default function Layout({ children }) {
             ref={dragRef}
             className="overflow-x-hidden lg:overflow-x-visible"
           >
-            <AnimatePresence mode="popLayout" initial={false}>
+            <AnimatePresence mode="sync" initial={false}>
               <motion.div
                 key={location.key}
                 initial={{ x: enterX }}
@@ -283,7 +283,7 @@ export default function Layout({ children }) {
         {previewTabPath && (
           <div
             ref={previewRef}
-            className="lg:hidden fixed inset-0 bg-ninja-bg overflow-auto pointer-events-none"
+            className="lg:hidden fixed inset-0 bg-ninja-bg overflow-hidden pointer-events-none"
             style={{ zIndex: 35 }}
           >
             <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-8 pb-32">
