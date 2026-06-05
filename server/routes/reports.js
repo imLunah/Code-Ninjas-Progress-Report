@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { requireManager } = require('../middleware/auth');
+const { requireSensei } = require('../middleware/auth');
 
 // GET /api/reports/overview — enrollment counts, belt distribution, activity stats
-router.get('/overview', requireManager, async (req, res) => {
+router.get('/overview', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
   const locationId = req.session.activeLocationId;
   try {
