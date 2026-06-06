@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef, createContext, useContext, lazy, Suspense } from 'react';
+import { useNavigate, useLocation, MemoryRouter } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
@@ -21,6 +21,19 @@ function touchTargetShouldScroll(el) {
   }
   return false;
 }
+
+export const LayoutPreviewContext = createContext(false);
+
+const TAB_LAZY_MAP = {
+  '/manager/dashboard': lazy(() => import('../../pages/manager/ManagerDashboard')),
+  '/sensei/dashboard': lazy(() => import('../../pages/sensei/SenseiDashboard')),
+  '/manager/students': lazy(() => import('../../pages/manager/StudentRoster')),
+  '/clubs': lazy(() => import('../../pages/ClubsPage')),
+  '/manager/staff': lazy(() => import('../../pages/manager/StaffPage')),
+  '/manager/reports': lazy(() => import('../../pages/manager/ReportsPage')),
+  '/curriculum-roadmap': lazy(() => import('../../pages/CurriculumRoadmapPage')),
+  '/account': lazy(() => import('../../pages/AccountPage')),
+};
 
 function AnnouncementBanner({ text }) {
   const storageKey = `ann_dismissed_${encodeURIComponent(text).slice(0, 32)}`;
@@ -95,17 +108,38 @@ function TabSkeleton({ tab }) {
   );
 }
 
+function AdjacentPanel({ tab, panelRef, side }) {
+  const Component = tab ? TAB_LAZY_MAP[tab.to] : null;
+  if (!Component) return null;
+  return (
+    <div
+      ref={panelRef}
+      className="absolute top-0 left-0 right-0 bg-ninja-bg lg:hidden pointer-events-none overflow-hidden"
+      style={{ transform: `translateX(${side === 'left' ? '-100%' : '100%'})`, willChange: 'transform' }}
+    >
+      <LayoutPreviewContext.Provider value={true}>
+        <MemoryRouter initialEntries={[tab.to]}>
+          <div className="px-4 py-4 sm:px-6 sm:py-8">
+            <Suspense fallback={<TabSkeleton tab={tab} />}>
+              <Component />
+            </Suspense>
+          </div>
+        </MemoryRouter>
+      </LayoutPreviewContext.Provider>
+    </div>
+  );
+}
+
 export default function Layout({ children }) {
+  const isPreview = useContext(LayoutPreviewContext);
   const { user, viewAs } = useAuth();
   const [bugOpen, setBugOpen] = useState(false);
-  const [previewTab, setPreviewTab] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
 
   const dragRef = useRef(null);
-  const previewRef = useRef(null);
-  const previewBaseXRef = useRef(0);
-  const previewSideSet = useRef(false);
+  const prevPanelRef = useRef(null);
+  const nextPanelRef = useRef(null);
   const touchStart = useRef(null);
   const isHorizontalSwipe = useRef(false);
   const swipeDirRef = useRef(null);
@@ -113,12 +147,15 @@ export default function Layout({ children }) {
   const swipeBlocked = useRef(false);
 
   useEffect(() => {
+    if (isPreview) return;
     if (user?.mustResetPassword && location.pathname !== '/account') {
       navigate('/account', { replace: true });
     }
-  }, [user?.mustResetPassword, location.pathname, navigate]);
+  }, [isPreview, user?.mustResetPassword, location.pathname, navigate]);
 
   useEffect(() => {
+    if (isPreview) return;
+
     const handleStart = (e) => {
       if (animating.current) return;
       if (touchTargetShouldScroll(e.target)) return;
@@ -126,8 +163,6 @@ export default function Layout({ children }) {
       isHorizontalSwipe.current = false;
       swipeDirRef.current = null;
       swipeBlocked.current = false;
-      previewSideSet.current = false;
-      if (previewRef.current) previewRef.current.style.display = 'none';
     };
 
     const handleMove = (e) => {
@@ -137,7 +172,8 @@ export default function Layout({ children }) {
 
       if (!isHorizontalSwipe.current) {
         if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-        if (Math.abs(dy) >= Math.abs(dx)) { touchStart.current = null; return; }
+        // Require clearly horizontal gesture before intercepting (same 1.5× ratio as navigation threshold)
+        if (Math.abs(dx) < Math.abs(dy) * 1.5) { touchStart.current = null; return; }
         e.preventDefault();
         isHorizontalSwipe.current = true;
         swipeDirRef.current = dx < 0 ? 'left' : 'right';
@@ -148,15 +184,6 @@ export default function Layout({ children }) {
         if (idx !== -1) {
           const adjIdx = dx < 0 ? idx + 1 : idx - 1;
           if (adjIdx < 0 || adjIdx >= tabs.length) { swipeBlocked.current = true; return; }
-          if (previewRef.current && !previewSideSet.current) {
-            const vw = window.innerWidth;
-            previewBaseXRef.current = dx < 0 ? vw : -vw;
-            previewRef.current.style.transform = `translate3d(${previewBaseXRef.current}px, 0, 0)`;
-            previewRef.current.style.transition = 'none';
-            previewRef.current.style.display = 'block';
-            previewSideSet.current = true;
-            setPreviewTab(tabs[adjIdx]);
-          }
         }
       }
 
@@ -164,9 +191,13 @@ export default function Layout({ children }) {
       e.preventDefault();
       dragRef.current.style.transform = `translate3d(${dx}px, 0, 0)`;
       dragRef.current.style.transition = 'none';
-      if (previewRef.current && previewSideSet.current) {
-        previewRef.current.style.transform = `translate3d(${previewBaseXRef.current + dx}px, 0, 0)`;
-        previewRef.current.style.transition = 'none';
+      if (prevPanelRef.current) {
+        prevPanelRef.current.style.transform = `translate3d(calc(-100% + ${dx}px), 0, 0)`;
+        prevPanelRef.current.style.transition = 'none';
+      }
+      if (nextPanelRef.current) {
+        nextPanelRef.current.style.transform = `translate3d(calc(100% + ${dx}px), 0, 0)`;
+        nextPanelRef.current.style.transition = 'none';
       }
     };
 
@@ -188,13 +219,20 @@ export default function Layout({ children }) {
       if (Math.abs(dx) >= 60 && Math.abs(dx) >= Math.abs(dy) * 1.5) {
         const tabs = getMobileNavTabs(user, viewAs);
         const idx = tabs.findIndex(t => t.to === location.pathname);
+
         if (idx === -1 && dx > 0) {
           animating.current = true;
           el.style.transition = SPRING;
           el.style.transform = 'translate3d(100%, 0, 0)';
           setTimeout(() => {
-            if (previewRef.current) previewRef.current.style.display = 'none';
-            previewSideSet.current = false;
+            if (prevPanelRef.current) {
+              prevPanelRef.current.style.transition = 'none';
+              prevPanelRef.current.style.transform = 'translateX(-100%)';
+            }
+            if (nextPanelRef.current) {
+              nextPanelRef.current.style.transition = 'none';
+              nextPanelRef.current.style.transform = 'translateX(100%)';
+            }
             el.style.transform = '';
             el.style.transition = '';
             animating.current = false;
@@ -202,6 +240,7 @@ export default function Layout({ children }) {
           }, 280);
           return;
         }
+
         if (idx !== -1) {
           const canGoNext = dx < 0 && idx < tabs.length - 1;
           const canGoPrev = dx > 0 && idx > 0;
@@ -210,13 +249,23 @@ export default function Layout({ children }) {
             const nextPath = canGoNext ? tabs[idx + 1].to : tabs[idx - 1].to;
             el.style.transition = SPRING;
             el.style.transform = `translate3d(${dx < 0 ? '-100%' : '100%'}, 0, 0)`;
-            if (previewRef.current && previewSideSet.current) {
-              previewRef.current.style.transition = SPRING;
-              previewRef.current.style.transform = 'translate3d(0, 0, 0)';
+
+            // Slide in the appropriate adjacent panel
+            const incomingPanel = dx < 0 ? nextPanelRef : prevPanelRef;
+            if (incomingPanel.current) {
+              incomingPanel.current.style.transition = SPRING;
+              incomingPanel.current.style.transform = 'translate3d(0, 0, 0)';
             }
+
             setTimeout(() => {
-              if (previewRef.current) previewRef.current.style.display = 'none';
-              previewSideSet.current = false;
+              if (prevPanelRef.current) {
+                prevPanelRef.current.style.transition = 'none';
+                prevPanelRef.current.style.transform = 'translateX(-100%)';
+              }
+              if (nextPanelRef.current) {
+                nextPanelRef.current.style.transition = 'none';
+                nextPanelRef.current.style.transform = 'translateX(100%)';
+              }
               el.style.transform = '';
               el.style.transition = '';
               animating.current = false;
@@ -230,20 +279,18 @@ export default function Layout({ children }) {
       const SNAP = 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1)';
       el.style.transition = SNAP;
       el.style.transform = 'translate3d(0, 0, 0)';
-      if (previewRef.current && previewSideSet.current) {
-        previewRef.current.style.transition = SNAP;
-        previewRef.current.style.transform = `translate3d(${previewBaseXRef.current}px, 0, 0)`;
-        setTimeout(() => {
-          if (previewRef.current) previewRef.current.style.display = 'none';
-          previewSideSet.current = false;
-        }, 360);
+      if (prevPanelRef.current) {
+        prevPanelRef.current.style.transition = SNAP;
+        prevPanelRef.current.style.transform = 'translateX(-100%)';
+      }
+      if (nextPanelRef.current) {
+        nextPanelRef.current.style.transition = SNAP;
+        nextPanelRef.current.style.transform = 'translateX(100%)';
       }
     };
 
     const handleCancel = () => {
       touchStart.current = null;
-      previewSideSet.current = false;
-      if (previewRef.current) previewRef.current.style.display = 'none';
     };
 
     document.addEventListener('touchstart', handleStart, { passive: true });
@@ -256,7 +303,17 @@ export default function Layout({ children }) {
       document.removeEventListener('touchend', handleEnd);
       document.removeEventListener('touchcancel', handleCancel);
     };
-  }, [user, viewAs, location.pathname, navigate]);
+  }, [isPreview, user, viewAs, location.pathname, navigate]);
+
+  // Content-only render for adjacent preview panels (no shell, no sidebar, no nav)
+  if (isPreview) {
+    return <>{children}</>;
+  }
+
+  const tabs = getMobileNavTabs(user, viewAs);
+  const currentIdx = tabs.findIndex(t => t.to === location.pathname);
+  const prevTab = currentIdx > 0 ? tabs[currentIdx - 1] : null;
+  const nextTab = currentIdx < tabs.length - 1 ? tabs[currentIdx + 1] : null;
 
   const fromSwipe = location.state?.fromSwipe;
   const swipeDir = location.state?.swipeDir;
@@ -272,14 +329,12 @@ export default function Layout({ children }) {
         </div>
         <main className="flex-1 overflow-y-auto min-h-0 max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-4 lg:pb-8">
           <div className="relative overflow-x-hidden lg:overflow-x-visible">
-            {/* Skeleton preview — slides in behind current page during swipe */}
-            <div
-              ref={previewRef}
-              className="absolute inset-0 bg-ninja-bg px-4 py-4 sm:px-6 sm:py-8 lg:hidden overflow-hidden"
-              style={{ display: 'none' }}
-            >
-              <TabSkeleton tab={previewTab} />
-            </div>
+            {prevTab && (
+              <AdjacentPanel key={prevTab.to} tab={prevTab} panelRef={prevPanelRef} side="left" />
+            )}
+            {nextTab && (
+              <AdjacentPanel key={nextTab.to} tab={nextTab} panelRef={nextPanelRef} side="right" />
+            )}
 
             <div ref={dragRef} className="relative bg-ninja-bg touch-pan-y lg:touch-auto">
               <AnimatePresence mode="popLayout">
