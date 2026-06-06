@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, createContext, useContext, lazy, Suspense } from 'react';
-import { useNavigate, useLocation, MemoryRouter } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
@@ -72,13 +72,11 @@ function AdjacentPanel({ tab, panelRef, side }) {
       style={{ transform: `translateX(${side === 'left' ? '-100%' : '100%'})`, willChange: 'transform' }}
     >
       <LayoutPreviewContext.Provider value={true}>
-        <MemoryRouter initialEntries={[tab.to]}>
-          <div className="px-4 py-4 sm:px-6 sm:py-8">
-            <Suspense fallback={null}>
-              <Component />
-            </Suspense>
-          </div>
-        </MemoryRouter>
+        <div className="px-4 py-4 sm:px-6 sm:py-8">
+          <Suspense fallback={null}>
+            <Component />
+          </Suspense>
+        </div>
       </LayoutPreviewContext.Provider>
     </div>
   );
