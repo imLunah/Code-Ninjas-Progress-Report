@@ -62,52 +62,6 @@ function AnnouncementBanner({ text }) {
   );
 }
 
-function TabSkeleton({ tab }) {
-  const path = tab?.to ?? '';
-  const isGrid = ['/clubs', '/manager/staff'].includes(path);
-  const isStats = path.includes('dashboard');
-
-  return (
-    <div className="animate-pulse space-y-4">
-      <div>
-        <div className="h-8 bg-ninja-border/50 rounded-lg w-40" />
-        <div className="h-3 bg-ninja-border/30 rounded w-28 mt-2" />
-      </div>
-
-      {isStats && (
-        <>
-          <div className="grid grid-cols-3 gap-3">
-            {[0,1,2].map(i => <div key={i} className="bg-ninja-border/30 rounded-xl h-20" />)}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {[0,1,2,3].map(i => <div key={i} className="bg-ninja-border/30 rounded-xl h-24" />)}
-          </div>
-        </>
-      )}
-
-      {isGrid && (
-        <div className="grid grid-cols-2 gap-3">
-          {[0,1,2,3,4,5].map(i => <div key={i} className="bg-ninja-border/30 rounded-xl h-28" />)}
-        </div>
-      )}
-
-      {!isGrid && !isStats && (
-        <div className="bg-white border border-ninja-border rounded-xl overflow-hidden shadow-sm">
-          {[0,1,2,3,4,5,6].map(i => (
-            <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-ninja-border/40 last:border-b-0">
-              <div className="w-9 h-9 rounded-full bg-ninja-border/40 flex-shrink-0" />
-              <div className="flex-1 space-y-1.5">
-                <div className="h-3.5 bg-ninja-border/40 rounded" style={{ width: `${50 + (i * 19) % 40}%` }} />
-                <div className="h-2.5 bg-ninja-border/30 rounded w-20" />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function AdjacentPanel({ tab, panelRef, side }) {
   const Component = tab ? TAB_LAZY_MAP[tab.to] : null;
   if (!Component) return null;
@@ -120,7 +74,7 @@ function AdjacentPanel({ tab, panelRef, side }) {
       <LayoutPreviewContext.Provider value={true}>
         <MemoryRouter initialEntries={[tab.to]}>
           <div className="px-4 py-4 sm:px-6 sm:py-8">
-            <Suspense fallback={<TabSkeleton tab={tab} />}>
+            <Suspense fallback={null}>
               <Component />
             </Suspense>
           </div>
