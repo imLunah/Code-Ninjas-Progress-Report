@@ -25,31 +25,20 @@ function touchTargetShouldScroll(el) {
 function AnnouncementBanner({ text }) {
   const storageKey = `ann_dismissed_${encodeURIComponent(text).slice(0, 32)}`;
   const [dismissed, setDismissed] = useState(() => !!sessionStorage.getItem(storageKey));
-
-  const dismiss = () => {
-    sessionStorage.setItem(storageKey, '1');
-    setDismissed(true);
-  };
-
+  const dismiss = () => { sessionStorage.setItem(storageKey, '1'); setDismissed(true); };
   return (
     <AnimatePresence>
       {!dismissed && (
         <motion.div
-          initial={{ opacity: 0, y: -6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.2 }}
+          initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}
           className="border-b border-ninja-border px-4 sm:px-6 py-2.5 flex items-center gap-3"
         >
           <svg className="w-4 h-4 text-ninja-red flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p className="flex-1 text-ninja-navy font-ninja text-sm leading-snug">{text}</p>
-          <button
-            onClick={dismiss}
-            className="text-ninja-muted hover:text-ninja-navy transition-colors flex-shrink-0"
-            aria-label="Dismiss announcement"
-          >
+          <button onClick={dismiss} className="text-ninja-muted hover:text-ninja-navy transition-colors flex-shrink-0" aria-label="Dismiss announcement">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -60,14 +49,58 @@ function AnnouncementBanner({ text }) {
   );
 }
 
+function TabSkeleton({ tab }) {
+  const path = tab?.to ?? '';
+  const isGrid = ['/clubs', '/manager/staff'].includes(path);
+  const isStats = path.includes('dashboard');
+
+  return (
+    <div className="animate-pulse space-y-4">
+      <div>
+        <div className="h-8 bg-ninja-border/50 rounded-lg w-40" />
+        <div className="h-3 bg-ninja-border/30 rounded w-28 mt-2" />
+      </div>
+
+      {isStats && (
+        <>
+          <div className="grid grid-cols-3 gap-3">
+            {[0,1,2].map(i => <div key={i} className="bg-ninja-border/30 rounded-xl h-20" />)}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {[0,1,2,3].map(i => <div key={i} className="bg-ninja-border/30 rounded-xl h-24" />)}
+          </div>
+        </>
+      )}
+
+      {isGrid && (
+        <div className="grid grid-cols-2 gap-3">
+          {[0,1,2,3,4,5].map(i => <div key={i} className="bg-ninja-border/30 rounded-xl h-28" />)}
+        </div>
+      )}
+
+      {!isGrid && !isStats && (
+        <div className="bg-white border border-ninja-border rounded-xl overflow-hidden shadow-sm">
+          {[0,1,2,3,4,5,6].map(i => (
+            <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-ninja-border/40 last:border-b-0">
+              <div className="w-9 h-9 rounded-full bg-ninja-border/40 flex-shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3.5 bg-ninja-border/40 rounded" style={{ width: `${50 + (i * 19) % 40}%` }} />
+                <div className="h-2.5 bg-ninja-border/30 rounded w-20" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Layout({ children }) {
   const { user, viewAs } = useAuth();
   const [bugOpen, setBugOpen] = useState(false);
+  const [previewTab, setPreviewTab] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
-
-  // ?_f=1 — content-only mode used by swipe preview iframes
-  const isPreviewFrame = new URLSearchParams(location.search).get('_f') === '1';
 
   const dragRef = useRef(null);
   const previewRef = useRef(null);
@@ -80,15 +113,12 @@ export default function Layout({ children }) {
   const swipeBlocked = useRef(false);
 
   useEffect(() => {
-    if (isPreviewFrame) return;
     if (user?.mustResetPassword && location.pathname !== '/account') {
       navigate('/account', { replace: true });
     }
-  }, [isPreviewFrame, user?.mustResetPassword, location.pathname, navigate]);
+  }, [user?.mustResetPassword, location.pathname, navigate]);
 
   useEffect(() => {
-    if (isPreviewFrame) return; // no swipe gesture handling inside preview iframes
-
     const handleStart = (e) => {
       if (animating.current) return;
       if (touchTargetShouldScroll(e.target)) return;
@@ -107,10 +137,7 @@ export default function Layout({ children }) {
 
       if (!isHorizontalSwipe.current) {
         if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-        if (Math.abs(dy) >= Math.abs(dx)) {
-          touchStart.current = null;
-          return;
-        }
+        if (Math.abs(dy) >= Math.abs(dx)) { touchStart.current = null; return; }
         e.preventDefault();
         isHorizontalSwipe.current = true;
         swipeDirRef.current = dx < 0 ? 'left' : 'right';
@@ -121,21 +148,19 @@ export default function Layout({ children }) {
         if (idx !== -1) {
           const adjIdx = dx < 0 ? idx + 1 : idx - 1;
           if (adjIdx < 0 || adjIdx >= tabs.length) { swipeBlocked.current = true; return; }
-          // Load adjacent page in iframe preview
           if (previewRef.current && !previewSideSet.current) {
             const vw = window.innerWidth;
             previewBaseXRef.current = dx < 0 ? vw : -vw;
-            previewRef.current.src = `${tabs[adjIdx].to}?_f=1`;
             previewRef.current.style.transform = `translate3d(${previewBaseXRef.current}px, 0, 0)`;
             previewRef.current.style.transition = 'none';
             previewRef.current.style.display = 'block';
             previewSideSet.current = true;
+            setPreviewTab(tabs[adjIdx]);
           }
         }
       }
 
       if (swipeBlocked.current) return;
-
       e.preventDefault();
       dragRef.current.style.transform = `translate3d(${dx}px, 0, 0)`;
       dragRef.current.style.transition = 'none';
@@ -156,7 +181,6 @@ export default function Layout({ children }) {
 
       const el = dragRef.current;
       if (!el) return;
-
       if (swipeBlocked.current) { swipeBlocked.current = false; return; }
 
       const SPRING = 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1)';
@@ -232,16 +256,7 @@ export default function Layout({ children }) {
       document.removeEventListener('touchend', handleEnd);
       document.removeEventListener('touchcancel', handleCancel);
     };
-  }, [isPreviewFrame, user, viewAs, location.pathname, navigate]);
-
-  // Content-only mode — rendered inside swipe preview iframes
-  if (isPreviewFrame) {
-    return (
-      <div className="bg-ninja-bg w-full px-4 sm:px-6 py-4 sm:py-8">
-        {children}
-      </div>
-    );
-  }
+  }, [user, viewAs, location.pathname, navigate]);
 
   const fromSwipe = location.state?.fromSwipe;
   const swipeDir = location.state?.swipeDir;
@@ -257,18 +272,16 @@ export default function Layout({ children }) {
         </div>
         <main className="flex-1 overflow-y-auto min-h-0 max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-4 lg:pb-8">
           <div className="relative overflow-x-hidden lg:overflow-x-visible">
-            {/* Swipe preview iframe — loads adjacent tab in content-only mode (?_f=1) */}
-            <iframe
-              ref={previewRef}
-              className="absolute inset-0 w-full h-full border-none lg:hidden"
-              style={{ display: 'none' }}
-              title="page preview"
-            />
-
+            {/* Skeleton preview — slides in behind current page during swipe */}
             <div
-              ref={dragRef}
-              className="relative bg-ninja-bg touch-pan-y lg:touch-auto"
+              ref={previewRef}
+              className="absolute inset-0 bg-ninja-bg px-4 py-4 sm:px-6 sm:py-8 lg:hidden overflow-hidden"
+              style={{ display: 'none' }}
             >
+              <TabSkeleton tab={previewTab} />
+            </div>
+
+            <div ref={dragRef} className="relative bg-ninja-bg touch-pan-y lg:touch-auto">
               <AnimatePresence mode="popLayout">
                 <motion.div
                   key={location.key}
@@ -283,7 +296,6 @@ export default function Layout({ children }) {
             </div>
           </div>
         </main>
-
       </div>
       <MobileNav />
       <BugReportButton
