@@ -67,6 +67,10 @@ export default function Layout({ children }) {
   const location = useLocation();
 
   const dragRef = useRef(null);
+  const previewRef = useRef(null);
+  const previewNameRef = useRef(null);
+  const previewBaseXRef = useRef(0);
+  const previewSideSet = useRef(false);
   const touchStart = useRef(null);
   const isHorizontalSwipe = useRef(false);
   const swipeDirRef = useRef(null);
@@ -87,6 +91,8 @@ export default function Layout({ children }) {
       isHorizontalSwipe.current = false;
       swipeDirRef.current = null;
       swipeBlocked.current = false;
+      previewSideSet.current = false;
+      if (previewRef.current) previewRef.current.style.display = 'none';
     };
 
     const handleMove = (e) => {
@@ -110,6 +116,16 @@ export default function Layout({ children }) {
         if (idx !== -1) {
           const adjIdx = dx < 0 ? idx + 1 : idx - 1;
           if (adjIdx < 0 || adjIdx >= tabs.length) { swipeBlocked.current = true; return; }
+          // Show preview for the adjacent tab
+          if (previewRef.current && previewNameRef.current && !previewSideSet.current) {
+            const vw = window.innerWidth;
+            previewBaseXRef.current = dx < 0 ? vw : -vw;
+            previewNameRef.current.textContent = tabs[adjIdx].label;
+            previewRef.current.style.transform = `translate3d(${previewBaseXRef.current}px, 0, 0)`;
+            previewRef.current.style.transition = 'none';
+            previewRef.current.style.display = 'flex';
+            previewSideSet.current = true;
+          }
         }
       }
 
@@ -118,6 +134,10 @@ export default function Layout({ children }) {
       e.preventDefault();
       dragRef.current.style.transform = `translate3d(${dx}px, 0, 0)`;
       dragRef.current.style.transition = 'none';
+      if (previewRef.current && previewSideSet.current) {
+        previewRef.current.style.transform = `translate3d(${previewBaseXRef.current + dx}px, 0, 0)`;
+        previewRef.current.style.transition = 'none';
+      }
     };
 
     const handleEnd = (e) => {
@@ -144,6 +164,8 @@ export default function Layout({ children }) {
           el.style.transition = SPRING;
           el.style.transform = 'translate3d(100%, 0, 0)';
           setTimeout(() => {
+            if (previewRef.current) previewRef.current.style.display = 'none';
+            previewSideSet.current = false;
             el.style.transform = '';
             el.style.transition = '';
             animating.current = false;
@@ -159,7 +181,13 @@ export default function Layout({ children }) {
             const nextPath = canGoNext ? tabs[idx + 1].to : tabs[idx - 1].to;
             el.style.transition = SPRING;
             el.style.transform = `translate3d(${dx < 0 ? '-100%' : '100%'}, 0, 0)`;
+            if (previewRef.current && previewSideSet.current) {
+              previewRef.current.style.transition = SPRING;
+              previewRef.current.style.transform = 'translate3d(0, 0, 0)';
+            }
             setTimeout(() => {
+              if (previewRef.current) previewRef.current.style.display = 'none';
+              previewSideSet.current = false;
               el.style.transform = '';
               el.style.transition = '';
               animating.current = false;
@@ -173,9 +201,21 @@ export default function Layout({ children }) {
       const SNAP = 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1)';
       el.style.transition = SNAP;
       el.style.transform = 'translate3d(0, 0, 0)';
+      if (previewRef.current && previewSideSet.current) {
+        previewRef.current.style.transition = SNAP;
+        previewRef.current.style.transform = `translate3d(${previewBaseXRef.current}px, 0, 0)`;
+        setTimeout(() => {
+          if (previewRef.current) previewRef.current.style.display = 'none';
+          previewSideSet.current = false;
+        }, 360);
+      }
     };
 
-    const handleCancel = () => { touchStart.current = null; };
+    const handleCancel = () => {
+      touchStart.current = null;
+      previewSideSet.current = false;
+      if (previewRef.current) previewRef.current.style.display = 'none';
+    };
 
     document.addEventListener('touchstart', handleStart, { passive: true });
     document.addEventListener('touchmove', handleMove, { passive: false });
@@ -202,21 +242,32 @@ export default function Layout({ children }) {
           <ThemeToggle />
         </div>
         <main className="flex-1 overflow-y-auto min-h-0 max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-4 lg:pb-8">
-          <div
-            ref={dragRef}
-            className="overflow-x-hidden lg:overflow-x-visible touch-pan-y lg:touch-auto"
-          >
-            <AnimatePresence mode="popLayout">
-              <motion.div
-                key={location.key}
-                initial={{ x: enterX, opacity: fromSwipe ? 1 : 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={fromSwipe ? { duration: 0 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                style={{ width: '100%' }}
-              >
-                {children}
-              </motion.div>
-            </AnimatePresence>
+          <div className="relative overflow-x-hidden lg:overflow-x-visible">
+            {/* Swipe preview — renders behind dragRef (earlier in DOM), slides in from edge */}
+            <div
+              ref={previewRef}
+              className="absolute inset-0 bg-ninja-bg items-center justify-center lg:hidden"
+              style={{ display: 'none' }}
+            >
+              <span ref={previewNameRef} className="font-ninja font-bold text-2xl text-ninja-navy" />
+            </div>
+
+            <div
+              ref={dragRef}
+              className="relative bg-ninja-bg touch-pan-y lg:touch-auto"
+            >
+              <AnimatePresence mode="popLayout">
+                <motion.div
+                  key={location.key}
+                  initial={{ x: enterX, opacity: fromSwipe ? 1 : 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={fromSwipe ? { duration: 0 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  style={{ width: '100%' }}
+                >
+                  {children}
+                </motion.div>
+              </AnimatePresence>
+            </div>
           </div>
         </main>
 
