@@ -66,9 +66,11 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // ?_f=1 — content-only mode used by swipe preview iframes
+  const isPreviewFrame = new URLSearchParams(location.search).get('_f') === '1';
+
   const dragRef = useRef(null);
   const previewRef = useRef(null);
-  const previewNameRef = useRef(null);
   const previewBaseXRef = useRef(0);
   const previewSideSet = useRef(false);
   const touchStart = useRef(null);
@@ -78,12 +80,15 @@ export default function Layout({ children }) {
   const swipeBlocked = useRef(false);
 
   useEffect(() => {
+    if (isPreviewFrame) return;
     if (user?.mustResetPassword && location.pathname !== '/account') {
       navigate('/account', { replace: true });
     }
-  }, [user?.mustResetPassword, location.pathname, navigate]);
+  }, [isPreviewFrame, user?.mustResetPassword, location.pathname, navigate]);
 
   useEffect(() => {
+    if (isPreviewFrame) return; // no swipe gesture handling inside preview iframes
+
     const handleStart = (e) => {
       if (animating.current) return;
       if (touchTargetShouldScroll(e.target)) return;
@@ -116,14 +121,14 @@ export default function Layout({ children }) {
         if (idx !== -1) {
           const adjIdx = dx < 0 ? idx + 1 : idx - 1;
           if (adjIdx < 0 || adjIdx >= tabs.length) { swipeBlocked.current = true; return; }
-          // Show preview for the adjacent tab
-          if (previewRef.current && previewNameRef.current && !previewSideSet.current) {
+          // Load adjacent page in iframe preview
+          if (previewRef.current && !previewSideSet.current) {
             const vw = window.innerWidth;
             previewBaseXRef.current = dx < 0 ? vw : -vw;
-            previewNameRef.current.textContent = tabs[adjIdx].label;
+            previewRef.current.src = `${tabs[adjIdx].to}?_f=1`;
             previewRef.current.style.transform = `translate3d(${previewBaseXRef.current}px, 0, 0)`;
             previewRef.current.style.transition = 'none';
-            previewRef.current.style.display = 'flex';
+            previewRef.current.style.display = 'block';
             previewSideSet.current = true;
           }
         }
@@ -227,7 +232,16 @@ export default function Layout({ children }) {
       document.removeEventListener('touchend', handleEnd);
       document.removeEventListener('touchcancel', handleCancel);
     };
-  }, [user, viewAs, location.pathname, navigate]);
+  }, [isPreviewFrame, user, viewAs, location.pathname, navigate]);
+
+  // Content-only mode — rendered inside swipe preview iframes
+  if (isPreviewFrame) {
+    return (
+      <div className="bg-ninja-bg w-full px-4 sm:px-6 py-4 sm:py-8">
+        {children}
+      </div>
+    );
+  }
 
   const fromSwipe = location.state?.fromSwipe;
   const swipeDir = location.state?.swipeDir;
@@ -243,14 +257,13 @@ export default function Layout({ children }) {
         </div>
         <main className="flex-1 overflow-y-auto min-h-0 max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-4 lg:pb-8">
           <div className="relative overflow-x-hidden lg:overflow-x-visible">
-            {/* Swipe preview — renders behind dragRef (earlier in DOM), slides in from edge */}
-            <div
+            {/* Swipe preview iframe — loads adjacent tab in content-only mode (?_f=1) */}
+            <iframe
               ref={previewRef}
-              className="absolute inset-0 bg-ninja-bg items-center justify-center lg:hidden"
+              className="absolute inset-0 w-full h-full border-none lg:hidden"
               style={{ display: 'none' }}
-            >
-              <span ref={previewNameRef} className="font-ninja font-bold text-2xl text-ninja-navy" />
-            </div>
+              title="page preview"
+            />
 
             <div
               ref={dragRef}
