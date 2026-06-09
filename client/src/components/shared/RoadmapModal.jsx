@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../api/client';
 
@@ -11,16 +12,13 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
   const [error, setError] = useState(null);
   const [expandedModules, setExpandedModules] = useState(new Set());
   const [pending, setPending] = useState(new Set());
-  // tabSubProgram: only set when user manually picks a JR tab; null means "use enrollment default"
   const [tabSubProgram, setTabSubProgram] = useState(null);
 
-  // Reset tab when modal closes so next open starts fresh
   useEffect(() => {
     if (!open) setTabSubProgram(null);
   }, [open]);
 
   const subProgramOptions = PROGRAM_SUB_PROGRAMS[enrollment?.program] ?? null;
-  // Synchronously computed — no timing race
   const effectiveSubProgram = subProgramOptions
     ? (tabSubProgram ?? enrollment?.last_sub_program ?? subProgramOptions[0])
     : (enrollment?.last_sub_program ?? null);
@@ -95,11 +93,15 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+    >
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <motion.div
-        className="relative bg-white w-full sm:max-w-2xl sm:rounded-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh]"
+        className="relative bg-ninja-bg w-full sm:max-w-2xl sm:rounded-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh] border-t border-ninja-border sm:border"
         initial={{ opacity: 0, y: 32 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 32 }}
@@ -116,7 +118,7 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
               <p className="text-ninja-muted font-ninja text-xs mt-1">
                 {completedCount + pendingCount} of {totalLessons} completed
                 {pendingCount > 0 && (
-                  <span className="text-emerald-600 font-semibold"> (+{pendingCount} unsaved)</span>
+                  <span className="text-emerald-400 font-semibold"> (+{pendingCount} unsaved)</span>
                 )}
               </p>
             )}
@@ -141,7 +143,7 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
                 className={`font-ninja font-semibold text-sm px-3.5 py-1.5 rounded-lg transition-colors ${
                   effectiveSubProgram === sub
                     ? 'bg-ninja-blue text-white'
-                    : 'text-ninja-muted hover:text-ninja-navy hover:bg-gray-100'
+                    : 'text-ninja-muted hover:text-ninja-navy hover:bg-ninja-border/50'
                 }`}
               >
                 {sub}
@@ -158,7 +160,7 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
             </div>
           )}
           {error && !loading && (
-            <div className="px-6 py-4 text-red-600 font-ninja text-sm">{error}</div>
+            <div className="px-6 py-4 text-ninja-red font-ninja text-sm">{error}</div>
           )}
           {!loading && !error && modules.map(mod => {
             const expanded = expandedModules.has(mod.module_name);
@@ -168,9 +170,9 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
             const allDone = mod.lessons.length > 0 && (completedInModule === mod.lessons.length);
 
             return (
-              <div key={mod.id} className={`border-b border-ninja-border last:border-0 ${isCurrent ? 'bg-blue-50/30' : ''}`}>
+              <div key={mod.id} className={`border-b border-ninja-border last:border-0 ${isCurrent ? 'bg-ninja-blue/5' : ''}`}>
                 <button
-                  className="w-full flex items-center justify-between px-6 py-3.5 text-left hover:bg-gray-50/80 transition-colors"
+                  className="w-full flex items-center justify-between px-6 py-3.5 text-left hover:bg-ninja-border/30 transition-colors"
                   onClick={() => toggleExpand(mod.module_name)}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -181,7 +183,7 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
                         </svg>
                       </span>
                     ) : (
-                      <span className="shrink-0 w-4 h-4 rounded-full border-2 border-gray-300" />
+                      <span className="shrink-0 w-4 h-4 rounded-full border-2 border-ninja-border" />
                     )}
                     <span className="font-ninja font-bold text-ninja-navy text-sm truncate">{mod.module_name}</span>
                     {isCurrent && (
@@ -227,8 +229,8 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
                                 isCompleted
                                   ? 'cursor-default opacity-60'
                                   : isPending
-                                  ? 'bg-emerald-50 hover:bg-emerald-100/80'
-                                  : 'hover:bg-gray-50'
+                                  ? 'bg-emerald-900/30 hover:bg-emerald-900/40'
+                                  : 'hover:bg-ninja-border/30'
                               }`}
                               onClick={() => toggleLesson(mod.module_name, lesson.lesson_name, isCompleted)}
                             >
@@ -236,7 +238,7 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
                                 className={`shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 transition-colors ${
                                   checked
                                     ? 'bg-emerald-500 border-emerald-500'
-                                    : 'border-gray-300'
+                                    : 'border-ninja-border'
                                 }`}
                               >
                                 {checked && (
@@ -261,7 +263,7 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
         </div>
 
         {/* Footer */}
-        <div className={`px-6 py-4 border-t border-ninja-border bg-white flex-shrink-0 flex items-center justify-between ${pendingCount === 0 ? 'justify-end' : ''}`}>
+        <div className={`px-6 py-4 border-t border-ninja-border bg-ninja-bg flex-shrink-0 flex items-center justify-between ${pendingCount === 0 ? 'justify-end' : ''}`}>
           {pendingCount > 0 ? (
             <>
               <p className="font-ninja text-sm text-ninja-muted">
@@ -285,6 +287,7 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
           )}
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 }
