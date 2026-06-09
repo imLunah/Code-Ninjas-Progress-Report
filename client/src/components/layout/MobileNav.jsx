@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getActiveTabIndex } from '../../lib/navTabs';
 
 function LocationBar({ user, switchLocation }) {
-  const glass = 'w-full rounded-xl border border-white/15 bg-white/10 backdrop-blur-2xl text-ninja-navy px-3 py-1.5 font-ninja text-sm font-semibold shadow-lg shadow-black/25';
+  const glass = 'w-full rounded-xl border border-white/15 dark:border-white/10 bg-white/10 dark:bg-black/45 backdrop-blur-2xl text-ninja-navy px-3 py-1.5 font-ninja text-sm font-semibold shadow-lg shadow-black/30';
   if (['manager', 'admin'].includes(user.role)) {
     return (
       <select
@@ -77,8 +77,8 @@ export default function MobileNav() {
       </div>
       {/* Liquid glass capsule */}
       <div
-        className="pointer-events-auto relative flex items-center justify-between rounded-full border border-white/15 bg-white/10 backdrop-blur-2xl px-1.5 py-1.5"
-        style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(0,0,0,0.15), 0 8px 32px rgba(0,0,0,0.35)' }}
+        className="pointer-events-auto relative flex items-center justify-between gap-0.5 rounded-full border border-white/15 dark:border-white/10 bg-white/10 dark:bg-black/45 backdrop-blur-2xl px-2 py-2"
+        style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(0,0,0,0.15), 0 8px 32px rgba(0,0,0,0.4)' }}
       >
         {/* top sheen highlight */}
         <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent rounded-full" />
@@ -92,13 +92,13 @@ export default function MobileNav() {
               transition={{ type: 'spring', stiffness: 500, damping: 28 }}
               aria-label={tab.label}
               aria-current={active ? 'page' : undefined}
-              className="relative flex-1 flex items-center justify-center h-11 rounded-full"
+              className="relative flex-1 flex items-center justify-center h-12 rounded-full"
             >
               {active && (
                 <motion.div
                   layoutId="mobileNavPill"
-                  className="absolute inset-x-0.5 inset-y-0 rounded-full border border-white/25 bg-white/20"
-                  style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.25), 0 2px 8px rgba(0,0,0,0.2)' }}
+                  className="absolute inset-0 rounded-full border border-white/25 dark:border-white/15 bg-white/20 dark:bg-white/[0.12]"
+                  style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.25), 0 2px 8px rgba(0,0,0,0.25)' }}
                   transition={PILL_SPRING}
                 />
               )}
