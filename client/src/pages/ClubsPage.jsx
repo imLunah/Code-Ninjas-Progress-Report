@@ -6,6 +6,7 @@ import Button from '../components/ui/Button';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { COLOR_SETS, toSlug } from '../utils/clubUtils';
+import ModalPortal from '../components/ui/ModalPortal';
 
 const COLOR_OPTIONS = [
   { key: 'purple', label: 'Purple' },
@@ -137,7 +138,7 @@ function EditClubModal({ club, onSaved, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/40 backdrop-blur-sm">
+    <ModalPortal><div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
         <h2 className="text-ninja-navy font-ninja font-bold text-xl mb-4">Edit Club</h2>
 
@@ -207,7 +208,7 @@ function EditClubModal({ club, onSaved, onClose }) {
           </div>
         </form>
       </div>
-    </div>
+    </div></ModalPortal>
   );
 }
 
@@ -242,7 +243,7 @@ function CreateClubModal({ onCreated, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/40 backdrop-blur-sm">
+    <ModalPortal><div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
         <h2 className="text-ninja-navy font-ninja font-bold text-xl mb-4">Create New Club</h2>
 
@@ -313,7 +314,7 @@ function CreateClubModal({ onCreated, onClose }) {
           </div>
         </form>
       </div>
-    </div>
+    </div></ModalPortal>
   );
 }
 

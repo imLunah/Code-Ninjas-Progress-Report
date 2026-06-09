@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 const isSafari = typeof navigator !== 'undefined' &&
   /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
@@ -17,13 +18,13 @@ export default function Modal({ isOpen, onClose, title, children, subheader, wid
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
       className={`fixed inset-0 z-[100] bg-ninja-navy/50 ${isSafari ? '' : 'flex items-start sm:items-center justify-center p-4 overflow-y-auto'}`}
       onClick={onClose}
     >
       <div
-        className={`${isSafari ? 'fixed bottom-0 left-0 right-0 rounded-t-2xl' : 'relative rounded-xl'} bg-white border border-ninja-border shadow-xl w-full ${width} max-h-[90vh] flex flex-col`}
+        className={`${isSafari ? 'fixed bottom-0 left-0 right-0 rounded-t-2xl' : 'relative rounded-xl'} bg-white border border-ninja-border shadow-xl w-full ${width} max-h-[90dvh] flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header — never scrolls */}
@@ -36,17 +37,16 @@ export default function Modal({ isOpen, onClose, title, children, subheader, wid
             &times;
           </button>
         </div>
-        {/* Optional non-scrolling subheader (e.g. search bar) */}
         {subheader && (
           <div className="flex-shrink-0 px-4 pt-3 pb-2">
             {subheader}
           </div>
         )}
-        {/* Content — scrolls */}
-        <div className="flex-1 overflow-y-auto p-4 pt-2">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 pt-2">
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

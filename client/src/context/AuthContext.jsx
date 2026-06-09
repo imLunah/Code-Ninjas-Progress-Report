@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { invalidateCurriculumCache } from './CurriculumContext';
+import ModalPortal from '../components/ui/ModalPortal';
 
 export const AuthContext = createContext(null);
 
@@ -62,7 +63,7 @@ export function AuthProvider({ children }) {
 
 function SessionTimeoutModal({ onDismiss }) {
   return (
-    <div className="fixed inset-0 z-[9999] flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/50 backdrop-blur-sm">
+    <ModalPortal><div className="fixed inset-0 z-[9999] flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center">
         <div className="text-4xl mb-3">⏱️</div>
         <h2 className="text-lg font-bold font-ninja text-ninja-navy mb-2">Session Timed Out</h2>
@@ -76,7 +77,7 @@ function SessionTimeoutModal({ onDismiss }) {
           Sign In Again
         </button>
       </div>
-    </div>
+    </div></ModalPortal>
   );
 }
 

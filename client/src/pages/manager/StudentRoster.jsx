@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Papa from 'papaparse';
 import Layout from '../../components/layout/Layout';
+import ModalPortal from '../../components/ui/ModalPortal';
 import BeltBadge from '../../components/ui/BeltBadge';
 import ProgramBadge from '../../components/ui/ProgramBadge';
 import Button from '../../components/ui/Button';
@@ -617,7 +618,7 @@ export default function StudentRoster() {
 
       {/* CSV Import Modal */}
       {importModal && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/40">
+        <ModalPortal><div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
             <h2 className="text-lg font-bold font-ninja text-ninja-navy mb-1">Import from MyStudio CSV</h2>
             <p className="text-ninja-muted font-ninja text-sm mb-5">
@@ -674,7 +675,7 @@ export default function StudentRoster() {
               </Button>
             </div>
           </div>
-        </div>
+        </div></ModalPortal>
       )}
     </Layout>
   );
