@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getActiveTabIndex } from '../../lib/navTabs';
 
 function LocationBar({ user, switchLocation }) {
-  const glass = 'w-full rounded-xl border border-white/15 dark:border-white/10 bg-white/10 dark:bg-black/45 backdrop-blur-2xl text-ninja-navy px-3 py-1.5 font-ninja text-sm font-semibold shadow-lg shadow-black/30';
+  const glass = 'w-full rounded-xl border border-white/15 dark:border-white/10 bg-white/10 dark:bg-[#141826]/60 backdrop-blur-2xl text-ninja-navy px-3 py-1.5 font-ninja text-sm font-semibold shadow-lg shadow-black/30';
   if (['manager', 'admin'].includes(user.role)) {
     return (
       <select
@@ -77,7 +77,7 @@ export default function MobileNav() {
       </div>
       {/* Liquid glass capsule */}
       <div
-        className="pointer-events-auto relative flex items-center justify-between gap-0.5 rounded-full border border-white/15 dark:border-white/10 bg-white/10 dark:bg-black/45 backdrop-blur-2xl px-2 py-2"
+        className="pointer-events-auto relative flex items-center justify-between gap-0.5 rounded-full border border-white/15 dark:border-white/10 bg-white/10 dark:bg-[#141826]/60 backdrop-blur-2xl px-2 py-2"
         style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(0,0,0,0.15), 0 8px 32px rgba(0,0,0,0.4)' }}
       >
         {/* top sheen highlight */}
