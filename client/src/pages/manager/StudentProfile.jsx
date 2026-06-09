@@ -1021,7 +1021,7 @@ export default function StudentProfile() {
                           </p>
                         )}
                         {student.parent_phone && (
-                          <p className="text-ninja-muted font-ninja text-sm">{student.parent_phone}</p>
+                          <p className="text-ninja-muted font-ninja text-sm">{student.parent_phone.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')}</p>
                         )}
                       </div>
                       <button
