@@ -3,8 +3,125 @@ import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import Button from '../ui/Button';
 import BeltProgressFields from './BeltProgressFields';
-import ProjectFields from './ProjectFields';
 import { useCurriculum } from '../../context/CurriculumContext';
+import { PROJECTS, STATUSES, BELT_LEVEL_PROJECTS, getLevelProjects } from '../../utils/beltConfig';
+
+const UPPER_BELTS = ['Purple', 'Brown', 'Red', 'Black'];
+
+function getSectionLabel(index, total) {
+  if (index === total - 1) return 'Adventure';
+  const num = Math.floor(index / 2) + 1;
+  return index % 2 === 0 ? `Build ${num}` : `Solve ${num}`;
+}
+
+function CreateProjectRow({ entry, index, total, beltLevel, beltSublevel, beltProjects, onChange, onRemove }) {
+  const isUpperBelt = UPPER_BELTS.includes(beltLevel);
+  const dynBelt = beltProjects?.[beltLevel];
+  const dynLevel = dynBelt ? Object.fromEntries(
+    Object.entries(dynBelt).map(([sub, projs]) => [sub, projs.map(p => p.project_name)])
+  ) : null;
+  const dynLevelProjects = dynLevel?.[beltSublevel] ?? null;
+  const dynAllUpper = isUpperBelt && dynBelt ? Object.values(dynBelt).flat().map(p => p.project_name) : null;
+
+  const levelProjects = dynLevelProjects ?? getLevelProjects(beltLevel, beltSublevel);
+  const allUpperBeltProjects = dynAllUpper ?? (isUpperBelt && BELT_LEVEL_PROJECTS[beltLevel]
+    ? Object.values(BELT_LEVEL_PROJECTS[beltLevel]).flat()
+    : null);
+
+  const projectOptions = isUpperBelt ? (allUpperBeltProjects ?? PROJECTS) : (levelProjects ?? PROJECTS);
+  const hasBeltProjects = beltLevel && !!(dynBelt || BELT_LEVEL_PROJECTS[beltLevel]);
+  const needsSublevel = !isUpperBelt && hasBeltProjects && (!beltSublevel || parseInt(beltSublevel) < 1);
+  const showLabels = levelProjects && !isUpperBelt;
+
+  return (
+    <div className="relative border border-ninja-border rounded-xl p-4 bg-ninja-bg space-y-3">
+      {total > 1 && (
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide">
+            Project {index + 1}
+          </span>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-ninja-muted hover:text-red-400 transition-colors text-sm leading-none"
+            title="Remove this project"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      <div>
+        <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
+          Project
+        </label>
+        {needsSublevel ? (
+          <p className="text-ninja-muted font-ninja text-sm italic">Select a sublevel above to see projects.</p>
+        ) : entry.isCustom ? (
+          <div className="space-y-1.5">
+            <input
+              type="text"
+              value={entry.customProject}
+              onChange={(e) => onChange('customProject', e.target.value)}
+              placeholder="Project name..."
+              className="w-full bg-white border border-ninja-blue text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none transition-colors"
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => { onChange('isCustom', false); onChange('customProject', ''); }}
+              className="text-ninja-muted hover:text-ninja-navy text-xs font-ninja underline"
+            >
+              ← Use standard project
+            </button>
+          </div>
+        ) : (
+          <select
+            value={entry.project}
+            onChange={(e) => {
+              if (e.target.value === '__custom__') {
+                onChange('isCustom', true);
+                onChange('project', '');
+              } else {
+                onChange('project', e.target.value);
+              }
+            }}
+            className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+          >
+            <option value="">Select project...</option>
+            {projectOptions.map((p, i) => {
+              const label = showLabels ? `${getSectionLabel(i, projectOptions.length)}: ${p}` : p;
+              return <option key={p} value={p}>{label}</option>;
+            })}
+            <option value="__custom__">Custom...</option>
+          </select>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
+          Status
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {STATUSES.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => onChange('status', entry.status === s ? '' : s)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-ninja font-semibold transition-colors ${
+                entry.status === s
+                  ? s === 'Completed' ? 'bg-emerald-500 text-white' : 'bg-ninja-blue text-white'
+                  : 'bg-white border border-ninja-border text-ninja-navy hover:border-ninja-blue'
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function LessonEntryRow({ entry, index, total, program, onChange, onRemove, subPrograms, curriculum: curriculumData }) {
   const subProgramOptions = subPrograms[program] || null;
@@ -163,8 +280,14 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
   const [notes, setNotes] = useState('');
   const [beltLevel, setBeltLevel] = useState(enrollment?.belt_level || '');
   const [beltSublevel, setBeltSublevel] = useState(enrollment?.belt_sublevel || '');
-  const [project, setProject] = useState(enrollment?.current_project || '');
-  const [status, setStatus] = useState(enrollment?.project_status || '');
+
+  const emptyCreateEntry = { project: '', status: '', isCustom: false, customProject: '' };
+  const [createEntries, setCreateEntries] = useState([{
+    project: enrollment?.current_project || '',
+    status: enrollment?.project_status || '',
+    isCustom: false,
+    customProject: '',
+  }]);
 
   const emptyEntry = { subProgram: '', moduleName: '', lessonName: '', customModule: '', customLesson: '', status: '' };
   const [lessonEntries, setLessonEntries] = useState([{ ...emptyEntry }]);
@@ -177,9 +300,14 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
   const sessionDate = sessionDateProp || today();
   const hasLessonFields = !!(subPrograms[program] || curriculum[program]?.length);
 
-  // Reset lesson entries when program changes
   useEffect(() => {
     setLessonEntries([{ ...emptyEntry }]);
+    setCreateEntries([{
+      project: enrollment?.current_project || '',
+      status: enrollment?.project_status || '',
+      isCustom: false,
+      customProject: '',
+    }]);
   }, [program]);
 
   const updateEntry = (index, field, value) => {
@@ -197,6 +325,16 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
   const addEntry = () => setLessonEntries((prev) => [...prev, { ...emptyEntry }]);
   const removeEntry = (index) => setLessonEntries((prev) => prev.filter((_, i) => i !== index));
 
+  const updateCreateEntry = (index, field, value) => {
+    setCreateEntries((prev) => prev.map((e, i) => i !== index ? e : { ...e, [field]: value }));
+  };
+  const addCreateEntry = () => setCreateEntries((prev) => [...prev, { ...emptyCreateEntry }]);
+  const removeCreateEntry = (index) => setCreateEntries((prev) => prev.filter((_, i) => i !== index));
+
+  const handleBeltClearProjects = () => {
+    setCreateEntries((prev) => prev.map((e) => ({ ...e, project: '', isCustom: false, customProject: '' })));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!notes.trim()) {
@@ -207,54 +345,74 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
       setError('Belt level is required for CREATE logs');
       return;
     }
-    if (loading) return; // prevent double-submit
+    if (loading) return;
 
     setLoading(true);
     setError('');
     setSuccess(false);
 
     try {
-      // Build lesson_entries — only include entries that have at least a module selected
-      const filledEntries = lessonEntries
-        .filter((e) => {
-          if (e.moduleName === '__custom__') return e.customModule || e.customLesson;
-          return e.moduleName || e.subProgram || e.lessonName;
-        })
-        .map((e) => ({
-          sub_program: e.subProgram || null,
-          module_name: e.moduleName === '__custom__' ? (e.customModule || null) : (e.moduleName || null),
-          lesson_name: e.moduleName === '__custom__' ? (e.customLesson || null) : (e.lessonName || null),
-          status: e.status || null,
-        }));
+      let payload;
 
-      const payload = {
-        student_id: student.id,
-        program,
-        session_date: sessionDate,
-        notes: notes.trim(),
-        belt_level_at: isCreate ? (beltLevel || null) : null,
-        belt_sublevel_at: isCreate && beltSublevel ? parseInt(beltSublevel) : null,
-        project_at: isCreate ? (project || null) : null,
-        // For CREATE: top-level status from belt fields. For non-Create single entry: from lesson entry.
-        status_at: isCreate
-          ? (status || null)
-          : (filledEntries.length <= 1 ? (filledEntries[0]?.status || null) : null),
-        update_student: true,
-        ...(filledEntries.length > 1
-          ? { lesson_entries: filledEntries }
-          : {
-              sub_program: filledEntries[0]?.sub_program || null,
-              module_name: filledEntries[0]?.module_name || null,
-              lesson_name: filledEntries[0]?.lesson_name || null,
-            }),
-      };
+      if (isCreate) {
+        const filledCreateEntries = createEntries
+          .filter((e) => e.isCustom ? e.customProject : e.project)
+          .map((e) => ({
+            project_at: e.isCustom ? (e.customProject || null) : (e.project || null),
+            status: e.status || null,
+          }));
+        const lastCE = filledCreateEntries[filledCreateEntries.length - 1];
+
+        payload = {
+          student_id: student.id,
+          program,
+          session_date: sessionDate,
+          notes: notes.trim(),
+          belt_level_at: beltLevel || null,
+          belt_sublevel_at: beltSublevel ? parseInt(beltSublevel) : null,
+          project_at: lastCE?.project_at || null,
+          status_at: lastCE?.status || null,
+          update_student: true,
+          ...(filledCreateEntries.length > 1 ? { lesson_entries: filledCreateEntries } : {}),
+        };
+      } else {
+        const filledEntries = lessonEntries
+          .filter((e) => {
+            if (e.moduleName === '__custom__') return e.customModule || e.customLesson;
+            return e.moduleName || e.subProgram || e.lessonName;
+          })
+          .map((e) => ({
+            sub_program: e.subProgram || null,
+            module_name: e.moduleName === '__custom__' ? (e.customModule || null) : (e.moduleName || null),
+            lesson_name: e.moduleName === '__custom__' ? (e.customLesson || null) : (e.lessonName || null),
+            status: e.status || null,
+          }));
+
+        payload = {
+          student_id: student.id,
+          program,
+          session_date: sessionDate,
+          notes: notes.trim(),
+          belt_level_at: null,
+          belt_sublevel_at: null,
+          project_at: null,
+          status_at: filledEntries.length <= 1 ? (filledEntries[0]?.status || null) : null,
+          update_student: true,
+          ...(filledEntries.length > 1
+            ? { lesson_entries: filledEntries }
+            : {
+                sub_program: filledEntries[0]?.sub_program || null,
+                module_name: filledEntries[0]?.module_name || null,
+                lesson_name: filledEntries[0]?.lesson_name || null,
+              }),
+        };
+      }
 
       const log = await api.post('/progress', payload);
       setSuccess(true);
       setNotes('');
       setLessonEntries([{ ...emptyEntry }]);
-      setProject(enrollment?.current_project || '');
-      setStatus(enrollment?.project_status || '');
+      setCreateEntries([{ ...emptyCreateEntry }]);
       onLogged && onLogged(log);
     } catch (err) {
       setError(err.message || 'Failed to save log');
@@ -262,6 +420,10 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
       setLoading(false);
     }
   };
+
+  const filledCreateCount = isCreate
+    ? createEntries.filter((e) => e.isCustom ? e.customProject : e.project).length
+    : 0;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -353,24 +515,40 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
             setBeltLevel={setBeltLevel}
             beltSublevel={beltSublevel}
             setBeltSublevel={setBeltSublevel}
-            setProject={setProject}
+            setProject={handleBeltClearProjects}
           />
 
-          <ProjectFields
-            project={project}
-            setProject={setProject}
-            status={status}
-            setStatus={setStatus}
-            beltLevel={beltLevel}
-            beltSublevel={beltSublevel}
-            beltProjects={beltProjects}
-          />
-
+          <div className="space-y-3">
+            {createEntries.map((entry, i) => (
+              <CreateProjectRow
+                key={i}
+                entry={entry}
+                index={i}
+                total={createEntries.length}
+                beltLevel={beltLevel}
+                beltSublevel={beltSublevel}
+                beltProjects={beltProjects}
+                onChange={(field, value) => updateCreateEntry(i, field, value)}
+                onRemove={() => removeCreateEntry(i)}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={addCreateEntry}
+              className="w-full py-2 rounded-xl border-2 border-dashed border-ninja-border text-ninja-muted hover:border-ninja-blue hover:text-ninja-blue font-ninja font-semibold text-sm transition-colors"
+            >
+              + Add Another Project
+            </button>
+          </div>
         </div>
       )}
 
       <Button type="submit" disabled={loading} className="w-full">
-        {loading ? 'Saving...' : `Log ${lessonEntries.length > 1 ? `${lessonEntries.length} Lessons` : 'Progress'}`}
+        {loading ? 'Saving...' : filledCreateCount > 1
+          ? `Log ${filledCreateCount} Projects`
+          : lessonEntries.length > 1
+          ? `Log ${lessonEntries.length} Lessons`
+          : 'Log Progress'}
       </Button>
 
       </>)}
