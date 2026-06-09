@@ -8,36 +8,32 @@ const BELT_COLOR = Object.fromEntries(BELTS.map(b => [b.name, { color: b.color, 
 
 const PROGRAM_CONFIG = {
   'CREATE': {
-    color: '#2563eb',
-    bg: '#eff6ff',
-    border: '#bfdbfe',
-    dot: '#2563eb',
+    color: '#60a5fa',
+    bg: 'rgba(96, 165, 250, 0.07)',
+    border: 'rgba(96, 165, 250, 0.18)',
     label: 'CREATE',
   },
   'JR': {
-    color: '#7c3aed',
-    bg: '#faf5ff',
-    border: '#e9d5ff',
-    dot: '#7c3aed',
+    color: '#a78bfa',
+    bg: 'rgba(167, 139, 250, 0.07)',
+    border: 'rgba(167, 139, 250, 0.18)',
     label: 'JR',
   },
   'AI Academy': {
-    color: '#0e7490',
-    bg: '#ecfeff',
-    border: '#a5f3fc',
-    dot: '#0e7490',
+    color: '#22d3ee',
+    bg: 'rgba(34, 211, 238, 0.07)',
+    border: 'rgba(34, 211, 238, 0.18)',
     label: 'AI Academy',
   },
   'Robotics Academy': {
-    color: '#1d4ed8',
-    bg: '#eff6ff',
-    border: '#bfdbfe',
-    dot: '#1d4ed8',
+    color: '#38a1ff',
+    bg: 'rgba(56, 161, 255, 0.07)',
+    border: 'rgba(56, 161, 255, 0.18)',
     label: 'Robotics Academy',
   },
 };
 
-const defaultConfig = { color: '#006ADD', bg: '#eff6ff', border: '#bfdbfe', dot: '#006ADD', label: '' };
+const defaultConfig = { color: '#38a1ff', bg: 'rgba(56, 161, 255, 0.07)', border: 'rgba(56, 161, 255, 0.18)', label: '' };
 
 function getConfig(program) {
   return PROGRAM_CONFIG[program] || { ...defaultConfig, label: program };
@@ -46,12 +42,11 @@ function getConfig(program) {
 function getProjectPrefix(name, index, total) {
   const lower = name.toLowerCase();
   if (lower.includes('belt-up')) return 'Belt-Up';
-  if (lower.startsWith('prove yourself')) return null; // name already contains it
+  if (lower.startsWith('prove yourself')) return null;
   if (lower.startsWith('debugging')) {
     const solveNum = Math.ceil((index + 1) / 2);
     return `Solve ${solveNum}`;
   }
-  // count non-debug, non-belt-up projects before this one
   return index === total - 1 ? 'Adventure' : `Build ${Math.floor(index / 2) + 1}`;
 }
 
@@ -74,33 +69,53 @@ function LessonList({ lessons, isCreate }) {
   );
 }
 
-function ModuleCard({ mod, accentColor, isCreate }) {
+function ModuleCard({ mod, accentColor, isCreate, index }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div
-      className="border border-ninja-border rounded-xl overflow-hidden bg-white"
-      style={{ borderLeftColor: accentColor, borderLeftWidth: 3 }}
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.22, delay: Math.min(index, 8) * 0.04, ease: [0.22, 1, 0.36, 1] }}
+      className={`rounded-xl overflow-hidden border transition-colors duration-150 ${
+        open
+          ? 'border-ninja-border bg-ninja-border/20'
+          : 'border-ninja-border bg-ninja-border/10 hover:bg-ninja-border/20'
+      }`}
     >
-      <button
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-ninja-bg/60 transition-colors group"
+      <motion.button
+        className="w-full flex items-center justify-between px-4 py-3.5 text-left"
         onClick={() => setOpen(o => !o)}
+        whileTap={{ scale: 0.98 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
       >
         <div className="flex items-center gap-3 min-w-0">
-          <motion.svg
+          <motion.div
             animate={{ rotate: open ? 90 : 0 }}
-            transition={{ duration: 0.18 }}
-            className="shrink-0 w-3.5 h-3.5 text-ninja-muted"
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center"
+            style={{ backgroundColor: open ? accentColor + '28' : 'transparent' }}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </motion.svg>
+            <svg
+              className="w-3.5 h-3.5"
+              style={{ color: open ? accentColor : '#8a9bb8' }}
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </motion.div>
           <span className="font-ninja font-bold text-sm text-ninja-navy truncate">{mod.module_name}</span>
         </div>
-        <span className="shrink-0 text-xs font-ninja text-ninja-muted ml-3">
+        <span
+          className="shrink-0 text-xs font-ninja font-semibold px-2.5 py-1 rounded-full ml-3 transition-colors duration-150"
+          style={{
+            backgroundColor: open ? accentColor + '22' : 'rgba(44, 55, 82, 0.7)',
+            color: open ? accentColor : '#8a9bb8',
+          }}
+        >
           {mod.lessons.length} {isCreate ? 'project' : 'lesson'}{mod.lessons.length !== 1 ? 's' : ''}
         </span>
-      </button>
+      </motion.button>
 
       <AnimatePresence initial={false}>
         {open && (
@@ -121,7 +136,7 @@ function ModuleCard({ mod, accentColor, isCreate }) {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }
 
@@ -150,7 +165,7 @@ function SubProgramView({ modules, subPrograms, accentColor, program }) {
                 className={`font-ninja font-semibold text-sm px-3.5 py-1.5 rounded-lg transition-colors ${
                   isActive
                     ? ''
-                    : 'text-ninja-muted hover:text-ninja-navy bg-ninja-bg border border-ninja-border hover:border-ninja-blue/40'
+                    : 'text-ninja-muted hover:text-ninja-navy bg-ninja-border/20 border border-ninja-border hover:border-ninja-border'
                 }`}
                 style={isActive ? { background: activeBg, color: activeText } : {}}
               >
@@ -161,8 +176,8 @@ function SubProgramView({ modules, subPrograms, accentColor, program }) {
         </div>
       )}
       <div className="space-y-2">
-        {visibleModules.map(mod => (
-          <ModuleCard key={mod.id} mod={mod} accentColor={accentColor} isCreate={isCreate} />
+        {visibleModules.map((mod, i) => (
+          <ModuleCard key={mod.id} mod={mod} accentColor={accentColor} isCreate={isCreate} index={i} />
         ))}
         {visibleModules.length === 0 && (
           <p className="text-ninja-muted font-ninja text-sm py-4 text-center">No modules yet.</p>
@@ -217,19 +232,21 @@ export default function CurriculumRoadmapPage() {
                 const isActive = p.program === activeProgram;
                 const logo = PROGRAM_LOGOS[p.program];
                 return (
-                  <button
+                  <motion.button
                     key={p.program}
                     onClick={() => setActiveProgram(p.program)}
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                     className={`font-ninja font-bold text-sm px-4 py-2 rounded-xl border transition-all flex items-center gap-2 ${
                       isActive
                         ? 'text-white border-transparent shadow-sm'
-                        : 'bg-white border-ninja-border text-ninja-navy hover:border-ninja-blue/40'
+                        : 'bg-ninja-border/20 border-ninja-border text-ninja-navy hover:border-ninja-border'
                     }`}
                     style={isActive ? { background: c.color, borderColor: c.color } : {}}
                   >
                     {logo && <img src={logo} alt="" className="w-5 h-5 object-contain rounded" />}
                     {p.program}
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>
