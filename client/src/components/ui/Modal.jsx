@@ -1,33 +1,26 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-const isSafari = typeof navigator !== 'undefined' &&
-  /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
 export default function Modal({ isOpen, onClose, title, children, subheader, width = 'max-w-lg' }) {
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
+    if (!isOpen) return;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
   if (!isOpen) return null;
 
   return createPortal(
+    // Mobile: the outer div IS the full-screen panel — header always at top, guaranteed.
+    // Desktop (lg+): dark backdrop + centered rounded panel.
     <div
-      className={`fixed inset-0 z-[100] bg-ninja-navy/50 ${isSafari ? '' : 'flex items-start sm:items-center justify-center p-4 overflow-y-auto'}`}
-      onClick={onClose}
+      className="fixed inset-0 z-[100] flex flex-col bg-white lg:bg-ninja-navy/50 lg:items-center lg:justify-center lg:p-6"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className={`${isSafari ? 'fixed bottom-0 left-0 right-0 rounded-t-2xl' : 'relative rounded-xl'} bg-white border border-ninja-border shadow-xl w-full ${width} max-h-[90dvh] flex flex-col`}
+        className={`w-full flex-1 flex flex-col overflow-hidden lg:flex-none lg:max-h-[90dvh] lg:rounded-2xl lg:bg-white lg:shadow-xl lg:border lg:border-ninja-border ${width}`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header — never scrolls */}
         <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-ninja-border">
           <h2 className="text-xl font-bold font-ninja text-ninja-navy">{title}</h2>
           <button
