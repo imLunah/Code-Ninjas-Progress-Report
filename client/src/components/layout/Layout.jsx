@@ -279,7 +279,7 @@ export default function Layout({ children }) {
         <div className="lg:hidden fixed top-3 right-4 z-30">
           <ThemeToggle />
         </div>
-        <main className="flex-1 overflow-y-auto min-h-0 max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-4 lg:pb-8">
+        <main className="flex-1 overflow-y-auto min-h-0 max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-28 lg:pb-8">
           <div className="relative overflow-x-hidden overflow-y-hidden lg:overflow-x-visible lg:overflow-y-visible">
             {prevTab && (
               <AdjacentPanel key={prevTab.to} tab={prevTab} panelRef={prevPanelRef} side="left" />
@@ -303,8 +303,8 @@ export default function Layout({ children }) {
             </div>
           </div>
         </main>
+        <MobileNav />
       </div>
-      <MobileNav />
       <BugReportButton
         open={bugOpen}
         onClose={() => setBugOpen(false)}

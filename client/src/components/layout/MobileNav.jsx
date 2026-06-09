@@ -4,24 +4,23 @@ import { useAuth } from '../../context/AuthContext';
 import { getActiveTabIndex } from '../../lib/navTabs';
 
 function LocationBar({ user, switchLocation }) {
+  const glass = 'w-full rounded-xl border border-white/15 bg-white/10 backdrop-blur-2xl text-ninja-navy px-3 py-1.5 font-ninja text-sm font-semibold shadow-lg shadow-black/25';
   if (['manager', 'admin'].includes(user.role)) {
     return (
-      <div className="px-4 py-1.5 bg-ninja-bg">
-        <select
-          value={user.activeLocation?.id ?? ''}
-          onChange={(e) => switchLocation(Number(e.target.value))}
-          className="w-full bg-ninja-border/20 border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-sm font-semibold focus:outline-none focus:border-ninja-blue transition-colors"
-        >
-          {user.availableLocations?.map((loc) => (
-            <option key={loc.id} value={loc.id}>{loc.name}</option>
-          ))}
-        </select>
-      </div>
+      <select
+        value={user.activeLocation?.id ?? ''}
+        onChange={(e) => switchLocation(Number(e.target.value))}
+        className={`${glass} focus:outline-none focus:border-ninja-blue transition-colors appearance-none`}
+      >
+        {user.availableLocations?.map((loc) => (
+          <option key={loc.id} value={loc.id} className="bg-ninja-bg text-ninja-navy">{loc.name}</option>
+        ))}
+      </select>
     );
   }
   return (
-    <div className="px-4 py-1.5 bg-ninja-bg">
-      <span className="text-ninja-navy font-ninja text-sm font-semibold">{user.activeLocation?.name ?? ''}</span>
+    <div className={glass}>
+      <span>{user.activeLocation?.name ?? ''}</span>
     </div>
   );
 }
@@ -29,7 +28,7 @@ function LocationBar({ user, switchLocation }) {
 function TabIcon({ iconId, profilePicUrl, initials, active }) {
   if (iconId === null) {
     if (profilePicUrl) {
-      return <img src={profilePicUrl} alt="me" className="w-6 h-6 rounded-full object-cover border border-ninja-border" />;
+      return <img src={profilePicUrl} alt="me" className="w-6 h-6 rounded-full object-cover border border-white/25" />;
     }
     return (
       <div className="w-6 h-6 rounded-full bg-ninja-blue flex items-center justify-center text-white font-ninja font-bold text-[10px]">
@@ -41,7 +40,7 @@ function TabIcon({ iconId, profilePicUrl, initials, active }) {
     <img
       src={`/icons/${iconId}.png`}
       alt=""
-      className={`w-7 h-7 transition-all duration-200 ${active ? '' : 'opacity-45 grayscale-[0.35]'}`}
+      className={`w-7 h-7 transition-all duration-200 ${active ? 'drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]' : 'opacity-45 grayscale-[0.35]'}`}
     />
   );
 }
@@ -72,9 +71,17 @@ export default function MobileNav() {
   const activeIndex = getActiveTabIndex(tabs, location.pathname);
 
   return (
-    <nav className="lg:hidden flex-shrink-0 bg-ninja-bg px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-1">
-      <LocationBar user={isSenseiView ? { ...user, role: 'sensei' } : user} switchLocation={switchLocation} />
-      <div className="mt-1.5 flex items-center justify-between rounded-full border border-ninja-border bg-ninja-border/15 backdrop-blur-xl px-1.5 py-1.5 shadow-lg shadow-black/25">
+    <nav className="lg:hidden absolute bottom-0 inset-x-0 z-20 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 pointer-events-none">
+      <div className="pointer-events-auto mb-1.5">
+        <LocationBar user={isSenseiView ? { ...user, role: 'sensei' } : user} switchLocation={switchLocation} />
+      </div>
+      {/* Liquid glass capsule */}
+      <div
+        className="pointer-events-auto relative flex items-center justify-between rounded-full border border-white/15 bg-white/10 backdrop-blur-2xl px-1.5 py-1.5"
+        style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(0,0,0,0.15), 0 8px 32px rgba(0,0,0,0.35)' }}
+      >
+        {/* top sheen highlight */}
+        <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent rounded-full" />
         {tabs.map((tab, i) => {
           const active = i === activeIndex;
           return (
@@ -90,7 +97,8 @@ export default function MobileNav() {
               {active && (
                 <motion.div
                   layoutId="mobileNavPill"
-                  className="absolute inset-x-0.5 inset-y-0 rounded-full bg-ninja-blue/20 border border-ninja-blue/30"
+                  className="absolute inset-x-0.5 inset-y-0 rounded-full border border-white/25 bg-white/20"
+                  style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.25), 0 2px 8px rgba(0,0,0,0.2)' }}
                   transition={PILL_SPRING}
                 />
               )}
