@@ -1,14 +1,16 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
+import { getActiveTabIndex } from '../../lib/navTabs';
 
 function LocationBar({ user, switchLocation }) {
   if (['manager', 'admin'].includes(user.role)) {
     return (
-      <div className="px-4 py-1.5 border-b border-ninja-border bg-ninja-bg">
+      <div className="px-4 py-1.5 bg-ninja-bg">
         <select
           value={user.activeLocation?.id ?? ''}
           onChange={(e) => switchLocation(Number(e.target.value))}
-          className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-sm font-semibold focus:outline-none focus:border-ninja-blue transition-colors"
+          className="w-full bg-ninja-border/20 border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-sm font-semibold focus:outline-none focus:border-ninja-blue transition-colors"
         >
           {user.availableLocations?.map((loc) => (
             <option key={loc.id} value={loc.id}>{loc.name}</option>
@@ -18,43 +20,38 @@ function LocationBar({ user, switchLocation }) {
     );
   }
   return (
-    <div className="px-4 py-1.5 border-b border-ninja-border bg-ninja-bg">
+    <div className="px-4 py-1.5 bg-ninja-bg">
       <span className="text-ninja-navy font-ninja text-sm font-semibold">{user.activeLocation?.name ?? ''}</span>
     </div>
   );
 }
 
-function NavTabIcon({ id, svg }) {
-  if (svg) {
+function TabIcon({ iconId, profilePicUrl, initials, active }) {
+  if (iconId === null) {
+    if (profilePicUrl) {
+      return <img src={profilePicUrl} alt="me" className="w-6 h-6 rounded-full object-cover border border-ninja-border" />;
+    }
     return (
-      <span className="w-7 h-7 flex items-center justify-center">
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-          <path strokeLinecap="round" strokeLinejoin="round" d={svg} />
-        </svg>
-      </span>
+      <div className="w-6 h-6 rounded-full bg-ninja-blue flex items-center justify-center text-white font-ninja font-bold text-[10px]">
+        {initials}
+      </div>
     );
   }
   return (
     <img
-      src={`/icons/${id}.png`}
+      src={`/icons/${iconId}.png`}
       alt=""
-      className="w-7 h-7"
+      className={`w-7 h-7 transition-all duration-200 ${active ? '' : 'opacity-45 grayscale-[0.35]'}`}
     />
   );
 }
-function AccountIcon({ profilePicUrl, initials }) {
-  if (profilePicUrl) {
-    return <img src={profilePicUrl} alt="me" className="w-6 h-6 rounded-full object-cover border border-ninja-border" />;
-  }
-  return (
-    <div className="w-6 h-6 rounded-full bg-ninja-blue flex items-center justify-center text-white font-ninja font-bold text-[10px]">
-      {initials}
-    </div>
-  );
-}
+
+const PILL_SPRING = { type: 'spring', stiffness: 480, damping: 36, mass: 0.7 };
 
 export default function MobileNav() {
   const { user, switchLocation, viewAs } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   if (!user) return null;
 
   const isSenseiView = user.role === 'admin' && viewAs === 'sensei';
@@ -72,33 +69,46 @@ export default function MobileNav() {
     { to: '/account', label: 'Account', iconId: null },
   ];
 
+  const activeIndex = getActiveTabIndex(tabs, location.pathname);
+
   return (
-    <nav className="lg:hidden flex-shrink-0 bg-white border-t border-ninja-border">
+    <nav className="lg:hidden flex-shrink-0 bg-ninja-bg px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-1">
       <LocationBar user={isSenseiView ? { ...user, role: 'sensei' } : user} switchLocation={switchLocation} />
-      <div className="flex items-stretch">
-        {tabs.map((tab) => (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            className={({ isActive }) =>
-              `flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-ninja font-semibold transition-colors ${
-                isActive ? 'text-ninja-blue' : 'text-ninja-muted'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {tab.iconId
-                  ? <NavTabIcon id={tab.iconId} />
-                  : tab.svg
-                    ? <NavTabIcon svg={tab.svg} />
-                    : <AccountIcon profilePicUrl={user.profilePicUrl} initials={initials} />
-                }
-                {tab.label}
-              </>
-            )}
-          </NavLink>
-        ))}
+      <div className="mt-1.5 flex items-center justify-between rounded-full border border-ninja-border bg-ninja-border/15 backdrop-blur-xl px-1.5 py-1.5 shadow-lg shadow-black/25">
+        {tabs.map((tab, i) => {
+          const active = i === activeIndex;
+          return (
+            <motion.button
+              key={tab.to}
+              onClick={() => { if (!active) navigate(tab.to); }}
+              whileTap={{ scale: 0.82 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+              aria-label={tab.label}
+              aria-current={active ? 'page' : undefined}
+              className="relative flex-1 flex items-center justify-center h-11 rounded-full"
+            >
+              {active && (
+                <motion.div
+                  layoutId="mobileNavPill"
+                  className="absolute inset-x-0.5 inset-y-0 rounded-full bg-ninja-blue/20 border border-ninja-blue/30"
+                  transition={PILL_SPRING}
+                />
+              )}
+              <motion.span
+                className="relative z-10 flex items-center justify-center"
+                animate={{ scale: active ? 1.12 : 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 26 }}
+              >
+                <TabIcon
+                  iconId={tab.iconId}
+                  profilePicUrl={user.profilePicUrl}
+                  initials={initials}
+                  active={active}
+                />
+              </motion.span>
+            </motion.button>
+          );
+        })}
       </div>
     </nav>
   );
