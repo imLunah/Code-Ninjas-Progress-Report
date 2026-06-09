@@ -263,30 +263,21 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
           })}
         </div>
 
-        {/* Footer */}
-        <div className={`px-6 py-4 border-t border-ninja-border bg-ninja-bg flex-shrink-0 flex items-center justify-between ${pendingCount === 0 ? 'justify-end' : ''}`}>
-          {pendingCount > 0 ? (
-            <>
-              <p className="font-ninja text-sm text-ninja-muted">
-                {pendingCount} lesson{pendingCount !== 1 ? 's' : ''} to mark complete
-              </p>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="bg-ninja-blue text-white font-ninja font-bold text-sm px-5 py-2 rounded-xl hover:opacity-90 disabled:opacity-60 transition-opacity"
-              >
-                {saving ? 'Saving...' : 'Save'}
-              </button>
-            </>
-          ) : (
+        {/* Footer — only shown when there are pending lessons */}
+        {pendingCount > 0 && (
+          <div className="px-6 py-4 border-t border-ninja-border bg-ninja-bg flex-shrink-0 flex items-center justify-between">
+            <p className="font-ninja text-sm text-ninja-muted">
+              {pendingCount} lesson{pendingCount !== 1 ? 's' : ''} to mark complete
+            </p>
             <button
-              onClick={onClose}
-              className="font-ninja text-sm text-ninja-muted hover:text-ninja-navy transition-colors"
+              onClick={handleSave}
+              disabled={saving}
+              className="bg-ninja-blue text-white font-ninja font-bold text-sm px-5 py-2 rounded-xl hover:opacity-90 disabled:opacity-60 transition-opacity"
             >
-              Close
+              {saving ? 'Saving...' : 'Save'}
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </motion.div>
     </div>,
     document.body
