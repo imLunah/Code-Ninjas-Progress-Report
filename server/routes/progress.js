@@ -75,7 +75,7 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
         date,
         belt_level_at || null,
         belt_sublevel_at || null,
-        project_at || null,
+        entry.project_at ?? project_at ?? null,
         entry.status ?? status_at ?? null,
         notes,
         entry.sub_program || null,
