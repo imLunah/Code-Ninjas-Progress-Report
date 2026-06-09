@@ -12,6 +12,7 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
   const [error, setError] = useState(null);
   const [expandedModules, setExpandedModules] = useState(new Set());
   const [pending, setPending] = useState(new Set());
+  const [unchecked, setUnchecked] = useState(new Set());
   const [tabSubProgram, setTabSubProgram] = useState(null);
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
     setLoading(true);
     setError(null);
     setPending(new Set());
+    setUnchecked(new Set());
     const params = new URLSearchParams({ program: enrollment.program });
     if (effectiveSubProgram) params.set('sub_program', effectiveSubProgram);
     api.get(`/students/${student.id}/roadmap?${params}`)
@@ -54,30 +56,47 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
   };
 
   const toggleLesson = (moduleName, lessonName, alreadyCompleted) => {
-    if (alreadyCompleted) return;
     const key = `${moduleName}\x00${lessonName}`;
-    setPending(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+    if (alreadyCompleted) {
+      setUnchecked(prev => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      });
+    } else {
+      setPending(prev => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      });
+    }
   };
 
   const handleSave = async () => {
-    if (!pending.size) return;
+    if (!pending.size && !unchecked.size) return;
     setSaving(true);
     setError(null);
     try {
-      const entries = [...pending].map(key => {
+      const toEntries = (set) => [...set].map(key => {
         const idx = key.indexOf('\x00');
         return { module_name: key.slice(0, idx), lesson_name: key.slice(idx + 1) };
       });
-      await api.post(`/students/${student.id}/roadmap/complete`, {
-        program: enrollment.program,
-        sub_program: effectiveSubProgram || undefined,
-        entries,
-      });
+      if (pending.size) {
+        await api.post(`/students/${student.id}/roadmap/complete`, {
+          program: enrollment.program,
+          sub_program: effectiveSubProgram || undefined,
+          entries: toEntries(pending),
+        });
+      }
+      if (unchecked.size) {
+        await api.post(`/students/${student.id}/roadmap/uncomplete`, {
+          program: enrollment.program,
+          sub_program: effectiveSubProgram || undefined,
+          entries: toEntries(unchecked),
+        });
+      }
       onUpdate?.();
       onClose();
     } catch (err) {
@@ -90,6 +109,7 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
   const totalLessons = modules.reduce((acc, m) => acc + m.lessons.length, 0);
   const completedCount = modules.reduce((acc, m) => acc + m.lessons.filter(l => l.completed).length, 0);
   const pendingCount = pending.size;
+  const uncheckedCount = unchecked.size;
 
   if (!open) return null;
 
@@ -220,35 +240,46 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
                         {mod.lessons.map(lesson => {
                           const key = `${mod.module_name}\x00${lesson.lesson_name}`;
                           const isPending = pending.has(key);
+                          const isUnchecked = unchecked.has(key);
                           const isCompleted = lesson.completed;
-                          const checked = isCompleted || isPending;
+                          const showChecked = (isCompleted && !isUnchecked) || isPending;
 
                           return (
                             <button
                               key={lesson.id}
                               className={`w-full flex items-start gap-3 py-2 px-3 rounded-lg text-left transition-colors ${
-                                isCompleted
-                                  ? 'cursor-default opacity-60'
+                                isUnchecked
+                                  ? 'bg-red-900/20 hover:bg-red-900/30'
                                   : isPending
                                   ? 'bg-emerald-900/30 hover:bg-emerald-900/40'
+                                  : isCompleted
+                                  ? 'hover:bg-ninja-border/20'
                                   : 'hover:bg-ninja-border/30'
                               }`}
                               onClick={() => toggleLesson(mod.module_name, lesson.lesson_name, isCompleted)}
                             >
                               <span
                                 className={`shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 transition-colors ${
-                                  checked
+                                  isUnchecked
+                                    ? 'bg-transparent border-red-500/60'
+                                    : showChecked
                                     ? 'bg-emerald-500 border-emerald-500'
                                     : 'border-ninja-border'
                                 }`}
                               >
-                                {checked && (
+                                {isUnchecked ? (
+                                  <svg className="w-3 h-3 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                ) : showChecked ? (
                                   <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                   </svg>
-                                )}
+                                ) : null}
                               </span>
-                              <span className={`font-ninja text-sm leading-snug ${isCompleted ? 'text-ninja-muted line-through' : 'text-ninja-navy'}`}>
+                              <span className={`font-ninja text-sm leading-snug ${
+                                isUnchecked ? 'text-red-400 line-through' : isCompleted ? 'text-ninja-muted line-through' : 'text-ninja-navy'
+                              }`}>
                                 {lesson.lesson_name}
                               </span>
                             </button>
@@ -263,11 +294,13 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
           })}
         </div>
 
-        {/* Footer — only shown when there are pending lessons */}
-        {pendingCount > 0 && (
+        {/* Footer — only shown when there are pending or unchecked lessons */}
+        {(pendingCount > 0 || uncheckedCount > 0) && (
           <div className="px-6 py-4 border-t border-ninja-border bg-ninja-bg flex-shrink-0 flex items-center justify-between">
             <p className="font-ninja text-sm text-ninja-muted">
-              {pendingCount} lesson{pendingCount !== 1 ? 's' : ''} to mark complete
+              {pendingCount > 0 && `+${pendingCount} to complete`}
+              {pendingCount > 0 && uncheckedCount > 0 && ' · '}
+              {uncheckedCount > 0 && `−${uncheckedCount} to remove`}
             </p>
             <button
               onClick={handleSave}

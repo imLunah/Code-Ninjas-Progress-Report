@@ -544,6 +544,74 @@ router.post('/:id/roadmap/complete', requireSensei, requireOwnLocation, async (r
   }
 });
 
+// POST /api/students/:id/roadmap/uncomplete — batch-remove completed lessons
+router.post('/:id/roadmap/uncomplete', requireSensei, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { program, sub_program, entries } = req.body;
+  if (!program || !Array.isArray(entries) || !entries.length) {
+    return res.status(400).json({ error: 'program and entries array are required' });
+  }
+
+  try {
+    const { rows: studentRows } = await pool.query(
+      'SELECT id FROM students WHERE id = $1 AND active = true AND location_id = $2',
+      [req.params.id, req.session.activeLocationId]
+    );
+    if (!studentRows[0]) return res.status(404).json({ error: 'Student not found' });
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const entry of entries) {
+        await client.query(
+          "DELETE FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name = $3 AND lesson_name = $4 AND status_at = 'Completed'",
+          [req.params.id, program, entry.module_name, entry.lesson_name]
+        );
+      }
+
+      // Recompute percent_complete for current module
+      const { rows: spRows } = await client.query(
+        'SELECT last_module_name, last_sub_program FROM student_programs WHERE student_id = $1 AND program = $2',
+        [req.params.id, program]
+      );
+      const currentModule = spRows[0]?.last_module_name;
+      const currentSubProgram = spRows[0]?.last_sub_program;
+      if (currentModule) {
+        const { rows: doneRows } = await client.query(
+          "SELECT COUNT(DISTINCT lesson_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name = $3 AND lesson_name IS NOT NULL AND status_at = 'Completed'",
+          [req.params.id, program, currentModule]
+        );
+        const { rows: totalRows } = await client.query(
+          `SELECT COUNT(cl.id) AS total FROM curriculum_lessons cl
+           JOIN curriculum_modules cm ON cl.module_id = cm.id
+           WHERE cm.program = $1 AND cm.module_name = $2
+             AND (cm.sub_program = $3 OR (cm.sub_program IS NULL AND $3::text IS NULL))`,
+          [program, currentModule, currentSubProgram || null]
+        );
+        const totalLessons = parseInt(totalRows[0].total);
+        if (totalLessons > 0) {
+          const pct = Math.min(100, Math.round((parseInt(doneRows[0].cnt) / totalLessons) * 100));
+          await client.query(
+            'UPDATE student_programs SET percent_complete = $1 WHERE student_id = $2 AND program = $3',
+            [pct, req.params.id, program]
+          );
+        }
+      }
+      await client.query('COMMIT');
+    } catch (txErr) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw txErr;
+    } finally {
+      client.release();
+    }
+
+    res.json({ removed: entries.length });
+  } catch (err) {
+    console.error('Roadmap uncomplete error:', err);
+    res.status(500).json({ error: 'Failed to remove lessons' });
+  }
+});
+
 // POST /api/students/import — bulk import from CSV data
 router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');

@@ -602,6 +602,7 @@ export default function StudentProfile() {
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
   const sortedLogs = [...logs].sort((a, b) => new Date(b.session_date) - new Date(a.session_date));
+  const displayLogs = sortedLogs.filter(l => l.notes !== 'Marked complete from roadmap');
   const lastSessionStr = sortedLogs[0]
     ? new Date(String(sortedLogs[0].session_date).split('T')[0] + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '—';
@@ -705,11 +706,11 @@ export default function StudentProfile() {
           )}
 
           {/* Recent Progress */}
-          {logs.length > 0 && (
+          {displayLogs.length > 0 && (
             <motion.div variants={fadeUp} className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
               <h2 className="font-ninja font-bold text-ninja-navy mb-3">Recent Progress</h2>
-              <div className="space-y-4">
-                {logs.slice(0, 5).map((log, i) => (
+              <div className="space-y-4 max-h-72 overflow-y-auto no-scrollbar">
+                {displayLogs.map((log, i) => (
                   <motion.div
                     key={log.id}
                     className="flex gap-3"
@@ -847,11 +848,11 @@ export default function StudentProfile() {
               </motion.div>
 
               {/* Recent Progress */}
-              {logs.length > 0 && (
+              {displayLogs.length > 0 && (
                 <motion.div variants={fadeUp} className="bg-white rounded-2xl p-5 border border-ninja-border shadow-sm">
                   <h2 className="font-ninja font-bold text-ninja-navy mb-1">Recent Progress</h2>
-                  <div>
-                    {sortedLogs.slice(0, 6).map((log, i) => (
+                  <div className="max-h-80 overflow-y-auto no-scrollbar">
+                    {displayLogs.map((log, i) => (
                       <motion.div
                         key={log.id}
                         className="flex gap-3 py-3 border-t border-ninja-border/60 first:border-t-0 first:pt-0"
