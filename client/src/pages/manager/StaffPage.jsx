@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import ModalPortal from '../../components/ui/ModalPortal';
 
 function StaffAvatar({ url, name }) {
   const [imgError, setImgError] = useState(false);
@@ -60,7 +61,7 @@ function EditCredentialsModal({ sensei, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/40 backdrop-blur-sm">
+    <ModalPortal><div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
         <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-1">Edit Login — {sensei.display_name}</h2>
         <p className="text-ninja-muted font-ninja text-xs mb-4">Passwords are never shown. Leave blank to keep current.</p>
@@ -104,7 +105,7 @@ function EditCredentialsModal({ sensei, onClose }) {
           </div>
         </form>
       </div>
-    </div>
+    </div></ModalPortal>
   );
 }
 

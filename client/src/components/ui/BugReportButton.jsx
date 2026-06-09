@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { api } from '../../api/client';
+import ModalPortal from './ModalPortal';
 
 const CATEGORIES = [
   'Login Issue',
@@ -82,7 +83,7 @@ export default function BugReportButton({ reporter, open, onClose }) {
   return (
     <>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+        <ModalPortal><div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between">
@@ -184,7 +185,7 @@ export default function BugReportButton({ reporter, open, onClose }) {
               </form>
             )}
           </div>
-        </div>
+        </div></ModalPortal>
       )}
     </>
   );
