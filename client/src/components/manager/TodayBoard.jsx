@@ -43,17 +43,24 @@ export default function TodayBoard({ assignments, onRemove }) {
   }
 
   const completedCount = assignments.filter((a) => a.completed).length;
-  // Only show pending/overdue — completed ninjas are tracked in the stat strip above
-  const sorted = [...assignments]
-    .filter((a) => !a.completed)
-    .sort((a, b) => {
-      const aOver = a.session_date && String(a.session_date).split('T')[0] < todayStr;
-      const bOver = b.session_date && String(b.session_date).split('T')[0] < todayStr;
-      if (aOver === bOver) return 0;
-      return aOver ? -1 : 1; // overdue first
-    });
 
-  if (sorted.length === 0) {
+  // Group pending assignments by student_id — one card per student
+  const groupedMap = assignments
+    .filter((a) => !a.completed)
+    .reduce((acc, a) => {
+      if (!acc[a.student_id]) acc[a.student_id] = { ...a, assignments: [] };
+      acc[a.student_id].assignments.push(a);
+      return acc;
+    }, {});
+
+  const groups = Object.values(groupedMap).sort((a, b) => {
+    const aOver = a.assignments.some((x) => x.session_date && String(x.session_date).split('T')[0] < todayStr);
+    const bOver = b.assignments.some((x) => x.session_date && String(x.session_date).split('T')[0] < todayStr);
+    if (aOver === bOver) return 0;
+    return aOver ? -1 : 1;
+  });
+
+  if (groups.length === 0) {
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.97 }}
@@ -67,11 +74,28 @@ export default function TodayBoard({ assignments, onRemove }) {
     );
   }
 
+  const buildLogUrl = (group) => {
+    const programInfo = {};
+    group.assignments.forEach((a) => {
+      const d = a.session_date ? String(a.session_date).split('T')[0] : null;
+      if (!programInfo[a.program]) programInfo[a.program] = { date: d, count: 0 };
+      programInfo[a.program].count++;
+    });
+    const uniquePrograms = [...new Set(group.assignments.map((a) => a.program))];
+    const datesStr = Object.entries(programInfo).map(([p, { date }]) => `${p}:${date}`).join(',');
+    const countsStr = Object.entries(programInfo).map(([p, { count }]) => `${p}:${count}`).join(',');
+    return (
+      `/sensei/student/${group.student_id}` +
+      `?programs=${encodeURIComponent(uniquePrograms.join(','))}` +
+      `&dates=${encodeURIComponent(datesStr)}` +
+      `&counts=${encodeURIComponent(countsStr)}`
+    );
+  };
+
   return (
     <>
-      {/* ── Mobile layout (new compact design) ── */}
+      {/* ── Mobile layout ── */}
       <div className="sm:hidden space-y-3">
-        {/* Legend + count */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 font-ninja text-sm text-ninja-muted">
             <span className="flex items-center gap-1.5">
@@ -89,30 +113,35 @@ export default function TodayBoard({ assignments, onRemove }) {
         </div>
 
         <div className="space-y-3">
-          {sorted.map((a, i) => {
-            const isOverdue = !a.completed && a.session_date &&
-              new Date(a.session_date).toISOString().split('T')[0] < todayStr;
-            const borderColor = a.completed ? '#4ade80' : isOverdue ? '#f87171' : '#fde047';
-            const dotClass = a.completed ? 'bg-green-500' : isOverdue ? 'bg-red-400' : 'bg-yellow-400';
+          {groups.map((group, i) => {
+            const isOverdue = group.assignments.some(
+              (a) => a.session_date && String(a.session_date).split('T')[0] < todayStr
+            );
+            const borderColor = isOverdue ? '#f87171' : '#fde047';
+            const dotClass = isOverdue ? 'bg-red-400' : 'bg-yellow-400';
+            const sessionCount = group.assignments.length;
+            const uniquePrograms = [...new Set(group.assignments.map((a) => a.program))];
+            const createAssignment = group.assignments.find((a) => a.program === 'CREATE');
+            const removeId = group.assignments[0].id;
 
             return (
               <motion.div
-                key={a.id}
+                key={group.student_id}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05, duration: 0.25, ease: 'easeOut' }}
                 className="bg-white rounded-2xl p-4 cursor-pointer"
                 style={{ border: `2px solid ${borderColor}` }}
-                onClick={() => navigate(`/manager/students/${a.student_id}`)}
+                onClick={() => navigate(`/manager/students/${group.student_id}`)}
               >
                 <div className="flex items-start justify-between gap-2 mb-2.5">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-ninja-navy font-ninja font-bold text-lg leading-tight">
-                      {a.student_name}{isBirthdayToday(a.birthday) && <span className="ml-1.5">🎂</span>}
+                      {group.student_name}{isBirthdayToday(group.birthday) && <span className="ml-1.5">🎂</span>}
                     </span>
-                    {parseInt(a.session_number) > 1 && (
+                    {sessionCount > 1 && (
                       <span className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
-                        Session {a.session_number}
+                        {sessionCount} sessions
                       </span>
                     )}
                     {isOverdue && (
@@ -124,10 +153,10 @@ export default function TodayBoard({ assignments, onRemove }) {
                   <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
                     <div className={`w-3 h-3 rounded-full flex-shrink-0 ${dotClass}`} />
                     {!isReadOnly && (
-                      confirmId === a.id ? (
+                      confirmId === group.student_id ? (
                         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                           <button
-                            onClick={() => handleRemove(a.id)}
+                            onClick={() => handleRemove(removeId)}
                             className="text-xs font-ninja font-semibold text-white bg-red-500 px-2 py-0.5 rounded-lg"
                           >
                             Remove
@@ -141,7 +170,7 @@ export default function TodayBoard({ assignments, onRemove }) {
                         </div>
                       ) : (
                         <button
-                          onClick={(e) => { e.stopPropagation(); setConfirmId(a.id); }}
+                          onClick={(e) => { e.stopPropagation(); setConfirmId(group.student_id); }}
                           className="text-ninja-muted hover:text-red-400 transition-colors text-sm leading-none"
                           title="Remove from board"
                         >
@@ -152,15 +181,23 @@ export default function TodayBoard({ assignments, onRemove }) {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <ProgramBadge program={a.program} size="sm" />
-                  {a.belt_level && (
-                    <BeltBadge belt={a.belt_level} sublevel={a.belt_sublevel} size="xs" />
+                  {uniquePrograms.map((p) => <ProgramBadge key={p} program={p} size="sm" />)}
+                  {createAssignment?.belt_level && (
+                    <BeltBadge belt={createAssignment.belt_level} sublevel={createAssignment.belt_sublevel} size="xs" />
                   )}
                 </div>
-                {a.sensei_name && (
+                {group.assignments[0].sensei_name && (
                   <p className="text-ninja-muted font-ninja text-xs mt-1">
-                    Sensei: {a.sensei_name}
+                    Sensei: {group.assignments[0].sensei_name}
                   </p>
+                )}
+                {!isReadOnly && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigate(buildLogUrl(group)); }}
+                    className="mt-3 w-full text-sm font-ninja font-bold text-ninja-blue border-2 border-ninja-blue rounded-xl py-2 hover:bg-ninja-blue hover:text-white transition-colors"
+                  >
+                    Log Progress
+                  </button>
                 )}
               </motion.div>
             );
@@ -168,17 +205,22 @@ export default function TodayBoard({ assignments, onRemove }) {
         </div>
       </div>
 
-      {/* ── Tablet + Desktop layout (sm+): card grid ── */}
+      {/* ── Tablet + Desktop layout (sm+) ── */}
       <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {sorted.map((a, i) => {
-          const isOverdue = !a.completed && a.session_date &&
-            String(a.session_date).split('T')[0] < todayStr;
-          const borderClass = a.completed ? 'border-green-400' : isOverdue ? 'border-red-400' : 'border-yellow-300';
-          const dotClass = a.completed ? 'bg-green-500' : isOverdue ? 'bg-red-400' : 'bg-yellow-400';
+        {groups.map((group, i) => {
+          const isOverdue = group.assignments.some(
+            (a) => a.session_date && String(a.session_date).split('T')[0] < todayStr
+          );
+          const borderClass = isOverdue ? 'border-red-400' : 'border-yellow-300';
+          const dotClass = isOverdue ? 'bg-red-400' : 'bg-yellow-400';
+          const sessionCount = group.assignments.length;
+          const uniquePrograms = [...new Set(group.assignments.map((a) => a.program))];
+          const createAssignment = group.assignments.find((a) => a.program === 'CREATE');
+          const removeId = group.assignments[0].id;
 
           return (
             <motion.div
-              key={a.id}
+              key={group.student_id}
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.06, duration: 0.28, ease: 'easeOut' }}
@@ -187,48 +229,60 @@ export default function TodayBoard({ assignments, onRemove }) {
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
-                    onClick={() => navigate(`/manager/students/${a.student_id}`)}
+                    onClick={() => navigate(`/manager/students/${group.student_id}`)}
                     className="text-ninja-navy font-ninja font-bold text-lg leading-tight hover:text-ninja-blue transition-colors text-left"
                   >
-                    {a.student_name}{isBirthdayToday(a.birthday) && <span className="ml-1.5">🎂</span>}
+                    {group.student_name}{isBirthdayToday(group.birthday) && <span className="ml-1.5">🎂</span>}
                   </button>
-                  {parseInt(a.session_number) > 1 && (
+                  {sessionCount > 1 && (
                     <span className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
-                      Session {a.session_number}
+                      {sessionCount} sessions
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 mt-1">
                   <div className={`w-3 h-3 rounded-full ${dotClass}`} />
                   {!isReadOnly && (
-                    confirmId === a.id ? (
+                    confirmId === group.student_id ? (
                       <div className="flex items-center gap-1">
-                        <button onClick={() => handleRemove(a.id)} className="text-xs font-ninja font-semibold text-white bg-red-500 px-2 py-0.5 rounded-lg">Remove</button>
-                        <button onClick={() => setConfirmId(null)} className="text-xs font-ninja font-semibold text-ninja-muted bg-ninja-bg border border-ninja-border px-2 py-0.5 rounded-lg">Cancel</button>
+                        <button
+                          onClick={() => handleRemove(removeId)}
+                          className="text-xs font-ninja font-semibold text-white bg-red-500 px-2 py-0.5 rounded-lg"
+                        >
+                          Remove
+                        </button>
+                        <button
+                          onClick={() => setConfirmId(null)}
+                          className="text-xs font-ninja font-semibold text-ninja-muted bg-ninja-bg border border-ninja-border px-2 py-0.5 rounded-lg"
+                        >
+                          Cancel
+                        </button>
                       </div>
                     ) : (
-                      <button onClick={() => setConfirmId(a.id)} className="text-ninja-muted hover:text-red-400 transition-colors text-sm leading-none">✕</button>
+                      <button
+                        onClick={() => setConfirmId(group.student_id)}
+                        className="text-ninja-muted hover:text-red-400 transition-colors text-sm leading-none"
+                      >
+                        ✕
+                      </button>
                     )
                   )}
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <ProgramBadge program={a.program} size="sm" />
-                {a.program === 'CREATE' && a.belt_level && <BeltBadge belt={a.belt_level} sublevel={a.belt_sublevel} size="xs" />}
+                {uniquePrograms.map((p) => <ProgramBadge key={p} program={p} size="sm" />)}
+                {createAssignment?.belt_level && (
+                  <BeltBadge belt={createAssignment.belt_level} sublevel={createAssignment.belt_sublevel} size="xs" />
+                )}
               </div>
-              {a.completed ? (
-                <p className="text-green-600 font-ninja font-semibold text-xs">✓ Done</p>
-              ) : isOverdue ? (
+              {isOverdue ? (
                 <p className="text-red-600 font-ninja font-semibold text-xs">Overdue</p>
               ) : (
                 <p className="text-yellow-700 font-ninja font-semibold text-xs">Not logged yet</p>
               )}
-              {!a.completed && !isReadOnly && (
+              {!isReadOnly && (
                 <button
-                  onClick={() => {
-                    const d = String(a.session_date).split('T')[0];
-                    navigate(`/sensei/student/${a.student_id}?programs=${encodeURIComponent(a.program)}&dates=${encodeURIComponent(`${a.program}:${d}`)}&counts=${encodeURIComponent(`${a.program}:1`)}`);
-                  }}
+                  onClick={() => navigate(buildLogUrl(group))}
                   className="mt-auto w-full text-sm font-ninja font-bold text-ninja-blue border-2 border-ninja-blue rounded-xl py-2 hover:bg-ninja-blue hover:text-white transition-colors"
                 >
                   Log Progress
@@ -238,7 +292,6 @@ export default function TodayBoard({ assignments, onRemove }) {
           );
         })}
       </div>
-
     </>
   );
 }
