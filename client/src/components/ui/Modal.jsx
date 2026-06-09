@@ -19,7 +19,7 @@ export default function Modal({ isOpen, onClose, title, children, subheader, wid
 
   return (
     <div
-      className={`fixed inset-0 z-[100] bg-ninja-navy/50 ${isSafari ? '' : 'flex items-center justify-center p-4'}`}
+      className={`fixed inset-0 z-[100] bg-ninja-navy/50 ${isSafari ? '' : 'flex items-start sm:items-center justify-center p-4 overflow-y-auto'}`}
       onClick={onClose}
     >
       <div

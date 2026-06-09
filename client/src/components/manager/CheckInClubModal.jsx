@@ -38,7 +38,7 @@ export default function CheckInClubModal({ isOpen, onClose, onCheckedIn }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto bg-black/40 px-4 py-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
         <h2 className="text-xl font-bold font-ninja text-ninja-navy mb-4">Check In Club</h2>
 
