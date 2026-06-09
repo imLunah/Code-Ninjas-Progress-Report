@@ -137,7 +137,7 @@ function EditClubModal({ club, onSaved, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
         <h2 className="text-ninja-navy font-ninja font-bold text-xl mb-4">Edit Club</h2>
 
@@ -242,7 +242,7 @@ function CreateClubModal({ onCreated, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
         <h2 className="text-ninja-navy font-ninja font-bold text-xl mb-4">Create New Club</h2>
 

@@ -617,7 +617,7 @@ export default function StudentRoster() {
 
       {/* CSV Import Modal */}
       {importModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
             <h2 className="text-lg font-bold font-ninja text-ninja-navy mb-1">Import from MyStudio CSV</h2>
             <p className="text-ninja-muted font-ninja text-sm mb-5">
