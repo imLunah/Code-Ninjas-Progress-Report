@@ -95,17 +95,18 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-50 flex flex-col sm:flex-row sm:items-center sm:justify-center sm:p-4 sm:bg-black/50"
       onTouchStart={(e) => e.stopPropagation()}
       onTouchEnd={(e) => e.stopPropagation()}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <motion.div
-        className="relative bg-ninja-bg w-full sm:max-w-2xl sm:rounded-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh] border-t border-ninja-border sm:border"
+        className="relative bg-ninja-bg w-full flex-1 flex flex-col overflow-hidden sm:flex-none sm:max-w-2xl sm:rounded-2xl sm:max-h-[85vh] sm:border sm:border-ninja-border"
         initial={{ opacity: 0, y: 32 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 32 }}
         transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b border-ninja-border flex items-start justify-between flex-shrink-0">
