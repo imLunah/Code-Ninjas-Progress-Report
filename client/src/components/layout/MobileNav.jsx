@@ -76,7 +76,7 @@ export default function MobileNav({ compact = false }) {
                 {active && (
                   <motion.div
                     layoutId="mobileNavPill"
-                    className="absolute -inset-x-1.5 -inset-y-1.5 rounded-full border border-white/30 dark:border-white/10 bg-white/25 dark:bg-white/[0.08] overflow-hidden"
+                    className="absolute -inset-x-4 -inset-y-1.5 rounded-full border border-white/30 dark:border-white/10 bg-white/25 dark:bg-white/[0.08] overflow-hidden"
                     style={{ boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.45), inset 0 -1px 2px rgba(255,255,255,0.12), 0 4px 12px rgba(0,0,0,0.10)' }}
                     transition={PILL_SPRING}
                   >
