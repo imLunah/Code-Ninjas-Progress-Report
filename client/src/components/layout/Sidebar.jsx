@@ -101,7 +101,7 @@ export default function Sidebar({ onOpenBug }) {
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       className="hidden lg:flex flex-col w-56 xl:w-60 relative flex-shrink-0 sticky top-0 h-screen z-40 bg-white/70 dark:bg-[#141826]/50 backdrop-blur-2xl backdrop-saturate-150 border-r border-white/40 dark:border-white/10"
-      style={{ boxShadow: 'inset -1px 0 1px rgba(255,255,255,0.5), inset 1px 0 1px rgba(255,255,255,0.25), 1px 0 24px rgba(0,0,0,0.04)' }}
+      style={{ boxShadow: 'inset -1px 0 1px rgba(255,255,255,0.3), 1px 0 24px rgba(0,0,0,0.04)' }}
     >
       {/* Cursor-reactive ambient highlight — light refraction drifts with pointer */}
       <motion.div className="pointer-events-none absolute inset-0 z-0 dark:hidden" style={{ background: glow }} />
@@ -145,10 +145,10 @@ export default function Sidebar({ onOpenBug }) {
               to={link.to}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-ninja font-bold text-sm transition-colors relative overflow-hidden ${
                 isActive
-                  ? 'text-ninja-blue bg-white/60 dark:bg-white/[0.08] border border-white/60 dark:border-white/10'
-                  : 'text-ninja-navy hover:bg-white/40 dark:hover:bg-white/[0.05]'
+                  ? 'text-ninja-blue bg-white/60 dark:bg-white/[0.06] border border-white/60 dark:border-white/[0.07]'
+                  : 'text-ninja-navy hover:bg-white/40 dark:hover:bg-white/[0.04]'
               }`}
-              style={isActive ? { boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.7), 0 4px 12px rgba(0,0,0,0.05)' } : undefined}
+              style={isActive ? { boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.45), 0 4px 12px rgba(0,0,0,0.05)' } : undefined}
             >
               {isActive && (
                 <>

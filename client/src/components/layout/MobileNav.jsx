@@ -79,11 +79,11 @@ export default function MobileNav({ compact = false }) {
           style={{ boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.28), inset 0 -1px 1px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.06), 0 12px 36px rgba(0,0,0,0.16)' }}
         >
           {/* refraction gloss — light sheen down the top half */}
-          <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-white/20 via-white/[0.05] to-transparent dark:from-white/12" />
+          <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-white/20 via-white/[0.05] to-transparent dark:from-white/[0.07]" />
           {/* ambient highlight — soft light source, upper-center */}
-          <div className="pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 w-40 h-12 rounded-full bg-white/30 dark:bg-white/12 blur-2xl" />
+          <div className="pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 w-40 h-12 rounded-full bg-white/30 dark:bg-white/[0.05] blur-2xl" />
           {/* top sheen highlight — crisp edge catch */}
-          <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent rounded-full" />
+          <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/70 dark:via-white/25 to-transparent rounded-full" />
           {tabs.map((tab, i) => {
             const active = i === activeIndex;
             return (
@@ -99,12 +99,12 @@ export default function MobileNav({ compact = false }) {
                 {active && (
                   <motion.div
                     layoutId="mobileNavPill"
-                    className="absolute inset-0 rounded-full border border-white/30 dark:border-white/18 bg-white/25 dark:bg-white/[0.14] overflow-hidden"
+                    className="absolute inset-0 rounded-full border border-white/30 dark:border-white/10 bg-white/25 dark:bg-white/[0.08] overflow-hidden"
                     style={{ boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.45), inset 0 -1px 2px rgba(255,255,255,0.12), 0 4px 12px rgba(0,0,0,0.10)' }}
                     transition={PILL_SPRING}
                   >
                     {/* inner glow */}
-                    <span className="absolute inset-0 rounded-full bg-gradient-to-b from-white/25 to-transparent dark:from-white/10" />
+                    <span className="absolute inset-0 rounded-full bg-gradient-to-b from-white/25 to-transparent dark:from-white/[0.05]" />
                   </motion.div>
                 )}
                 <motion.span
