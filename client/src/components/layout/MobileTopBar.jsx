@@ -2,7 +2,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { getTopNavTabs } from '../../lib/navTabs';
 
-const GLASS = 'rounded-full border border-white/20 dark:border-white/12 bg-white/[0.04] dark:bg-[#141826]/20 backdrop-blur-sm backdrop-saturate-[1.9]';
+const GLASS = 'rounded-full border border-white/20 dark:border-white/12 bg-white/[0.04] dark:bg-[#0c0f1a]/55 backdrop-blur-sm backdrop-saturate-[1.9]';
+
+// Liquid-glass backdrop: warps content behind (Chromium); iOS Safari falls back to blur.
+const REFRACT = { backdropFilter: 'url(#liquidGlass) blur(3px) saturate(1.6)', WebkitBackdropFilter: 'blur(3px) saturate(1.6)' };
 
 // Bar-chart / analytics icon for Reports
 function ReportsIcon() {
@@ -40,7 +43,7 @@ function TopIcon({ tab, active }) {
       aria-label={tab.label}
       aria-current={active ? 'page' : undefined}
       className={`relative flex items-center justify-center w-11 h-11 overflow-hidden ${GLASS} transition-colors ${active ? 'text-ninja-blue' : 'text-ninja-navy/70'}`}
-      style={{ boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.28), inset 0 -1px 1px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.05), 0 8px 24px rgba(0,0,0,0.14)' }}
+      style={{ ...REFRACT, boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.28), inset 0 -1px 1px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.05), 0 8px 24px rgba(0,0,0,0.14)' }}
     >
       <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-white/20 to-transparent dark:from-white/[0.07]" />
       <span className="pointer-events-none absolute inset-x-2 top-0 h-px bg-gradient-to-r from-transparent via-white/60 dark:via-white/20 to-transparent" />
