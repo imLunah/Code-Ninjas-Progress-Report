@@ -2,7 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { getTopNavTabs } from '../../lib/navTabs';
 
-const GLASS = 'rounded-full border border-white/15 dark:border-white/10 bg-white/5 dark:bg-[#141826]/25 backdrop-blur-md backdrop-saturate-[1.7]';
+const GLASS = 'rounded-full border border-white/20 dark:border-white/12 bg-white/[0.04] dark:bg-[#141826]/20 backdrop-blur-sm backdrop-saturate-[1.9]';
 
 // Bar-chart / analytics icon for Reports
 function ReportsIcon() {
@@ -39,10 +39,11 @@ function TopIcon({ tab, active }) {
       transition={{ type: 'spring', stiffness: 500, damping: 28 }}
       aria-label={tab.label}
       aria-current={active ? 'page' : undefined}
-      className={`relative flex items-center justify-center w-11 h-11 ${GLASS} transition-colors ${active ? 'text-ninja-blue' : 'text-ninja-navy/70'}`}
-      style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.18), 0 6px 20px rgba(0,0,0,0.3)' }}
+      className={`relative flex items-center justify-center w-11 h-11 overflow-hidden ${GLASS} transition-colors ${active ? 'text-ninja-blue' : 'text-ninja-navy/70'}`}
+      style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.22), 0 6px 20px rgba(0,0,0,0.3)' }}
     >
-      {Icon && <Icon />}
+      <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-white/18 to-transparent dark:from-white/12" />
+      <span className="relative z-10 flex items-center justify-center">{Icon && <Icon />}</span>
     </motion.button>
   );
 }
