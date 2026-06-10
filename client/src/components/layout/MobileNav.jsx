@@ -87,6 +87,11 @@ export default function MobileNav({ compact = false }) {
           <div className="pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 w-40 h-12 rounded-full bg-white/30 dark:bg-white/[0.05] blur-2xl" />
           {/* top sheen highlight — crisp edge catch */}
           <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/70 dark:via-white/25 to-transparent rounded-full" />
+          {/* refracted glass rim — element filter ripples the rim + splits light (works on Safari/iOS) */}
+          <div
+            className="pointer-events-none absolute inset-[1.5px] rounded-full border border-white/45 dark:border-white/20"
+            style={{ filter: 'url(#liquidEdge)', boxShadow: 'inset 1.5px 0 1.5px rgba(90,170,255,0.20), inset -1.5px 0 1.5px rgba(255,120,170,0.20)' }}
+          />
           {tabs.map((tab, i) => {
             const active = i === activeIndex;
             return (

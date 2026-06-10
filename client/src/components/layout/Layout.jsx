@@ -292,6 +292,13 @@ export default function Layout({ children }) {
           <feGaussianBlur in="noise" stdDeviation="2.2" result="softNoise" />
           <feDisplacementMap in="SourceGraphic" in2="softNoise" scale="22" xChannelSelector="R" yChannelSelector="G" />
         </filter>
+        {/* Edge refraction — element filter (renders on Safari/iOS, unlike backdrop url()).
+            Low scale so a thin rim ripples like bent glass instead of tearing. */}
+        <filter id="liquidEdge" x="-15%" y="-15%" width="130%" height="130%" colorInterpolationFilters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.018 0.026" numOctaves="2" seed="7" result="en" />
+          <feGaussianBlur in="en" stdDeviation="1.4" result="eb" />
+          <feDisplacementMap in="SourceGraphic" in2="eb" scale="6" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
       </svg>
       <Sidebar onOpenBug={() => setBugOpen(true)} />
       <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
