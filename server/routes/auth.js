@@ -130,7 +130,7 @@ router.get('/me', async (req, res) => {
   try {
     const pool = req.app.get('db');
     const { rows } = await pool.query(
-      'SELECT id, username, display_name, role, location_id, profile_pic_url, must_reset_password FROM users WHERE id = $1',
+      'SELECT id, username, display_name, role, location_id, profile_pic_url, must_reset_password, onboarded_at FROM users WHERE id = $1',
       [req.session.userId]
     );
     const user = rows[0];
@@ -161,6 +161,7 @@ router.get('/me', async (req, res) => {
       availableLocations,
       announcement,
       mustResetPassword: req.session.mustResetPassword ?? false,
+      onboarded: !!user.onboarded_at,
     });
   } catch (err) {
     console.error('Me error:', err);
