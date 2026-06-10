@@ -108,6 +108,17 @@ export default function Layout({ children }) {
   const swipeDirRef = useRef(null);
   const animating = useRef(false);
   const swipeBlocked = useRef(false);
+  const swipeTimer = useRef(null);
+
+  // Tapping a nav icon mid-swipe must win: cancel the pending swipe navigate + reset its visuals.
+  const cancelPendingSwipe = () => {
+    if (swipeTimer.current) { clearTimeout(swipeTimer.current); swipeTimer.current = null; }
+    if (!animating.current) return;
+    animating.current = false;
+    if (dragRef.current) { dragRef.current.style.transition = ''; dragRef.current.style.transform = ''; }
+    if (prevPanelRef.current) { prevPanelRef.current.style.transition = 'none'; prevPanelRef.current.style.transform = 'translateX(-100%)'; }
+    if (nextPanelRef.current) { nextPanelRef.current.style.transition = 'none'; nextPanelRef.current.style.transform = 'translateX(100%)'; }
+  };
 
   useEffect(() => {
     if (isPreview) return;
@@ -150,6 +161,19 @@ export default function Layout({ children }) {
         }
       }
 
+      // Vertical escape: gesture latched horizontal but turned clearly vertical while
+      // the drag is still small — release to native scroll (fixes scroll-lock mid-gesture).
+      if (Math.abs(dx) < 40 && Math.abs(dy) > Math.abs(dx) * 1.5) {
+        isHorizontalSwipe.current = false;
+        swipeDirRef.current = null;
+        touchStart.current = null;
+        dragRef.current.style.transition = 'none';
+        dragRef.current.style.transform = '';
+        if (prevPanelRef.current) { prevPanelRef.current.style.transition = 'none'; prevPanelRef.current.style.transform = 'translateX(-100%)'; }
+        if (nextPanelRef.current) { nextPanelRef.current.style.transition = 'none'; nextPanelRef.current.style.transform = 'translateX(100%)'; }
+        return;
+      }
+
       if (swipeBlocked.current) return;
       e.preventDefault();
       dragRef.current.style.transform = `translate3d(${dx}px, 0, 0)`;
@@ -187,7 +211,8 @@ export default function Layout({ children }) {
           animating.current = true;
           el.style.transition = SPRING;
           el.style.transform = 'translate3d(100%, 0, 0)';
-          setTimeout(() => {
+          swipeTimer.current = setTimeout(() => {
+            swipeTimer.current = null;
             if (prevPanelRef.current) {
               prevPanelRef.current.style.transition = 'none';
               prevPanelRef.current.style.transform = 'translateX(-100%)';
@@ -220,7 +245,8 @@ export default function Layout({ children }) {
               incomingPanel.current.style.transform = 'translate3d(0, 0, 0)';
             }
 
-            setTimeout(() => {
+            swipeTimer.current = setTimeout(() => {
+              swipeTimer.current = null;
               if (prevPanelRef.current) {
                 prevPanelRef.current.style.transition = 'none';
                 prevPanelRef.current.style.transform = 'translateX(-100%)';
@@ -321,7 +347,7 @@ export default function Layout({ children }) {
             </div>
           </div>
         </main>
-        <MobileNav compact={navCompact} />
+        <MobileNav compact={navCompact} onBeforeNavigate={cancelPendingSwipe} />
       </div>
       <BugReportButton
         open={bugOpen}

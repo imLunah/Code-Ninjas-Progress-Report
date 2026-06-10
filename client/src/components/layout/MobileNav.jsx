@@ -31,7 +31,7 @@ function TabIcon({ iconId, profilePicUrl, initials, active }) {
 const PILL_SPRING = { type: 'spring', stiffness: 480, damping: 36, mass: 0.7 };
 const SCALE_SPRING = { type: 'spring', stiffness: 320, damping: 30 };
 
-export default function MobileNav({ compact = false }) {
+export default function MobileNav({ compact = false, onBeforeNavigate }) {
   const { user, viewAs } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -66,7 +66,7 @@ export default function MobileNav({ compact = false }) {
             return (
               <motion.button
                 key={tab.to}
-                onClick={() => { if (!active) navigate(tab.to); }}
+                onClick={() => { onBeforeNavigate?.(); if (location.pathname !== tab.to) navigate(tab.to); }}
                 whileTap={{ scale: 0.82 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 28 }}
                 aria-label={tab.label}
