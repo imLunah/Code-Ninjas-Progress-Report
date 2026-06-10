@@ -89,7 +89,7 @@ export default function MobileNav({ compact = false }) {
           <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/70 dark:via-white/25 to-transparent rounded-full" />
           {/* refracted glass rim — element filter ripples the rim + splits light (works on Safari/iOS) */}
           <div
-            className="pointer-events-none absolute inset-[1.5px] rounded-full border border-white/45 dark:border-white/20"
+            className="pointer-events-none absolute inset-[1.5px] rounded-full"
             style={{ filter: 'url(#liquidEdge)', boxShadow: 'inset 1.5px 0 1.5px rgba(90,170,255,0.20), inset -1.5px 0 1.5px rgba(255,120,170,0.20)' }}
           />
           {tabs.map((tab, i) => {

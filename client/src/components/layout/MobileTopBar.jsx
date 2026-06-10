@@ -49,7 +49,7 @@ function TopIcon({ tab, active }) {
       <span className="pointer-events-none absolute inset-x-2 top-0 h-px bg-gradient-to-r from-transparent via-white/60 dark:via-white/20 to-transparent" />
       {/* refracted glass rim (works on Safari/iOS via element filter) */}
       <span
-        className="pointer-events-none absolute inset-[1.5px] rounded-full border border-white/40 dark:border-white/18"
+        className="pointer-events-none absolute inset-[1.5px] rounded-full"
         style={{ filter: 'url(#liquidEdge)', boxShadow: 'inset 1.5px 0 1.5px rgba(90,170,255,0.18), inset -1.5px 0 1.5px rgba(255,120,170,0.18)' }}
       />
       <span className="relative z-10 flex items-center justify-center">{Icon && <Icon />}</span>
