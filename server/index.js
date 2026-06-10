@@ -78,6 +78,7 @@ app.use('/api/curriculum', require('./routes/curriculum'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/announcements', require('./routes/announcements'));
 app.use('/api/releases', require('./routes/releases'));
+app.use('/api/onboarding', require('./routes/onboarding'));
 // Bug reports — staff or parent session accepted; try staff first, fall back to parent
 app.use('/api/bugs',
   (req, res, next) => staffSession(req, res, () => {

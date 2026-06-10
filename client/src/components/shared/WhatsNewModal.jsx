@@ -17,8 +17,8 @@ export default function WhatsNewModal() {
 
   useEffect(() => {
     if (!user) { setOpen(false); setReleases([]); checkedFor.current = null; return; }
-    // Force-reset users must clear that first; don't interrupt with the modal.
-    if (user.mustResetPassword) return;
+    // Force-reset + onboarding take priority; don't stack the What's New modal on top.
+    if (user.mustResetPassword || user.onboarded === false) return;
     if (checkedFor.current === user.id) return;
     checkedFor.current = user.id;
     api.get('/releases/unseen')

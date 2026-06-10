@@ -10,6 +10,7 @@ function AdminNav() {
     { to: '/admin/users', label: 'Users' },
     { to: '/admin/curriculum', label: 'Curriculum' },
     { to: '/admin/releases', label: 'Releases' },
+    { to: '/admin/onboarding', label: 'Onboarding' },
     { to: '/admin/settings', label: 'Settings' },
   ];
   return (

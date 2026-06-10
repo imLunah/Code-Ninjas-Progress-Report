@@ -9,6 +9,7 @@ import ProtectedRoute from './components/layout/ProtectedRoute';
 import ParentRoute from './components/layout/ParentRoute';
 import AdminBar from './components/ui/AdminBar';
 import WhatsNewModal from './components/shared/WhatsNewModal';
+import OnboardingTour from './components/shared/OnboardingTour';
 
 import LoginPage from './pages/LoginPage';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
@@ -36,6 +37,7 @@ import CurriculumPage from './pages/admin/CurriculumPage';
 import UsersPage from './pages/admin/UsersPage';
 import SettingsPage from './pages/admin/SettingsPage';
 import ReleasesPage from './pages/admin/ReleasesPage';
+import OnboardingPage from './pages/admin/OnboardingPage';
 import ChangelogPage from './pages/ChangelogPage';
 
 export default function App() {
@@ -78,6 +80,7 @@ export default function App() {
             <Route path="/admin/users" element={<ProtectedRoute role="admin"><UsersPage /></ProtectedRoute>} />
             <Route path="/admin/curriculum" element={<ProtectedRoute role="admin"><CurriculumPage /></ProtectedRoute>} />
             <Route path="/admin/releases" element={<ProtectedRoute role="admin"><ReleasesPage /></ProtectedRoute>} />
+            <Route path="/admin/onboarding" element={<ProtectedRoute role="admin"><OnboardingPage /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute role="admin"><SettingsPage /></ProtectedRoute>} />
 
             {/* Curriculum Roadmap */}
@@ -96,6 +99,7 @@ export default function App() {
           </Routes>
           <AdminBar />
           <WhatsNewModal />
+          <OnboardingTour />
       </AuthProvider>
       </ParentAuthProvider>
       </CurriculumProvider>
