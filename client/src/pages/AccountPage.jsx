@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
 export default function AccountPage() {
-  const { user, setUser, logout } = useAuth();
+  const { user, setUser, logout, switchLocation } = useAuth();
   const { dark, toggle } = useTheme();
   const navigate = useNavigate();
 
@@ -228,6 +228,36 @@ export default function AccountPage() {
             </button>
           </div>
         </motion.div>
+
+        {/* Location */}
+        {!isForced && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.09, duration: 0.3 }}
+            className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm"
+          >
+            <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">Location</p>
+            {['manager', 'admin'].includes(user?.role) ? (
+              <select
+                value={user?.activeLocation?.id ?? ''}
+                onChange={(e) => switchLocation(Number(e.target.value))}
+                className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2.5 font-ninja text-sm font-semibold focus:outline-none focus:border-ninja-blue"
+              >
+                {user?.availableLocations?.map((loc) => (
+                  <option key={loc.id} value={loc.id}>{loc.name}</option>
+                ))}
+              </select>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="w-9 h-9 rounded-xl bg-ninja-bg text-ninja-blue flex items-center justify-center flex-shrink-0">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                </span>
+                <p className="text-ninja-navy font-ninja font-semibold text-sm truncate">{user?.activeLocation?.name ?? '—'}</p>
+              </div>
+            )}
+          </motion.div>
+        )}
 
         {/* Username + Password */}
         <motion.form
