@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
-import ThemeToggle from '../ui/ThemeToggle';
+import MobileTopBar from './MobileTopBar';
 import BugReportButton from '../ui/BugReportButton';
 import { useAuth } from '../../context/AuthContext';
 import { getMobileNavTabs } from '../../lib/navTabs';
@@ -92,6 +92,17 @@ export default function Layout({ children }) {
   const dragRef = useRef(null);
   const prevPanelRef = useRef(null);
   const nextPanelRef = useRef(null);
+  const lastScrollY = useRef(0);
+  const [navCompact, setNavCompact] = useState(false);
+
+  const handleMainScroll = (e) => {
+    const y = e.currentTarget.scrollTop;
+    if (y < 24) { setNavCompact(false); lastScrollY.current = y; return; }
+    const dy = y - lastScrollY.current;
+    if (dy > 6) setNavCompact(true);
+    else if (dy < -6) setNavCompact(false);
+    lastScrollY.current = y;
+  };
   const touchStart = useRef(null);
   const isHorizontalSwipe = useRef(false);
   const swipeDirRef = useRef(null);
@@ -276,10 +287,8 @@ export default function Layout({ children }) {
       <Sidebar onOpenBug={() => setBugOpen(true)} />
       <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
         {user?.announcement && <AnnouncementBanner text={user.announcement} />}
-        <div className="lg:hidden fixed top-3 right-4 z-30">
-          <ThemeToggle />
-        </div>
-        <main className="flex-1 overflow-y-auto min-h-0 max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-28 lg:pb-8">
+        <MobileTopBar compact={navCompact} />
+        <main onScroll={handleMainScroll} className="flex-1 overflow-y-auto min-h-0 max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 pt-16 lg:pt-8 pb-28 lg:pb-8">
           <div className="relative overflow-x-hidden overflow-y-hidden lg:overflow-x-visible lg:overflow-y-visible">
             {prevTab && (
               <AdjacentPanel key={prevTab.to} tab={prevTab} panelRef={prevPanelRef} side="left" />
@@ -303,7 +312,7 @@ export default function Layout({ children }) {
             </div>
           </div>
         </main>
-        <MobileNav />
+        <MobileNav compact={navCompact} />
       </div>
       <BugReportButton
         open={bugOpen}

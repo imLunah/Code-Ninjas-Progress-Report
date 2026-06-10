@@ -1,18 +1,24 @@
+// Bottom nav pill — also drives swipe navigation (Layout cycles these).
 export function getMobileNavTabs(user, viewAs) {
   if (!user) return [];
   const isSenseiView = user.role === 'admin' && viewAs === 'sensei';
   const isManager = ['manager', 'admin'].includes(user.role) && !isSenseiView;
   const dashPath = isManager ? '/manager/dashboard' : '/sensei/dashboard';
-  const tabs = [
+  return [
     { to: dashPath, label: 'Today', iconId: 'today' },
     { to: '/manager/students', label: 'Ninjas', iconId: 'roster' },
     { to: '/clubs', label: 'Clubs', iconId: 'clubs' },
     { to: '/manager/staff', label: 'Staff', iconId: 'staff' },
-    { to: '/manager/reports', label: 'Reports', iconId: 'report' },
-    { to: '/curriculum-roadmap', label: 'Roadmap', iconId: null },
     { to: '/account', label: 'Account', iconId: null },
   ];
-  return tabs;
+}
+
+// Top bar — occasional/reference destinations, in the screen corners (IG-style).
+export function getTopNavTabs() {
+  return {
+    left: { to: '/manager/reports', label: 'Reports', iconId: 'report' },
+    right: { to: '/curriculum-roadmap', label: 'Roadmap', iconId: 'roadmap' },
+  };
 }
 
 export function getActiveTabIndex(tabs, pathname) {
