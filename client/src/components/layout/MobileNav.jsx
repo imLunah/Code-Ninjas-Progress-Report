@@ -70,7 +70,7 @@ export default function MobileNav({ compact = false }) {
       </div>
       {/* Liquid glass capsule — compact, centered */}
       <div
-        className={`pointer-events-auto relative flex items-center gap-0.5 rounded-full overflow-hidden border border-white/20 dark:border-white/12 bg-white/[0.04] dark:bg-[#141826]/20 backdrop-blur-sm backdrop-saturate-[1.9] transition-all duration-200 ${compact ? 'px-1.5 py-1' : 'px-2 py-1.5'}`}
+        className={`pointer-events-auto relative flex items-center justify-between rounded-full overflow-hidden border border-white/20 dark:border-white/12 bg-white/[0.04] dark:bg-[#141826]/20 backdrop-blur-sm backdrop-saturate-[1.9] transition-all duration-200 ${compact ? 'gap-2 px-3 py-1' : 'gap-3.5 px-5 py-1.5'}`}
         style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(0,0,0,0.15), 0 8px 32px rgba(0,0,0,0.35)' }}
       >
         {/* reflective gloss — light sheen on the top half */}
