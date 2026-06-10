@@ -1,6 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import ThemeToggle from '../ui/ThemeToggle';
 import { getTopNavTabs } from '../../lib/navTabs';
 
 const GLASS = 'rounded-full border border-white/15 dark:border-white/10 bg-white/10 dark:bg-[#141826]/60 backdrop-blur-2xl';
@@ -46,10 +45,7 @@ export default function MobileTopBar({ compact = false }) {
       <div className={compact ? 'pointer-events-none' : 'pointer-events-auto'}>
         <TopIcon tab={left} active={leftActive} />
       </div>
-      <div className={`flex items-center gap-2 ${compact ? 'pointer-events-none' : 'pointer-events-auto'}`}>
-        <div className={`flex items-center justify-center ${GLASS} w-11 h-11`}>
-          <ThemeToggle className="!bg-transparent hover:!bg-white/10 !w-full !h-full !rounded-full" />
-        </div>
+      <div className={compact ? 'pointer-events-none' : 'pointer-events-auto'}>
         <TopIcon tab={right} active={rightActive} />
       </div>
     </motion.header>
