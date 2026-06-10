@@ -284,6 +284,15 @@ export default function Layout({ children }) {
 
   return (
     <div className="fixed inset-0 overflow-hidden flex flex-col bg-ninja-bg lg:static lg:inset-auto lg:overflow-visible lg:min-h-[100dvh] lg:flex-row">
+      {/* Liquid-glass refraction filter — displaces the backdrop so content warps through the glass.
+          Renders in Chromium; iOS Safari ignores url() in backdrop-filter and falls back to blur. */}
+      <svg aria-hidden="true" className="absolute w-0 h-0 pointer-events-none" focusable="false">
+        <filter id="liquidGlass" x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.012 0.014" numOctaves="2" seed="17" result="noise" />
+          <feGaussianBlur in="noise" stdDeviation="2.2" result="softNoise" />
+          <feDisplacementMap in="SourceGraphic" in2="softNoise" scale="22" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </svg>
       <Sidebar onOpenBug={() => setBugOpen(true)} />
       <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
         {user?.announcement && <AnnouncementBanner text={user.announcement} />}

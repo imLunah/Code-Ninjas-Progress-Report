@@ -100,7 +100,7 @@ export default function Sidebar({ onOpenBug }) {
       ref={asideRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="hidden lg:flex flex-col w-56 xl:w-60 relative flex-shrink-0 sticky top-0 h-screen z-40 bg-white/70 dark:bg-[#141826]/50 backdrop-blur-2xl backdrop-saturate-150 border-r border-white/40 dark:border-white/10"
+      className="hidden lg:flex flex-col w-56 xl:w-60 relative flex-shrink-0 sticky top-0 h-screen z-40 bg-white/70 dark:bg-[#0c0f1a]/75 backdrop-blur-2xl backdrop-saturate-150 border-r border-white/40 dark:border-white/10"
       style={{ boxShadow: 'inset -1px 0 1px rgba(255,255,255,0.3), 1px 0 24px rgba(0,0,0,0.04)' }}
     >
       {/* Cursor-reactive ambient highlight — light refraction drifts with pointer */}

@@ -3,7 +3,10 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { getMobileNavTabs, getActiveTabIndex } from '../../lib/navTabs';
 
-const GLASS = 'border border-white/20 dark:border-white/12 bg-white/[0.04] dark:bg-[#141826]/20 backdrop-blur-sm backdrop-saturate-[1.9]';
+const GLASS = 'border border-white/20 dark:border-white/12 bg-white/[0.04] dark:bg-[#0c0f1a]/55 backdrop-blur-sm backdrop-saturate-[1.9]';
+
+// Liquid-glass backdrop: warps the content behind it (Chromium); iOS Safari falls back to blur.
+const REFRACT = { backdropFilter: 'url(#liquidGlass) blur(3px) saturate(1.6)', WebkitBackdropFilter: 'blur(3px) saturate(1.6)' };
 
 function LocationBar({ user, switchLocation }) {
   const glass = `rounded-xl ${GLASS} text-ninja-navy font-ninja font-semibold shadow-[0_2px_6px_rgba(0,0,0,0.05),0_8px_24px_rgba(0,0,0,0.12)] px-3 py-1.5 text-sm`;
@@ -76,7 +79,7 @@ export default function MobileNav({ compact = false }) {
         {/* Liquid glass capsule */}
         <div
           className={`pointer-events-auto relative w-full max-w-xs flex items-center justify-between rounded-full overflow-hidden px-4 py-1.5 ${GLASS}`}
-          style={{ boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.28), inset 0 -1px 1px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.06), 0 12px 36px rgba(0,0,0,0.16)' }}
+          style={{ ...REFRACT, boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.28), inset 0 -1px 1px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.06), 0 12px 36px rgba(0,0,0,0.16)' }}
         >
           {/* refraction gloss — light sheen down the top half */}
           <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-white/20 via-white/[0.05] to-transparent dark:from-white/[0.07]" />
