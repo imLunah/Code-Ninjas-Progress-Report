@@ -52,7 +52,7 @@ export default function MobileNav({ compact = false }) {
       >
         {/* Liquid glass capsule */}
         <div
-          className={`pointer-events-auto relative w-full max-w-[26rem] flex items-center justify-between rounded-full overflow-hidden px-5 py-2 ${GLASS}`}
+          className={`pointer-events-auto relative w-full max-w-[26rem] flex items-center justify-between rounded-full overflow-hidden px-5 py-1.5 ${GLASS}`}
           style={{ ...REFRACT, boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.28), inset 0 -1px 1px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.06), 0 12px 36px rgba(0,0,0,0.16)' }}
         >
           {/* refraction gloss — light sheen down the top half */}
@@ -71,12 +71,12 @@ export default function MobileNav({ compact = false }) {
                 transition={{ type: 'spring', stiffness: 500, damping: 28 }}
                 aria-label={tab.label}
                 aria-current={active ? 'page' : undefined}
-                className="relative flex items-center justify-center rounded-full w-12 h-12"
+                className="relative flex items-center justify-center rounded-full w-12 h-10"
               >
                 {active && (
                   <motion.div
                     layoutId="mobileNavPill"
-                    className="absolute -inset-x-4 -inset-y-1.5 rounded-full border border-white/30 dark:border-white/10 bg-white/25 dark:bg-white/[0.08] overflow-hidden"
+                    className="absolute -inset-x-4 -inset-y-1 rounded-full border border-white/30 dark:border-white/10 bg-white/25 dark:bg-white/[0.08] overflow-hidden"
                     style={{ boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.45), inset 0 -1px 2px rgba(255,255,255,0.12), 0 4px 12px rgba(0,0,0,0.10)' }}
                     transition={PILL_SPRING}
                   >
