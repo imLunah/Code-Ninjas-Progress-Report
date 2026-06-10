@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getMobileNavTabs, getActiveTabIndex } from '../../lib/navTabs';
 
 function LocationBar({ user, switchLocation, compact }) {
-  const glass = `rounded-xl border border-white/15 dark:border-white/10 bg-white/5 dark:bg-[#141826]/30 backdrop-blur-xl backdrop-saturate-150 text-ninja-navy font-ninja font-semibold shadow-lg shadow-black/25 transition-all duration-200 ${compact ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm'}`;
+  const glass = `rounded-xl border border-white/15 dark:border-white/10 bg-white/5 dark:bg-[#141826]/25 backdrop-blur-md backdrop-saturate-[1.7] text-ninja-navy font-ninja font-semibold shadow-lg shadow-black/25 transition-all duration-200 ${compact ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm'}`;
   if (['manager', 'admin'].includes(user.role)) {
     return (
       <select
@@ -70,7 +70,7 @@ export default function MobileNav({ compact = false }) {
       </div>
       {/* Liquid glass capsule — compact, centered */}
       <div
-        className={`pointer-events-auto relative flex items-center gap-0.5 rounded-full border border-white/15 dark:border-white/10 bg-white/5 dark:bg-[#141826]/30 backdrop-blur-xl backdrop-saturate-150 transition-all duration-200 ${compact ? 'px-1.5 py-1' : 'px-2 py-1.5'}`}
+        className={`pointer-events-auto relative flex items-center gap-0.5 rounded-full border border-white/15 dark:border-white/10 bg-white/5 dark:bg-[#141826]/25 backdrop-blur-md backdrop-saturate-[1.7] transition-all duration-200 ${compact ? 'px-1.5 py-1' : 'px-2 py-1.5'}`}
         style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(0,0,0,0.15), 0 8px 32px rgba(0,0,0,0.35)' }}
       >
         {/* top sheen highlight */}
