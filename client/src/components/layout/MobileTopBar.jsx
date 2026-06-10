@@ -40,9 +40,10 @@ function TopIcon({ tab, active }) {
       aria-label={tab.label}
       aria-current={active ? 'page' : undefined}
       className={`relative flex items-center justify-center w-11 h-11 overflow-hidden ${GLASS} transition-colors ${active ? 'text-ninja-blue' : 'text-ninja-navy/70'}`}
-      style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.22), 0 6px 20px rgba(0,0,0,0.3)' }}
+      style={{ boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.28), inset 0 -1px 1px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.05), 0 8px 24px rgba(0,0,0,0.14)' }}
     >
-      <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-white/18 to-transparent dark:from-white/12" />
+      <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-white/20 to-transparent dark:from-white/12" />
+      <span className="pointer-events-none absolute inset-x-2 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
       <span className="relative z-10 flex items-center justify-center">{Icon && <Icon />}</span>
     </motion.button>
   );

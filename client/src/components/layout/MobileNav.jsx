@@ -6,7 +6,7 @@ import { getMobileNavTabs, getActiveTabIndex } from '../../lib/navTabs';
 const GLASS = 'border border-white/20 dark:border-white/12 bg-white/[0.04] dark:bg-[#141826]/20 backdrop-blur-sm backdrop-saturate-[1.9]';
 
 function LocationBar({ user, switchLocation }) {
-  const glass = `rounded-xl ${GLASS} text-ninja-navy font-ninja font-semibold shadow-lg shadow-black/25 px-3 py-1.5 text-sm`;
+  const glass = `rounded-xl ${GLASS} text-ninja-navy font-ninja font-semibold shadow-[0_2px_6px_rgba(0,0,0,0.05),0_8px_24px_rgba(0,0,0,0.12)] px-3 py-1.5 text-sm`;
   if (['manager', 'admin'].includes(user.role)) {
     return (
       <select
@@ -76,12 +76,14 @@ export default function MobileNav({ compact = false }) {
         {/* Liquid glass capsule */}
         <div
           className={`pointer-events-auto relative w-full max-w-xs flex items-center justify-between rounded-full overflow-hidden px-4 py-1.5 ${GLASS}`}
-          style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(0,0,0,0.15), 0 8px 32px rgba(0,0,0,0.35)' }}
+          style={{ boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.28), inset 0 -1px 1px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.06), 0 12px 36px rgba(0,0,0,0.16)' }}
         >
-          {/* reflective gloss — light sheen on the top half */}
-          <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-white/18 via-white/[0.04] to-transparent dark:from-white/12" />
-          {/* top sheen highlight */}
-          <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent rounded-full" />
+          {/* refraction gloss — light sheen down the top half */}
+          <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-white/20 via-white/[0.05] to-transparent dark:from-white/12" />
+          {/* ambient highlight — soft light source, upper-center */}
+          <div className="pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 w-40 h-12 rounded-full bg-white/30 dark:bg-white/12 blur-2xl" />
+          {/* top sheen highlight — crisp edge catch */}
+          <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent rounded-full" />
           {tabs.map((tab, i) => {
             const active = i === activeIndex;
             return (
@@ -97,10 +99,13 @@ export default function MobileNav({ compact = false }) {
                 {active && (
                   <motion.div
                     layoutId="mobileNavPill"
-                    className="absolute inset-0 rounded-full border border-white/25 dark:border-white/15 bg-white/20 dark:bg-white/[0.12]"
-                    style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.25), 0 2px 8px rgba(0,0,0,0.25)' }}
+                    className="absolute inset-0 rounded-full border border-white/30 dark:border-white/18 bg-white/25 dark:bg-white/[0.14] overflow-hidden"
+                    style={{ boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.45), inset 0 -1px 2px rgba(255,255,255,0.12), 0 4px 12px rgba(0,0,0,0.10)' }}
                     transition={PILL_SPRING}
-                  />
+                  >
+                    {/* inner glow */}
+                    <span className="absolute inset-0 rounded-full bg-gradient-to-b from-white/25 to-transparent dark:from-white/10" />
+                  </motion.div>
                 )}
                 <motion.span
                   className="relative z-10 flex items-center justify-center"
