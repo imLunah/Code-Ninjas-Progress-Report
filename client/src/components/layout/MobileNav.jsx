@@ -3,8 +3,10 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { getMobileNavTabs, getActiveTabIndex } from '../../lib/navTabs';
 
-function LocationBar({ user, switchLocation, compact }) {
-  const glass = `rounded-xl border border-white/20 dark:border-white/12 bg-white/[0.04] dark:bg-[#141826]/20 backdrop-blur-sm backdrop-saturate-[1.9] text-ninja-navy font-ninja font-semibold shadow-lg shadow-black/25 transition-all duration-200 ${compact ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm'}`;
+const GLASS = 'border border-white/20 dark:border-white/12 bg-white/[0.04] dark:bg-[#141826]/20 backdrop-blur-sm backdrop-saturate-[1.9]';
+
+function LocationBar({ user, switchLocation }) {
+  const glass = `rounded-xl ${GLASS} text-ninja-navy font-ninja font-semibold shadow-lg shadow-black/25 px-3 py-1.5 text-sm`;
   if (['manager', 'admin'].includes(user.role)) {
     return (
       <select
@@ -25,15 +27,13 @@ function LocationBar({ user, switchLocation, compact }) {
   );
 }
 
-function TabIcon({ iconId, profilePicUrl, initials, active, compact }) {
-  const avatar = compact ? 'w-5 h-5' : 'w-6 h-6';
-  const icon = compact ? 'w-6 h-6' : 'w-7 h-7';
+function TabIcon({ iconId, profilePicUrl, initials, active }) {
   if (iconId === null) {
     if (profilePicUrl) {
-      return <img src={profilePicUrl} alt="me" className={`${avatar} rounded-full object-cover border border-white/25 transition-all duration-200`} />;
+      return <img src={profilePicUrl} alt="me" className="w-6 h-6 rounded-full object-cover border border-white/25" />;
     }
     return (
-      <div className={`${avatar} rounded-full bg-ninja-blue flex items-center justify-center text-white font-ninja font-bold text-[10px] transition-all duration-200`}>
+      <div className="w-6 h-6 rounded-full bg-ninja-blue flex items-center justify-center text-white font-ninja font-bold text-[10px]">
         {initials}
       </div>
     );
@@ -42,12 +42,13 @@ function TabIcon({ iconId, profilePicUrl, initials, active, compact }) {
     <img
       src={`/icons/${iconId}.png`}
       alt=""
-      className={`${icon} transition-all duration-200 ${active ? 'drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]' : 'opacity-45 grayscale-[0.35]'}`}
+      className={`w-7 h-7 transition-opacity duration-200 ${active ? 'drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]' : 'opacity-45 grayscale-[0.35]'}`}
     />
   );
 }
 
 const PILL_SPRING = { type: 'spring', stiffness: 480, damping: 36, mass: 0.7 };
+const SCALE_SPRING = { type: 'spring', stiffness: 320, damping: 30 };
 
 export default function MobileNav({ compact = false }) {
   const { user, switchLocation, viewAs } = useAuth();
@@ -61,59 +62,63 @@ export default function MobileNav({ compact = false }) {
   const tabs = getMobileNavTabs(user, viewAs);
   const activeIndex = getActiveTabIndex(tabs, location.pathname);
 
-  const tabSize = compact ? 'w-10 h-10' : 'w-12 h-12';
-
   return (
-    <nav className="lg:hidden absolute bottom-0 inset-x-0 z-20 px-2 pb-[max(env(safe-area-inset-bottom),22px)] pt-2 pointer-events-none flex flex-col items-center gap-2">
-      <div className="pointer-events-auto">
-        <LocationBar user={isSenseiView ? { ...user, role: 'sensei' } : user} switchLocation={switchLocation} compact={compact} />
-      </div>
-      {/* Liquid glass capsule — compact, centered */}
-      <div
-        className={`pointer-events-auto relative w-full max-w-xs flex items-center justify-between rounded-full overflow-hidden border border-white/20 dark:border-white/12 bg-white/[0.04] dark:bg-[#141826]/20 backdrop-blur-sm backdrop-saturate-[1.9] transition-all duration-200 ${compact ? 'px-3 py-1' : 'px-4 py-1.5'}`}
-        style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(0,0,0,0.15), 0 8px 32px rgba(0,0,0,0.35)' }}
+    <nav className="lg:hidden absolute bottom-0 inset-x-0 z-20 px-2 pb-[max(env(safe-area-inset-bottom),22px)] pt-2 pointer-events-none flex flex-col items-center">
+      {/* Whole stack scales as one unit on scroll — no per-icon reflow */}
+      <motion.div
+        className="w-full flex flex-col items-center gap-2 origin-bottom"
+        animate={{ scale: compact ? 0.86 : 1 }}
+        transition={SCALE_SPRING}
       >
-        {/* reflective gloss — light sheen on the top half */}
-        <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-white/18 via-white/[0.04] to-transparent dark:from-white/12" />
-        {/* top sheen highlight */}
-        <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent rounded-full" />
-        {tabs.map((tab, i) => {
-          const active = i === activeIndex;
-          return (
-            <motion.button
-              key={tab.to}
-              onClick={() => { if (!active) navigate(tab.to); }}
-              whileTap={{ scale: 0.82 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-              aria-label={tab.label}
-              aria-current={active ? 'page' : undefined}
-              className={`relative flex items-center justify-center rounded-full transition-all duration-200 ${tabSize}`}
-            >
-              {active && (
-                <motion.div
-                  layoutId="mobileNavPill"
-                  className="absolute inset-0 rounded-full border border-white/25 dark:border-white/15 bg-white/20 dark:bg-white/[0.12]"
-                  style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.25), 0 2px 8px rgba(0,0,0,0.25)' }}
-                  transition={PILL_SPRING}
-                />
-              )}
-              <motion.span
-                className="relative z-10 flex items-center justify-center"
-                animate={{ scale: active ? 1.12 : 1 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 26 }}
+        <div className="pointer-events-auto">
+          <LocationBar user={isSenseiView ? { ...user, role: 'sensei' } : user} switchLocation={switchLocation} />
+        </div>
+        {/* Liquid glass capsule */}
+        <div
+          className={`pointer-events-auto relative w-full max-w-xs flex items-center justify-between rounded-full overflow-hidden px-4 py-1.5 ${GLASS}`}
+          style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 1px rgba(0,0,0,0.15), 0 8px 32px rgba(0,0,0,0.35)' }}
+        >
+          {/* reflective gloss — light sheen on the top half */}
+          <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-white/18 via-white/[0.04] to-transparent dark:from-white/12" />
+          {/* top sheen highlight */}
+          <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent rounded-full" />
+          {tabs.map((tab, i) => {
+            const active = i === activeIndex;
+            return (
+              <motion.button
+                key={tab.to}
+                onClick={() => { if (!active) navigate(tab.to); }}
+                whileTap={{ scale: 0.82 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                aria-label={tab.label}
+                aria-current={active ? 'page' : undefined}
+                className="relative flex items-center justify-center rounded-full w-12 h-12"
               >
-                <TabIcon
-                  iconId={tab.iconId}
-                  profilePicUrl={user.profilePicUrl}
-                  initials={initials}
-                  active={active}
-                  compact={compact}
-                />
-              </motion.span>
-            </motion.button>
-          );
-        })}
-      </div>
+                {active && (
+                  <motion.div
+                    layoutId="mobileNavPill"
+                    className="absolute inset-0 rounded-full border border-white/25 dark:border-white/15 bg-white/20 dark:bg-white/[0.12]"
+                    style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.25), 0 2px 8px rgba(0,0,0,0.25)' }}
+                    transition={PILL_SPRING}
+                  />
+                )}
+                <motion.span
+                  className="relative z-10 flex items-center justify-center"
+                  animate={{ scale: active ? 1.12 : 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 26 }}
+                >
+                  <TabIcon
+                    iconId={tab.iconId}
+                    profilePicUrl={user.profilePicUrl}
+                    initials={initials}
+                    active={active}
+                  />
+                </motion.span>
+              </motion.button>
+            );
+          })}
+        </div>
+      </motion.div>
     </nav>
   );
 }
