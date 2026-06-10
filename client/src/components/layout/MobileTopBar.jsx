@@ -5,7 +5,7 @@ import { getTopNavTabs } from '../../lib/navTabs';
 const GLASS = 'rounded-full border border-white/20 dark:border-white/12 bg-white/[0.04] dark:bg-[#0c0f1a]/55 backdrop-blur-sm backdrop-saturate-[1.9]';
 
 // Liquid-glass backdrop: warps content behind (Chromium); iOS Safari falls back to blur.
-const REFRACT = { backdropFilter: 'url(#liquidGlass) blur(3px) saturate(1.6)', WebkitBackdropFilter: 'blur(3px) saturate(1.6)' };
+const REFRACT = { backdropFilter: 'url(#liquidGlass) blur(1px) saturate(1.6)', WebkitBackdropFilter: 'blur(1px) saturate(1.6)' };
 
 // Bar-chart / analytics icon for Reports
 function ReportsIcon() {
