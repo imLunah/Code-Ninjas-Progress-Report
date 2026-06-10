@@ -52,7 +52,7 @@ export default function MobileNav({ compact = false }) {
       >
         {/* Liquid glass capsule */}
         <div
-          className={`pointer-events-auto relative w-full max-w-sm flex items-center justify-between rounded-full overflow-hidden px-5 py-3 ${GLASS}`}
+          className={`pointer-events-auto relative w-full max-w-md flex items-center justify-between rounded-full overflow-hidden px-5 py-3 ${GLASS}`}
           style={{ ...REFRACT, boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.28), inset 0 -1px 1px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.06), 0 12px 36px rgba(0,0,0,0.16)' }}
         >
           {/* refraction gloss — light sheen down the top half */}
