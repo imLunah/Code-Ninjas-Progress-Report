@@ -2,7 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { getTopNavTabs } from '../../lib/navTabs';
 
-const GLASS = 'rounded-full border border-white/15 dark:border-white/10 bg-white/5 dark:bg-[#141826]/30 backdrop-blur-xl backdrop-saturate-150';
+const GLASS = 'rounded-full border border-white/15 dark:border-white/10 bg-white/5 dark:bg-[#141826]/25 backdrop-blur-md backdrop-saturate-[1.7]';
 
 // Bar-chart / analytics icon for Reports
 function ReportsIcon() {
