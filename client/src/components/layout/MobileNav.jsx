@@ -43,7 +43,7 @@ export default function MobileNav({ compact = false, onBeforeNavigate }) {
   const activeIndex = getActiveTabIndex(tabs, location.pathname);
 
   return (
-    <nav className="lg:hidden absolute bottom-0 inset-x-0 z-20 px-2 pb-[max(env(safe-area-inset-bottom),22px)] pt-2 pointer-events-none flex flex-col items-center">
+    <nav className="lg:hidden absolute bottom-0 inset-x-0 z-20 px-4 pb-[max(env(safe-area-inset-bottom),22px)] pt-2 pointer-events-none flex flex-col items-center">
       {/* Whole stack scales as one unit on scroll — no per-icon reflow */}
       <motion.div
         className="w-full flex flex-col items-center gap-2 origin-bottom"
