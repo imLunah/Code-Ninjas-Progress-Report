@@ -6,7 +6,7 @@ import { getMobileNavTabs, getActiveTabIndex } from '../../lib/navTabs';
 const GLASS = 'border border-white/20 dark:border-white/12 bg-white/[0.04] dark:bg-[#0c0f1a]/55 backdrop-blur-sm backdrop-saturate-[1.9]';
 
 // Liquid-glass backdrop: warps the content behind it (Chromium); iOS Safari falls back to blur.
-const REFRACT = { backdropFilter: 'url(#liquidGlass) blur(3px) saturate(1.6)', WebkitBackdropFilter: 'blur(3px) saturate(1.6)' };
+const REFRACT = { backdropFilter: 'url(#liquidGlass) blur(1px) saturate(1.6)', WebkitBackdropFilter: 'blur(1px) saturate(1.6)' };
 
 function TabIcon({ iconId, profilePicUrl, initials, active }) {
   if (iconId === null) {
