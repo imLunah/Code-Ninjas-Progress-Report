@@ -1,13 +1,11 @@
-import { useRef } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { motion, useMotionValue, useMotionTemplate, useSpring } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import ThemeToggle from '../ui/ThemeToggle';
 
 function NavIcon({ id, svg }) {
   if (svg) {
     return (
-      <span className="relative w-9 h-9 flex-shrink-0 flex items-center justify-center">
+      <span className="w-9 h-9 flex-shrink-0 flex items-center justify-center">
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
           <path strokeLinecap="round" strokeLinejoin="round" d={svg} />
         </svg>
@@ -18,7 +16,7 @@ function NavIcon({ id, svg }) {
     <img
       src={`/icons/${id}.png`}
       alt=""
-      className="relative w-9 h-9 flex-shrink-0"
+      className="w-9 h-9 flex-shrink-0"
     />
   );
 }
@@ -76,47 +74,16 @@ export default function Sidebar({ onOpenBug }) {
     navigate('/login');
   };
 
-  // Cursor-reactive ambient highlight — light refraction follows the pointer.
-  // Spring-smoothed so reflections drift rather than snap. No re-render on move.
-  const asideRef = useRef(null);
-  const rawX = useMotionValue(50);
-  const rawY = useMotionValue(-200);
-  const mx = useSpring(rawX, { stiffness: 120, damping: 30, mass: 0.6 });
-  const my = useSpring(rawY, { stiffness: 120, damping: 30, mass: 0.6 });
-
-  const handleMouseMove = (e) => {
-    const rect = asideRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    rawX.set(((e.clientX - rect.left) / rect.width) * 100);
-    rawY.set(((e.clientY - rect.top) / rect.height) * 100);
-  };
-  const handleMouseLeave = () => { rawY.set(-200); };
-
-  const glow = useMotionTemplate`radial-gradient(420px circle at ${mx}% ${my}%, rgba(255,255,255,0.55), rgba(255,255,255,0) 55%)`;
-  const glowDark = useMotionTemplate`radial-gradient(420px circle at ${mx}% ${my}%, rgba(120,160,255,0.10), rgba(255,255,255,0) 55%)`;
-
   return (
-    <aside
-      ref={asideRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      className="hidden lg:flex flex-col w-56 xl:w-60 relative flex-shrink-0 sticky top-0 h-screen z-40 bg-white/70 dark:bg-[#0c0f1a]/75 backdrop-blur-2xl backdrop-saturate-150 border-r border-white/40 dark:border-white/10"
-      style={{ boxShadow: 'inset -1px 0 1px rgba(255,255,255,0.3), 1px 0 24px rgba(0,0,0,0.04)' }}
-    >
-      {/* Cursor-reactive ambient highlight — light refraction drifts with pointer */}
-      <motion.div className="pointer-events-none absolute inset-0 z-0 dark:hidden" style={{ background: glow }} />
-      <motion.div className="pointer-events-none absolute inset-0 z-0 hidden dark:block" style={{ background: glowDark }} />
-      {/* Top edge sheen */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/70 dark:via-white/15 to-transparent z-0" />
-
+    <aside className="hidden lg:flex flex-col w-56 xl:w-60 bg-white border-r border-ninja-border flex-shrink-0 sticky top-0 h-screen z-40">
       {/* Logo */}
-      <div className="relative z-10 px-5 py-5 border-b border-ninja-border">
+      <div className="px-5 py-5 border-b border-ninja-border">
         <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-14 w-auto" />
       </div>
 
       {/* Center switcher */}
       {user && (
-        <div className="relative z-10 px-3 pt-3">
+        <div className="px-3 pt-3">
           {['manager', 'admin'].includes(user.role) && !isSenseiView ? (
             <select
               value={user.activeLocation?.id ?? ''}
@@ -136,41 +103,37 @@ export default function Sidebar({ onOpenBug }) {
       )}
 
       {/* Nav */}
-      <nav className="relative z-10 flex-1 p-3 space-y-0.5 mt-2 overflow-y-auto">
+      <nav className="flex-1 p-3 space-y-0.5 mt-2 overflow-y-auto">
         {navLinks.map((link) => {
           const isActive = isLinkActive(link, location.pathname, location.search);
           return (
             <Link
               key={link.to}
               to={link.to}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-ninja font-bold text-sm transition-colors relative overflow-hidden ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-ninja font-bold text-sm transition-colors relative ${
                 isActive
-                  ? 'text-ninja-blue bg-white/60 dark:bg-white/[0.06] border border-white/60 dark:border-white/[0.07]'
-                  : 'text-ninja-navy hover:bg-white/40 dark:hover:bg-white/[0.04]'
+                  ? 'bg-ninja-blue/10 text-ninja-blue'
+                  : 'text-ninja-navy hover:bg-ninja-bg'
               }`}
-              style={isActive ? { boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.45), 0 4px 12px rgba(0,0,0,0.05)' } : undefined}
             >
               {isActive && (
-                <>
-                  <span className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-b from-white/40 to-transparent dark:from-white/[0.06]" />
-                  <span className="absolute left-0 inset-y-2 w-0.5 bg-ninja-blue rounded-r-full" />
-                </>
+                <span className="absolute left-0 inset-y-2 w-0.5 bg-ninja-blue rounded-r-full" />
               )}
               <NavIcon id={link.icon} svg={link.svg} />
-              <span className="relative">{link.label}</span>
+              <span>{link.label}</span>
             </Link>
           );
         })}
       </nav>
 
       {/* Theme toggle */}
-      <div className="relative z-10 px-4 py-2 flex items-center justify-between border-t border-ninja-border">
+      <div className="px-4 py-2 flex items-center justify-between border-t border-ninja-border">
         <span className="text-ninja-muted font-ninja text-xs font-semibold">Appearance</span>
         <ThemeToggle />
       </div>
 
       {/* User card */}
-      <div className="relative z-10 p-3 border-t border-ninja-border">
+      <div className="p-3 border-t border-ninja-border">
         <div className="flex items-center gap-2.5 px-2 py-2">
           <Link to="/account" className="flex items-center gap-2.5 flex-1 min-w-0 hover:opacity-80 transition-opacity">
             {user?.profilePicUrl ? (
