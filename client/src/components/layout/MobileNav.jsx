@@ -8,28 +8,6 @@ const GLASS = 'border border-white/20 dark:border-white/12 bg-white/[0.04] dark:
 // Liquid-glass backdrop: warps the content behind it (Chromium); iOS Safari falls back to blur.
 const REFRACT = { backdropFilter: 'url(#liquidGlass) blur(3px) saturate(1.6)', WebkitBackdropFilter: 'blur(3px) saturate(1.6)' };
 
-function LocationBar({ user, switchLocation }) {
-  const glass = `rounded-xl ${GLASS} text-ninja-navy font-ninja font-semibold shadow-[0_2px_6px_rgba(0,0,0,0.05),0_8px_24px_rgba(0,0,0,0.12)] px-3 py-1.5 text-sm`;
-  if (['manager', 'admin'].includes(user.role)) {
-    return (
-      <select
-        value={user.activeLocation?.id ?? ''}
-        onChange={(e) => switchLocation(Number(e.target.value))}
-        className={`${glass} focus:outline-none focus:border-ninja-blue appearance-none`}
-      >
-        {user.availableLocations?.map((loc) => (
-          <option key={loc.id} value={loc.id} className="bg-ninja-bg text-ninja-navy">{loc.name}</option>
-        ))}
-      </select>
-    );
-  }
-  return (
-    <div className={glass}>
-      <span>{user.activeLocation?.name ?? ''}</span>
-    </div>
-  );
-}
-
 function TabIcon({ iconId, profilePicUrl, initials, active }) {
   if (iconId === null) {
     if (profilePicUrl) {
@@ -54,12 +32,11 @@ const PILL_SPRING = { type: 'spring', stiffness: 480, damping: 36, mass: 0.7 };
 const SCALE_SPRING = { type: 'spring', stiffness: 320, damping: 30 };
 
 export default function MobileNav({ compact = false }) {
-  const { user, switchLocation, viewAs } = useAuth();
+  const { user, viewAs } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   if (!user) return null;
 
-  const isSenseiView = user.role === 'admin' && viewAs === 'sensei';
   const initials = user.displayName?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || '?';
 
   const tabs = getMobileNavTabs(user, viewAs);
@@ -73,9 +50,6 @@ export default function MobileNav({ compact = false }) {
         animate={{ scale: compact ? 0.86 : 1 }}
         transition={SCALE_SPRING}
       >
-        <div className="pointer-events-auto">
-          <LocationBar user={isSenseiView ? { ...user, role: 'sensei' } : user} switchLocation={switchLocation} />
-        </div>
         {/* Liquid glass capsule */}
         <div
           className={`pointer-events-auto relative w-full max-w-xs flex items-center justify-between rounded-full overflow-hidden px-4 py-1.5 ${GLASS}`}
