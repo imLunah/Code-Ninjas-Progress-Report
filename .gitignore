@@ -7,3 +7,8 @@ server/data/
 .claude/
 .agents/
 CLAUDE.md
+
+# Editor swap + local test artifacts
+.CLAUDE.md.swp
+*.swp
+test-results/
