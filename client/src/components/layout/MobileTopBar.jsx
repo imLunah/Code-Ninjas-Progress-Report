@@ -4,8 +4,34 @@ import { getTopNavTabs } from '../../lib/navTabs';
 
 const GLASS = 'rounded-full border border-white/15 dark:border-white/10 bg-white/10 dark:bg-[#141826]/60 backdrop-blur-2xl';
 
+// Bar-chart / analytics icon for Reports
+function ReportsIcon() {
+  return (
+    <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4v15a1 1 0 0 0 1 1h15" />
+      <path d="M8 16v-4" />
+      <path d="M13 16V8" />
+      <path d="M18 16v-6" />
+    </svg>
+  );
+}
+
+// Open-book icon for Curriculum
+function CurriculumIcon() {
+  return (
+    <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 6.5C10.5 5.3 8.5 4.7 5.5 4.7c-.8 0-1.5.1-2 .3v13c.5-.2 1.2-.3 2-.3 3 0 5 .6 6.5 1.8" />
+      <path d="M12 6.5C13.5 5.3 15.5 4.7 18.5 4.7c.8 0 1.5.1 2 .3v13c-.5-.2-1.2-.3-2-.3-3 0-5 .6-6.5 1.8" />
+      <path d="M12 6.5v13" />
+    </svg>
+  );
+}
+
+const TOP_ICONS = { '/manager/reports': ReportsIcon, '/curriculum-roadmap': CurriculumIcon };
+
 function TopIcon({ tab, active }) {
   const navigate = useNavigate();
+  const Icon = TOP_ICONS[tab.to];
   return (
     <motion.button
       onClick={() => { if (!active) navigate(tab.to); }}
@@ -13,14 +39,10 @@ function TopIcon({ tab, active }) {
       transition={{ type: 'spring', stiffness: 500, damping: 28 }}
       aria-label={tab.label}
       aria-current={active ? 'page' : undefined}
-      className={`relative flex items-center justify-center w-11 h-11 ${GLASS}`}
+      className={`relative flex items-center justify-center w-11 h-11 ${GLASS} transition-colors ${active ? 'text-ninja-blue' : 'text-ninja-navy/70'}`}
       style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.18), 0 6px 20px rgba(0,0,0,0.3)' }}
     >
-      <img
-        src={`/icons/${tab.iconId}.png`}
-        alt=""
-        className={`w-6 h-6 ${active ? 'drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]' : 'opacity-55 grayscale-[0.3]'}`}
-      />
+      {Icon && <Icon />}
     </motion.button>
   );
 }
