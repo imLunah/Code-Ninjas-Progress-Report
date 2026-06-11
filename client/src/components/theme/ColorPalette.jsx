@@ -1,19 +1,24 @@
 import { motion } from 'framer-motion';
-import { ACCENTS } from '../../lib/accents';
+import { ACCENTS, DEFAULT_OPTION } from '../../lib/accents';
+
+// Default first, then the accent colors.
+const OPTIONS = [DEFAULT_OPTION, ...ACCENTS];
 
 /**
- * Horizontal row of circular accent swatches. Selected swatch scales up with
- * an animated ring (shared layoutId). Keyboard: arrows move, Enter/Space select.
- * Scrolls horizontally on narrow viewports.
+ * Row of circular swatches: a "Default" (restore stock theme) chip followed by
+ * the accent colors. Selected swatch scales up with an animated ring. Keyboard:
+ * arrows move, Enter/Space select. Scrolls horizontally on narrow viewports.
  */
 export default function ColorPalette({ value, onChange }) {
+  const current = value || 'default';
+
   const handleKey = (e, idx) => {
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
       e.preventDefault();
-      onChange(ACCENTS[(idx + 1) % ACCENTS.length].id);
+      onChange(OPTIONS[(idx + 1) % OPTIONS.length].id);
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
       e.preventDefault();
-      onChange(ACCENTS[(idx - 1 + ACCENTS.length) % ACCENTS.length].id);
+      onChange(OPTIONS[(idx - 1 + OPTIONS.length) % OPTIONS.length].id);
     }
   };
 
@@ -23,8 +28,9 @@ export default function ColorPalette({ value, onChange }) {
       aria-label="Accent color"
       className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1 px-0.5"
     >
-      {ACCENTS.map((a, idx) => {
-        const active = value === a.id;
+      {OPTIONS.map((a, idx) => {
+        const active = current === a.id;
+        const isDefault = a.id === 'default';
         return (
           <button
             key={a.id}
@@ -51,9 +57,16 @@ export default function ColorPalette({ value, onChange }) {
               whileTap={{ scale: 0.92 }}
               animate={{ scale: active ? 1.1 : 1 }}
               transition={{ type: 'spring', stiffness: 400, damping: 24 }}
-              className="block w-8 h-8 rounded-full ring-1 ring-black/10"
+              className="flex items-center justify-center w-8 h-8 rounded-full ring-1 ring-black/10"
               style={{ backgroundColor: a.swatch }}
-            />
+            >
+              {isDefault && (
+                // a "reset / none" glyph so Default reads as classic, not a color
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round">
+                  <path d="M3 12a9 9 0 1 0 3-6.7" /><polyline points="3 4 3 9 8 9" />
+                </svg>
+              )}
+            </motion.span>
           </button>
         );
       })}

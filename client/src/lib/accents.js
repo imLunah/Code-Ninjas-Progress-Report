@@ -21,6 +21,14 @@ export const ACCENTS = [
 
 export const DEFAULT_ACCENT = 'blue';
 
+// The "Default" choice — restores the original DojoLink light/dark theme with
+// no accent tinting (ThemeContext clears the inline CSS vars when selected).
+export const DEFAULT_OPTION = { id: 'default', label: 'Default', swatch: '#64748b' };
+
+export function isDefaultAccent(id) {
+  return !id || id === 'default';
+}
+
 export function getAccent(id) {
   return ACCENTS.find((a) => a.id === id) || ACCENTS.find((a) => a.id === DEFAULT_ACCENT);
 }
