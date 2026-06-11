@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { getAccent } from '../../lib/accents';
+import { getAccent, isDefaultAccent, DEFAULT_OPTION } from '../../lib/accents';
 import ThemeCustomizerModal from '../theme/ThemeCustomizerModal';
 
 function NavIcon({ id, svg }) {
@@ -48,7 +48,7 @@ export default function Sidebar({ onOpenBug }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [themeOpen, setThemeOpen] = useState(false);
-  const activeAccent = getAccent(accent);
+  const accentSwatch = isDefaultAccent(accent) ? DEFAULT_OPTION.swatch : getAccent(accent).swatch;
 
   const ROADMAP_LINK = { to: '/curriculum-roadmap', label: 'Roadmap', icon: 'roadmap' };
 
@@ -150,7 +150,7 @@ export default function Sidebar({ onOpenBug }) {
             </span>
             <span className="text-ninja-navy font-ninja text-sm font-semibold">Appearance</span>
           </span>
-          <span className="w-4 h-4 rounded-full ring-1 ring-black/10 flex-shrink-0" style={{ backgroundColor: activeAccent.swatch }} />
+          <span className="w-4 h-4 rounded-full ring-1 ring-black/10 flex-shrink-0" style={{ backgroundColor: accentSwatch }} />
         </button>
       </div>
 

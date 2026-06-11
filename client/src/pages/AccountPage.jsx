@@ -5,13 +5,14 @@ import Layout from '../components/layout/Layout';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { getAccent } from '../lib/accents';
+import { getAccent, isDefaultAccent, DEFAULT_OPTION } from '../lib/accents';
 import { ONBOARDING_ENABLED } from '../lib/features';
 
 export default function AccountPage() {
   const { user, setUser, logout, switchLocation } = useAuth();
   const { dark, accent } = useTheme();
-  const activeAccent = getAccent(accent);
+  const accentLabel = isDefaultAccent(accent) ? DEFAULT_OPTION.label : getAccent(accent).label;
+  const accentSwatch = isDefaultAccent(accent) ? DEFAULT_OPTION.swatch : getAccent(accent).swatch;
   const navigate = useNavigate();
 
   const [username, setUsername] = useState(user?.username || '');
@@ -212,11 +213,11 @@ export default function AccountPage() {
               </span>
               <div>
                 <p className="text-ninja-navy font-ninja font-semibold text-sm">Appearance</p>
-                <p className="text-ninja-muted font-ninja text-xs">{dark ? 'Dark' : 'Light'} · {activeAccent.label}</p>
+                <p className="text-ninja-muted font-ninja text-xs">{dark ? 'Dark' : 'Light'} · {accentLabel}</p>
               </div>
             </div>
             <div className="flex items-center gap-2.5">
-              <span className="w-4 h-4 rounded-full border border-black/10" style={{ backgroundColor: activeAccent.swatch }} />
+              <span className="w-4 h-4 rounded-full border border-black/10" style={{ backgroundColor: accentSwatch }} />
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-ninja-muted"><polyline points="9 18 15 12 9 6" /></svg>
             </div>
           </div>

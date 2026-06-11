@@ -1,23 +1,23 @@
-import { motion, MotionConfig } from 'framer-motion';
+import { MotionConfig } from 'framer-motion';
 import { useTheme } from '../../context/ThemeContext';
-import { getAccent } from '../../lib/accents';
+import { getAccent, isDefaultAccent, DEFAULT_OPTION } from '../../lib/accents';
 import ModeToggle from './ModeToggle';
 import ColorPalette from './ColorPalette';
-import IntensitySlider from './IntensitySlider';
-import GlowKnob from './GlowKnob';
-import PreviewOrb from './PreviewOrb';
 
 /**
  * Theme customizer. A clean, native-feeling settings card built on the app's
  * own ninja-* tokens, so it recolors with the chosen accent and reads at home
- * in both light and dark. Drives the live theme through ThemeContext.
+ * in both light and dark. Controls: light/dark mode + accent color (with a
+ * Default option that restores the original DojoLink theme).
  *
- * `onClose` (optional) renders a close button — used when shown in the desktop
- * popup. Omit it for the full-page (mobile) view.
+ * `onClose` (optional) renders a close button — used in the desktop popup.
  */
 export default function ThemeCustomizer({ onClose, className = '' }) {
-  const { settings, setMode, setAccent, setIntensity, setGlow } = useTheme();
+  const { settings, setMode, setAccent } = useTheme();
+  const isDefault = isDefaultAccent(settings.accentColor);
   const accent = getAccent(settings.accentColor);
+  const headerSwatch = isDefault ? DEFAULT_OPTION.swatch : accent.swatch;
+  const headerLabel = isDefault ? 'Default' : accent.label;
 
   return (
     <MotionConfig reducedMotion="user">
@@ -28,15 +28,12 @@ export default function ThemeCustomizer({ onClose, className = '' }) {
         {/* header */}
         <header className="flex items-center justify-between px-5 pt-5 pb-4">
           <div className="flex items-center gap-2.5">
-            <span
-              className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: 'rgb(var(--ninja-blue) / 0.12)' }}
-            >
-              <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: accent.swatch }} />
+            <span className="w-7 h-7 rounded-lg flex items-center justify-center bg-ninja-bg">
+              <span className="w-3.5 h-3.5 rounded-full ring-1 ring-black/10" style={{ backgroundColor: headerSwatch }} />
             </span>
             <div>
               <h2 className="text-base font-bold font-ninja text-ninja-navy leading-tight">Theme</h2>
-              <p className="text-xs font-ninja text-ninja-muted leading-tight">{accent.label} · {settings.mode === 'dark' ? 'Dark' : 'Light'}</p>
+              <p className="text-xs font-ninja text-ninja-muted leading-tight">{headerLabel} · {settings.mode === 'dark' ? 'Dark' : 'Light'}</p>
             </div>
           </div>
           {onClose && (
@@ -54,26 +51,30 @@ export default function ThemeCustomizer({ onClose, className = '' }) {
 
         <div className="px-5 pb-5 flex flex-col gap-5">
           {/* mode */}
-          <ModeToggle mode={settings.mode} onChange={setMode} />
+          <div>
+            <p className="text-xs font-bold font-ninja uppercase tracking-wide text-ninja-muted mb-2.5">Mode</p>
+            <ModeToggle mode={settings.mode} onChange={setMode} />
+          </div>
 
-          {/* preview */}
-          <PreviewOrb accentSwatch={accent.swatch} intensity={settings.intensity} glow={settings.glow} />
+          {/* live preview — reflects the current tokens */}
+          <div className="rounded-2xl border border-ninja-border bg-ninja-bg p-4">
+            <div className="rounded-xl bg-white border border-ninja-border p-3 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-bold font-ninja text-ninja-navy leading-tight truncate">Today's Ninjas</p>
+                  <p className="text-xs font-ninja text-ninja-muted leading-tight">Live preview</p>
+                </div>
+                <span className="px-3 py-1.5 rounded-lg bg-ninja-blue text-white text-xs font-bold font-ninja whitespace-nowrap">
+                  Check In
+                </span>
+              </div>
+            </div>
+          </div>
 
           {/* palette */}
           <div>
             <p className="text-xs font-bold font-ninja uppercase tracking-wide text-ninja-muted mb-2.5">Accent</p>
             <ColorPalette value={settings.accentColor} onChange={setAccent} />
-          </div>
-
-          {/* divider */}
-          <div className="h-px bg-ninja-border" />
-
-          {/* intensity + glow */}
-          <div className="flex items-end gap-5">
-            <div className="flex-1 min-w-0">
-              <IntensitySlider value={settings.intensity} onChange={setIntensity} />
-            </div>
-            <GlowKnob value={settings.glow} onChange={setGlow} />
           </div>
         </div>
       </section>

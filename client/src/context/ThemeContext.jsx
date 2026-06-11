@@ -1,18 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { getAccent, buildAccentTokens, DEFAULT_ACCENT } from '../lib/accents';
+import { getAccent, buildAccentTokens, isDefaultAccent } from '../lib/accents';
 
 const ThemeContext = createContext(null);
 
-function readNumber(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw === null) return fallback;
-    const n = parseFloat(raw);
-    return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : fallback;
-  } catch {
-    return fallback;
-  }
-}
+const ACCENT_VARS = ['--ninja-bg', '--ninja-border', '--ninja-navy', '--ninja-muted', '--ninja-blue', '--ninja-blue-hover'];
 
 export function ThemeProvider({ children }) {
   const [dark, setDark] = useState(() => {
@@ -22,11 +13,10 @@ export function ThemeProvider({ children }) {
     } catch { return true; }
   });
 
+  // 'default' = original DojoLink theme (no accent tint). Otherwise an accent id.
   const [accent, setAccentState] = useState(() => {
-    try { return getAccent(localStorage.getItem('dj-accent')).id; } catch { return DEFAULT_ACCENT; }
+    try { return localStorage.getItem('dj-accent') || 'default'; } catch { return 'default'; }
   });
-  const [intensity, setIntensityState] = useState(() => readNumber('dj-intensity', 0.6));
-  const [glow, setGlowState] = useState(() => readNumber('dj-glow', 0.35));
 
   // ── Mode (light/dark) ──────────────────────────────────────────────
   useEffect(() => {
@@ -43,44 +33,33 @@ export function ThemeProvider({ children }) {
     return () => clearTimeout(t);
   }, [dark]);
 
-  // ── Accent → retint the WHOLE theme globally ────────────────────────
-  // Blends the accent into the neutral surface/text tokens (bg, border, navy,
-  // muted) plus the accent tokens. Inline vars on <html> beat both :root and
-  // .dark rules, so one set works in either mode. Re-runs on mode change.
+  // ── Accent → retint the whole theme, or clear for Default ───────────
+  // Inline vars on <html> beat both :root and .dark rules. For 'default' we
+  // remove them so the stock index.css values rule again.
   useEffect(() => {
     const root = document.documentElement;
-    const a = getAccent(accent);
-    const tokens = buildAccentTokens(a, dark);
+    if (isDefaultAccent(accent)) {
+      ACCENT_VARS.forEach((v) => root.style.removeProperty(v));
+      localStorage.setItem('dj-accent', 'default');
+      return;
+    }
+    const tokens = buildAccentTokens(getAccent(accent), dark);
     for (const [k, v] of Object.entries(tokens)) root.style.setProperty(k, v);
-    localStorage.setItem('dj-accent', a.id);
+    localStorage.setItem('dj-accent', accent);
   }, [accent, dark]);
-
-  // ── Intensity + glow → global CSS vars ──────────────────────────────
-  useEffect(() => {
-    document.documentElement.style.setProperty('--theme-intensity', String(intensity));
-    localStorage.setItem('dj-intensity', String(intensity));
-  }, [intensity]);
-
-  useEffect(() => {
-    document.documentElement.style.setProperty('--theme-glow', String(glow));
-    localStorage.setItem('dj-glow', String(glow));
-  }, [glow]);
 
   const toggle = () => setDark((d) => !d);
   const setMode = (mode) => setDark(mode === 'dark');
-  const setAccent = (id) => setAccentState(getAccent(id).id);
-  const clamp01 = (n) => Math.min(1, Math.max(0, n));
-  const setIntensity = (n) => setIntensityState(clamp01(n));
-  const setGlow = (n) => setGlowState(clamp01(n));
+  const setAccent = (id) => setAccentState(isDefaultAccent(id) ? 'default' : getAccent(id).id);
 
   const settings = useMemo(
-    () => ({ mode: dark ? 'dark' : 'light', accentColor: accent, intensity, glow }),
-    [dark, accent, intensity, glow]
+    () => ({ mode: dark ? 'dark' : 'light', accentColor: accent }),
+    [dark, accent]
   );
 
   const value = useMemo(
-    () => ({ dark, toggle, setMode, accent, setAccent, intensity, setIntensity, glow, setGlow, settings }),
-    [dark, accent, intensity, glow, settings]
+    () => ({ dark, toggle, setMode, accent, setAccent, settings }),
+    [dark, accent, settings]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
