@@ -50,19 +50,21 @@ function ClubCard({ club, onClick, onDelete, onEdit, canManage }) {
           {hasCover ? (
             <img src={club.cover_image_url} alt={club.name} onError={() => setCoverError(true)} className="w-full h-full object-cover" />
           ) : (
-            <span className="absolute -right-1 -top-4 font-ninja font-black text-white/20 leading-none select-none" style={{ fontSize: '6rem' }}>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 font-ninja font-black text-white/15 leading-none select-none" style={{ fontSize: '3.75rem' }}>
               {initial}
             </span>
           )}
         </div>
 
-        {/* Monogram avatar straddling header/body */}
+        {/* Monogram avatar straddling header/body — halo uses bg-white (themed surface), not ring-white */}
         <div className="px-5">
-          <div
-            className="w-12 h-12 -mt-6 rounded-2xl flex items-center justify-center text-white font-black font-ninja text-xl shadow-md ring-4 ring-white"
-            style={{ background: c.solid }}
-          >
-            {initial}
+          <div className="-mt-6 inline-block rounded-[1.15rem] bg-white p-1 shadow-md">
+            <div
+              className="w-11 h-11 rounded-2xl flex items-center justify-center text-white font-black font-ninja text-lg"
+              style={{ background: c.solid }}
+            >
+              {initial}
+            </div>
           </div>
         </div>
 
