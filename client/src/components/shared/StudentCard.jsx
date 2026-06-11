@@ -29,8 +29,9 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
   const multiPendingCount = Object.values(pendingPerProgram).filter(c => c > 1).reduce((s, c) => s + c, 0);
   const hasMultipleSessions = multiPendingCount > 0;
 
-  // For CREATE badge details, pull from the primary assignment or the student object
-  const createAssignment = assignments.find((a) => a.program === 'CREATE') || {};
+  // Belts only apply to non-CREATE programs (CREATE is self-evident; a belt
+  // there is just clutter). Show a belt only when a non-CREATE assignment has one.
+  const beltAssignment = assignments.find((a) => a.program !== 'CREATE' && a.belt_level);
   const isBirthday = isBirthdayToday(student.birthday);
 
   return (
@@ -62,10 +63,10 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
             {[...new Set(assignments.map(a => a.program))].map((program) => (
               <ProgramBadge key={program} program={program} size="sm" />
             ))}
-            {createAssignment.belt_level && (
+            {beltAssignment && (
               <BeltBadge
-                belt={createAssignment.belt_level || student.belt_level}
-                sublevel={createAssignment.belt_sublevel || student.belt_sublevel}
+                belt={beltAssignment.belt_level}
+                sublevel={beltAssignment.belt_sublevel}
                 size="xs"
               />
             )}
@@ -76,9 +77,9 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
               {assignments.filter((a) => a.completed).length}/{assignments.length} sessions logged
             </p>
           )}
-          {!allCompleted && !someCompleted && (
-            <p className={`font-ninja text-xs mt-1 font-semibold ${isOverdue ? 'text-red-600' : 'text-yellow-600'}`}>
-              {isOverdue ? 'Overdue' : 'Not logged yet'}
+          {!allCompleted && !someCompleted && !isOverdue && (
+            <p className="font-ninja text-xs mt-1 font-semibold text-yellow-600">
+              Not logged yet
             </p>
           )}
 
