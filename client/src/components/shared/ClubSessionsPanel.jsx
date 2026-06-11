@@ -119,10 +119,10 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
             const isEditingAttendees = editingAttendeesId === s.id;
             const sessionDateStr = String(s.session_date).split('T')[0];
             const isPast = sessionDateStr < todayStr;
-            const borderClass = isPast ? 'border-red-400' : 'border-yellow-300';
+            const attendeeCount = s.attendees?.length ?? 0;
 
             return (
-              <div key={s.id} className={`relative bg-white border ${borderClass} rounded-xl shadow-sm p-4 flex flex-col gap-3`}>
+              <div key={s.id} className="relative bg-white border border-ninja-border rounded-xl shadow-sm p-4 flex flex-col gap-3 hover:border-ninja-blue/50 transition-colors">
                 {/* X delete button */}
                 {isManager && !isReadOnly && confirmId !== s.id && (
                   <button
@@ -133,12 +133,29 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
                   </button>
                 )}
                 {/* Header */}
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <ClubBadge name={s.club_name} />
-                    <span className="text-ninja-muted font-ninja text-xs pr-4">{s.attendees?.length ?? 0} students</span>
+                <div className="pr-6">
+                  <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                    <h3 className="font-ninja font-bold text-ninja-navy text-sm leading-snug">{s.club_name}</h3>
+                    {isPast && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-amber-400/15 text-amber-500 text-[10px] font-ninja font-bold uppercase tracking-wide">
+                        Needs logging
+                      </span>
+                    )}
                   </div>
-                  <p className="text-ninja-muted font-ninja text-xs mt-1">{formatDate(s.session_date)}</p>
+                  <div className="flex items-center gap-3 text-ninja-muted font-ninja text-xs">
+                    <span className="inline-flex items-center gap-1">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <rect x="3" y="4" width="18" height="18" rx="2" /><path strokeLinecap="round" d="M16 2v4M8 2v4M3 10h18" />
+                      </svg>
+                      {formatDate(s.session_date)}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87" />
+                      </svg>
+                      {attendeeCount} {attendeeCount === 1 ? 'ninja' : 'ninjas'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Attendees toggle */}
@@ -222,7 +239,7 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
                 {!isReadOnly && (
                   <button
                     onClick={() => navigate(`/clubs/${toSlug(s.club_name)}/sessions/${s.id}`)}
-                    className="w-full text-sm font-ninja font-bold text-ninja-blue border border-ninja-blue rounded-lg py-1.5 hover:bg-ninja-blue hover:text-white transition-colors"
+                    className="mt-auto w-full text-sm font-ninja font-bold text-white bg-ninja-blue rounded-lg py-2 hover:bg-ninja-blue/90 transition-colors"
                   >
                     Log Progress
                   </button>
