@@ -69,9 +69,9 @@ export default function ThemeCustomizer({ onClose, className = '' }) {
             </div>
           </div>
 
-          {/* palette */}
+          {/* palette — the centerpiece */}
           <div>
-            <p className="text-xs font-bold font-ninja uppercase tracking-wide text-ninja-muted mb-2.5">Accent</p>
+            <p className="text-xs font-bold font-ninja uppercase tracking-wide text-ninja-muted mb-3 text-center">Accent Color</p>
             <ColorPalette value={settings.accentColor} onChange={setAccent} />
           </div>
         </div>
