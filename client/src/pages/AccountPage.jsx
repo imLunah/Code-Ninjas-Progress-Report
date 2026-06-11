@@ -5,6 +5,7 @@ import Layout from '../components/layout/Layout';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { ONBOARDING_ENABLED } from '../lib/features';
 
 export default function AccountPage() {
   const { user, setUser, logout, switchLocation } = useAuth();
@@ -252,6 +253,7 @@ export default function AccountPage() {
         </motion.a>
 
         {/* Getting Started */}
+        {ONBOARDING_ENABLED && (
         <motion.a
           href="/getting-started"
           initial={{ opacity: 0, y: 12 }}
@@ -272,6 +274,7 @@ export default function AccountPage() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-ninja-muted"><polyline points="9 18 15 12 9 6" /></svg>
           </div>
         </motion.a>
+        )}
 
         {/* Location */}
         {!isForced && (

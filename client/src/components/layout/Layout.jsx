@@ -7,6 +7,7 @@ import MobileTopBar from './MobileTopBar';
 import BugReportButton from '../ui/BugReportButton';
 import { useAuth } from '../../context/AuthContext';
 import { getMobileNavTabs } from '../../lib/navTabs';
+import { ONBOARDING_ENABLED } from '../../lib/features';
 
 const SKIP_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON']);
 
@@ -124,7 +125,7 @@ export default function Layout({ children }) {
     if (isPreview) return;
     if (user?.mustResetPassword && location.pathname !== '/account') {
       navigate('/account', { replace: true });
-    } else if (user && !user.mustResetPassword && user.onboarded === false && location.pathname !== '/getting-started') {
+    } else if (ONBOARDING_ENABLED && user && !user.mustResetPassword && user.onboarded === false && location.pathname !== '/getting-started') {
       // New account, password already set → send through the Getting Started page once.
       navigate('/getting-started', { replace: true });
     }

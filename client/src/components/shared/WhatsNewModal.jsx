@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import ReleaseContent from './ReleaseContent';
+import { ONBOARDING_ENABLED } from '../../lib/features';
 
 const PANEL_SPRING = { type: 'spring', stiffness: 320, damping: 30, mass: 0.9 };
 
@@ -18,7 +19,7 @@ export default function WhatsNewModal() {
   useEffect(() => {
     if (!user) { setOpen(false); setReleases([]); checkedFor.current = null; return; }
     // Force-reset + onboarding take priority; don't stack the What's New modal on top.
-    if (user.mustResetPassword || user.onboarded === false) return;
+    if (user.mustResetPassword || (ONBOARDING_ENABLED && user.onboarded === false)) return;
     if (checkedFor.current === user.id) return;
     checkedFor.current = user.id;
     api.get('/releases/unseen')
