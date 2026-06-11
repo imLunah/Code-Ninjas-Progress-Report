@@ -36,26 +36,23 @@ export default function ColorPalette({ value, onChange }) {
             onClick={() => onChange(a.id)}
             onKeyDown={(e) => handleKey(e, idx)}
             className="relative flex-shrink-0 outline-none rounded-full
-                       focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2
-                       focus-visible:ring-offset-transparent"
+                       focus-visible:ring-2 focus-visible:ring-ninja-blue/50 focus-visible:ring-offset-2
+                       focus-visible:ring-offset-white"
           >
             {active && (
               <motion.span
                 layoutId="accentRing"
                 transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-                className="absolute -inset-1.5 rounded-full border-2 border-white/80"
+                className="absolute -inset-1.5 rounded-full border-2 border-ninja-navy"
               />
             )}
             <motion.span
               whileHover={{ scale: 1.14 }}
               whileTap={{ scale: 0.92 }}
-              animate={{ scale: active ? 1.12 : 1 }}
+              animate={{ scale: active ? 1.1 : 1 }}
               transition={{ type: 'spring', stiffness: 400, damping: 24 }}
-              className="block w-8 h-8 rounded-full"
-              style={{
-                backgroundColor: a.swatch,
-                boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.45), inset 0 -2px 4px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.3)',
-              }}
+              className="block w-8 h-8 rounded-full ring-1 ring-black/10"
+              style={{ backgroundColor: a.swatch }}
             />
           </button>
         );

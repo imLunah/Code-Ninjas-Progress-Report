@@ -42,10 +42,10 @@ export default function IntensitySlider({ value, onChange }) {
   return (
     <div className="select-none">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-semibold font-ninja uppercase tracking-wide text-white/55">
-          Gradient Intensity
+        <span className="text-xs font-bold font-ninja uppercase tracking-wide text-ninja-muted">
+          Intensity
         </span>
-        <span className="text-xs font-bold font-ninja text-white/80 tabular-nums">{pct}%</span>
+        <span className="text-xs font-bold font-ninja text-ninja-navy tabular-nums">{pct}%</span>
       </div>
 
       <div
@@ -59,32 +59,27 @@ export default function IntensitySlider({ value, onChange }) {
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onKeyDown={handleKey}
-        className="relative h-10 cursor-pointer touch-none outline-none rounded-2xl px-1
-                   focus-visible:ring-2 focus-visible:ring-white/40"
+        className="relative h-9 cursor-pointer touch-none outline-none rounded-2xl px-1
+                   focus-visible:ring-2 focus-visible:ring-ninja-blue/40"
       >
         <svg viewBox="0 0 256 32" preserveAspectRatio="none" className="absolute inset-0 w-full h-full overflow-visible">
           <defs>
             <clipPath id="intensityFill"><rect x="0" y="0" width={256 * value} height="32" /></clipPath>
-            <linearGradient id="intensityGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="rgb(var(--ninja-blue))" stopOpacity="0.5" />
-              <stop offset="100%" stopColor="rgb(var(--ninja-blue))" />
-            </linearGradient>
           </defs>
           {/* base waveform */}
-          <path d={WAVE} fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth="2.5" strokeLinecap="round" />
+          <path d={WAVE} fill="none" stroke="rgb(var(--ninja-border))" strokeWidth="2.5" strokeLinecap="round" />
           {/* filled waveform */}
-          <path d={WAVE} fill="none" stroke="url(#intensityGrad)" strokeWidth="3" strokeLinecap="round" clipPath="url(#intensityFill)" />
+          <path d={WAVE} fill="none" stroke="rgb(var(--ninja-blue))" strokeWidth="3" strokeLinecap="round" clipPath="url(#intensityFill)" />
         </svg>
 
-        {/* glass thumb */}
+        {/* thumb */}
         <motion.div
-          className="absolute top-1/2 w-7 h-7 rounded-full pointer-events-none"
+          className="absolute top-1/2 w-6 h-6 rounded-full pointer-events-none"
           style={{ x: '-50%', y: '-50%' }}
           animate={{ left: `${value * 100}%` }}
           transition={{ type: 'spring', stiffness: 600, damping: 38 }}
         >
-          <div className="w-full h-full rounded-full bg-white/25 border border-white/40 backdrop-blur-md
-                          shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_2px_rgba(255,255,255,0.6)]" />
+          <div className="w-full h-full rounded-full bg-white border-2 border-ninja-blue shadow-md" />
         </motion.div>
       </div>
     </div>

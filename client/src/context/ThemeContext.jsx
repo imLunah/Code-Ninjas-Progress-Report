@@ -26,7 +26,7 @@ export function ThemeProvider({ children }) {
     try { return getAccent(localStorage.getItem('dj-accent')).id; } catch { return DEFAULT_ACCENT; }
   });
   const [intensity, setIntensityState] = useState(() => readNumber('dj-intensity', 0.6));
-  const [glow, setGlowState] = useState(() => readNumber('dj-glow', 0.45));
+  const [glow, setGlowState] = useState(() => readNumber('dj-glow', 0.35));
 
   // ── Mode (light/dark) ──────────────────────────────────────────────
   useEffect(() => {
