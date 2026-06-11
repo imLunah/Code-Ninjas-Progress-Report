@@ -85,7 +85,7 @@ export default function ManagerDashboard() {
               { label: 'Logged today',  value: assignments.filter(a => a.completed).length, color: '#22c55e' },
               { label: 'Pending',       value: assignments.filter(a => !a.completed && !(a.session_date && String(a.session_date).split('T')[0] < todayStr)).length, color: '#eab308' },
               { label: 'Overdue',       value: assignments.filter(a => !a.completed && a.session_date && String(a.session_date).split('T')[0] < todayStr).length, color: '#ef4444' },
-              { label: 'Total today',   value: assignments.length, color: '#006ADD' },
+              { label: 'Total today',   value: assignments.length, color: 'rgb(var(--ninja-blue))' },
             ].map((s, i) => (
               <motion.div
                 key={s.label}
