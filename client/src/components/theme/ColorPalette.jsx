@@ -16,10 +16,8 @@ export default function ColorPalette({ value, onChange }) {
 
   const handleKey = (e, idx) => {
     let next = idx;
-    if (e.key === 'ArrowRight') next = (idx + 1) % CELLS.length;
-    else if (e.key === 'ArrowLeft') next = (idx - 1 + CELLS.length) % CELLS.length;
-    else if (e.key === 'ArrowDown') next = Math.min(idx + 8, CELLS.length - 1);
-    else if (e.key === 'ArrowUp') next = Math.max(idx - 8, 0);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (idx + 1) % CELLS.length;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (idx - 1 + CELLS.length) % CELLS.length;
     else return;
     e.preventDefault();
     onChange(CELLS[next]);
@@ -29,7 +27,7 @@ export default function ColorPalette({ value, onChange }) {
     <div
       role="radiogroup"
       aria-label="Accent color"
-      className="grid grid-cols-8 gap-2.5 justify-items-center"
+      className="flex flex-wrap items-center justify-center gap-3"
     >
       {CELLS.map((cell, idx) => {
         const isDefault = cell === 'default';

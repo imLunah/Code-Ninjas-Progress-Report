@@ -21,13 +21,10 @@ export const ACCENTS = [
 
 export const DEFAULT_ACCENT = 'blue';
 
-// In-panel color palette — a spread of hues × shades the user taps directly
-// (no native OS picker). Each value is a hex stored straight as the accent.
+// A small, clean set of preset accents the user taps directly. Fine-tuning is
+// done in the color map above; these are just quick picks.
 export const SWATCH_GRID = [
-  '#64748b', '#6b7280', '#ef4444', '#dc2626', '#f97316', '#ea580c', '#f59e0b', '#eab308',
-  '#84cc16', '#22c55e', '#16a34a', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6',
-  '#2563eb', '#6366f1', '#4f46e5', '#8b5cf6', '#a855f7', '#9333ea', '#d946ef', '#ec4899',
-  '#db2777', '#f43f5e',
+  '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#8b5cf6', '#ec4899',
 ];
 
 // The "Default" choice — restores the original DojoLink light/dark theme with
