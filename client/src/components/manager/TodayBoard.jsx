@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { today } from '../../utils/dateUtils';
-import BeltBadge from '../ui/BeltBadge';
 import ProgramBadge from '../ui/ProgramBadge';
 import { isBirthdayToday } from '../shared/BirthdayConfetti';
 
@@ -121,7 +120,6 @@ export default function TodayBoard({ assignments, onRemove }) {
             const dotClass = isOverdue ? 'bg-red-400' : 'bg-yellow-400';
             const sessionCount = group.assignments.length;
             const uniquePrograms = [...new Set(group.assignments.map((a) => a.program))];
-            const createAssignment = group.assignments.find((a) => a.program === 'CREATE');
             const removeId = group.assignments[0].id;
 
             return (
@@ -182,9 +180,6 @@ export default function TodayBoard({ assignments, onRemove }) {
                 </div>
                 <div className="flex flex-wrap items-center gap-2 mb-2">
                   {uniquePrograms.map((p) => <ProgramBadge key={p} program={p} size="sm" />)}
-                  {createAssignment?.belt_level && (
-                    <BeltBadge belt={createAssignment.belt_level} sublevel={createAssignment.belt_sublevel} size="xs" />
-                  )}
                 </div>
                 {group.assignments[0].sensei_name && (
                   <p className="text-ninja-muted font-ninja text-xs mt-1">
@@ -215,7 +210,6 @@ export default function TodayBoard({ assignments, onRemove }) {
           const dotClass = isOverdue ? 'bg-red-400' : 'bg-yellow-400';
           const sessionCount = group.assignments.length;
           const uniquePrograms = [...new Set(group.assignments.map((a) => a.program))];
-          const createAssignment = group.assignments.find((a) => a.program === 'CREATE');
           const removeId = group.assignments[0].id;
 
           return (
@@ -271,9 +265,6 @@ export default function TodayBoard({ assignments, onRemove }) {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {uniquePrograms.map((p) => <ProgramBadge key={p} program={p} size="sm" />)}
-                {createAssignment?.belt_level && (
-                  <BeltBadge belt={createAssignment.belt_level} sublevel={createAssignment.belt_sublevel} size="xs" />
-                )}
               </div>
               {isOverdue ? (
                 <p className="text-red-600 font-ninja font-semibold text-xs">Overdue</p>

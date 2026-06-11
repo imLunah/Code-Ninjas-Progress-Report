@@ -1,5 +1,4 @@
 import { today } from '../../utils/dateUtils';
-import BeltBadge from '../ui/BeltBadge';
 import ProgramBadge from '../ui/ProgramBadge';
 
 function isBirthdayToday(birthday) {
@@ -29,9 +28,6 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
   const multiPendingCount = Object.values(pendingPerProgram).filter(c => c > 1).reduce((s, c) => s + c, 0);
   const hasMultipleSessions = multiPendingCount > 0;
 
-  // Belts only apply to non-CREATE programs (CREATE is self-evident; a belt
-  // there is just clutter). Show a belt only when a non-CREATE assignment has one.
-  const beltAssignment = assignments.find((a) => a.program !== 'CREATE' && a.belt_level);
   const isBirthday = isBirthdayToday(student.birthday);
 
   return (
@@ -63,13 +59,6 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
             {[...new Set(assignments.map(a => a.program))].map((program) => (
               <ProgramBadge key={program} program={program} size="sm" />
             ))}
-            {beltAssignment && (
-              <BeltBadge
-                belt={beltAssignment.belt_level}
-                sublevel={beltAssignment.belt_sublevel}
-                size="xs"
-              />
-            )}
           </div>
 
           {someCompleted && (
