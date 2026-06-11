@@ -42,15 +42,22 @@ export default function ColorMap({ value, onChange }) {
   const [hsv, setHsv] = useState(seed);
   const svRef = useRef(null);
   const hueRef = useRef(null);
+  const lastEmit = useRef(isCustomAccent(value) ? value.toLowerCase() : null);
 
-  // Re-seed when an external pick (grid swatch / default) changes the value.
+  // Re-seed only when the value changes from OUTSIDE the map (preset swatch /
+  // default). Skipping our own emissions avoids the hex round-trip dropping the
+  // hue at the grayscale edges (s=0 or v=0), which snapped the hue to red.
   useEffect(() => {
-    if (isCustomAccent(value)) setHsv(hexToHsv(value));
+    if (!isCustomAccent(value)) return;
+    if (value.toLowerCase() === lastEmit.current) return;
+    setHsv(hexToHsv(value));
   }, [value]);
 
   const emit = useCallback((next) => {
     setHsv(next);
-    onChange(hsvToHex(next.h, next.s, next.v));
+    const hex = hsvToHex(next.h, next.s, next.v);
+    lastEmit.current = hex.toLowerCase();
+    onChange(hex);
   }, [onChange]);
 
   const svFromPointer = (clientX, clientY) => {
