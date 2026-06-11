@@ -1,9 +1,21 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { getAccent, buildAccentTokens, buildCustomTokens, isDefaultAccent, isCustomAccent } from '../lib/accents';
 
 const ThemeContext = createContext(null);
 
 const ACCENT_VARS = ['--ninja-bg', '--ninja-border', '--ninja-navy', '--ninja-muted', '--ninja-blue', '--ninja-blue-hover'];
+
+// Write the accent CSS vars straight to <html>. Pure DOM — no React, no
+// storage — so it's cheap enough to call on every drag frame.
+function writeAccentVars(accent, dark) {
+  const root = document.documentElement;
+  if (isDefaultAccent(accent)) {
+    ACCENT_VARS.forEach((v) => root.style.removeProperty(v));
+    return;
+  }
+  const tokens = isCustomAccent(accent) ? buildCustomTokens(accent, dark) : buildAccentTokens(getAccent(accent), dark);
+  for (const [k, v] of Object.entries(tokens)) root.style.setProperty(k, v);
+}
 
 export function ThemeProvider({ children }) {
   const [dark, setDark] = useState(() => {
@@ -37,16 +49,13 @@ export function ThemeProvider({ children }) {
   // Inline vars on <html> beat both :root and .dark rules. For 'default' we
   // remove them so the stock index.css values rule again.
   useEffect(() => {
-    const root = document.documentElement;
-    if (isDefaultAccent(accent)) {
-      ACCENT_VARS.forEach((v) => root.style.removeProperty(v));
-      localStorage.setItem('dj-accent', 'default');
-      return;
-    }
-    const tokens = isCustomAccent(accent) ? buildCustomTokens(accent, dark) : buildAccentTokens(getAccent(accent), dark);
-    for (const [k, v] of Object.entries(tokens)) root.style.setProperty(k, v);
-    localStorage.setItem('dj-accent', accent);
+    writeAccentVars(accent, dark);
+    localStorage.setItem('dj-accent', isDefaultAccent(accent) ? 'default' : accent);
   }, [accent, dark]);
+
+  // Live, throwaway accent application for dragging — paints the CSS vars
+  // without touching React state or localStorage (no app-wide re-render).
+  const previewAccent = useCallback((hex) => writeAccentVars(hex, dark), [dark]);
 
   const toggle = () => setDark((d) => !d);
   const setMode = (mode) => setDark(mode === 'dark');
@@ -62,8 +71,8 @@ export function ThemeProvider({ children }) {
   );
 
   const value = useMemo(
-    () => ({ dark, toggle, setMode, accent, setAccent, settings }),
-    [dark, accent, settings]
+    () => ({ dark, toggle, setMode, accent, setAccent, previewAccent, settings }),
+    [dark, accent, settings, previewAccent]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

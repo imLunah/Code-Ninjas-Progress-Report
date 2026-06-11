@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { isCustomAccent } from '../../lib/accents';
 
 const clamp = (n, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, n));
@@ -35,43 +35,51 @@ function hexToHsv(hex) {
 
 /**
  * Draggable hue/shade color map: a 2D saturation–value square with a movable
- * handle, plus a hue spectrum slider below. Emits a hex on every change.
+ * handle plus a hue slider. HSV is the single source of truth here — the hue
+ * is never derived back from the emitted hex, so dragging to the grayscale
+ * edges can't snap the hue. During a drag we only `onPreview` (cheap DOM paint)
+ * and commit once via `onChange` on release, so the app doesn't re-render mid-drag.
  */
-export default function ColorMap({ value, onChange }) {
-  const seed = isCustomAccent(value) ? hexToHsv(value) : { h: 213, s: 0.75, v: 0.96 };
-  const [hsv, setHsv] = useState(seed);
+export default function ColorMap({ value, onChange, onPreview }) {
+  const [hsv, setHsv] = useState(() => (isCustomAccent(value) ? hexToHsv(value) : { h: 213, s: 0.75, v: 0.96 }));
   const svRef = useRef(null);
   const hueRef = useRef(null);
-  const lastEmit = useRef(isCustomAccent(value) ? value.toLowerCase() : null);
+  const ownHex = useRef(isCustomAccent(value) ? value.toLowerCase() : null);
 
-  // Re-seed only when the value changes from OUTSIDE the map (preset swatch /
-  // default). Skipping our own emissions avoids the hex round-trip dropping the
-  // hue at the grayscale edges (s=0 or v=0), which snapped the hue to red.
+  // Sync from an OUTSIDE change (preset swatch / default) — never from our own
+  // commits (ownHex guards that), so the round-trip can't disturb the hue.
   useEffect(() => {
     if (!isCustomAccent(value)) return;
-    if (value.toLowerCase() === lastEmit.current) return;
+    if (value.toLowerCase() === ownHex.current) return;
     setHsv(hexToHsv(value));
+    ownHex.current = value.toLowerCase();
   }, [value]);
 
-  const emit = useCallback((next) => {
+  const apply = (next, commit) => {
     setHsv(next);
     const hex = hsvToHex(next.h, next.s, next.v);
-    lastEmit.current = hex.toLowerCase();
-    onChange(hex);
-  }, [onChange]);
+    ownHex.current = hex.toLowerCase();
+    if (commit) onChange(hex);
+    else onPreview?.(hex);
+  };
 
   const svFromPointer = (clientX, clientY) => {
     const r = svRef.current.getBoundingClientRect();
-    emit({ ...hsv, s: clamp((clientX - r.left) / r.width), v: clamp(1 - (clientY - r.top) / r.height) });
+    apply({ ...hsv, s: clamp((clientX - r.left) / r.width), v: clamp(1 - (clientY - r.top) / r.height) }, false);
   };
   const hueFromPointer = (clientX) => {
     const r = hueRef.current.getBoundingClientRect();
-    emit({ ...hsv, h: clamp((clientX - r.left) / r.width) * 360, s: hsv.s || 0.75, v: hsv.v || 0.96 });
+    apply({ ...hsv, h: clamp((clientX - r.left) / r.width) * 360 }, false);
   };
+
+  // Commit the current color to React state / storage on release.
+  const commit = () => onChange(hsvToHex(hsv.h, hsv.s, hsv.v));
 
   const drag = (handler) => ({
     onPointerDown: (e) => { e.currentTarget.setPointerCapture(e.pointerId); handler(e); },
     onPointerMove: (e) => { if (e.buttons) handler(e); },
+    onPointerUp: commit,
+    onLostPointerCapture: commit,
   });
 
   const svKey = (e) => {
@@ -83,7 +91,7 @@ export default function ColorMap({ value, onChange }) {
     else if (e.key === 'ArrowDown') v = clamp(v - step);
     else return;
     e.preventDefault();
-    emit({ ...hsv, s, v });
+    apply({ ...hsv, s, v }, true);
   };
   const hueKey = (e) => {
     const step = e.shiftKey ? 24 : 6;
@@ -92,7 +100,7 @@ export default function ColorMap({ value, onChange }) {
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') h = (h - step + 360) % 360;
     else return;
     e.preventDefault();
-    emit({ ...hsv, h });
+    apply({ ...hsv, h }, true);
   };
 
   const hueColor = hsvToHex(hsv.h, 1, 1);

@@ -15,7 +15,7 @@ import ColorPalette from './ColorPalette';
  * `onClose` (optional) renders a close button — used in the desktop popup.
  */
 export default function ThemeCustomizer({ onClose, className = '' }) {
-  const { settings, setMode, setAccent } = useTheme();
+  const { settings, setMode, setAccent, previewAccent } = useTheme();
   const headerSwatch = swatchFor(settings.accentColor);
   const headerLabel = labelFor(settings.accentColor);
 
@@ -102,7 +102,7 @@ export default function ThemeCustomizer({ onClose, className = '' }) {
           </div>
 
           {/* hue / shade color map */}
-          <ColorMap value={settings.accentColor} onChange={setAccent} />
+          <ColorMap value={settings.accentColor} onChange={setAccent} onPreview={previewAccent} />
 
           {/* quick swatches */}
           <div>
