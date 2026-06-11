@@ -32,7 +32,7 @@ export default function LandingPage() {
 
   if (loading || user) {
     return (
-      <div style={{ background: BG }} className="min-h-screen flex items-center justify-center">
+      <div style={{ background: BG }} className="theme-locked min-h-screen flex items-center justify-center">
         <div
           className="w-8 h-8 rounded-full border-2 animate-spin"
           style={{ borderColor: BLUE, borderTopColor: 'transparent' }}
