@@ -9,7 +9,6 @@ import ProtectedRoute from './components/layout/ProtectedRoute';
 import ParentRoute from './components/layout/ParentRoute';
 import AdminBar from './components/ui/AdminBar';
 import WhatsNewModal from './components/shared/WhatsNewModal';
-import OnboardingTour from './components/shared/OnboardingTour';
 
 import LoginPage from './pages/LoginPage';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
@@ -37,8 +36,8 @@ import CurriculumPage from './pages/admin/CurriculumPage';
 import UsersPage from './pages/admin/UsersPage';
 import SettingsPage from './pages/admin/SettingsPage';
 import ReleasesPage from './pages/admin/ReleasesPage';
-import OnboardingPage from './pages/admin/OnboardingPage';
 import ChangelogPage from './pages/ChangelogPage';
+import GettingStartedPage from './pages/GettingStartedPage';
 
 export default function App() {
   return (
@@ -80,12 +79,12 @@ export default function App() {
             <Route path="/admin/users" element={<ProtectedRoute role="admin"><UsersPage /></ProtectedRoute>} />
             <Route path="/admin/curriculum" element={<ProtectedRoute role="admin"><CurriculumPage /></ProtectedRoute>} />
             <Route path="/admin/releases" element={<ProtectedRoute role="admin"><ReleasesPage /></ProtectedRoute>} />
-            <Route path="/admin/onboarding" element={<ProtectedRoute role="admin"><OnboardingPage /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute role="admin"><SettingsPage /></ProtectedRoute>} />
 
             {/* Curriculum Roadmap */}
             <Route path="/curriculum-roadmap" element={<ProtectedRoute role="sensei"><CurriculumRoadmapPage /></ProtectedRoute>} />
             <Route path="/changelog" element={<ProtectedRoute role="sensei"><ChangelogPage /></ProtectedRoute>} />
+            <Route path="/getting-started" element={<ProtectedRoute role="sensei"><GettingStartedPage /></ProtectedRoute>} />
 
             {/* Account */}
             <Route path="/account" element={<ProtectedRoute role="sensei"><AccountPage /></ProtectedRoute>} />
@@ -99,7 +98,6 @@ export default function App() {
           </Routes>
           <AdminBar />
           <WhatsNewModal />
-          <OnboardingTour />
       </AuthProvider>
       </ParentAuthProvider>
       </CurriculumProvider>
