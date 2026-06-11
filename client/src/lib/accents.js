@@ -24,3 +24,40 @@ export const DEFAULT_ACCENT = 'blue';
 export function getAccent(id) {
   return ACCENTS.find((a) => a.id === id) || ACCENTS.find((a) => a.id === DEFAULT_ACCENT);
 }
+
+// ── Theme tinting ──────────────────────────────────────────────────────────
+// An accent doesn't just recolor buttons — it retints the whole UI. We blend a
+// small amount of the accent hue into the neutral surface/text tokens so the
+// entire app shifts toward the chosen color while staying legible.
+
+const parse = (s) => s.split(' ').map(Number);
+const rgbStr = (arr) => arr.join(' ');
+// mix(accent, neutral, t): t = how much accent to blend into the neutral.
+const mix = (a, b, t) => a.map((v, i) => Math.round(v * t + b[i] * (1 - t)));
+
+// Stock DojoLink neutrals (from index.css) used as the blend base per mode.
+const NEUTRAL = {
+  dark:  { bg: [28, 33, 50],   border: [44, 55, 82],   navy: [208, 218, 234], muted: [138, 155, 184] },
+  light: { bg: [245, 247, 250], border: [226, 232, 240], navy: [26, 46, 74],   muted: [80, 102, 144] },
+};
+
+// Accent blend strengths — subtle on big surfaces, stronger on borders/muted.
+const BLEND = { bg: 0.08, border: 0.22, navy: 0.10, muted: 0.24 };
+
+/**
+ * Build the full CSS-variable token set for an accent in a given mode.
+ * Returns space-separated RGB strings ready for style.setProperty.
+ */
+export function buildAccentTokens(accent, dark) {
+  const a = getAccent(accent.id ? accent.id : accent);
+  const base = parse(dark ? a.dark : a.light);
+  const n = dark ? NEUTRAL.dark : NEUTRAL.light;
+  return {
+    '--ninja-bg':         rgbStr(mix(base, n.bg, BLEND.bg)),
+    '--ninja-border':     rgbStr(mix(base, n.border, BLEND.border)),
+    '--ninja-navy':       rgbStr(mix(base, n.navy, BLEND.navy)),
+    '--ninja-muted':      rgbStr(mix(base, n.muted, BLEND.muted)),
+    '--ninja-blue':       rgbStr(base),
+    '--ninja-blue-hover': dark ? a.hoverDark : a.hoverLight,
+  };
+}

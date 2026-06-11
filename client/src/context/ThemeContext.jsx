@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { getAccent, DEFAULT_ACCENT } from '../lib/accents';
+import { getAccent, buildAccentTokens, DEFAULT_ACCENT } from '../lib/accents';
 
 const ThemeContext = createContext(null);
 
@@ -43,14 +43,15 @@ export function ThemeProvider({ children }) {
     return () => clearTimeout(t);
   }, [dark]);
 
-  // ── Accent → override --ninja-blue / --ninja-blue-hover globally ─────
-  // Inline vars on <html> beat both :root and .dark rules, so a single set
-  // works in either mode. Re-runs on mode change to pick the right shade.
+  // ── Accent → retint the WHOLE theme globally ────────────────────────
+  // Blends the accent into the neutral surface/text tokens (bg, border, navy,
+  // muted) plus the accent tokens. Inline vars on <html> beat both :root and
+  // .dark rules, so one set works in either mode. Re-runs on mode change.
   useEffect(() => {
     const root = document.documentElement;
     const a = getAccent(accent);
-    root.style.setProperty('--ninja-blue', dark ? a.dark : a.light);
-    root.style.setProperty('--ninja-blue-hover', dark ? a.hoverDark : a.hoverLight);
+    const tokens = buildAccentTokens(a, dark);
+    for (const [k, v] of Object.entries(tokens)) root.style.setProperty(k, v);
     localStorage.setItem('dj-accent', a.id);
   }, [accent, dark]);
 
