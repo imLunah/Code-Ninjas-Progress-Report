@@ -10,6 +10,10 @@
   --ninja-blue-hover:  0 88 184;
   --ninja-navy:        26 46 74;
   --ninja-muted:       80 102 144;
+
+  /* Theme Customizer — overridden at runtime by ThemeContext */
+  --theme-glow:        0.45;
+  --theme-intensity:   0.6;
 }
 
 .dark {
@@ -26,6 +30,18 @@ body {
   background-color: rgb(var(--ninja-bg));
   color: rgb(var(--ninja-navy));
   font-family: 'Nunito', sans-serif;
+}
+
+/* ── Accent glow (driven by --theme-glow, 0–1) ── */
+/* Scoped to interactive accent surfaces (primary buttons/links) so the glow
+   reads globally without spraying shadows onto tiny chips. .accent-glow opts
+   any element in. At glow=0 the alpha is 0, so no shadow renders. */
+button.bg-ninja-blue,
+a.bg-ninja-blue,
+.accent-glow {
+  box-shadow:
+    0 6px 18px -2px rgb(var(--ninja-blue) / calc(var(--theme-glow, 0) * 0.55)),
+    0 0 calc(var(--theme-glow, 0) * 30px) rgb(var(--ninja-blue) / calc(var(--theme-glow, 0) * 0.4));
 }
 
 /* ── Smooth theme transition (only fires during the toggle) ── */

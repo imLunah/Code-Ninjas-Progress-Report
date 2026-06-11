@@ -40,6 +40,7 @@ import ReleasesPage from './pages/admin/ReleasesPage';
 import ChangelogPage from './pages/ChangelogPage';
 // Lazy — pulls in lottie; keep it out of the main bundle (only new accounts / revisits load it).
 const GettingStartedPage = lazy(() => import('./pages/GettingStartedPage'));
+const AppearancePage = lazy(() => import('./pages/AppearancePage'));
 
 export default function App() {
   return (
@@ -90,6 +91,7 @@ export default function App() {
 
             {/* Account */}
             <Route path="/account" element={<ProtectedRoute role="sensei"><AccountPage /></ProtectedRoute>} />
+            <Route path="/appearance" element={<ProtectedRoute role="sensei"><Suspense fallback={null}><AppearancePage /></Suspense></ProtectedRoute>} />
 
             {/* Public */}
             <Route path="/privacy"       element={<PrivacyPage />} />
