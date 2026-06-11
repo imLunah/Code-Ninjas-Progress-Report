@@ -2,6 +2,7 @@ import { MotionConfig } from 'framer-motion';
 import { useTheme } from '../../context/ThemeContext';
 import { swatchFor, labelFor } from '../../lib/accents';
 import ModeToggle from './ModeToggle';
+import ColorMap from './ColorMap';
 import ColorPalette from './ColorPalette';
 
 /**
@@ -54,24 +55,12 @@ export default function ThemeCustomizer({ onClose, className = '' }) {
             <ModeToggle mode={settings.mode} onChange={setMode} />
           </div>
 
-          {/* live preview — reflects the current tokens */}
-          <div className="rounded-2xl border border-ninja-border bg-ninja-bg p-4">
-            <div className="rounded-xl bg-white border border-ninja-border p-3 shadow-sm">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-bold font-ninja text-ninja-navy leading-tight truncate">Today's Ninjas</p>
-                  <p className="text-xs font-ninja text-ninja-muted leading-tight">Live preview</p>
-                </div>
-                <span className="px-3 py-1.5 rounded-lg bg-ninja-blue text-white text-xs font-bold font-ninja whitespace-nowrap">
-                  Check In
-                </span>
-              </div>
-            </div>
-          </div>
+          {/* hue / shade color map */}
+          <ColorMap value={settings.accentColor} onChange={setAccent} />
 
-          {/* palette — the centerpiece */}
+          {/* quick swatches */}
           <div>
-            <p className="text-xs font-bold font-ninja uppercase tracking-wide text-ninja-muted mb-3 text-center">Accent Color</p>
+            <p className="text-xs font-bold font-ninja uppercase tracking-wide text-ninja-muted mb-3 text-center">Presets</p>
             <ColorPalette value={settings.accentColor} onChange={setAccent} />
           </div>
         </div>
