@@ -124,8 +124,11 @@ export default function Layout({ children }) {
     if (isPreview) return;
     if (user?.mustResetPassword && location.pathname !== '/account') {
       navigate('/account', { replace: true });
+    } else if (user && !user.mustResetPassword && user.onboarded === false && location.pathname !== '/getting-started') {
+      // New account, password already set → send through the Getting Started page once.
+      navigate('/getting-started', { replace: true });
     }
-  }, [isPreview, user?.mustResetPassword, location.pathname, navigate]);
+  }, [isPreview, user?.mustResetPassword, user?.onboarded, location.pathname, navigate]);
 
   useEffect(() => {
     if (isPreview) return;

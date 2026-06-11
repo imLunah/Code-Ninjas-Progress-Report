@@ -251,28 +251,27 @@ export default function AccountPage() {
           </div>
         </motion.a>
 
-        {/* Replay walkthrough */}
-        <motion.button
-          type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent('replay_onboarding'))}
+        {/* Getting Started */}
+        <motion.a
+          href="/getting-started"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.11, duration: 0.3 }}
-          className="w-full text-left bg-white border border-ninja-border rounded-2xl p-5 shadow-sm hover:border-ninja-blue/50 transition-colors"
+          className="block bg-white border border-ninja-border rounded-2xl p-5 shadow-sm hover:border-ninja-blue/50 transition-colors"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="w-9 h-9 rounded-xl flex items-center justify-center text-ninja-blue bg-ninja-blue/10">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8" /><path d="M3 4v4h4" /></svg>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" /></svg>
               </span>
               <div>
-                <p className="text-ninja-navy font-ninja font-semibold text-sm">Replay walkthrough</p>
-                <p className="text-ninja-muted font-ninja text-xs">See the getting-started tour again</p>
+                <p className="text-ninja-navy font-ninja font-semibold text-sm">Getting Started</p>
+                <p className="text-ninja-muted font-ninja text-xs">How to use DojoLink</p>
               </div>
             </div>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-ninja-muted"><polyline points="9 18 15 12 9 6" /></svg>
           </div>
-        </motion.button>
+        </motion.a>
 
         {/* Location */}
         {!isForced && (
