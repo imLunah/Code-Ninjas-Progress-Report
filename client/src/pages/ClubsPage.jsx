@@ -56,19 +56,7 @@ function ClubCard({ club, onClick, onDelete, onEdit, canManage }) {
           )}
         </div>
 
-        {/* Monogram avatar straddling header/body — halo uses bg-white (themed surface), not ring-white */}
-        <div className="px-5">
-          <div className="-mt-6 inline-block rounded-[1.15rem] bg-white p-1 shadow-md">
-            <div
-              className="w-11 h-11 rounded-2xl flex items-center justify-center text-white font-black font-ninja text-lg"
-              style={{ background: c.solid }}
-            >
-              {initial}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 flex flex-col px-5 pt-3 pb-4">
+        <div className="flex-1 flex flex-col px-5 pt-4 pb-4">
           <h3 className="text-ninja-navy font-ninja font-bold text-lg leading-snug line-clamp-2">{club.name}</h3>
 
           {club.schedule && (
