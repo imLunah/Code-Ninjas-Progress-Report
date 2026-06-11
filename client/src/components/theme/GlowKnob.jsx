@@ -1,0 +1,114 @@
+import { useRef, useCallback } from 'react';
+import { motion } from 'framer-motion';
+
+const SWEEP = 270;          // degrees of travel
+const START = -135;         // angle at value 0 (straight down = -135..+135)
+const DOTS = 28;
+
+/**
+ * Circular rotary knob controlling glow strength (0..1). Drag around the knob
+ * or use arrow keys. A dotted ring fills up to the current value.
+ */
+export default function GlowKnob({ value, onChange }) {
+  const ref = useRef(null);
+
+  const setFromPointer = useCallback((clientX, clientY) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    // angle measured from straight-down, clockwise positive
+    let deg = (Math.atan2(clientX - cx, cy - clientY) * 180) / Math.PI;
+    let pct = (deg - START) / SWEEP;
+    pct = Math.min(1, Math.max(0, pct));
+    onChange(pct);
+  }, [onChange]);
+
+  const handlePointerDown = (e) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setFromPointer(e.clientX, e.clientY);
+  };
+  const handlePointerMove = (e) => {
+    if (e.buttons === 0) return;
+    setFromPointer(e.clientX, e.clientY);
+  };
+
+  const handleKey = (e) => {
+    const step = e.shiftKey ? 0.1 : 0.02;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); onChange(Math.min(1, value + step)); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); onChange(Math.max(0, value - step)); }
+    else if (e.key === 'Home') { e.preventDefault(); onChange(0); }
+    else if (e.key === 'End') { e.preventDefault(); onChange(1); }
+  };
+
+  const angle = START + value * SWEEP;
+  const pct = Math.round(value * 100);
+  const litDots = Math.round(value * DOTS);
+
+  return (
+    <div className="flex flex-col items-center select-none">
+      <span className="text-xs font-semibold font-ninja uppercase tracking-wide text-white/55 mb-3 self-start">
+        Glow Amount
+      </span>
+
+      <div
+        ref={ref}
+        role="slider"
+        aria-label="Glow amount"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={pct}
+        tabIndex={0}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onKeyDown={handleKey}
+        className="relative w-28 h-28 cursor-grab active:cursor-grabbing touch-none outline-none rounded-full
+                   focus-visible:ring-2 focus-visible:ring-white/40"
+      >
+        {/* dotted indicator ring */}
+        {Array.from({ length: DOTS }).map((_, i) => {
+          const a = (START + (i / (DOTS - 1)) * SWEEP) * (Math.PI / 180);
+          const r = 50;
+          const x = 56 + Math.sin(a) * r;
+          const y = 56 - Math.cos(a) * r;
+          const lit = i < litDots;
+          return (
+            <span
+              key={i}
+              className="absolute rounded-full"
+              style={{
+                left: x, top: y, width: 4, height: 4, transform: 'translate(-50%,-50%)',
+                backgroundColor: lit ? 'rgb(var(--ninja-blue))' : 'rgba(255,255,255,0.18)',
+                boxShadow: lit ? `0 0 ${4 + value * 6}px rgb(var(--ninja-blue) / 0.8)` : 'none',
+                transition: 'background-color 0.15s, box-shadow 0.15s',
+              }}
+            />
+          );
+        })}
+
+        {/* knob body */}
+        <div className="absolute inset-3 rounded-full bg-black/30 border border-white/12 backdrop-blur-md
+                        shadow-[inset_0_2px_6px_rgba(0,0,0,0.5),0_4px_14px_rgba(0,0,0,0.4)]
+                        flex items-center justify-center">
+          <div
+            className="absolute inset-0 rounded-full pointer-events-none"
+            style={{ boxShadow: `0 0 ${value * 26}px rgb(var(--ninja-blue) / ${value * 0.6})` }}
+          />
+          {/* pointer indicator */}
+          <motion.div
+            className="absolute w-full h-full"
+            animate={{ rotate: angle }}
+            transition={{ type: 'spring', stiffness: 500, damping: 36 }}
+          >
+            <span
+              className="absolute left-1/2 top-2 w-1.5 h-4 rounded-full -translate-x-1/2"
+              style={{ backgroundColor: 'rgb(var(--ninja-blue))', boxShadow: '0 0 8px rgb(var(--ninja-blue) / 0.9)' }}
+            />
+          </motion.div>
+          <span className="text-sm font-bold font-ninja text-white/85 tabular-nums">{pct}</span>
+        </div>
+      </div>
+    </div>
+  );
+}

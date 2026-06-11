@@ -5,11 +5,13 @@ import Layout from '../components/layout/Layout';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { getAccent } from '../lib/accents';
 import { ONBOARDING_ENABLED } from '../lib/features';
 
 export default function AccountPage() {
   const { user, setUser, logout, switchLocation } = useAuth();
-  const { dark, toggle } = useTheme();
+  const { dark, accent } = useTheme();
+  const activeAccent = getAccent(accent);
   const navigate = useNavigate();
 
   const [username, setUsername] = useState(user?.username || '');
@@ -191,14 +193,14 @@ export default function AccountPage() {
           </div>
         </motion.div>}
 
-        {/* Appearance */}
-        <motion.div
+        {/* Appearance — opens the Theme customizer */}
+        <motion.a
+          href="/appearance"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08, duration: 0.3 }}
-          className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm"
+          className="block bg-white border border-ninja-border rounded-2xl p-5 shadow-sm hover:border-ninja-blue/50 transition-colors"
         >
-          <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">Appearance</p>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className={`w-9 h-9 rounded-xl flex items-center justify-center ${dark ? 'text-yellow-300 bg-yellow-400/10' : 'text-ninja-muted bg-ninja-bg'}`}>
@@ -209,26 +211,16 @@ export default function AccountPage() {
                 )}
               </span>
               <div>
-                <p className="text-ninja-navy font-ninja font-semibold text-sm">Dark mode</p>
-                <p className="text-ninja-muted font-ninja text-xs">{dark ? 'On' : 'Off'}</p>
+                <p className="text-ninja-navy font-ninja font-semibold text-sm">Appearance</p>
+                <p className="text-ninja-muted font-ninja text-xs">{dark ? 'Dark' : 'Light'} · {activeAccent.label}</p>
               </div>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={dark}
-              aria-label="Toggle dark mode"
-              onClick={toggle}
-              className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${dark ? 'bg-ninja-blue' : 'bg-ninja-border'}`}
-            >
-              <motion.span
-                layout
-                transition={{ type: 'spring', stiffness: 500, damping: 32 }}
-                className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${dark ? 'right-1' : 'left-1'}`}
-              />
-            </button>
+            <div className="flex items-center gap-2.5">
+              <span className="w-4 h-4 rounded-full border border-black/10" style={{ backgroundColor: activeAccent.swatch }} />
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-ninja-muted"><polyline points="9 18 15 12 9 6" /></svg>
+            </div>
           </div>
-        </motion.div>
+        </motion.a>
 
         {/* What's New */}
         <motion.a
