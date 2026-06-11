@@ -1,30 +1,29 @@
 import { PROGRAM_LOGOS } from '../../utils/beltConfig';
 
+// Colors follow the project convention: JR = purple, Robotics + AI = blue, CREATE = blue.
+// Tints are opacity-based so they read well in both light and dark themes.
 const PROGRAM_COLORS = {
-  'CREATE': 'bg-blue-100 text-blue-700',
-  'Robotics Academy': 'bg-blue-100 text-blue-700',
-  'AI Academy': 'bg-blue-100 text-blue-700',
-  'JR': 'bg-purple-100 text-purple-700',
+  'CREATE':           { bg: 'bg-blue-500/10',   text: 'text-blue-600 dark:text-blue-300',     ring: 'ring-blue-500/25' },
+  'Robotics Academy': { bg: 'bg-blue-500/10',   text: 'text-blue-600 dark:text-blue-300',     ring: 'ring-blue-500/25' },
+  'AI Academy':       { bg: 'bg-blue-500/10',   text: 'text-blue-600 dark:text-blue-300',     ring: 'ring-blue-500/25' },
+  'JR':               { bg: 'bg-purple-500/12', text: 'text-purple-600 dark:text-purple-300', ring: 'ring-purple-500/25' },
+};
+
+const SIZE = {
+  xs: { pad: 'text-xs px-2 py-0.5 gap-1',    img: 'w-4 h-4' },
+  sm: { pad: 'text-sm px-2.5 py-1 gap-1.5',  img: 'w-5 h-5' },
+  md: { pad: 'text-base px-3 py-1.5 gap-2',  img: 'w-6 h-6' },
 };
 
 export default function ProgramBadge({ program, size = 'sm' }) {
   if (!program) return null;
-  const colorClass = PROGRAM_COLORS[program] || 'bg-gray-100 text-gray-600';
+  const c = PROGRAM_COLORS[program] || { bg: 'bg-ninja-border/20', text: 'text-ninja-muted', ring: 'ring-ninja-border' };
   const logo = PROGRAM_LOGOS[program];
-
-  const sizeClasses = {
-    xs: 'text-xs px-1.5 py-0.5',
-    sm: 'text-sm px-2 py-0.5',
-    md: 'text-base px-3 py-1',
-  };
-
-  const imgSize = size === 'md' ? 'w-6 h-6' : 'w-5 h-5';
+  const s = SIZE[size] || SIZE.sm;
 
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-md font-ninja font-bold ${sizeClasses[size]} ${colorClass}`}>
-      {size !== 'xs' && logo && (
-        <img src={logo} alt="" className={`${imgSize} rounded overflow-hidden object-contain flex-shrink-0`} />
-      )}
+    <span className={`inline-flex items-center rounded-full font-ninja font-bold ring-1 ${s.pad} ${c.bg} ${c.text} ${c.ring}`}>
+      {logo && <img src={logo} alt="" className={`${s.img} rounded-full object-contain flex-shrink-0`} />}
       {program}
     </span>
   );
