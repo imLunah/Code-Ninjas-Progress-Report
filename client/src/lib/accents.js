@@ -39,45 +39,27 @@ export function getAccent(id) {
   return ACCENTS.find((a) => a.id === id) || ACCENTS.find((a) => a.id === DEFAULT_ACCENT);
 }
 
-// ── Theme tinting ──────────────────────────────────────────────────────────
-// An accent doesn't just recolor buttons — it retints the whole UI. We blend a
-// small amount of the accent hue into the neutral surface/text tokens so the
-// entire app shifts toward the chosen color while staying legible.
+// ── Accent tokens ───────────────────────────────────────────────────────────
+// An accent only swaps the brand color (--ninja-blue / -hover) — exactly like
+// the stock blue. Neutral surfaces stay slate; we never tint the background.
 
-const parse = (s) => s.split(' ').map(Number);
 const rgbStr = (arr) => arr.join(' ');
-// mix(accent, neutral, t): t = how much accent to blend into the neutral.
+// mix(a, b, t): t = how much of `a` to blend with `b`.
 const mix = (a, b, t) => a.map((v, i) => Math.round(v * t + b[i] * (1 - t)));
-
-// Stock DojoLink neutrals (from index.css) used as the blend base per mode.
-const NEUTRAL = {
-  dark:  { bg: [28, 33, 50],   border: [44, 55, 82],   navy: [208, 218, 234], muted: [138, 155, 184] },
-  light: { bg: [245, 247, 250], border: [226, 232, 240], navy: [26, 46, 74],   muted: [80, 102, 144] },
-};
-
-// Accent blend strengths — subtle on big surfaces, stronger on borders/muted.
-const BLEND = { bg: 0.08, border: 0.22, navy: 0.10, muted: 0.24 };
 
 /**
  * Build the full CSS-variable token set for an accent in a given mode.
  * Returns space-separated RGB strings ready for style.setProperty.
  */
-// Build tokens from an accent's pre-tuned shades (presets) OR from a raw base.
-function tokensFrom(base, hover, dark) {
-  const n = dark ? NEUTRAL.dark : NEUTRAL.light;
-  return {
-    '--ninja-bg':         rgbStr(mix(base, n.bg, BLEND.bg)),
-    '--ninja-border':     rgbStr(mix(base, n.border, BLEND.border)),
-    '--ninja-navy':       rgbStr(mix(base, n.navy, BLEND.navy)),
-    '--ninja-muted':      rgbStr(mix(base, n.muted, BLEND.muted)),
-    '--ninja-blue':       rgbStr(base),
-    '--ninja-blue-hover': rgbStr(hover),
-  };
-}
-
+// Accent only swaps the brand color tokens — same logic as the default blue:
+// the dark slate background / borders / text stay neutral, just like the stock
+// theme. We do NOT tint the neutral surfaces (that looked muddy).
 export function buildAccentTokens(accent, dark) {
   const a = getAccent(accent.id ? accent.id : accent);
-  return tokensFrom(parse(dark ? a.dark : a.light), parse(dark ? a.hoverDark : a.hoverLight), dark);
+  return {
+    '--ninja-blue':       dark ? a.dark : a.light,
+    '--ninja-blue-hover': dark ? a.hoverDark : a.hoverLight,
+  };
 }
 
 // ── Custom (any-hue) accents ────────────────────────────────────────────────
@@ -90,13 +72,16 @@ function hexToRgb(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-/** Tokens for an arbitrary hex color: use it directly in light mode, brighten
+/** Accent tokens for an arbitrary hex: use it directly in light mode, brighten
  *  it for dark mode so it stays legible on the deep slate background. */
 export function buildCustomTokens(hex, dark) {
   const picked = hexToRgb(hex);
   const base = dark ? mix(picked, [255, 255, 255], 0.72) : picked; // 28% toward white in dark
   const hover = dark ? mix(base, [0, 0, 0], 0.88) : mix(base, [0, 0, 0], 0.85);
-  return tokensFrom(base, hover, dark);
+  return {
+    '--ninja-blue':       rgbStr(base),
+    '--ninja-blue-hover': rgbStr(hover),
+  };
 }
 
 /** Swatch color to display for any accent value (default / preset / custom). */
