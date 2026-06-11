@@ -84,7 +84,7 @@ function MobileBeltJourney({ enrollment }) {
             return (
               <React.Fragment key={b.name}>
                 {i > 0 && (
-                  <div className="h-0.5 flex-shrink-0" style={{ width: 16, backgroundColor: i <= beltIdx ? '#006ADD' : '#e2e8f0' }} />
+                  <div className="h-0.5 flex-shrink-0" style={{ width: 16, backgroundColor: i <= beltIdx ? 'rgb(var(--ninja-blue))' : '#e2e8f0' }} />
                 )}
                 <div
                   ref={isCurrent ? currentIconRef : null}
@@ -124,7 +124,7 @@ function MobileBeltJourney({ enrollment }) {
           <div className="h-2.5 rounded-full overflow-hidden bg-gray-100">
             <motion.div
               className="h-full rounded-full"
-              style={{ backgroundColor: belt?.color || '#006ADD' }}
+              style={{ backgroundColor: belt?.color || 'rgb(var(--ninja-blue))' }}
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
@@ -157,7 +157,7 @@ const PROGRAM_CARD_BAR_COLORS = {
 function MobileProgramCard({ enrollment, onOpenRoadmap }) {
   const { program, percent_complete, last_sub_program, last_module_name, last_lesson_name, last_session_date } = enrollment;
   const gradient = PROGRAM_CARD_GRADIENTS[program] || 'linear-gradient(135deg, #0f172a, #1e293b)';
-  const barColor = PROGRAM_CARD_BAR_COLORS[program] || '#006ADD';
+  const barColor = PROGRAM_CARD_BAR_COLORS[program] || 'rgb(var(--ninja-blue))';
 
   return (
     <div className="rounded-2xl overflow-hidden border border-ninja-border shadow-sm">
@@ -311,7 +311,7 @@ function DesktopBeltJourney({ enrollment }) {
               {i > 0 && (
                 <div
                   className="h-0.5 flex-1"
-                  style={{ backgroundColor: i <= beltIdx ? '#006ADD' : '#e2e8f0' }}
+                  style={{ backgroundColor: i <= beltIdx ? 'rgb(var(--ninja-blue))' : '#e2e8f0' }}
                 />
               )}
               <div className="flex-shrink-0" style={{ width: size, height: size }}>
@@ -348,7 +348,7 @@ function DesktopBeltJourney({ enrollment }) {
           <div className="h-2.5 rounded-full overflow-hidden bg-gray-100">
             <motion.div
               className="h-full rounded-full"
-              style={{ backgroundColor: belt?.color || '#006ADD' }}
+              style={{ backgroundColor: belt?.color || 'rgb(var(--ninja-blue))' }}
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.35 }}
@@ -396,7 +396,7 @@ function DesktopActivityChart({ logs }) {
             <div className="w-full flex flex-col justify-end" style={{ height: BAR_HEIGHT }}>
               <motion.div
                 className="w-full rounded-t-md"
-                style={{ backgroundColor: isCurrent ? '#006ADD' : '#93c5fd' }}
+                style={{ backgroundColor: isCurrent ? 'rgb(var(--ninja-blue))' : '#93c5fd' }}
                 initial={{ height: 0 }}
                 animate={{ height: barH > 0 ? `${barH}px` : 0 }}
                 transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: i * 0.07 + 0.2 }}
