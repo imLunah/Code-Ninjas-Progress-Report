@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 
 export default function AccessibilityPage() {
   return (
-    <div className="min-h-screen bg-ninja-bg py-12 px-4">
+    <div className="theme-locked min-h-screen bg-ninja-bg py-12 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-10 w-auto mb-6" />

@@ -21,6 +21,20 @@
   --ninja-muted:       138 155 184; /* #8a9bb8 — cool blue-gray, WCAG AA */
 }
 
+/* ── Theme-locked subtrees ── */
+/* Public pages (landing, login, legal) always use the stock brand blue — the
+   user's chosen accent must not leak in. Re-declaring the vars here overrides
+   the inline accent set on <html> for this subtree (custom props inherit from
+   the nearest ancestor that sets them). */
+.theme-locked {
+  --ninja-blue:        0 106 221;
+  --ninja-blue-hover:  0 88 184;
+}
+.dark .theme-locked {
+  --ninja-blue:        56 161 255;
+  --ninja-blue-hover:  28 138 255;
+}
+
 /* ── Base ── */
 body {
   background-color: rgb(var(--ninja-bg));
