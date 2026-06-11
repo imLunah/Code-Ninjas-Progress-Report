@@ -1,6 +1,6 @@
 import { MotionConfig } from 'framer-motion';
 import { useTheme } from '../../context/ThemeContext';
-import { getAccent, isDefaultAccent, DEFAULT_OPTION } from '../../lib/accents';
+import { swatchFor, labelFor } from '../../lib/accents';
 import ModeToggle from './ModeToggle';
 import ColorPalette from './ColorPalette';
 
@@ -14,10 +14,8 @@ import ColorPalette from './ColorPalette';
  */
 export default function ThemeCustomizer({ onClose, className = '' }) {
   const { settings, setMode, setAccent } = useTheme();
-  const isDefault = isDefaultAccent(settings.accentColor);
-  const accent = getAccent(settings.accentColor);
-  const headerSwatch = isDefault ? DEFAULT_OPTION.swatch : accent.swatch;
-  const headerLabel = isDefault ? 'Default' : accent.label;
+  const headerSwatch = swatchFor(settings.accentColor);
+  const headerLabel = labelFor(settings.accentColor);
 
   return (
     <MotionConfig reducedMotion="user">

@@ -26,7 +26,7 @@ export default function ThemeCustomizerModal({ open, onClose }) {
           transition={{ duration: 0.15 }}
         >
           <div
-            className="absolute inset-0 bg-black/45 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/45"
             onClick={onClose}
             aria-hidden="true"
           />

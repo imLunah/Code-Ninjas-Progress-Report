@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { getAccent, buildAccentTokens, isDefaultAccent } from '../lib/accents';
+import { getAccent, buildAccentTokens, buildCustomTokens, isDefaultAccent, isCustomAccent } from '../lib/accents';
 
 const ThemeContext = createContext(null);
 
@@ -43,14 +43,18 @@ export function ThemeProvider({ children }) {
       localStorage.setItem('dj-accent', 'default');
       return;
     }
-    const tokens = buildAccentTokens(getAccent(accent), dark);
+    const tokens = isCustomAccent(accent) ? buildCustomTokens(accent, dark) : buildAccentTokens(getAccent(accent), dark);
     for (const [k, v] of Object.entries(tokens)) root.style.setProperty(k, v);
     localStorage.setItem('dj-accent', accent);
   }, [accent, dark]);
 
   const toggle = () => setDark((d) => !d);
   const setMode = (mode) => setDark(mode === 'dark');
-  const setAccent = (id) => setAccentState(isDefaultAccent(id) ? 'default' : getAccent(id).id);
+  const setAccent = (id) => {
+    if (isDefaultAccent(id)) return setAccentState('default');
+    if (isCustomAccent(id)) return setAccentState(id);
+    setAccentState(getAccent(id).id);
+  };
 
   const settings = useMemo(
     () => ({ mode: dark ? 'dark' : 'light', accentColor: accent }),
