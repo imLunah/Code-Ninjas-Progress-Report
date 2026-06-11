@@ -25,6 +25,8 @@ function ClubCard({ club, onClick, onDelete, onEdit, canManage }) {
   const [deleting, setDeleting] = useState(false);
   const [coverError, setCoverError] = useState(false);
   const c = COLOR_SETS[club.color_key] || COLOR_SETS.blue;
+  const initial = (club.name?.trim()?.[0] || '?').toUpperCase();
+  const hasCover = club.cover_image_url && !coverError;
 
   const handleDelete = async (e) => {
     e.stopPropagation();
@@ -38,63 +40,78 @@ function ClubCard({ club, onClick, onDelete, onEdit, canManage }) {
   };
 
   return (
-    <div className="relative bg-white border border-ninja-border rounded-2xl shadow-sm hover:border-ninja-blue hover:shadow-md transition-all group overflow-hidden">
-      {club.cover_image_url && !coverError && (
-        <div className="h-28 w-full overflow-hidden bg-ninja-bg">
-          <img src={club.cover_image_url} alt={club.name} onError={() => setCoverError(true)} className="w-full h-full object-cover" />
+    <div className="relative h-full flex flex-col bg-white border border-ninja-border rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group overflow-hidden">
+      <button onClick={onClick} className="flex-1 flex flex-col text-left">
+        {/* Identity header — cover image or a color wash with a faded monogram */}
+        <div
+          className="relative h-20 overflow-hidden"
+          style={hasCover ? undefined : { background: `linear-gradient(135deg, ${c.solid} 0%, ${c.solid}b3 100%)` }}
+        >
+          {hasCover ? (
+            <img src={club.cover_image_url} alt={club.name} onError={() => setCoverError(true)} className="w-full h-full object-cover" />
+          ) : (
+            <span className="absolute -right-1 -top-4 font-ninja font-black text-white/20 leading-none select-none" style={{ fontSize: '6rem' }}>
+              {initial}
+            </span>
+          )}
         </div>
-      )}
-      <button
-        onClick={onClick}
-        className="w-full p-6 text-left"
-      >
-        <div className="mb-4">
-          <span className={`inline-block text-sm font-ninja font-bold px-3 py-1 rounded-full border ${c.bg} ${c.text} ${c.border}`}>
-            {club.name}
+
+        {/* Monogram avatar straddling header/body */}
+        <div className="px-5">
+          <div
+            className="w-12 h-12 -mt-6 rounded-2xl flex items-center justify-center text-white font-black font-ninja text-xl shadow-md ring-4 ring-white"
+            style={{ background: c.solid }}
+          >
+            {initial}
+          </div>
+        </div>
+
+        <div className="flex-1 flex flex-col px-5 pt-3 pb-4">
+          <h3 className="text-ninja-navy font-ninja font-bold text-lg leading-snug line-clamp-2">{club.name}</h3>
+
+          {club.schedule && (
+            <div className="flex items-center gap-1.5 mt-1.5 text-ninja-muted font-ninja text-xs font-semibold">
+              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" />
+              </svg>
+              <span className="truncate">{club.schedule}</span>
+            </div>
+          )}
+
+          {club.description && (
+            <p className="text-ninja-muted font-ninja text-sm leading-relaxed mt-2 line-clamp-2">{club.description}</p>
+          )}
+
+          <span className="mt-auto pt-4 inline-flex items-center gap-1 text-ninja-muted group-hover:text-ninja-blue font-ninja font-semibold text-sm transition-colors">
+            View club
+            <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
           </span>
         </div>
-        <p className="text-ninja-muted font-ninja text-sm leading-relaxed">
-          {club.description || 'No description yet.'}
-        </p>
-        <p className="text-ninja-blue font-ninja font-semibold text-sm mt-4 group-hover:underline">
-          View Club →
-        </p>
       </button>
 
       {canManage && (
-        <div className="absolute top-3 right-3 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+        <div className="absolute top-2.5 right-2.5 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           {confirming ? (
             <>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="text-xs font-ninja font-semibold text-white bg-ninja-red px-2 py-1 rounded-lg disabled:opacity-50"
-              >
+              <button onClick={handleDelete} disabled={deleting}
+                className="text-xs font-ninja font-semibold text-white bg-ninja-red px-2 py-1 rounded-lg shadow disabled:opacity-50">
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>
-              <button
-                onClick={() => setConfirming(false)}
-                className="text-xs font-ninja font-semibold text-ninja-muted bg-ninja-bg border border-ninja-border px-2 py-1 rounded-lg"
-              >
+              <button onClick={() => setConfirming(false)}
+                className="text-xs font-ninja font-semibold text-ninja-navy bg-white/90 px-2 py-1 rounded-lg shadow">
                 Cancel
               </button>
             </>
           ) : (
             <>
-              <button
-                onClick={(e) => { e.stopPropagation(); onEdit(club); }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity text-ninja-muted hover:text-ninja-blue p-1 rounded"
-                title="Edit club"
-              >
+              <button onClick={(e) => { e.stopPropagation(); onEdit(club); }} title="Edit club"
+                className="opacity-0 group-hover:opacity-100 transition-opacity text-white bg-black/25 hover:bg-black/40 backdrop-blur-sm p-1.5 rounded-lg">
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
               </button>
-              <button
-                onClick={() => setConfirming(true)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity text-ninja-muted hover:text-ninja-red p-1 rounded"
-                title="Delete club"
-              >
+              <button onClick={() => setConfirming(true)} title="Delete club"
+                className="opacity-0 group-hover:opacity-100 transition-opacity text-white bg-black/25 hover:bg-ninja-red backdrop-blur-sm p-1.5 rounded-lg">
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
@@ -368,6 +385,7 @@ export default function ClubsPage() {
             {clubs.map((club, i) => (
               <motion.div
                 key={club.id}
+                className="h-full"
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.07, duration: 0.28, ease: 'easeOut' }}
