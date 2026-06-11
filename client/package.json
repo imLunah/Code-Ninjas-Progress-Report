@@ -12,6 +12,7 @@
     "@vercel/analytics": "^2.0.1",
     "emoji-picker-react": "^4.19.1",
     "framer-motion": "^12.38.0",
+    "lottie-react": "^2.4.1",
     "papaparse": "^5.5.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MotionConfig } from 'framer-motion';
 import { Analytics } from '@vercel/analytics/react';
@@ -37,7 +38,8 @@ import UsersPage from './pages/admin/UsersPage';
 import SettingsPage from './pages/admin/SettingsPage';
 import ReleasesPage from './pages/admin/ReleasesPage';
 import ChangelogPage from './pages/ChangelogPage';
-import GettingStartedPage from './pages/GettingStartedPage';
+// Lazy — pulls in lottie; keep it out of the main bundle (only new accounts / revisits load it).
+const GettingStartedPage = lazy(() => import('./pages/GettingStartedPage'));
 
 export default function App() {
   return (
@@ -84,7 +86,7 @@ export default function App() {
             {/* Curriculum Roadmap */}
             <Route path="/curriculum-roadmap" element={<ProtectedRoute role="sensei"><CurriculumRoadmapPage /></ProtectedRoute>} />
             <Route path="/changelog" element={<ProtectedRoute role="sensei"><ChangelogPage /></ProtectedRoute>} />
-            <Route path="/getting-started" element={<ProtectedRoute role="sensei"><GettingStartedPage /></ProtectedRoute>} />
+            <Route path="/getting-started" element={<ProtectedRoute role="sensei"><Suspense fallback={null}><GettingStartedPage /></Suspense></ProtectedRoute>} />
 
             {/* Account */}
             <Route path="/account" element={<ProtectedRoute role="sensei"><AccountPage /></ProtectedRoute>} />

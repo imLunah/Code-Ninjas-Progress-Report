@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import Lottie from 'lottie-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 
 const ICONS = {
+  wave: 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zM8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01',
   checkin: 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
   log: 'M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z',
   progress: 'M3 3v18h18M7 14l3-3 3 3 5-5',
@@ -12,73 +14,92 @@ const ICONS = {
   roster: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 11h-6M19 8v6',
   reports: 'M21 21H3M7 21V11M12 21V5M17 21v-7',
   staff: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM19 8v6M22 11h-6',
+  rocket: 'M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z',
 };
 
-// Render **bold** spans from our static step strings without dangerouslySetInnerHTML.
-function renderBold(text) {
-  return text.split(/(\*\*.+?\*\*)/g).map((part, i) =>
-    part.startsWith('**') && part.endsWith('**')
-      ? <strong key={i} className="font-bold">{part.slice(2, -2)}</strong>
-      : part
-  );
-}
+// Each screen: media is tried first; falls back to the icon if the asset is missing.
+// Drop real clips/animations in client/public/onboarding/ and fill `src` (e.g. media:{type:'video',src:'/onboarding/checkin.webm'}).
+const WELCOME = { icon: 'wave', media: { type: 'lottie', src: '/onboarding/welcome.json' }, title: 'Welcome to DojoLink', body: 'A quick tour of the basics — swipe through, takes about a minute.' };
+const FINISH = { icon: 'rocket', media: { type: 'lottie', src: '/onboarding/celebrate.json' }, title: 'You’re all set 🥷', body: 'You can reopen this anytime from your Account page. Let’s go!' };
 
-function Icon({ d }) {
+const SENSEI = [
+  { icon: 'checkin', media: { type: 'video', src: '/onboarding/checkin.webm' }, title: 'Check in your ninjas', body: 'Open the Today tab, tap a ninja to check them in, and assign them to a sensei.' },
+  { icon: 'log', media: { type: 'video', src: '/onboarding/log.webm' }, title: 'Log a session', body: 'Open a ninja, record the lessons they worked on, any belt advancement, and a quick note.' },
+  { icon: 'progress', media: { type: 'video', src: '/onboarding/progress.webm' }, title: 'Track progress', body: 'Each profile shows belt, current project, % complete, and full session history.' },
+  { icon: 'clubs', media: { type: 'video', src: '/onboarding/clubs.webm' }, title: 'Run clubs', body: 'In Clubs, start a session, mark attendance, and add notes or resources.' },
+];
+
+const MANAGER = [
+  { icon: 'roster', media: { type: 'video', src: '/onboarding/roster.webm' }, title: 'Manage the roster', body: 'In Ninjas, search, add, or import students from CSV — and edit or archive any profile.' },
+  { icon: 'reports', media: { type: 'video', src: '/onboarding/reports.webm' }, title: 'See the big picture', body: 'Reports shows enrollment, belt distribution, inactive students, and belt advancements.' },
+  { icon: 'staff', media: { type: 'video', src: '/onboarding/staff.webm' }, title: 'Manage your team', body: 'Use Staff to add or remove senseis, reset credentials, and set profile photos.' },
+];
+
+function FallbackIcon({ name }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d={d} />
+    <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-ninja-blue">
+      <path d={ICONS[name] || ICONS.rocket} />
     </svg>
   );
 }
 
-const SENSEI_SECTIONS = [
-  { icon: 'checkin', title: 'Check in your ninjas', steps: ['Open the **Today** tab to see who’s scheduled.', 'Tap a ninja to check them in for the session.', 'Assign them to yourself or another sensei.'] },
-  { icon: 'log', title: 'Log a session', steps: ['Open a ninja from **Today** or **Ninjas**.', 'Record the lessons they worked on and any belt advancement.', 'Add a quick note for the next sensei or the parent.'] },
-  { icon: 'progress', title: 'Track progress', steps: ['Each ninja’s profile shows their belt, current project, and % complete.', 'Scroll **Recent Progress** to see their session history.', 'Use **View Roadmap** to batch-check completed lessons.'] },
-  { icon: 'clubs', title: 'Run clubs', steps: ['Open the **Clubs** tab and pick a club.', 'Start a session, mark who attended, and add notes or resources.'] },
-];
+function OnboardingMedia({ screen }) {
+  const { media, icon } = screen;
+  const [failed, setFailed] = useState(false);
+  const [lottieData, setLottieData] = useState(null);
 
-const MANAGER_SECTIONS = [
-  { icon: 'roster', title: 'Manage the roster', steps: ['Go to **Ninjas** to search, add, or import students from CSV.', 'Open a profile to edit enrollment, pin notes, or archive.'] },
-  { icon: 'reports', title: 'See the big picture', steps: ['The **Reports** tab shows enrollment, belt distribution, and inactive students.', 'Track belt advancements over time at a glance.'] },
-  { icon: 'staff', title: 'Manage your team', steps: ['Use **Staff** to add or remove senseis.', 'Reset credentials and set profile photos for your team.'] },
-];
+  useEffect(() => {
+    setFailed(false); setLottieData(null);
+    if (media?.type === 'lottie' && media.src) {
+      let alive = true;
+      fetch(media.src)
+        .then((r) => { if (!r.ok) throw new Error('missing'); return r.json(); })
+        .then((d) => { if (alive) setLottieData(d); })
+        .catch(() => { if (alive) setFailed(true); });
+      return () => { alive = false; };
+    }
+  }, [media?.type, media?.src]);
 
-const container = { hidden: {}, show: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } } };
-const item = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } } };
+  const showFallback = !media || media.type === 'none' || failed || (media.type === 'lottie' && !lottieData);
 
-function Section({ section, index }) {
   return (
-    <motion.div variants={item} className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
-      <div className="flex items-start gap-4">
-        <span className="flex-shrink-0 w-11 h-11 rounded-xl bg-ninja-blue/10 text-ninja-blue flex items-center justify-center">
-          <Icon d={ICONS[section.icon]} />
-        </span>
-        <div className="min-w-0">
-          <h3 className="font-ninja font-bold text-ninja-navy text-lg mb-2">{section.title}</h3>
-          <ol className="space-y-2">
-            {section.steps.map((s, i) => (
-              <li key={i} className="flex gap-2.5">
-                <span className="flex-shrink-0 w-5 h-5 mt-0.5 rounded-full bg-ninja-blue text-white text-[11px] font-ninja font-bold flex items-center justify-center">{i + 1}</span>
-                <span className="font-ninja text-sm text-ninja-navy leading-relaxed">{renderBold(s)}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </div>
-    </motion.div>
+    <div className="w-full aspect-[4/3] rounded-3xl bg-ninja-blue/[0.06] border border-ninja-border flex items-center justify-center overflow-hidden">
+      {!showFallback && media.type === 'video' && (
+        <video src={media.src} autoPlay loop muted playsInline onError={() => setFailed(true)} className="w-full h-full object-cover" />
+      )}
+      {!showFallback && media.type === 'lottie' && lottieData && (
+        <Lottie animationData={lottieData} loop className="w-3/4 h-3/4" />
+      )}
+      {showFallback && <FallbackIcon name={icon} />}
+    </div>
   );
 }
+
+const variants = {
+  enter: (dir) => ({ x: dir > 0 ? 340 : -340, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (dir) => ({ x: dir > 0 ? -340 : 340, opacity: 0 }),
+};
+const SWIPE_THRESHOLD = 60;
 
 export default function GettingStartedPage() {
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
+  const [page, setPage] = useState(0);
+  const [dir, setDir] = useState(1);
   const [finishing, setFinishing] = useState(false);
 
   const isManager = ['manager', 'admin'].includes(user?.role);
-  const sections = isManager ? [...SENSEI_SECTIONS, ...MANAGER_SECTIONS] : SENSEI_SECTIONS;
+  const screens = [WELCOME, ...SENSEI, ...(isManager ? MANAGER : []), FINISH];
   const dashPath = isManager ? '/manager/dashboard' : '/sensei/dashboard';
-  const firstName = user?.displayName?.split(' ')[0] || 'there';
+  const screen = screens[page];
+  const isLast = page === screens.length - 1;
+
+  const paginate = (delta) => {
+    const nextPage = page + delta;
+    if (nextPage < 0 || nextPage >= screens.length) return;
+    setDir(delta); setPage(nextPage);
+  };
 
   const finish = async () => {
     if (finishing) return;
@@ -88,30 +109,64 @@ export default function GettingStartedPage() {
     navigate(dashPath, { replace: true });
   };
 
+  const next = () => { isLast ? finish() : paginate(1); };
+
   return (
-    <div className="min-h-[100dvh] bg-ninja-bg overflow-y-auto">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10 pb-[max(env(safe-area-inset-bottom),32px)]">
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }} className="mb-8">
-          <p className="text-ninja-blue font-ninja text-sm font-bold uppercase tracking-wide mb-1">Getting Started</p>
-          <h1 className="text-3xl font-black font-ninja text-ninja-navy">Welcome, {firstName} 🥷</h1>
-          <p className="text-ninja-muted font-ninja text-sm mt-2 leading-relaxed">
-            Here’s a quick look at what you can do in DojoLink{isManager ? ' as a Center Director' : ''}. Takes about a minute.
-          </p>
-        </motion.div>
+    <div className="min-h-[100dvh] bg-ninja-bg flex flex-col">
+      <div className="flex-1 flex flex-col max-w-md w-full mx-auto px-5 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),24px)]">
+        {/* Top: progress dots + skip */}
+        <div className="flex items-center justify-between py-4">
+          <div className="flex items-center gap-1.5">
+            {screens.map((_, i) => (
+              <motion.span key={i} className="h-1.5 rounded-full bg-ninja-blue"
+                animate={{ width: i === page ? 22 : 7, opacity: i === page ? 1 : 0.3 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }} />
+            ))}
+          </div>
+          {!isLast && (
+            <button onClick={finish} className="text-ninja-muted hover:text-ninja-navy font-ninja text-sm font-semibold transition-colors">Skip</button>
+          )}
+        </div>
 
-        <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
-          {sections.map((s, i) => <Section key={s.title} section={s} index={i} />)}
-        </motion.div>
+        {/* Swipeable screen */}
+        <div className="flex-1 min-h-0 relative overflow-hidden">
+          <AnimatePresence mode="popLayout" custom={dir} initial={false}>
+            <motion.div
+              key={page}
+              custom={dir}
+              variants={variants}
+              initial="enter" animate="center" exit="exit"
+              transition={{ x: { type: 'spring', stiffness: 320, damping: 32 }, opacity: { duration: 0.2 } }}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.18}
+              onDragEnd={(e, { offset, velocity }) => {
+                const swipe = offset.x + velocity.x * 0.2;
+                if (swipe < -SWIPE_THRESHOLD) paginate(1);
+                else if (swipe > SWIPE_THRESHOLD) paginate(-1);
+              }}
+              className="absolute inset-0 flex flex-col items-center justify-center text-center cursor-grab active:cursor-grabbing"
+            >
+              <div className="w-full mb-7"><OnboardingMedia screen={screen} /></div>
+              <h1 className="text-2xl font-black font-ninja text-ninja-navy mb-2 px-2">{screen.title}</h1>
+              <p className="text-ninja-muted font-ninja text-sm leading-relaxed px-3 max-w-sm">{screen.body}</p>
+            </motion.div>
+          </AnimatePresence>
+        </div>
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 + sections.length * 0.08, duration: 0.4 }} className="mt-8">
-          <button onClick={finish} disabled={finishing}
-            className="w-full py-3.5 rounded-xl bg-ninja-blue text-white font-ninja font-bold text-sm hover:bg-ninja-blue/90 transition-colors disabled:opacity-60">
-            {finishing ? 'Loading…' : 'Get started'}
-          </button>
-          <p className="text-center text-ninja-muted font-ninja text-xs mt-3">
-            You can reopen this anytime from <span className="font-semibold text-ninja-navy">Account</span>.
-          </p>
-        </motion.div>
+        {/* Bottom: back / next */}
+        <div className="flex items-center gap-3 pt-5">
+          {page > 0 ? (
+            <motion.button onClick={() => paginate(-1)} whileTap={{ scale: 0.96 }}
+              className="px-5 py-3 rounded-xl bg-white border border-ninja-border text-ninja-navy font-ninja font-semibold text-sm hover:border-ninja-blue transition-colors">
+              Back
+            </motion.button>
+          ) : <div className="w-px" />}
+          <motion.button onClick={next} whileTap={{ scale: 0.97 }} disabled={finishing}
+            className="flex-1 py-3.5 rounded-xl bg-ninja-blue text-white font-ninja font-bold text-sm hover:bg-ninja-blue/90 transition-colors disabled:opacity-60">
+            {isLast ? (finishing ? 'Loading…' : 'Get started') : 'Next'}
+          </motion.button>
+        </div>
       </div>
     </div>
   );
