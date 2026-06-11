@@ -61,17 +61,16 @@ export default function PreviewOrb({ accentSwatch, intensity, glow }) {
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onKeyDown={onKey}
-      className="relative w-full aspect-square rounded-[26px] overflow-hidden cursor-grab active:cursor-grabbing
-                 touch-none outline-none border border-white/10
-                 bg-[#0b1f17] shadow-[inset_0_1px_2px_rgba(255,255,255,0.06),inset_0_-20px_40px_rgba(0,0,0,0.5)]
-                 focus-visible:ring-2 focus-visible:ring-white/40"
+      className="relative w-full aspect-[16/10] rounded-2xl overflow-hidden cursor-grab active:cursor-grabbing
+                 touch-none outline-none border border-ninja-border bg-ninja-bg
+                 focus-visible:ring-2 focus-visible:ring-ninja-blue/40"
     >
       {/* dotted grid */}
       <div
-        className="absolute inset-0 opacity-40"
+        className="absolute inset-0 opacity-50"
         style={{
-          backgroundImage: 'radial-gradient(rgba(255,255,255,0.22) 1px, transparent 1px)',
-          backgroundSize: '18px 18px',
+          backgroundImage: 'radial-gradient(rgb(var(--ninja-muted) / 0.35) 1px, transparent 1px)',
+          backgroundSize: '16px 16px',
         }}
       />
       {/* accent gradient spotlight */}

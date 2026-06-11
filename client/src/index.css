@@ -33,15 +33,12 @@ body {
 }
 
 /* ── Accent glow (driven by --theme-glow, 0–1) ── */
-/* Scoped to interactive accent surfaces (primary buttons/links) so the glow
-   reads globally without spraying shadows onto tiny chips. .accent-glow opts
-   any element in. At glow=0 the alpha is 0, so no shadow renders. */
+/* A tasteful accent-tinted drop shadow on primary buttons/links — NOT a neon
+   halo. Scales softly with --theme-glow; at glow=0 the alpha is 0 (no shadow). */
 button.bg-ninja-blue,
 a.bg-ninja-blue,
 .accent-glow {
-  box-shadow:
-    0 6px 18px -2px rgb(var(--ninja-blue) / calc(var(--theme-glow, 0) * 0.55)),
-    0 0 calc(var(--theme-glow, 0) * 30px) rgb(var(--ninja-blue) / calc(var(--theme-glow, 0) * 0.4));
+  box-shadow: 0 4px 14px -4px rgb(var(--ninja-blue) / calc(var(--theme-glow, 0) * 0.5));
 }
 
 /* ── Smooth theme transition (only fires during the toggle) ── */
