@@ -3,12 +3,16 @@ import { getAccent, buildAccentTokens, buildCustomTokens, isDefaultAccent, isCus
 
 const ThemeContext = createContext(null);
 
-const ACCENT_VARS = ['--ninja-bg', '--ninja-border', '--ninja-navy', '--ninja-muted', '--ninja-blue', '--ninja-blue-hover'];
+const ACCENT_VARS = ['--ninja-blue', '--ninja-blue-hover'];
+// Cleared on every apply so any stale tint from older builds (which used to
+// recolor the surfaces) goes away — accent now only touches the brand color.
+const STALE_TINT_VARS = ['--ninja-bg', '--ninja-border', '--ninja-navy', '--ninja-muted'];
 
 // Write the accent CSS vars straight to <html>. Pure DOM — no React, no
 // storage — so it's cheap enough to call on every drag frame.
 function writeAccentVars(accent, dark) {
   const root = document.documentElement;
+  STALE_TINT_VARS.forEach((v) => root.style.removeProperty(v));
   if (isDefaultAccent(accent)) {
     ACCENT_VARS.forEach((v) => root.style.removeProperty(v));
     return;
