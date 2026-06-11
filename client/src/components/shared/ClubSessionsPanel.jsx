@@ -241,7 +241,7 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
                     onClick={() => navigate(`/clubs/${toSlug(s.club_name)}/sessions/${s.id}`)}
                     className="mt-auto w-full text-sm font-ninja font-bold text-white bg-ninja-blue rounded-lg py-2 hover:bg-ninja-blue/90 transition-colors"
                   >
-                    Log Progress
+                    Log Club
                   </button>
                 )}
 
