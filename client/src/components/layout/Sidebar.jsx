@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
-import { getAccent, isDefaultAccent, DEFAULT_OPTION } from '../../lib/accents';
+import ThemeToggle from '../ui/ThemeToggle';
 import ThemeCustomizerModal from '../theme/ThemeCustomizerModal';
 
 function NavIcon({ id, svg }) {
@@ -44,11 +43,23 @@ function BugIcon() {
 
 export default function Sidebar({ onOpenBug }) {
   const { user, logout, switchLocation, viewAs } = useAuth();
-  const { dark, accent } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [themeOpen, setThemeOpen] = useState(false);
-  const accentSwatch = isDefaultAccent(accent) ? DEFAULT_OPTION.swatch : getAccent(accent).swatch;
+
+  // Secret: tap the logo 5× quickly to open the theme customizer.
+  const tapCount = useRef(0);
+  const tapTimer = useRef(null);
+  const handleLogoTap = () => {
+    tapCount.current += 1;
+    clearTimeout(tapTimer.current);
+    if (tapCount.current >= 5) {
+      tapCount.current = 0;
+      setThemeOpen(true);
+      return;
+    }
+    tapTimer.current = setTimeout(() => { tapCount.current = 0; }, 1200);
+  };
 
   const ROADMAP_LINK = { to: '/curriculum-roadmap', label: 'Roadmap', icon: 'roadmap' };
 
@@ -82,9 +93,11 @@ export default function Sidebar({ onOpenBug }) {
 
   return (
     <aside className="hidden lg:flex flex-col w-56 xl:w-60 bg-white border-r border-ninja-border flex-shrink-0 sticky top-0 h-screen z-40">
-      {/* Logo */}
+      {/* Logo (secret: 5 taps opens the theme customizer) */}
       <div className="px-5 py-5 border-b border-ninja-border">
-        <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-14 w-auto" />
+        <button type="button" onClick={handleLogoTap} className="block outline-none" aria-label="DojoLink">
+          <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-14 w-auto select-none" draggable={false} />
+        </button>
       </div>
 
       {/* Center switcher */}
@@ -132,26 +145,10 @@ export default function Sidebar({ onOpenBug }) {
         })}
       </nav>
 
-      {/* Appearance — opens the theme customizer popup */}
-      <div className="px-3 py-2 border-t border-ninja-border">
-        <button
-          type="button"
-          onClick={() => setThemeOpen(true)}
-          className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl
-                     hover:bg-ninja-bg transition-colors group"
-        >
-          <span className="flex items-center gap-2.5">
-            <span className="w-7 h-7 rounded-lg flex items-center justify-center text-ninja-muted bg-ninja-bg group-hover:bg-white transition-colors">
-              {dark ? (
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
-              ) : (
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>
-              )}
-            </span>
-            <span className="text-ninja-navy font-ninja text-sm font-semibold">Appearance</span>
-          </span>
-          <span className="w-4 h-4 rounded-full ring-1 ring-black/10 flex-shrink-0" style={{ backgroundColor: accentSwatch }} />
-        </button>
+      {/* Theme toggle */}
+      <div className="px-4 py-2 flex items-center justify-between border-t border-ninja-border">
+        <span className="text-ninja-muted font-ninja text-xs font-semibold">Appearance</span>
+        <ThemeToggle />
       </div>
 
       <ThemeCustomizerModal open={themeOpen} onClose={() => setThemeOpen(false)} />

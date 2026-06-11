@@ -56,9 +56,8 @@ const BLEND = { bg: 0.08, border: 0.22, navy: 0.10, muted: 0.24 };
  * Build the full CSS-variable token set for an accent in a given mode.
  * Returns space-separated RGB strings ready for style.setProperty.
  */
-export function buildAccentTokens(accent, dark) {
-  const a = getAccent(accent.id ? accent.id : accent);
-  const base = parse(dark ? a.dark : a.light);
+// Build tokens from an accent's pre-tuned shades (presets) OR from a raw base.
+function tokensFrom(base, hover, dark) {
   const n = dark ? NEUTRAL.dark : NEUTRAL.light;
   return {
     '--ninja-bg':         rgbStr(mix(base, n.bg, BLEND.bg)),
@@ -66,6 +65,44 @@ export function buildAccentTokens(accent, dark) {
     '--ninja-navy':       rgbStr(mix(base, n.navy, BLEND.navy)),
     '--ninja-muted':      rgbStr(mix(base, n.muted, BLEND.muted)),
     '--ninja-blue':       rgbStr(base),
-    '--ninja-blue-hover': dark ? a.hoverDark : a.hoverLight,
+    '--ninja-blue-hover': rgbStr(hover),
   };
+}
+
+export function buildAccentTokens(accent, dark) {
+  const a = getAccent(accent.id ? accent.id : accent);
+  return tokensFrom(parse(dark ? a.dark : a.light), parse(dark ? a.hoverDark : a.hoverLight), dark);
+}
+
+// ── Custom (any-hue) accents ────────────────────────────────────────────────
+const HEX = /^#([0-9a-fA-F]{6})$/;
+export function isCustomAccent(id) {
+  return typeof id === 'string' && HEX.test(id);
+}
+function hexToRgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+/** Tokens for an arbitrary hex color: use it directly in light mode, brighten
+ *  it for dark mode so it stays legible on the deep slate background. */
+export function buildCustomTokens(hex, dark) {
+  const picked = hexToRgb(hex);
+  const base = dark ? mix(picked, [255, 255, 255], 0.72) : picked; // 28% toward white in dark
+  const hover = dark ? mix(base, [0, 0, 0], 0.88) : mix(base, [0, 0, 0], 0.85);
+  return tokensFrom(base, hover, dark);
+}
+
+/** Swatch color to display for any accent value (default / preset / custom). */
+export function swatchFor(id) {
+  if (isDefaultAccent(id)) return DEFAULT_OPTION.swatch;
+  if (isCustomAccent(id)) return id;
+  return getAccent(id).swatch;
+}
+
+/** Human label for any accent value. */
+export function labelFor(id) {
+  if (isDefaultAccent(id)) return DEFAULT_OPTION.label;
+  if (isCustomAccent(id)) return 'Custom';
+  return getAccent(id).label;
 }

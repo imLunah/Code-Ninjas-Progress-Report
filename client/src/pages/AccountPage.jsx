@@ -1,18 +1,25 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { getAccent, isDefaultAccent, DEFAULT_OPTION } from '../lib/accents';
 import { ONBOARDING_ENABLED } from '../lib/features';
 
 export default function AccountPage() {
   const { user, setUser, logout, switchLocation } = useAuth();
-  const { dark, accent } = useTheme();
-  const accentLabel = isDefaultAccent(accent) ? DEFAULT_OPTION.label : getAccent(accent).label;
-  const accentSwatch = isDefaultAccent(accent) ? DEFAULT_OPTION.swatch : getAccent(accent).swatch;
+  const { dark, toggle } = useTheme();
+
+  // Secret: tap the appearance icon 5× quickly to open the theme customizer.
+  const themeTaps = useRef(0);
+  const themeTapTimer = useRef(null);
+  const handleThemeSecret = () => {
+    themeTaps.current += 1;
+    clearTimeout(themeTapTimer.current);
+    if (themeTaps.current >= 5) { themeTaps.current = 0; navigate('/appearance'); return; }
+    themeTapTimer.current = setTimeout(() => { themeTaps.current = 0; }, 1200);
+  };
   const navigate = useNavigate();
 
   const [username, setUsername] = useState(user?.username || '');
@@ -194,34 +201,49 @@ export default function AccountPage() {
           </div>
         </motion.div>}
 
-        {/* Appearance — opens the Theme customizer */}
-        <motion.a
-          href="/appearance"
+        {/* Appearance */}
+        <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08, duration: 0.3 }}
-          className="block bg-white border border-ninja-border rounded-2xl p-5 shadow-sm hover:border-ninja-blue/50 transition-colors"
+          className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm"
         >
+          <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">Appearance</p>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className={`w-9 h-9 rounded-xl flex items-center justify-center ${dark ? 'text-yellow-300 bg-yellow-400/10' : 'text-ninja-muted bg-ninja-bg'}`}>
+              <button
+                type="button"
+                onClick={handleThemeSecret}
+                aria-label="Appearance"
+                className={`w-9 h-9 rounded-xl flex items-center justify-center outline-none ${dark ? 'text-yellow-300 bg-yellow-400/10' : 'text-ninja-muted bg-ninja-bg'}`}
+              >
                 {dark ? (
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
                 ) : (
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>
                 )}
-              </span>
+              </button>
               <div>
-                <p className="text-ninja-navy font-ninja font-semibold text-sm">Appearance</p>
-                <p className="text-ninja-muted font-ninja text-xs">{dark ? 'Dark' : 'Light'} · {accentLabel}</p>
+                <p className="text-ninja-navy font-ninja font-semibold text-sm">Dark mode</p>
+                <p className="text-ninja-muted font-ninja text-xs">{dark ? 'On' : 'Off'}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2.5">
-              <span className="w-4 h-4 rounded-full border border-black/10" style={{ backgroundColor: accentSwatch }} />
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-ninja-muted"><polyline points="9 18 15 12 9 6" /></svg>
-            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={dark}
+              aria-label="Toggle dark mode"
+              onClick={toggle}
+              className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${dark ? 'bg-ninja-blue' : 'bg-ninja-border'}`}
+            >
+              <motion.span
+                layout
+                transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+                className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${dark ? 'right-1' : 'left-1'}`}
+              />
+            </button>
           </div>
-        </motion.a>
+        </motion.div>
 
         {/* What's New */}
         <motion.a
