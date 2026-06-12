@@ -7,7 +7,7 @@ import { today } from '../../utils/dateUtils';
 import ProgramBadge from '../ui/ProgramBadge';
 import { isBirthdayToday } from '../shared/BirthdayConfetti';
 
-export default function TodayBoard({ assignments, onRemove, statusFilter = 'pending' }) {
+export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlogged' }) {
   const { isReadOnly } = useAuth();
   const navigate = useNavigate();
   const [confirmId, setConfirmId] = useState(null);
@@ -44,11 +44,13 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'pend
   const completedCount = assignments.filter((a) => a.completed).length;
 
   // Pick the base set per status filter, then group by student_id (one card each).
-  const base = statusFilter === 'logged'
-    ? assignments.filter((a) => a.completed)
-    : statusFilter === 'all'
-      ? assignments
-      : assignments.filter((a) => !a.completed);
+  const isPast = (a) => a.session_date && String(a.session_date).split('T')[0] < todayStr;
+  const base =
+    statusFilter === 'logged'  ? assignments.filter((a) => a.completed)
+    : statusFilter === 'all'     ? assignments
+    : statusFilter === 'overdue' ? assignments.filter((a) => !a.completed && isPast(a))
+    : statusFilter === 'pending' ? assignments.filter((a) => !a.completed && !isPast(a))
+    : assignments.filter((a) => !a.completed); // 'unlogged' (default)
 
   const groupedMap = base.reduce((acc, a) => {
     if (!acc[a.student_id]) acc[a.student_id] = { ...a, assignments: [] };
@@ -64,7 +66,12 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'pend
   });
 
   if (groups.length === 0) {
-    const celebratory = statusFilter === 'pending';
+    const celebratory = statusFilter === 'unlogged' || statusFilter === 'pending';
+    const msg = celebratory
+      ? `All ${completedCount} ninja${completedCount !== 1 ? 's' : ''} logged!`
+      : statusFilter === 'logged' ? 'Nothing logged yet.'
+      : statusFilter === 'overdue' ? 'Nothing overdue 🎉'
+      : 'No classes to show.';
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.97 }}
@@ -72,11 +79,7 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'pend
         className="text-center py-16 font-ninja"
       >
         <img src="/CodeNinjasCelebrate.webp" alt="" className="h-28 mx-auto mb-4" />
-        <p className="text-xl font-bold text-ninja-navy">
-          {celebratory
-            ? `All ${completedCount} ninja${completedCount !== 1 ? 's' : ''} logged!`
-            : statusFilter === 'logged' ? 'Nothing logged yet.' : 'No classes to show.'}
-        </p>
+        <p className="text-xl font-bold text-ninja-navy">{msg}</p>
         {celebratory && <p className="text-sm mt-1 text-ninja-muted">Great session today.</p>}
       </motion.div>
     );
