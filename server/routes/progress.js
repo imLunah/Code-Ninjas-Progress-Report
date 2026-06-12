@@ -130,11 +130,18 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
       }
     }
 
-    // Mark only the oldest pending assignment complete (not all — there may be multiple check-ins)
+    // Mark only the oldest pending assignment complete (not all — there may be multiple check-ins).
+    // If the ninja was never checked in (no assignment), create one already-completed so the
+    // logged session still lands on Today's Board under "Logged" instead of vanishing.
     if (assignmentId) {
       await client.query(
         'UPDATE daily_assignments SET completed = true WHERE id = $1',
         [assignmentId]
+      );
+    } else {
+      await client.query(
+        'INSERT INTO daily_assignments (student_id, program, session_date, sensei_id, completed) VALUES ($1, $2, $3, $4, true)',
+        [student_id, program, date, senseiId]
       );
     }
 
