@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import TodayBoard from '../../components/manager/TodayBoard';
+import DashboardFilters from '../../components/shared/DashboardFilters';
 import AddStudentToday from '../../components/manager/AddStudentToday';
 import CheckInClubModal from '../../components/manager/CheckInClubModal';
 import ClubSessionsPanel from '../../components/shared/ClubSessionsPanel';
@@ -18,8 +19,15 @@ export default function ManagerDashboard() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCheckInClub, setShowCheckInClub] = useState(false);
   const [clubSessions, setClubSessions] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('pending');
+  const [programFilter, setProgramFilter] = useState(null);
 
   const todayStr = today();
+
+  const programs = [...new Set(assignments.map((a) => a.program))];
+  const visibleAssignments = programFilter
+    ? assignments.filter((a) => a.program === programFilter)
+    : assignments;
 
   const fetchAssignments = useCallback(async () => {
     try {
@@ -107,12 +115,23 @@ export default function ManagerDashboard() {
 {/* Board */}
         {error && <p className="text-ninja-red font-ninja text-center py-4">{error}</p>}
 
+        {!loading && !error && assignments.length > 0 && (
+          <DashboardFilters
+            status={statusFilter}
+            onStatus={setStatusFilter}
+            program={programFilter}
+            onProgram={setProgramFilter}
+            programs={programs}
+          />
+        )}
+
         {loading ? (
           <p className="text-ninja-muted font-ninja text-center py-8">Loading...</p>
         ) : (
           <TodayBoard
-            assignments={assignments}
+            assignments={visibleAssignments}
             onRemove={handleRemove}
+            statusFilter={statusFilter}
           />
         )}
 
