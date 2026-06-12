@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import TodayBoard from '../../components/manager/TodayBoard';
 import DashboardFilters from '../../components/shared/DashboardFilters';
+import BoardStats from '../../components/shared/BoardStats';
 import AddStudentToday from '../../components/manager/AddStudentToday';
 import CheckInClubModal from '../../components/manager/CheckInClubModal';
 import ClubSessionsPanel from '../../components/shared/ClubSessionsPanel';
@@ -19,7 +20,7 @@ export default function ManagerDashboard() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCheckInClub, setShowCheckInClub] = useState(false);
   const [clubSessions, setClubSessions] = useState([]);
-  const [statusFilter, setStatusFilter] = useState('pending');
+  const [statusFilter, setStatusFilter] = useState('unlogged');
   const [programFilter, setProgramFilter] = useState(null);
 
   const todayStr = today();
@@ -28,6 +29,14 @@ export default function ManagerDashboard() {
   const visibleAssignments = programFilter
     ? assignments.filter((a) => a.program === programFilter)
     : assignments;
+
+  const isPast = (a) => a.session_date && String(a.session_date).split('T')[0] < todayStr;
+  const counts = {
+    logged:  visibleAssignments.filter((a) => a.completed).length,
+    pending: visibleAssignments.filter((a) => !a.completed && !isPast(a)).length,
+    overdue: visibleAssignments.filter((a) => !a.completed && isPast(a)).length,
+    total:   visibleAssignments.length,
+  };
 
   const fetchAssignments = useCallback(async () => {
     try {
@@ -86,39 +95,16 @@ export default function ManagerDashboard() {
           )}
         </div>
 
-{/* Desktop stat strip */}
-        {!loading && !error && (
-          <div className="hidden lg:grid grid-cols-4 gap-4">
-            {[
-              { label: 'Logged today',  value: assignments.filter(a => a.completed).length, color: '#22c55e' },
-              { label: 'Pending',       value: assignments.filter(a => !a.completed && !(a.session_date && String(a.session_date).split('T')[0] < todayStr)).length, color: '#eab308' },
-              { label: 'Overdue',       value: assignments.filter(a => !a.completed && a.session_date && String(a.session_date).split('T')[0] < todayStr).length, color: '#ef4444' },
-              { label: 'Total today',   value: assignments.length, color: 'rgb(var(--ninja-blue))' },
-            ].map((s, i) => (
-              <motion.div
-                key={s.label}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.07, duration: 0.3, ease: 'easeOut' }}
-                className="bg-white border border-ninja-border rounded-xl p-4 shadow-sm"
-              >
-                <p className="font-ninja font-bold text-xs text-ninja-muted uppercase tracking-wide">{s.label}</p>
-                <div className="flex items-baseline gap-2 mt-1.5">
-                  <span className="font-ninja font-black text-3xl text-ninja-navy leading-none">{s.value}</span>
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
-                </div>
-              </motion.div>
-            ))}
-          </div>
+        {/* Stat cards — also the board's status filter */}
+        {!loading && !error && assignments.length > 0 && (
+          <BoardStats counts={counts} active={statusFilter} onSelect={setStatusFilter} />
         )}
 
-{/* Board */}
+        {/* Board */}
         {error && <p className="text-ninja-red font-ninja text-center py-4">{error}</p>}
 
         {!loading && !error && assignments.length > 0 && (
           <DashboardFilters
-            status={statusFilter}
-            onStatus={setStatusFilter}
             program={programFilter}
             onProgram={setProgramFilter}
             programs={programs}

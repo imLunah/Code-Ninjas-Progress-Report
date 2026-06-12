@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import StudentCard from '../../components/shared/StudentCard';
 import DashboardFilters from '../../components/shared/DashboardFilters';
+import BoardStats from '../../components/shared/BoardStats';
 import ClubSessionsPanel from '../../components/shared/ClubSessionsPanel';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
@@ -24,7 +25,7 @@ export default function SenseiDashboard() {
   const [error, setError] = useState('');
   const [clubSessions, setClubSessions] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [statusFilter, setStatusFilter] = useState('pending');
+  const [statusFilter, setStatusFilter] = useState('unlogged');
   const [programFilter, setProgramFilter] = useState(null);
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -62,13 +63,26 @@ export default function SenseiDashboard() {
     return acc;
   }, {});
   const allGrouped = Object.values(grouped);
-  const completedCount = allGrouped.filter((g) => g.assignments.every((a) => a.completed)).length;
-  const remainingCount = allGrouped.length - completedCount;
-  // Apply the status filter (pending / logged / all); overdue first
+  const isPast = (a) => a.session_date && String(a.session_date).split('T')[0] < todayStr;
+  const counts = {
+    logged:  filteredAssignments.filter((a) => a.completed).length,
+    pending: filteredAssignments.filter((a) => !a.completed && !isPast(a)).length,
+    overdue: filteredAssignments.filter((a) => !a.completed && isPast(a)).length,
+    total:   filteredAssignments.length,
+  };
+  // Apply the status filter (unlogged / pending / overdue / logged / all); overdue first
   const groupedList = allGrouped
     .filter((g) => {
       const done = g.assignments.every((a) => a.completed);
-      return statusFilter === 'logged' ? done : statusFilter === 'all' ? true : !done;
+      const hasOverdue = g.assignments.some((a) => !a.completed && isPast(a));
+      const hasPending = g.assignments.some((a) => !a.completed && !isPast(a));
+      switch (statusFilter) {
+        case 'logged': return done;
+        case 'overdue': return hasOverdue;
+        case 'pending': return hasPending;
+        case 'all': return true;
+        default: return !done; // 'unlogged'
+      }
     })
     .sort((a, b) => {
       const aOver = a.assignments.some((x) => !x.completed && x.session_date && String(x.session_date).split('T')[0] < todayStr);
@@ -98,28 +112,15 @@ export default function SenseiDashboard() {
           )}
         </motion.div>
 
-        {allGrouped.length > 0 && (
-          <motion.div className="grid grid-cols-3 gap-4" variants={stagger}>
-            <motion.div variants={fadeUp} className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
-              <p className="text-3xl font-bold font-ninja text-ninja-blue">{allGrouped.length}</p>
-              <p className="text-ninja-muted font-ninja text-sm mt-1">Total</p>
-            </motion.div>
-            <motion.div variants={fadeUp} className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
-              <p className="text-3xl font-bold font-ninja text-green-500">{completedCount}</p>
-              <p className="text-ninja-muted font-ninja text-sm mt-1">Logged</p>
-            </motion.div>
-            <motion.div variants={fadeUp} className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm">
-              <p className="text-3xl font-bold font-ninja text-ninja-muted">{remainingCount}</p>
-              <p className="text-ninja-muted font-ninja text-sm mt-1">Remaining</p>
-            </motion.div>
+        {!loading && !error && assignments.length > 0 && (
+          <motion.div variants={fadeUp}>
+            <BoardStats counts={counts} active={statusFilter} onSelect={setStatusFilter} />
           </motion.div>
         )}
 
         {!loading && !error && assignments.length > 0 && (
           <motion.div variants={fadeUp}>
             <DashboardFilters
-              status={statusFilter}
-              onStatus={setStatusFilter}
               program={programFilter}
               onProgram={setProgramFilter}
               programs={programs}
@@ -141,13 +142,15 @@ export default function SenseiDashboard() {
 
         {!loading && !error && allGrouped.length > 0 && groupedList.length === 0 && (
           <div className="text-center py-12 font-ninja">
-            <p className="text-2xl mb-2">{statusFilter === 'pending' ? '🎉' : '🥷'}</p>
+            <p className="text-2xl mb-2">{(statusFilter === 'unlogged' || statusFilter === 'pending') ? '🎉' : '🥷'}</p>
             <p className="text-lg font-bold text-ninja-navy">
-              {statusFilter === 'pending'
-                ? `All ${completedCount} ninja${completedCount !== 1 ? 's' : ''} logged!`
-                : statusFilter === 'logged' ? 'Nothing logged yet.' : 'No classes to show.'}
+              {(statusFilter === 'unlogged' || statusFilter === 'pending')
+                ? `All ${counts.logged} ninja${counts.logged !== 1 ? 's' : ''} logged!`
+                : statusFilter === 'logged' ? 'Nothing logged yet.'
+                : statusFilter === 'overdue' ? 'Nothing overdue 🎉'
+                : 'No classes to show.'}
             </p>
-            {statusFilter === 'pending' && <p className="text-ninja-muted text-sm mt-1">Great session today.</p>}
+            {(statusFilter === 'unlogged' || statusFilter === 'pending') && <p className="text-ninja-muted text-sm mt-1">Great session today.</p>}
           </div>
         )}
 
