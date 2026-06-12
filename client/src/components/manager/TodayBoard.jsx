@@ -7,7 +7,7 @@ import { today } from '../../utils/dateUtils';
 import ProgramBadge from '../ui/ProgramBadge';
 import { isBirthdayToday } from '../shared/BirthdayConfetti';
 
-export default function TodayBoard({ assignments, onRemove }) {
+export default function TodayBoard({ assignments, onRemove, statusFilter = 'pending' }) {
   const { isReadOnly } = useAuth();
   const navigate = useNavigate();
   const [confirmId, setConfirmId] = useState(null);
@@ -43,23 +43,28 @@ export default function TodayBoard({ assignments, onRemove }) {
 
   const completedCount = assignments.filter((a) => a.completed).length;
 
-  // Group pending assignments by student_id — one card per student
-  const groupedMap = assignments
-    .filter((a) => !a.completed)
-    .reduce((acc, a) => {
-      if (!acc[a.student_id]) acc[a.student_id] = { ...a, assignments: [] };
-      acc[a.student_id].assignments.push(a);
-      return acc;
-    }, {});
+  // Pick the base set per status filter, then group by student_id (one card each).
+  const base = statusFilter === 'logged'
+    ? assignments.filter((a) => a.completed)
+    : statusFilter === 'all'
+      ? assignments
+      : assignments.filter((a) => !a.completed);
+
+  const groupedMap = base.reduce((acc, a) => {
+    if (!acc[a.student_id]) acc[a.student_id] = { ...a, assignments: [] };
+    acc[a.student_id].assignments.push(a);
+    return acc;
+  }, {});
 
   const groups = Object.values(groupedMap).sort((a, b) => {
-    const aOver = a.assignments.some((x) => x.session_date && String(x.session_date).split('T')[0] < todayStr);
-    const bOver = b.assignments.some((x) => x.session_date && String(x.session_date).split('T')[0] < todayStr);
+    const aOver = a.assignments.some((x) => !x.completed && x.session_date && String(x.session_date).split('T')[0] < todayStr);
+    const bOver = b.assignments.some((x) => !x.completed && x.session_date && String(x.session_date).split('T')[0] < todayStr);
     if (aOver === bOver) return 0;
     return aOver ? -1 : 1;
   });
 
   if (groups.length === 0) {
+    const celebratory = statusFilter === 'pending';
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.97 }}
@@ -67,8 +72,12 @@ export default function TodayBoard({ assignments, onRemove }) {
         className="text-center py-16 font-ninja"
       >
         <img src="/CodeNinjasCelebrate.webp" alt="" className="h-28 mx-auto mb-4" />
-        <p className="text-xl font-bold text-ninja-navy">All {completedCount} ninja{completedCount !== 1 ? 's' : ''} logged!</p>
-        <p className="text-sm mt-1 text-ninja-muted">Great session today.</p>
+        <p className="text-xl font-bold text-ninja-navy">
+          {celebratory
+            ? `All ${completedCount} ninja${completedCount !== 1 ? 's' : ''} logged!`
+            : statusFilter === 'logged' ? 'Nothing logged yet.' : 'No classes to show.'}
+        </p>
+        {celebratory && <p className="text-sm mt-1 text-ninja-muted">Great session today.</p>}
       </motion.div>
     );
   }
@@ -113,11 +122,12 @@ export default function TodayBoard({ assignments, onRemove }) {
 
         <div className="space-y-3">
           {groups.map((group, i) => {
+            const allDone = group.assignments.every((a) => a.completed);
             const isOverdue = group.assignments.some(
-              (a) => a.session_date && String(a.session_date).split('T')[0] < todayStr
+              (a) => !a.completed && a.session_date && String(a.session_date).split('T')[0] < todayStr
             );
-            const borderColor = isOverdue ? '#f87171' : '#fde047';
-            const dotClass = isOverdue ? 'bg-red-400' : 'bg-yellow-400';
+            const borderColor = allDone ? '#4ade80' : isOverdue ? '#f87171' : '#fde047';
+            const dotClass = allDone ? 'bg-green-500' : isOverdue ? 'bg-red-400' : 'bg-yellow-400';
             const sessionCount = group.assignments.length;
             const uniquePrograms = [...new Set(group.assignments.map((a) => a.program))];
             const removeId = group.assignments[0].id;
@@ -145,6 +155,11 @@ export default function TodayBoard({ assignments, onRemove }) {
                     {isOverdue && (
                       <span className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600 border border-red-200">
                         Overdue
+                      </span>
+                    )}
+                    {allDone && (
+                      <span className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-300">
+                        Logged ✓
                       </span>
                     )}
                   </div>
@@ -186,7 +201,7 @@ export default function TodayBoard({ assignments, onRemove }) {
                     Sensei: {group.assignments[0].sensei_name}
                   </p>
                 )}
-                {!isReadOnly && (
+                {!isReadOnly && !allDone && (
                   <button
                     onClick={(e) => { e.stopPropagation(); navigate(buildLogUrl(group)); }}
                     className="mt-3 w-full text-sm font-ninja font-bold text-ninja-blue border-2 border-ninja-blue rounded-xl py-2 hover:bg-ninja-blue hover:text-white transition-colors"
@@ -203,11 +218,12 @@ export default function TodayBoard({ assignments, onRemove }) {
       {/* ── Tablet + Desktop layout (sm+) ── */}
       <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {groups.map((group, i) => {
+          const allDone = group.assignments.every((a) => a.completed);
           const isOverdue = group.assignments.some(
-            (a) => a.session_date && String(a.session_date).split('T')[0] < todayStr
+            (a) => !a.completed && a.session_date && String(a.session_date).split('T')[0] < todayStr
           );
-          const borderClass = isOverdue ? 'border-red-400' : 'border-yellow-300';
-          const dotClass = isOverdue ? 'bg-red-400' : 'bg-yellow-400';
+          const borderClass = allDone ? 'border-green-400' : isOverdue ? 'border-red-400' : 'border-yellow-300';
+          const dotClass = allDone ? 'bg-green-500' : isOverdue ? 'bg-red-400' : 'bg-yellow-400';
           const sessionCount = group.assignments.length;
           const uniquePrograms = [...new Set(group.assignments.map((a) => a.program))];
           const removeId = group.assignments[0].id;
@@ -266,12 +282,14 @@ export default function TodayBoard({ assignments, onRemove }) {
               <div className="flex flex-wrap items-center gap-2">
                 {uniquePrograms.map((p) => <ProgramBadge key={p} program={p} size="sm" />)}
               </div>
-              {isOverdue ? (
+              {allDone ? (
+                <p className="text-green-600 font-ninja font-semibold text-xs">Logged ✓</p>
+              ) : isOverdue ? (
                 <p className="text-red-600 font-ninja font-semibold text-xs">Overdue</p>
               ) : (
                 <p className="text-yellow-700 font-ninja font-semibold text-xs">Not logged yet</p>
               )}
-              {!isReadOnly && (
+              {!isReadOnly && !allDone && (
                 <button
                   onClick={() => navigate(buildLogUrl(group))}
                   className="mt-auto w-full text-sm font-ninja font-bold text-ninja-blue border-2 border-ninja-blue rounded-xl py-2 hover:bg-ninja-blue hover:text-white transition-colors"
