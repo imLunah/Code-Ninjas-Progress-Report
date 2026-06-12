@@ -57,7 +57,9 @@ export default function ManagerDashboard() {
   }, [fetchAssignments]);
 
   const handleAdded = (newAssignment) => {
-    setAssignments((prev) => [...prev, newAssignment]);
+    // Server may reuse an existing (overdue) session and move it to today —
+    // replace by id rather than appending a duplicate.
+    setAssignments((prev) => [...prev.filter((a) => a.id !== newAssignment.id), newAssignment]);
   };
 
   const handleUpdate = (updated) => {

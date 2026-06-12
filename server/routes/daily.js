@@ -89,14 +89,32 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
     );
     if (!enrollmentRows[0]) return res.status(404).json({ error: 'Ninja not enrolled in this program' });
 
-    const { rows: inserted } = await pool.query(
-      'INSERT INTO daily_assignments (student_id, program, session_date) VALUES ($1, $2, $3) RETURNING id',
-      [student_id, program, date]
+    // If the ninja already has an unlogged session for this program (e.g. an
+    // overdue one), reuse it and move it to today instead of stacking a
+    // duplicate — checking them in shouldn't pile an extra session onto the
+    // overdue.
+    const { rows: existing } = await pool.query(
+      `SELECT id FROM daily_assignments
+       WHERE student_id = $1 AND program = $2 AND completed = false
+       ORDER BY session_date ASC LIMIT 1`,
+      [student_id, program]
     );
+
+    let assignmentId;
+    if (existing[0]) {
+      await pool.query('UPDATE daily_assignments SET session_date = $1 WHERE id = $2', [date, existing[0].id]);
+      assignmentId = existing[0].id;
+    } else {
+      const { rows: inserted } = await pool.query(
+        'INSERT INTO daily_assignments (student_id, program, session_date) VALUES ($1, $2, $3) RETURNING id',
+        [student_id, program, date]
+      );
+      assignmentId = inserted[0].id;
+    }
 
     const { rows } = await pool.query(
       ASSIGNMENT_SELECT + ' WHERE da.id = $1',
-      [inserted[0].id]
+      [assignmentId]
     );
 
     res.status(201).json(rows[0]);
