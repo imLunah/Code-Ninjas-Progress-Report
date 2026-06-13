@@ -20,7 +20,7 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { formatDate, today } from '../utils/dateUtils';
 import { COLOR_SETS, getClubColors } from '../utils/clubUtils';
-import { supabase, SIGNED_TTL, extractStoragePath } from '../lib/supabase';
+import { uploadToSigned } from '../lib/supabase';
 
 const mdComponents = {
   h1: ({ children }) => <h1 className="text-lg font-bold text-ninja-navy mb-1">{children}</h1>,
@@ -261,14 +261,8 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
     setUploading(true);
     setUploadError('');
     try {
-      // PATCH DB first — if this fails, storage file is still intact
-      await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { cover_image_url: null });
-      if (clubDef.cover_image_url) {
-        try {
-          const oldPath = extractStoragePath(clubDef.cover_image_url, 'club-resources');
-          if (oldPath) await supabase.storage.from('club-resources').remove([oldPath]);
-        } catch {}
-      }
+      // Server clears the DB and deletes the orphaned object.
+      await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { path: null });
       onCoverUpdated(null);
     } catch {
       setUploadError('Remove failed. Try again.');
@@ -282,24 +276,11 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
     setUploading(true);
     setUploadError('');
     try {
-      const path = `covers/${clubDef.id}/${Date.now()}.jpg`;
-      const { data, error } = await supabase.storage
-        .from('club-resources')
-        .upload(path, blob, { cacheControl: '3600', upsert: false, contentType: 'image/jpeg' });
-      if (error) throw new Error(error.message);
-      const { data: signedData, error: signedErr } = await supabase.storage
-        .from('club-resources')
-        .createSignedUrl(data.path, SIGNED_TTL);
-      if (signedErr) throw new Error(signedErr.message);
-      // PATCH DB before deleting old file — if PATCH fails, old cover is still intact
-      await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { cover_image_url: signedData.signedUrl });
-      if (clubDef.cover_image_url) {
-        try {
-          const oldPath = extractStoragePath(clubDef.cover_image_url, 'club-resources');
-          if (oldPath) await supabase.storage.from('club-resources').remove([oldPath]);
-        } catch {}
-      }
-      onCoverUpdated(signedData.signedUrl);
+      const sign = await api.post(`/storage/club-cover/${clubDef.id}`, { contentType: 'image/jpeg' });
+      await uploadToSigned(sign.bucket, sign.path, sign.token, blob, 'image/jpeg');
+      // Server signs the read URL, stores it, and deletes the old cover.
+      const updated = await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { path: sign.path });
+      onCoverUpdated(updated?.cover_image_url || null);
     } catch {
       setUploadError('Upload failed. Try again.');
     } finally {
@@ -405,24 +386,18 @@ function ResourcesSection({ clubName, clubSlug, locationId, resources: initial, 
     if (mode === 'file' && !file) return;
     setSaving(true);
     try {
-      let resourceUrl = url.trim();
-      let fileName = null;
+      let payload;
       if (mode === 'file') {
         setUploadProgress('Uploading...');
-        const path = `${locationId}/${clubSlug}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-        const { data, error } = await supabase.storage.from('club-resources').upload(path, file, { cacheControl: '3600', upsert: false });
-        if (error) throw new Error(error.message);
-        const { data: signedData, error: signedErr } = await supabase.storage
-          .from('club-resources')
-          .createSignedUrl(data.path, SIGNED_TTL);
-        if (signedErr) throw new Error(signedErr.message);
-        resourceUrl = signedData.signedUrl;
-        fileName = file.name;
+        const sign = await api.post('/storage/club-resource', { filename: file.name });
+        await uploadToSigned(sign.bucket, sign.path, sign.token, file, file.type || undefined);
         setUploadProgress('Saving...');
+        // Server signs the read URL from the path.
+        payload = { title: title.trim(), path: sign.path, resource_type: 'file', file_name: file.name };
+      } else {
+        payload = { title: title.trim(), url: url.trim(), resource_type: 'url' };
       }
-      const resource = await api.post(`/clubs/profile/${encodeURIComponent(clubName)}/resources`, {
-        title: title.trim(), url: resourceUrl, resource_type: mode, file_name: fileName,
-      });
+      const resource = await api.post(`/clubs/profile/${encodeURIComponent(clubName)}/resources`, payload);
       setResources((prev) => [resource, ...prev]);
       resetForm();
     } catch {
@@ -434,13 +409,9 @@ function ResourcesSection({ clubName, clubSlug, locationId, resources: initial, 
 
   const handleDelete = async (r) => {
     try {
-      // DB first — if this fails, storage file is still intact
+      // Server deletes the DB row and the stored file (if any).
       await api.delete(`/clubs/resources/${r.id}`);
       setResources((prev) => prev.filter((x) => x.id !== r.id));
-      if (r.resource_type === 'file' && r.url) {
-        const storagePath = extractStoragePath(r.url, 'club-resources');
-        if (storagePath) await supabase.storage.from('club-resources').remove([storagePath]);
-      }
     } catch { } finally {
       setConfirmDelete(null);
     }

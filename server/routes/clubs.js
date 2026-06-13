@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuth, requireSensei, requireManager, requireOwnLocation } = require('../middleware/auth');
+const storage = require('../lib/storage');
 
 function toSlug(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -108,32 +109,37 @@ router.patch('/definitions/:id', requireManager, requireOwnLocation, async (req,
   }
 });
 
-// PATCH /api/clubs/definitions/:id/cover-image — manager updates club cover photo
+// PATCH /api/clubs/definitions/:id/cover-image — set/clear cover photo.
+// Body: { path } where path is the object path just uploaded via /api/storage/club-cover,
+// or { path: null } to clear. The read URL is signed server-side; clients never sign.
 router.patch('/definitions/:id/cover-image', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
-  const { cover_image_url } = req.body;
-  if (cover_image_url) {
-    try {
-      const parsed = new URL(cover_image_url);
-      if (!['http:', 'https:'].includes(parsed.protocol)) {
-        return res.status(400).json({ error: 'Invalid URL' });
-      }
-    } catch {
-      return res.status(400).json({ error: 'Invalid URL' });
+  const { path } = req.body;
+  const clubId = req.params.id;
+
+  if (path != null) {
+    if (typeof path !== 'string' || !path.startsWith(`covers/${clubId}/`) || path.includes('..')) {
+      return res.status(400).json({ error: 'Invalid file path' });
     }
   }
   try {
     const { rows: existing } = await pool.query(
-      'SELECT id, location_id FROM club_definitions WHERE id = $1',
-      [req.params.id]
+      'SELECT id, location_id, cover_image_url FROM club_definitions WHERE id = $1',
+      [clubId]
     );
     if (!existing[0]) return res.status(404).json({ error: 'Club not found' });
     if (existing[0].location_id === null) return res.status(403).json({ error: 'Cannot edit a built-in club' });
-    if (existing[0].location_id !== req.session.activeLocationId) return res.status(403).json({ error: 'Forbidden' });
+    if (req.session.role !== 'admin' && existing[0].location_id !== req.session.activeLocationId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const newUrl = path ? await storage.createSignedReadUrl('club-resources', path) : null;
     const { rows } = await pool.query(
       'UPDATE club_definitions SET cover_image_url = $1 WHERE id = $2 RETURNING cover_image_url',
-      [cover_image_url || null, req.params.id]
+      [newUrl, clubId]
     );
+    // Old cover is now orphaned — best-effort delete.
+    if (existing[0].cover_image_url) await storage.removeByUrl('club-resources', existing[0].cover_image_url);
     res.json(rows[0]);
   } catch (err) {
     console.error('Club cover image error:', err);
@@ -146,13 +152,14 @@ router.delete('/definitions/:id', requireManager, requireOwnLocation, async (req
   const pool = req.app.get('db');
   try {
     const { rows } = await pool.query(
-      'SELECT id, location_id FROM club_definitions WHERE id = $1',
+      'SELECT id, location_id, cover_image_url FROM club_definitions WHERE id = $1',
       [req.params.id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Club not found' });
     if (rows[0].location_id === null) return res.status(403).json({ error: 'Cannot delete a built-in club' });
     if (rows[0].location_id !== req.session.activeLocationId) return res.status(403).json({ error: 'Forbidden' });
     await pool.query('DELETE FROM club_definitions WHERE id = $1', [req.params.id]);
+    if (rows[0].cover_image_url) await storage.removeByUrl('club-resources', rows[0].cover_image_url);
     res.json({ ok: true });
   } catch (err) {
     console.error('Club definition delete error:', err);
@@ -272,24 +279,41 @@ router.patch('/profile/:clubName/pinned-note', requireSensei, requireOwnLocation
 router.post('/profile/:clubName/resources', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const clubName = decodeURIComponent(req.params.clubName);
-  const { title, url, resource_type, file_name } = req.body;
+  const { title, url, path, resource_type, file_name } = req.body;
 
   const validClubs = await getValidClubNames(pool, req.session.activeLocationId);
   if (!validClubs.has(clubName)) return res.status(400).json({ error: 'Invalid club' });
-  if (!title?.trim() || !url?.trim()) return res.status(400).json({ error: 'Title and URL are required' });
-  try {
-    const parsed = new URL(url.trim());
-    if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error();
-  } catch {
-    return res.status(400).json({ error: 'URL must start with http:// or https://' });
+  if (!title?.trim()) return res.status(400).json({ error: 'Title is required' });
+
+  // A resource is either an uploaded file (path, signed server-side) or an external link (url).
+  let finalUrl;
+  if (resource_type === 'file') {
+    const prefix = `resources/${req.session.activeLocationId}/`;
+    if (typeof path !== 'string' || !path.startsWith(prefix) || path.includes('..')) {
+      return res.status(400).json({ error: 'Invalid file path' });
+    }
+    try {
+      finalUrl = await storage.createSignedReadUrl('club-resources', path);
+    } catch {
+      return res.status(500).json({ error: 'Failed to sign uploaded file' });
+    }
+  } else {
+    if (!url?.trim()) return res.status(400).json({ error: 'URL is required' });
+    try {
+      const parsed = new URL(url.trim());
+      if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error();
+    } catch {
+      return res.status(400).json({ error: 'URL must start with http:// or https://' });
+    }
+    finalUrl = url.trim();
   }
 
   try {
     const { rows } = await pool.query(
       `INSERT INTO club_resources (club_name, location_id, title, url, added_by, resource_type, file_name)
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [clubName, req.session.activeLocationId, title.trim(), url.trim(), req.session.displayName,
-       resource_type || 'url', file_name?.trim() || null]
+      [clubName, req.session.activeLocationId, title.trim(), finalUrl, req.session.displayName,
+       resource_type === 'file' ? 'file' : 'url', file_name?.trim() || null]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -306,6 +330,8 @@ router.delete('/resources/:id', requireSensei, requireOwnLocation, async (req, r
       'DELETE FROM club_resources WHERE id = $1 AND location_id = $2 RETURNING url, resource_type',
       [req.params.id, req.session.activeLocationId]
     );
+    // Clean up the stored file (links have no object to remove).
+    if (rows[0] && rows[0].resource_type === 'file') await storage.removeByUrl('club-resources', rows[0].url);
     res.json({ ok: true, deleted: rows[0] || null });
   } catch (err) {
     console.error('Club resource delete error:', err);
