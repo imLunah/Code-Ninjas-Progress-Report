@@ -8,17 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { COLOR_SETS, toSlug } from '../utils/clubUtils';
 import ModalPortal from '../components/ui/ModalPortal';
 
-const COLOR_OPTIONS = [
-  { key: 'purple', label: 'Purple' },
-  { key: 'green',  label: 'Green'  },
-  { key: 'red',    label: 'Red'    },
-  { key: 'blue',   label: 'Blue'   },
-  { key: 'orange', label: 'Orange' },
-  { key: 'teal',   label: 'Teal'   },
-  { key: 'pink',   label: 'Pink'   },
-  { key: 'indigo', label: 'Indigo' },
-  { key: 'yellow', label: 'Yellow' },
-];
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 function ClubCard({ club, onClick, onDelete, onEdit, canManage }) {
   const [confirming, setConfirming] = useState(false);
@@ -117,7 +107,6 @@ function ClubCard({ club, onClick, onDelete, onEdit, canManage }) {
 function EditClubModal({ club, onSaved, onClose }) {
   const [name, setName] = useState(club.name);
   const [description, setDescription] = useState(club.description || '');
-  const [colorKey, setColorKey] = useState(club.color_key || 'blue');
   const [schedule, setSchedule] = useState(club.schedule || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -127,14 +116,15 @@ function EditClubModal({ club, onSaved, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) return setError('Club name is required.');
+    if (!schedule.trim()) return setError('Please pick which day the club meets.');
     setSaving(true);
     setError('');
     try {
       const updated = await api.patch(`/clubs/definitions/${club.id}`, {
         name: name.trim(),
         description: description.trim() || undefined,
-        color_key: colorKey,
-        schedule: schedule.trim() || undefined,
+        color_key: club.color_key || 'blue',
+        schedule: schedule.trim(),
       });
       onSaved(updated);
     } catch (err) {
@@ -180,33 +170,25 @@ function EditClubModal({ club, onSaved, onClose }) {
           </div>
 
           <div>
-            <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-2">
-              Badge Color
+            <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1">
+              Meeting Day
             </label>
-            <div className="flex flex-wrap gap-2">
-              {COLOR_OPTIONS.map((opt) => {
-                const c = COLOR_SETS[opt.key];
-                const selected = colorKey === opt.key;
-                return (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    onClick={() => setColorKey(opt.key)}
-                    className={`px-3 py-1 rounded-full text-xs font-ninja font-semibold border transition-all ${c.bg} ${c.text} ${c.border} ${
-                      selected ? 'ring-2 ring-offset-1 ring-ninja-blue' : 'opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
+            <select
+              value={schedule}
+              onChange={(e) => setSchedule(e.target.value)}
+              className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
+            >
+              <option value="">Select a day…</option>
+              {DAYS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
           </div>
 
           {error && <p className="text-ninja-red font-ninja text-sm">{error}</p>}
 
           <div className="flex gap-2 pt-2">
-            <Button type="submit" disabled={saving || !name.trim()}>
+            <Button type="submit" disabled={saving || !name.trim() || !schedule.trim()}>
               {saving ? 'Saving...' : 'Save Changes'}
             </Button>
             <Button variant="secondary" type="button" onClick={onClose}>
@@ -222,7 +204,6 @@ function EditClubModal({ club, onSaved, onClose }) {
 function CreateClubModal({ onCreated, onClose }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [colorKey, setColorKey] = useState('blue');
   const [schedule, setSchedule] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -232,14 +213,15 @@ function CreateClubModal({ onCreated, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) return setError('Club name is required.');
+    if (!schedule.trim()) return setError('Please pick which day the club meets.');
     setSaving(true);
     setError('');
     try {
       const club = await api.post('/clubs/definitions', {
         name: name.trim(),
         description: description.trim() || undefined,
-        color_key: colorKey,
-        schedule: schedule.trim() || undefined,
+        color_key: 'blue',
+        schedule: schedule.trim(),
       });
       onCreated(club);
     } catch (err) {
@@ -263,7 +245,7 @@ function CreateClubModal({ onCreated, onClose }) {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Coding Club"
+              placeholder="e.g. Roblox Club"
               autoFocus
               className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
             />
@@ -286,33 +268,25 @@ function CreateClubModal({ onCreated, onClose }) {
           </div>
 
           <div>
-            <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-2">
-              Badge Color
+            <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1">
+              Meeting Day
             </label>
-            <div className="flex flex-wrap gap-2">
-              {COLOR_OPTIONS.map((opt) => {
-                const c = COLOR_SETS[opt.key];
-                const selected = colorKey === opt.key;
-                return (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    onClick={() => setColorKey(opt.key)}
-                    className={`px-3 py-1 rounded-full text-xs font-ninja font-semibold border transition-all ${c.bg} ${c.text} ${c.border} ${
-                      selected ? 'ring-2 ring-offset-1 ring-ninja-blue' : 'opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
+            <select
+              value={schedule}
+              onChange={(e) => setSchedule(e.target.value)}
+              className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
+            >
+              <option value="">Select a day…</option>
+              {DAYS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
           </div>
 
           {error && <p className="text-ninja-red font-ninja text-sm">{error}</p>}
 
           <div className="flex gap-2 pt-2">
-            <Button type="submit" disabled={saving || !name.trim()}>
+            <Button type="submit" disabled={saving || !name.trim() || !schedule.trim()}>
               {saving ? 'Creating...' : 'Create Club'}
             </Button>
             <Button variant="secondary" type="button" onClick={onClose}>
