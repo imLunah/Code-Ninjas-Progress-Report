@@ -310,7 +310,7 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
   return (
     <div className="bg-white border border-ninja-border rounded-2xl shadow-sm overflow-hidden">
       {/* Cover image / color banner */}
-      <div className="relative h-28 w-full overflow-hidden">
+      <div className="relative h-40 w-full overflow-hidden">
         {clubDef.cover_image_url && !coverError ? (
           <img src={clubDef.cover_image_url} alt={clubDef.name} onError={() => setCoverError(true)} className="w-full h-full object-cover" />
         ) : (
