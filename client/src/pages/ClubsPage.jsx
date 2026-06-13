@@ -36,7 +36,7 @@ function ClubCard({ club, onClick, onDelete, onEdit, canManage }) {
       <button onClick={onClick} className="flex-1 flex flex-col text-left">
         {/* Identity header — cover image or a color wash with a faded monogram */}
         <div
-          className="relative h-20 overflow-hidden"
+          className="relative h-40 overflow-hidden"
           style={hasCover ? undefined : { background: `linear-gradient(135deg, ${c.solid} 0%, ${c.solid}b3 100%)` }}
         >
           {hasCover ? (
