@@ -7,6 +7,7 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { COLOR_SETS, toSlug } from '../utils/clubUtils';
 import ModalPortal from '../components/ui/ModalPortal';
+import CropModal from '../components/ui/CropModal';
 import { supabase, SIGNED_TTL } from '../lib/supabase';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -208,6 +209,7 @@ function CreateClubModal({ onCreated, onClose }) {
   const [schedule, setSchedule] = useState('');
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState('');
+  const [cropSrc, setCropSrc] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
@@ -221,11 +223,20 @@ function CreateClubModal({ onCreated, onClose }) {
     if (!file.type.startsWith('image/')) return setError('Please select an image file.');
     if (file.size > 10 * 1024 * 1024) return setError('Image must be under 10 MB.');
     setError('');
-    setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropConfirm = (blob) => {
+    setCropSrc(null);
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoFile(blob);
+    setPhotoPreview(URL.createObjectURL(blob));
   };
 
   const clearPhoto = () => {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
     setPhotoFile(null);
     setPhotoPreview('');
   };
@@ -331,13 +342,22 @@ function CreateClubModal({ onCreated, onClose }) {
             {photoPreview ? (
               <div className="relative h-28 w-full rounded-lg overflow-hidden border border-ninja-border">
                 <img src={photoPreview} alt="Club preview" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={clearPhoto}
-                  className="absolute top-2 right-2 bg-black/50 hover:bg-ninja-red text-white text-xs font-ninja font-semibold px-2 py-1 rounded-lg transition-colors"
-                >
-                  Remove
-                </button>
+                <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="bg-black/50 hover:bg-black/70 text-white text-xs font-ninja font-semibold px-2 py-1 rounded-lg transition-colors"
+                  >
+                    Change
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearPhoto}
+                    className="bg-black/50 hover:bg-ninja-red text-white text-xs font-ninja font-semibold px-2 py-1 rounded-lg transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             ) : (
               <button
@@ -367,6 +387,15 @@ function CreateClubModal({ onCreated, onClose }) {
           </div>
         </form>
       </div>
+      {cropSrc && (
+        <CropModal
+          imageSrc={cropSrc}
+          aspect={16 / 9}
+          cropShape="rect"
+          onConfirm={handleCropConfirm}
+          onCancel={() => setCropSrc(null)}
+        />
+      )}
     </div></ModalPortal>
   );
 }
