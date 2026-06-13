@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { COLOR_SETS, toSlug } from '../utils/clubUtils';
 import ModalPortal from '../components/ui/ModalPortal';
 import CropModal from '../components/ui/CropModal';
-import { supabase, SIGNED_TTL } from '../lib/supabase';
+import { uploadToSigned } from '../lib/supabase';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -257,18 +257,11 @@ function CreateClubModal({ onCreated, onClose }) {
 
       if (photoFile) {
         try {
-          const ext = photoFile.type === 'image/png' ? 'png' : 'jpg';
-          const path = `covers/${club.id}/${Date.now()}.${ext}`;
-          const { data, error: upErr } = await supabase.storage
-            .from('club-resources')
-            .upload(path, photoFile, { cacheControl: '3600', upsert: false, contentType: photoFile.type });
-          if (upErr) throw upErr;
-          const { data: signedData, error: signedErr } = await supabase.storage
-            .from('club-resources')
-            .createSignedUrl(data.path, SIGNED_TTL);
-          if (signedErr) throw signedErr;
-          const updated = await api.patch(`/clubs/definitions/${club.id}/cover-image`, { cover_image_url: signedData.signedUrl });
-          club.cover_image_url = updated?.cover_image_url || signedData.signedUrl;
+          const contentType = photoFile.type || 'image/jpeg';
+          const sign = await api.post(`/storage/club-cover/${club.id}`, { contentType });
+          await uploadToSigned(sign.bucket, sign.path, sign.token, photoFile, contentType);
+          const updated = await api.patch(`/clubs/definitions/${club.id}/cover-image`, { path: sign.path });
+          club.cover_image_url = updated?.cover_image_url || null;
         } catch {
           // Club is created; photo just didn't attach. Surface softly, still proceed.
           club.cover_image_url = null;

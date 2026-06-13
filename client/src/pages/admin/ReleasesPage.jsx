@@ -3,10 +3,7 @@ import { motion } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import Markdown from '../../components/shared/Markdown';
 import { api } from '../../api/client';
-import { supabase } from '../../lib/supabase';
-import { SIGNED_TTL, extractStoragePath } from '../../lib/supabase';
-
-const BUCKET = 'club-resources'; // reuse existing private bucket; media stored under releases/
+import { uploadToSigned } from '../../lib/supabase';
 
 function AdminNav() {
   const path = window.location.pathname;
@@ -84,13 +81,10 @@ export default function ReleasesPage() {
         const isImage = file.type.startsWith('image/');
         if (!isVideo && !isImage) { setError('Only images and videos allowed'); continue; }
         if (file.size > 50 * 1024 * 1024) { setError('Files must be under 50MB'); continue; }
-        const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const path = `releases/${Date.now()}_${safe}`;
-        const { data, error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type });
-        if (upErr) throw new Error(upErr.message);
-        const { data: signed, error: signErr } = await supabase.storage.from(BUCKET).createSignedUrl(data.path, SIGNED_TTL);
-        if (signErr) throw new Error(signErr.message);
-        added.push({ type: isVideo ? 'video' : 'image', url: signed.signedUrl });
+        const sign = await api.post('/storage/release-media', { contentType: file.type });
+        await uploadToSigned(sign.bucket, sign.path, sign.token, file, file.type);
+        // Keep `path` for the server to sign on save; `url` is a local preview only.
+        added.push({ type: isVideo ? 'video' : 'image', path: sign.path, url: URL.createObjectURL(file) });
       }
       setDraft((d) => ({ ...d, media: [...d.media, ...added] }));
     } catch (err) {
@@ -100,13 +94,8 @@ export default function ReleasesPage() {
     }
   };
 
-  const removeMedia = async (idx) => {
-    const item = draft.media[idx];
+  const removeMedia = (idx) => {
     setDraft((d) => ({ ...d, media: d.media.filter((_, i) => i !== idx) }));
-    try {
-      const p = extractStoragePath(item.url, BUCKET);
-      if (p) await supabase.storage.from(BUCKET).remove([p]);
-    } catch {}
   };
 
   const moveMedia = (idx, dir) => {

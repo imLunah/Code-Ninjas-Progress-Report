@@ -1,16 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const { requireSensei, requireAdmin } = require('../middleware/auth');
+const storage = require('../lib/storage');
 
 const MAX_MEDIA = 20;
+const BUCKET = 'club-resources';
 
-// Validate + normalize the media array coming from the client.
-function cleanMedia(media) {
+// Validate + normalize the media array from the client. Each item is either a
+// freshly uploaded file ({ type, path } — signed server-side) or an existing
+// item being kept ({ type, url }). Only release/ paths are accepted.
+async function cleanMedia(media) {
   if (!Array.isArray(media)) return [];
-  return media
-    .filter((m) => m && (m.type === 'image' || m.type === 'video') && typeof m.url === 'string' && m.url.trim())
-    .slice(0, MAX_MEDIA)
-    .map((m) => ({ type: m.type, url: m.url.trim() }));
+  const items = media
+    .filter((m) => m && (m.type === 'image' || m.type === 'video'))
+    .slice(0, MAX_MEDIA);
+  const out = [];
+  for (const m of items) {
+    if (typeof m.path === 'string' && m.path.startsWith('releases/') && !m.path.includes('..')) {
+      try {
+        out.push({ type: m.type, url: await storage.createSignedReadUrl(BUCKET, m.path) });
+      } catch { /* skip un-signable item */ }
+    } else if (typeof m.url === 'string' && m.url.trim()) {
+      out.push({ type: m.type, url: m.url.trim() });
+    }
+  }
+  return out;
 }
 
 // GET /api/releases — published releases, newest first (Changelog page). Any staff.
@@ -97,7 +111,7 @@ router.post('/', requireAdmin, async (req, res) => {
       title.trim(),
       version?.trim() || null,
       body_md || '',
-      JSON.stringify(cleanMedia(media)),
+      JSON.stringify(await cleanMedia(media)),
       pub,
       pub ? new Date().toISOString() : null,
       req.session.userId,
@@ -141,7 +155,7 @@ router.patch('/:id', requireAdmin, async (req, res) => {
       title?.trim() ?? null,
       version?.trim() || null,
       body_md ?? null,
-      media === undefined ? null : JSON.stringify(cleanMedia(media)),
+      media === undefined ? null : JSON.stringify(await cleanMedia(media)),
       willPublish,
       publishedAtExpr ?? null,
       publishedAtExpr !== undefined,
@@ -158,8 +172,13 @@ router.patch('/:id', requireAdmin, async (req, res) => {
 router.delete('/:id', requireAdmin, async (req, res) => {
   const pool = req.app.get('db');
   try {
-    const { rows } = await pool.query('DELETE FROM releases WHERE id = $1 RETURNING id', [req.params.id]);
+    const { rows } = await pool.query('DELETE FROM releases WHERE id = $1 RETURNING id, media', [req.params.id]);
     if (!rows[0]) return res.status(404).json({ error: 'Release not found' });
+    // Clean up uploaded media objects.
+    const media = Array.isArray(rows[0].media) ? rows[0].media : [];
+    for (const m of media) {
+      if (m && typeof m.url === 'string') await storage.removeByUrl(BUCKET, m.url);
+    }
     res.json({ ok: true });
   } catch (err) {
     console.error('Error deleting release:', err);
