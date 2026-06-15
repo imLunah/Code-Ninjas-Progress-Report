@@ -112,8 +112,15 @@ export default function GettingStartedPage() {
   const next = () => { isLast ? finish() : paginate(1); };
 
   return (
-    <div className="min-h-[100dvh] bg-ninja-bg flex flex-col">
-      <div className="flex-1 flex flex-col max-w-md w-full mx-auto px-5 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),24px)]">
+    <div className="relative min-h-[100dvh] bg-ninja-bg flex flex-col overflow-hidden">
+      {/* Scenic background (matches the Welcome onboarding page) */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: 'url(/onboarding-bg.jpg)' }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-ninja-bg/70 via-ninja-bg/85 to-ninja-bg" />
+
+      <div className="relative flex-1 flex flex-col max-w-md w-full mx-auto px-5 pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),24px)]">
         {/* Top: progress dots + skip */}
         <div className="flex items-center justify-between py-4">
           <div className="flex items-center gap-1.5">
