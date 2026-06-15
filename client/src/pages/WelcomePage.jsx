@@ -26,10 +26,10 @@ function PasswordRule({ ok, children }) {
     <li className="flex items-center gap-2 font-ninja text-xs">
       <motion.span
         initial={false}
-        animate={{ scale: ok ? 1 : 0.85, opacity: ok ? 1 : 0.5 }}
-        className={`flex items-center justify-center w-4 h-4 rounded-full text-[9px] ${ok ? 'bg-emerald-500 text-white' : 'bg-ninja-border/40 text-ninja-muted'}`}
+        animate={{ scale: ok ? 1 : 0.9 }}
+        className={`flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold ${ok ? 'bg-emerald-500 text-white' : 'bg-ninja-red/15 text-ninja-red'}`}
       >
-        {ok ? '✓' : ''}
+        {ok ? '✓' : '✕'}
       </motion.span>
       <span className={ok ? 'text-ninja-navy' : 'text-ninja-muted'}>{children}</span>
     </li>
@@ -49,7 +49,7 @@ export default function WelcomePage() {
   const [last, setLast] = useState(initial.last);
   const [confirmedName, setConfirmedName] = useState('');
 
-  const [username, setUsername] = useState(user?.username || '');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showPw, setShowPw] = useState(false);
