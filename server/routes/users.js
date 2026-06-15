@@ -140,9 +140,12 @@ router.patch('/me/avatar', requireSensei, async (req, res) => {
 // PATCH /api/users/me — any staff can update their own username/password
 router.patch('/me', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
-  const { username, new_password, current_password } = req.body;
-  if (!username?.trim() && !new_password?.trim()) {
+  const { username, new_password, current_password, display_name } = req.body;
+  if (!username?.trim() && !new_password?.trim() && !display_name?.trim()) {
     return res.status(400).json({ error: 'Nothing to update' });
+  }
+  if (display_name && display_name.trim().length > 80) {
+    return res.status(400).json({ error: 'Display name too long (max 80 chars)' });
   }
   if (new_password?.trim() && !req.session.mustResetPassword) {
     if (!current_password?.trim()) return res.status(400).json({ error: 'Current password is required to set a new password' });
@@ -160,13 +163,17 @@ router.patch('/me', requireSensei, async (req, res) => {
       if (rows[0]) return res.status(409).json({ error: 'Username already taken' });
       await pool.query('UPDATE users SET username = $1 WHERE id = $2', [username.trim(), req.session.userId]);
     }
+    if (display_name?.trim()) {
+      await pool.query('UPDATE users SET display_name = $1 WHERE id = $2', [display_name.trim(), req.session.userId]);
+      req.session.displayName = display_name.trim();
+    }
     if (new_password?.trim()) {
       if (!validatePassword(new_password.trim())) return res.status(400).json({ error: 'Password must be at least 6 characters and include an uppercase letter and a special character' });
       const hash = await bcrypt.hash(new_password.trim(), SALT_ROUNDS);
       await pool.query('UPDATE users SET password_hash = $1, must_reset_password = false WHERE id = $2', [hash, req.session.userId]);
       req.session.mustResetPassword = false;
     }
-    res.json({ ok: true, username: username?.trim() || undefined });
+    res.json({ ok: true, username: username?.trim() || undefined, display_name: display_name?.trim() || undefined });
   } catch (err) {
     console.error('Self credential update error:', err);
     if (err.code === '23505') return res.status(409).json({ error: 'Username already taken' });

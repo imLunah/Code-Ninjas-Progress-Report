@@ -41,6 +41,7 @@ import ChangelogPage from './pages/ChangelogPage';
 // Lazy — pulls in lottie; keep it out of the main bundle (only new accounts / revisits load it).
 const GettingStartedPage = lazy(() => import('./pages/GettingStartedPage'));
 const AppearancePage = lazy(() => import('./pages/AppearancePage'));
+const WelcomePage = lazy(() => import('./pages/WelcomePage'));
 
 export default function App() {
   return (
@@ -87,6 +88,7 @@ export default function App() {
             {/* Curriculum Roadmap */}
             <Route path="/curriculum-roadmap" element={<ProtectedRoute role="sensei"><CurriculumRoadmapPage /></ProtectedRoute>} />
             <Route path="/changelog" element={<ProtectedRoute role="sensei"><ChangelogPage /></ProtectedRoute>} />
+            <Route path="/welcome" element={<ProtectedRoute role="sensei"><Suspense fallback={null}><WelcomePage /></Suspense></ProtectedRoute>} />
             <Route path="/getting-started" element={<ProtectedRoute role="sensei"><Suspense fallback={null}><GettingStartedPage /></Suspense></ProtectedRoute>} />
 
             {/* Account */}
