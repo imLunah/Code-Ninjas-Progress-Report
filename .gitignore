@@ -12,3 +12,4 @@ CLAUDE.md
 .CLAUDE.md.swp
 *.swp
 test-results/
+.DS_Store
