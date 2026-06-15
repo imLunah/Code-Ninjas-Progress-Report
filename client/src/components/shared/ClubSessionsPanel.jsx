@@ -114,6 +114,7 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
         <div className="text-center py-6">
           <img src="/empty.png" alt="No sessions" className="h-28 mx-auto mb-4 opacity-80" />
           <p className="text-lg font-semibold font-ninja text-ninja-navy">No pending club sessions.</p>
+          <p className="text-ninja-muted font-ninja text-sm mt-1">No clubs have been added to today's board yet.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
