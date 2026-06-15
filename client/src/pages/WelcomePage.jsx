@@ -172,7 +172,7 @@ export default function WelcomePage() {
                     <h2 className="text-2xl font-black font-ninja text-ninja-navy mb-1.5">Is this your name?</h2>
                     <p className="text-ninja-muted font-ninja text-sm mb-7">Your center director set this up. Make sure it looks right.</p>
 
-                    <div className="rounded-2xl border border-ninja-border bg-white/[0.03] px-6 py-7 mb-7 text-center">
+                    <div className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md shadow-lg px-6 py-7 mb-7 text-center">
                       <p className="text-2xl font-bold font-ninja text-ninja-navy break-words">{fullName || '—'}</p>
                     </div>
 
@@ -185,7 +185,7 @@ export default function WelcomePage() {
                       </motion.button>
                       <motion.button
                         whileTap={{ scale: 0.98 }} onClick={() => { setError(''); setEditingName(true); }}
-                        className="w-full py-3.5 rounded-xl bg-white/[0.04] border border-ninja-border text-ninja-navy font-ninja font-semibold text-sm hover:border-ninja-blue/60 transition-colors"
+                        className="w-full py-3.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg text-ninja-navy font-ninja font-semibold text-sm hover:border-ninja-blue/60 transition-colors"
                       >
                         No, let me fix it
                       </motion.button>
@@ -201,14 +201,14 @@ export default function WelcomePage() {
                         <label className="block text-ninja-muted font-ninja text-xs font-semibold mb-1.5">First name</label>
                         <input
                           value={first} onChange={(e) => setFirst(e.target.value)} autoFocus
-                          className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-ninja-border text-ninja-navy font-ninja text-sm focus:border-ninja-blue focus:outline-none transition-colors"
+                          className="w-full px-4 py-3 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg text-ninja-navy font-ninja text-sm focus:border-ninja-blue/70 focus:bg-white/[0.16] focus:outline-none transition-colors"
                         />
                       </div>
                       <div>
                         <label className="block text-ninja-muted font-ninja text-xs font-semibold mb-1.5">Last name</label>
                         <input
                           value={last} onChange={(e) => setLast(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-ninja-border text-ninja-navy font-ninja text-sm focus:border-ninja-blue focus:outline-none transition-colors"
+                          className="w-full px-4 py-3 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg text-ninja-navy font-ninja text-sm focus:border-ninja-blue/70 focus:bg-white/[0.16] focus:outline-none transition-colors"
                         />
                       </div>
                     </div>
@@ -247,7 +247,7 @@ export default function WelcomePage() {
                     <label className="block text-ninja-muted font-ninja text-xs font-semibold mb-1.5">Username</label>
                     <input
                       value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username"
-                      className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-ninja-border text-ninja-navy font-ninja text-sm focus:border-ninja-blue focus:outline-none transition-colors"
+                      className="w-full px-4 py-3 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg text-ninja-navy font-ninja text-sm focus:border-ninja-blue/70 focus:bg-white/[0.16] focus:outline-none transition-colors"
                     />
                   </div>
                   <div>
@@ -255,7 +255,7 @@ export default function WelcomePage() {
                     <div className="relative">
                       <input
                         type={showPw ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password"
-                        className="w-full px-4 py-3 pr-16 rounded-xl bg-white/[0.04] border border-ninja-border text-ninja-navy font-ninja text-sm focus:border-ninja-blue focus:outline-none transition-colors"
+                        className="w-full px-4 py-3 pr-16 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg text-ninja-navy font-ninja text-sm focus:border-ninja-blue/70 focus:bg-white/[0.16] focus:outline-none transition-colors"
                       />
                       <button type="button" onClick={() => setShowPw((s) => !s)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-ninja-muted hover:text-ninja-navy font-ninja text-xs font-semibold">
@@ -267,7 +267,7 @@ export default function WelcomePage() {
                     <label className="block text-ninja-muted font-ninja text-xs font-semibold mb-1.5">Confirm password</label>
                     <input
                       type={showPw ? 'text' : 'password'} value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password"
-                      className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-ninja-border text-ninja-navy font-ninja text-sm focus:border-ninja-blue focus:outline-none transition-colors"
+                      className="w-full px-4 py-3 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg text-ninja-navy font-ninja text-sm focus:border-ninja-blue/70 focus:bg-white/[0.16] focus:outline-none transition-colors"
                     />
                   </div>
 
@@ -300,7 +300,7 @@ export default function WelcomePage() {
           {step > 0 && !editingName ? (
             <motion.button
               whileTap={{ scale: 0.96 }} onClick={() => go(-1)}
-              className="px-5 py-3 rounded-xl bg-white/[0.04] border border-ninja-border text-ninja-navy font-ninja font-semibold text-sm hover:border-ninja-blue/60 transition-colors"
+              className="px-5 py-3 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg text-ninja-navy font-ninja font-semibold text-sm hover:border-ninja-blue/60 transition-colors"
             >
               Back
             </motion.button>
