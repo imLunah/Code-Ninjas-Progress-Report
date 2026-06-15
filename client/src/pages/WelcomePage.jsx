@@ -101,8 +101,16 @@ export default function WelcomePage() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-ninja-bg flex flex-col">
-      <div className="flex-1 flex flex-col max-w-md w-full mx-auto px-6 pt-[max(env(safe-area-inset-top),28px)] pb-[max(env(safe-area-inset-bottom),28px)]">
+    <div className="relative min-h-[100dvh] bg-ninja-bg flex flex-col overflow-hidden">
+      {/* Scenic background */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: 'url(/onboarding-bg.jpg)' }}
+      />
+      {/* Dark scrim so dark-theme text stays legible over the bright scene */}
+      <div className="absolute inset-0 bg-gradient-to-b from-ninja-bg/70 via-ninja-bg/85 to-ninja-bg" />
+
+      <div className="relative flex-1 flex flex-col max-w-md w-full mx-auto px-6 pt-[max(env(safe-area-inset-top),28px)] pb-[max(env(safe-area-inset-bottom),28px)]">
         {/* Progress */}
         <div className="flex items-center gap-1.5 py-2">
           {STEPS.map((_, i) => (
