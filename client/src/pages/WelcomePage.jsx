@@ -101,16 +101,16 @@ export default function WelcomePage() {
   };
 
   return (
-    <div className="relative min-h-[100dvh] bg-ninja-bg flex flex-col overflow-hidden">
+    <div className="relative min-h-[100dvh] bg-ninja-bg flex flex-col lg:items-center lg:justify-center overflow-hidden">
       {/* Scenic background */}
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: 'url(/onboarding-bg.jpg)' }}
       />
       {/* Dark scrim so dark-theme text stays legible over the bright scene */}
-      <div className="absolute inset-0 bg-gradient-to-b from-ninja-bg/70 via-ninja-bg/85 to-ninja-bg" />
+      <div className="absolute inset-0 bg-gradient-to-b from-ninja-bg/70 via-ninja-bg/85 to-ninja-bg lg:from-ninja-bg/60 lg:via-ninja-bg/70 lg:to-ninja-bg/85" />
 
-      <div className="relative flex-1 flex flex-col max-w-md w-full mx-auto px-6 pt-[max(env(safe-area-inset-top),28px)] pb-[max(env(safe-area-inset-bottom),28px)]">
+      <div className="relative flex-1 lg:flex-none flex flex-col max-w-md w-full mx-auto px-6 pt-[max(env(safe-area-inset-top),28px)] pb-[max(env(safe-area-inset-bottom),28px)] lg:my-10 lg:px-10 lg:py-10 lg:rounded-3xl lg:border lg:border-ninja-border lg:bg-ninja-bg/75 lg:backdrop-blur-xl lg:shadow-2xl">
         {/* Progress */}
         <div className="flex items-center gap-1.5 py-2">
           {STEPS.map((_, i) => (
@@ -123,7 +123,7 @@ export default function WelcomePage() {
           ))}
         </div>
 
-        <div className="flex-1 min-h-0 relative overflow-hidden">
+        <div className="flex-1 min-h-0 lg:flex-none lg:h-[460px] relative overflow-hidden">
           <AnimatePresence mode="popLayout" custom={dir} initial={false}>
             {/* ── Step 1: Welcome ───────────────────────────── */}
             {step === 0 && (
