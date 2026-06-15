@@ -111,7 +111,10 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
       </div>
 
       {pendingSessions.length === 0 ? (
-        <p className="text-ninja-muted font-ninja text-sm text-center py-6 italic">No pending club sessions.</p>
+        <div className="text-center py-6">
+          <img src="/empty.png" alt="No sessions" className="h-16 mx-auto mb-2" />
+          <p className="text-ninja-muted font-ninja text-sm italic">No pending club sessions.</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {pendingSessions.map((s) => {

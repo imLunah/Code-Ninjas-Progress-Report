@@ -133,10 +133,9 @@ export default function SenseiDashboard() {
 
         {!loading && !error && allGrouped.length === 0 && (
           <div className="bg-white border border-ninja-border rounded-xl p-12 text-center shadow-sm">
-            <img src="/CodeNinjasCelebrate.webp" alt="Code Ninjas" className="h-24 mx-auto mb-4" />
+            <img src="/empty.png" alt="No ninjas" className="h-24 mx-auto mb-4" />
             <h3 className="text-2xl font-bold font-ninja text-ninja-navy mb-2">No Ninjas Yet</h3>
             <p className="text-ninja-muted font-ninja">No ninjas have been added to today's board yet.</p>
-            <p className="text-ninja-muted font-ninja text-sm mt-1">Check with your Center Director to get ninjas added.</p>
           </div>
         )}
 
