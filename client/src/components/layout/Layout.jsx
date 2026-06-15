@@ -123,8 +123,8 @@ export default function Layout({ children }) {
 
   useEffect(() => {
     if (isPreview) return;
-    if (user?.mustResetPassword && location.pathname !== '/account') {
-      navigate('/account', { replace: true });
+    if (user?.mustResetPassword && location.pathname !== '/welcome') {
+      navigate('/welcome', { replace: true });
     } else if (ONBOARDING_ENABLED && user && !user.mustResetPassword && user.onboarded === false && location.pathname !== '/getting-started') {
       // New account, password already set → send through the Getting Started page once.
       navigate('/getting-started', { replace: true });
