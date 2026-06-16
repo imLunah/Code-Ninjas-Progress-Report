@@ -77,7 +77,7 @@ export default function ParentStudentProfile() {
   const programs = student.programs || [];
 
   return (
-    <ParentLayout>
+    <ParentLayout wide>
       <div className="space-y-5">
         <button
           onClick={() => navigate('/parent/dashboard')}
@@ -106,13 +106,17 @@ export default function ParentStudentProfile() {
           </p>
         </div>
 
-        {/* Progress visualizations */}
-        {programs.length > 0 && (
-          <ProgressVisuals programs={programs} sessionLogs={student.session_logs || []} />
-        )}
+        <div className="lg:grid lg:grid-cols-3 lg:gap-5 lg:items-start">
+          {/* Main column — progress cards */}
+          <div className="lg:col-span-2 mb-5 lg:mb-0">
+            {programs.length > 0 && (
+              <ProgressVisuals programs={programs} sessionLogs={student.session_logs || []} />
+            )}
+          </div>
 
-
-        {/* Note for senseis — pinned note style */}
+          {/* Right rail — note + session history */}
+          <div className="space-y-5 lg:sticky lg:top-6">
+            {/* Note for senseis — pinned note style */}
         <div className="rounded-2xl overflow-hidden" style={{ background: '#fffbeb', border: '1.5px dashed #fcd34d' }}>
           <div className="p-5">
             <div className="flex items-center justify-between mb-3">
@@ -171,7 +175,7 @@ export default function ParentStudentProfile() {
           {(student.session_logs || []).length === 0 && (student.club_attendance || []).length === 0 ? (
             <p className="text-ninja-muted font-ninja text-sm italic">No sessions logged yet.</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto lg:pr-1 no-scrollbar">
               {[
                 ...(student.session_logs || []).map((l) => ({ ...l, _type: 'session' })),
                 ...(student.club_attendance || []).map((c) => ({ ...c, _type: 'club' })),
@@ -221,6 +225,8 @@ export default function ParentStudentProfile() {
                 ))}
             </div>
           )}
+        </div>
+          </div>
         </div>
       </div>
     </ParentLayout>

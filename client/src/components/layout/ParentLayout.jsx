@@ -12,7 +12,7 @@ function BugIcon() {
   );
 }
 
-export default function ParentLayout({ children }) {
+export default function ParentLayout({ children, wide = false }) {
   const { parent, logout } = useParentAuth();
   const navigate = useNavigate();
   const [bugOpen, setBugOpen] = useState(false);
@@ -44,7 +44,7 @@ export default function ParentLayout({ children }) {
           </button>
         </div>
       </nav>
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
+      <main className={`${wide ? 'max-w-3xl lg:max-w-6xl' : 'max-w-3xl'} mx-auto px-4 sm:px-6 py-6`}>
         {children}
       </main>
       <button

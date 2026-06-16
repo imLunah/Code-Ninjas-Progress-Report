@@ -698,9 +698,15 @@ export default function ProgressVisuals({ programs, sessionLogs }) {
   const others = programs.filter((p) => p.program !== 'CREATE');
 
   return (
-    <div className="space-y-4">
-      <ActivityChart logs={sessionLogs} />
-      {create && <BeltJourney enrollment={create} />}
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 xl:items-start">
+      <div className="xl:col-span-2">
+        <ActivityChart logs={sessionLogs} />
+      </div>
+      {create && (
+        <div className="xl:col-span-2">
+          <BeltJourney enrollment={create} />
+        </div>
+      )}
       {others.map((p) => (
         <ModuleProgress
           key={p.program}
