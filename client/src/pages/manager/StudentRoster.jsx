@@ -70,12 +70,13 @@ export default function StudentRoster() {
   const [importResult, setImportResult] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState('');
-  const [removeIds, setRemoveIds] = useState(new Set());
+  // Missing ninjas are removed by default — checking one KEEPS it.
+  const [keepIds, setKeepIds] = useState(new Set());
   const [archiving, setArchiving] = useState(false);
   const fileInputRef = useRef(null);
 
-  const toggleRemove = (id) => {
-    setRemoveIds((prev) => {
+  const toggleKeep = (id) => {
+    setKeepIds((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
@@ -83,24 +84,20 @@ export default function StudentRoster() {
   };
 
   const handleRemoveMissing = async () => {
-    const ids = [...removeIds];
+    const missing = importResult?.missing || [];
+    const ids = missing.filter((s) => !keepIds.has(s.id)).map((s) => s.id);
     if (ids.length === 0) return;
     setArchiving(true);
     try {
       const result = await api.post('/students/bulk-archive', { ids });
       setImportResult((prev) => ({ ...prev, missing: [], removed: result.archived }));
-      setRemoveIds(new Set());
+      setKeepIds(new Set());
       loadStudents();
     } catch (err) {
       setImportError(err.message || 'Could not remove students');
     } finally {
       setArchiving(false);
     }
-  };
-
-  const keepAllMissing = () => {
-    setImportResult((prev) => (prev ? { ...prev, missing: [] } : prev));
-    setRemoveIds(new Set());
   };
 
   const navigate = useNavigate();
@@ -235,7 +232,7 @@ export default function StudentRoster() {
     if (!file) return;
     setImportError('');
     setImportResult(null);
-    setRemoveIds(new Set());
+    setKeepIds(new Set());
     setImporting(true);
 
     Papa.parse(file, {
@@ -704,19 +701,30 @@ export default function StudentRoster() {
                       {importResult.missing.length} ninja{importResult.missing.length !== 1 ? 's are' : ' is'} on the roster but not in this CSV
                     </p>
                     <p className="text-ninja-muted font-ninja text-xs mb-2">
-                      Check the ones to remove (archive). Unchecked ninjas are kept.
+                      These will be removed (archived) unless you check them to keep.
                     </p>
+                    <button
+                      type="button"
+                      onClick={() => setKeepIds(
+                        keepIds.size === importResult.missing.length
+                          ? new Set()
+                          : new Set(importResult.missing.map((s) => s.id))
+                      )}
+                      className="text-ninja-blue font-ninja text-xs font-semibold hover:underline mb-2"
+                    >
+                      {keepIds.size === importResult.missing.length ? 'Uncheck all' : 'Keep all'}
+                    </button>
                     <ul className="text-ninja-navy font-ninja text-sm space-y-1 max-h-44 overflow-y-auto">
                       {importResult.missing.map((s) => (
                         <li key={s.id}>
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input
                               type="checkbox"
-                              checked={removeIds.has(s.id)}
-                              onChange={() => toggleRemove(s.id)}
-                              className="accent-ninja-red"
+                              checked={keepIds.has(s.id)}
+                              onChange={() => toggleKeep(s.id)}
+                              className="accent-green-600"
                             />
-                            <span>{s.full_name}</span>
+                            <span className={keepIds.has(s.id) ? '' : 'text-ninja-muted line-through'}>{s.full_name}</span>
                           </label>
                         </li>
                       ))}
@@ -729,21 +737,21 @@ export default function StudentRoster() {
             <div className="flex gap-2 mt-5">
               {importResult?.missing?.length > 0 ? (
                 <>
-                  <Button variant="secondary" onClick={keepAllMissing} disabled={archiving}>
-                    Keep all
+                  <Button variant="secondary" onClick={() => setImportModal(false)} disabled={archiving}>
+                    Done
                   </Button>
                   <Button
                     onClick={handleRemoveMissing}
-                    disabled={archiving || removeIds.size === 0}
+                    disabled={archiving || importResult.missing.length - keepIds.size === 0}
                     className="ml-auto"
                   >
-                    {archiving ? 'Removing…' : `Remove ${removeIds.size || ''}`.trim()}
+                    {archiving ? 'Removing…' : `Remove ${importResult.missing.length - keepIds.size}`}
                   </Button>
                 </>
               ) : (
                 <>
                   {importResult && !importing && (
-                    <Button variant="secondary" onClick={() => { setImportResult(null); setImportError(''); setRemoveIds(new Set()); }}>
+                    <Button variant="secondary" onClick={() => { setImportResult(null); setImportError(''); setKeepIds(new Set()); }}>
                       Import Another
                     </Button>
                   )}
