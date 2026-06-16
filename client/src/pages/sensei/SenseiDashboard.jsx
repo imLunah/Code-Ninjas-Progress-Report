@@ -144,7 +144,7 @@ export default function SenseiDashboard() {
             <p className="text-2xl mb-2">{(statusFilter === 'unlogged' || statusFilter === 'pending') ? '🎉' : '🥷'}</p>
             <p className="text-lg font-bold text-ninja-navy">
               {(statusFilter === 'unlogged' || statusFilter === 'pending')
-                ? `All ${counts.logged} ninja${counts.logged !== 1 ? 's' : ''} logged!`
+                ? 'All ninjas logged!'
                 : statusFilter === 'logged' ? 'Nothing logged yet.'
                 : statusFilter === 'overdue' ? 'Nothing overdue 🎉'
                 : 'No classes to show.'}

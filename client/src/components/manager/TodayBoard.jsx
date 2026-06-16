@@ -68,7 +68,7 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
   if (groups.length === 0) {
     const celebratory = statusFilter === 'unlogged' || statusFilter === 'pending';
     const msg = celebratory
-      ? `All ${completedCount} ninja${completedCount !== 1 ? 's' : ''} logged!`
+      ? 'All ninjas logged!'
       : statusFilter === 'logged' ? 'Nothing logged yet.'
       : statusFilter === 'overdue' ? 'Nothing overdue 🎉'
       : 'No classes to show.';
