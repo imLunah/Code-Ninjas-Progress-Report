@@ -18,9 +18,6 @@ export default function BeltBadge({ belt, sublevel, size = 'sm' }) {
       style={{ backgroundColor: beltConfig.color, color: beltConfig.textColor }}
     >
       {belt}
-      {sublevel != null && beltConfig.levels && (
-        <span className="opacity-75">#{sublevel}</span>
-      )}
     </span>
   );
 }
