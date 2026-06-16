@@ -36,7 +36,6 @@ import LocationsPage from './pages/admin/LocationsPage';
 import CurriculumPage from './pages/admin/CurriculumPage';
 import UsersPage from './pages/admin/UsersPage';
 import SettingsPage from './pages/admin/SettingsPage';
-import ReleasesPage from './pages/admin/ReleasesPage';
 import ChangelogPage from './pages/ChangelogPage';
 // Lazy — pulls in lottie; keep it out of the main bundle (only new accounts / revisits load it).
 const GettingStartedPage = lazy(() => import('./pages/GettingStartedPage'));
@@ -82,7 +81,6 @@ export default function App() {
             <Route path="/admin/locations" element={<ProtectedRoute role="admin"><LocationsPage /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute role="admin"><UsersPage /></ProtectedRoute>} />
             <Route path="/admin/curriculum" element={<ProtectedRoute role="admin"><CurriculumPage /></ProtectedRoute>} />
-            <Route path="/admin/releases" element={<ProtectedRoute role="admin"><ReleasesPage /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute role="admin"><SettingsPage /></ProtectedRoute>} />
 
             {/* Curriculum Roadmap */}
