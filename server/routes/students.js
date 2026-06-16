@@ -695,7 +695,41 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
     client.release();
   }
 
-  res.json({ added: added.length, duplicates });
+  // Active roster students at this location who are NOT in the uploaded CSV
+  // (matched by full name) — the caller can prompt to keep or remove them.
+  const incomingNames = new Set(
+    incoming.map((r) => r.full_name?.trim().toLowerCase()).filter(Boolean)
+  );
+  const { rows: activeRoster } = await pool.query(
+    'SELECT id, full_name FROM students WHERE location_id = $1 AND active = true',
+    [locationId]
+  );
+  const missing = activeRoster.filter(
+    (s) => !incomingNames.has(s.full_name.trim().toLowerCase())
+  );
+
+  res.json({ added: added.length, duplicates, missing });
+});
+
+// POST /api/students/bulk-archive — archive (soft-delete) many students at once
+router.post('/bulk-archive', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { ids } = req.body;
+  const locationId = req.session.activeLocationId;
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'No student ids provided' });
+  }
+  const cleanIds = ids.map((n) => parseInt(n, 10)).filter((n) => Number.isInteger(n));
+  if (cleanIds.length === 0) {
+    return res.status(400).json({ error: 'No valid student ids' });
+  }
+
+  const { rowCount } = await pool.query(
+    'UPDATE students SET active = false WHERE id = ANY($1::int[]) AND location_id = $2 AND active = true',
+    [cleanIds, locationId]
+  );
+  res.json({ archived: rowCount });
 });
 
 module.exports = router;

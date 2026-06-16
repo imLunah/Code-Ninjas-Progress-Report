@@ -70,7 +70,38 @@ export default function StudentRoster() {
   const [importResult, setImportResult] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState('');
+  const [removeIds, setRemoveIds] = useState(new Set());
+  const [archiving, setArchiving] = useState(false);
   const fileInputRef = useRef(null);
+
+  const toggleRemove = (id) => {
+    setRemoveIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const handleRemoveMissing = async () => {
+    const ids = [...removeIds];
+    if (ids.length === 0) return;
+    setArchiving(true);
+    try {
+      const result = await api.post('/students/bulk-archive', { ids });
+      setImportResult((prev) => ({ ...prev, missing: [], removed: result.archived }));
+      setRemoveIds(new Set());
+      loadStudents();
+    } catch (err) {
+      setImportError(err.message || 'Could not remove students');
+    } finally {
+      setArchiving(false);
+    }
+  };
+
+  const keepAllMissing = () => {
+    setImportResult((prev) => (prev ? { ...prev, missing: [] } : prev));
+    setRemoveIds(new Set());
+  };
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -204,6 +235,7 @@ export default function StudentRoster() {
     if (!file) return;
     setImportError('');
     setImportResult(null);
+    setRemoveIds(new Set());
     setImporting(true);
 
     Papa.parse(file, {
@@ -648,6 +680,11 @@ export default function StudentRoster() {
                   <p className="text-green-700 font-ninja font-semibold text-sm">
                     ✓ {importResult.added} ninja{importResult.added !== 1 ? 's' : ''} imported successfully
                   </p>
+                  {importResult.removed > 0 && (
+                    <p className="text-green-700 font-ninja text-sm mt-1">
+                      {importResult.removed} ninja{importResult.removed !== 1 ? 's' : ''} removed from the roster
+                    </p>
+                  )}
                 </div>
                 {importResult.duplicates?.length > 0 && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
@@ -661,18 +698,60 @@ export default function StudentRoster() {
                     </ul>
                   </div>
                 )}
+                {importResult.missing?.length > 0 && (
+                  <div className="bg-ninja-bg border border-ninja-border rounded-lg p-3">
+                    <p className="text-ninja-navy font-ninja font-semibold text-sm mb-1">
+                      {importResult.missing.length} ninja{importResult.missing.length !== 1 ? 's are' : ' is'} on the roster but not in this CSV
+                    </p>
+                    <p className="text-ninja-muted font-ninja text-xs mb-2">
+                      Check the ones to remove (archive). Unchecked ninjas are kept.
+                    </p>
+                    <ul className="text-ninja-navy font-ninja text-sm space-y-1 max-h-44 overflow-y-auto">
+                      {importResult.missing.map((s) => (
+                        <li key={s.id}>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={removeIds.has(s.id)}
+                              onChange={() => toggleRemove(s.id)}
+                              className="accent-ninja-red"
+                            />
+                            <span>{s.full_name}</span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
 
             <div className="flex gap-2 mt-5">
-              {importResult && !importing && (
-                <Button variant="secondary" onClick={() => { setImportResult(null); setImportError(''); }}>
-                  Import Another
-                </Button>
+              {importResult?.missing?.length > 0 ? (
+                <>
+                  <Button variant="secondary" onClick={keepAllMissing} disabled={archiving}>
+                    Keep all
+                  </Button>
+                  <Button
+                    onClick={handleRemoveMissing}
+                    disabled={archiving || removeIds.size === 0}
+                    className="ml-auto"
+                  >
+                    {archiving ? 'Removing…' : `Remove ${removeIds.size || ''}`.trim()}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {importResult && !importing && (
+                    <Button variant="secondary" onClick={() => { setImportResult(null); setImportError(''); setRemoveIds(new Set()); }}>
+                      Import Another
+                    </Button>
+                  )}
+                  <Button variant={importResult ? 'primary' : 'secondary'} onClick={() => setImportModal(false)} className="ml-auto">
+                    {importResult ? 'Done' : 'Cancel'}
+                  </Button>
+                </>
               )}
-              <Button variant={importResult ? 'primary' : 'secondary'} onClick={() => setImportModal(false)} className="ml-auto">
-                {importResult ? 'Done' : 'Cancel'}
-              </Button>
             </div>
           </div>
         </div></ModalPortal>
