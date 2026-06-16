@@ -175,7 +175,7 @@ export default function ParentStudentProfile() {
           {(student.session_logs || []).length === 0 && (student.club_attendance || []).length === 0 ? (
             <p className="text-ninja-muted font-ninja text-sm italic">No sessions logged yet.</p>
           ) : (
-            <div className="space-y-3 lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto lg:pr-1 no-scrollbar">
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 lg:max-h-[calc(100vh-11rem)] no-scrollbar">
               {[
                 ...(student.session_logs || []).map((l) => ({ ...l, _type: 'session' })),
                 ...(student.club_attendance || []).map((c) => ({ ...c, _type: 'club' })),
