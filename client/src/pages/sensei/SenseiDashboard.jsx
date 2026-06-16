@@ -140,9 +140,9 @@ export default function SenseiDashboard() {
         )}
 
         {!loading && !error && allGrouped.length > 0 && groupedList.length === 0 && (
-          <div className="text-center py-12 font-ninja">
-            <p className="text-2xl mb-2">{(statusFilter === 'unlogged' || statusFilter === 'pending') ? '🎉' : '🥷'}</p>
-            <p className="text-lg font-bold text-ninja-navy">
+          <div className="text-center py-16 font-ninja">
+            <img src="/CodeNinjasCelebrate.webp" alt="" className="h-28 mx-auto mb-4" />
+            <p className="text-xl font-bold text-ninja-navy">
               {(statusFilter === 'unlogged' || statusFilter === 'pending')
                 ? 'All ninjas logged!'
                 : statusFilter === 'logged' ? 'Nothing logged yet.'
