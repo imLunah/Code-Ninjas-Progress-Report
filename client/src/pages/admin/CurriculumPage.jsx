@@ -24,7 +24,6 @@ function AdminNav() {
     { to: '/admin/locations', label: 'Locations' },
     { to: '/admin/users', label: 'Users' },
     { to: '/admin/curriculum', label: 'Curriculum' },
-    { to: '/admin/releases', label: 'Releases' },
     { to: '/admin/settings', label: 'Settings' },
   ];
   return (
