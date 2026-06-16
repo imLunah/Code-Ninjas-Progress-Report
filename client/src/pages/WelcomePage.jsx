@@ -93,7 +93,10 @@ export default function WelcomePage() {
         displayName: payload.display_name || prev.displayName,
         mustResetPassword: false,
       }));
-      navigate('/getting-started', { replace: true });
+      const dashPath = user?.role === 'sensei' ? '/sensei/dashboard'
+        : user?.role === 'admin' ? '/admin/locations'
+        : '/manager/dashboard';
+      navigate(dashPath, { replace: true });
     } catch (err) {
       setError(err?.message || 'Something went wrong. Please try again.');
       setSaving(false);
