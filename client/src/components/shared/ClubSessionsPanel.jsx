@@ -141,8 +141,8 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
                   <div className="flex items-center gap-2 flex-wrap mb-1.5">
                     <h3 className="font-ninja font-bold text-ninja-navy text-sm leading-snug">{s.club_name}</h3>
                     {isPast && (
-                      <span className="px-1.5 py-0.5 rounded-md bg-amber-400/15 text-amber-500 text-[10px] font-ninja font-bold uppercase tracking-wide">
-                        Needs logging
+                      <span className="text-red-600 font-ninja font-semibold text-xs px-2 py-0.5 bg-red-50 border border-red-300 rounded-md">
+                        Overdue
                       </span>
                     )}
                   </div>
