@@ -651,7 +651,7 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
       );
 
       if (existing.length) {
-        duplicates.push(fullName);
+        duplicates.push({ id: existing[0].id, full_name: fullName });
         continue;
       }
 

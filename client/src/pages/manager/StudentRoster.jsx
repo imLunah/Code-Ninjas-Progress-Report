@@ -72,26 +72,40 @@ export default function StudentRoster() {
   const [importError, setImportError] = useState('');
   // Missing ninjas are removed by default — checking one KEEPS it.
   const [keepIds, setKeepIds] = useState(new Set());
+  // Duplicates are kept by default — checking one marks it for removal.
+  const [removeDupeIds, setRemoveDupeIds] = useState(new Set());
   const [archiving, setArchiving] = useState(false);
   const fileInputRef = useRef(null);
 
-  const toggleKeep = (id) => {
-    setKeepIds((prev) => {
+  const toggleInSet = (setter) => (id) => {
+    setter((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
   };
+  const toggleKeep = toggleInSet(setKeepIds);
+  const toggleRemoveDupe = toggleInSet(setRemoveDupeIds);
 
-  const handleRemoveMissing = async () => {
+  const missingRemoveCount = () => {
     const missing = importResult?.missing || [];
-    const ids = missing.filter((s) => !keepIds.has(s.id)).map((s) => s.id);
+    return missing.filter((s) => !keepIds.has(s.id)).length;
+  };
+  const totalRemoveCount = () => missingRemoveCount() + removeDupeIds.size;
+
+  const handleRemove = async () => {
+    const missing = importResult?.missing || [];
+    const ids = [
+      ...missing.filter((s) => !keepIds.has(s.id)).map((s) => s.id),
+      ...removeDupeIds,
+    ];
     if (ids.length === 0) return;
     setArchiving(true);
     try {
       const result = await api.post('/students/bulk-archive', { ids });
-      setImportResult((prev) => ({ ...prev, missing: [], removed: result.archived }));
+      setImportResult((prev) => ({ ...prev, missing: [], duplicates: [], removed: result.archived }));
       setKeepIds(new Set());
+      setRemoveDupeIds(new Set());
       loadStudents();
     } catch (err) {
       setImportError(err.message || 'Could not remove students');
@@ -233,6 +247,7 @@ export default function StudentRoster() {
     setImportError('');
     setImportResult(null);
     setKeepIds(new Set());
+    setRemoveDupeIds(new Set());
     setImporting(true);
 
     Papa.parse(file, {
@@ -684,13 +699,37 @@ export default function StudentRoster() {
                   )}
                 </div>
                 {importResult.duplicates?.length > 0 && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <p className="text-amber-700 font-ninja font-semibold text-sm mb-2">
-                      {importResult.duplicates.length} duplicate{importResult.duplicates.length !== 1 ? 's' : ''} skipped:
+                  <div className="bg-ninja-bg border border-ninja-border rounded-lg p-3">
+                    <p className="text-ninja-navy font-ninja font-semibold text-sm mb-1">
+                      {importResult.duplicates.length} duplicate{importResult.duplicates.length !== 1 ? 's' : ''} skipped (already enrolled)
                     </p>
-                    <ul className="text-amber-700 font-ninja text-sm space-y-0.5 max-h-32 overflow-y-auto">
-                      {importResult.duplicates.map((name, i) => (
-                        <li key={i}>• {name}</li>
+                    <p className="text-ninja-muted font-ninja text-xs mb-2">
+                      These are kept by default. Check any you want to remove (archive).
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setRemoveDupeIds(
+                        removeDupeIds.size === importResult.duplicates.length
+                          ? new Set()
+                          : new Set(importResult.duplicates.map((s) => s.id))
+                      )}
+                      className="text-ninja-blue font-ninja text-xs font-semibold hover:underline mb-2"
+                    >
+                      {removeDupeIds.size === importResult.duplicates.length ? 'Clear all' : 'Select all'}
+                    </button>
+                    <ul className="text-ninja-navy font-ninja text-sm space-y-1 max-h-44 overflow-y-auto">
+                      {importResult.duplicates.map((s) => (
+                        <li key={s.id}>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={removeDupeIds.has(s.id)}
+                              onChange={() => toggleRemoveDupe(s.id)}
+                              className="accent-ninja-red"
+                            />
+                            <span className={removeDupeIds.has(s.id) ? 'text-ninja-muted line-through' : ''}>{s.full_name}</span>
+                          </label>
+                        </li>
                       ))}
                     </ul>
                   </div>
@@ -735,23 +774,23 @@ export default function StudentRoster() {
             )}
 
             <div className="flex gap-2 mt-5">
-              {importResult?.missing?.length > 0 ? (
+              {(importResult?.missing?.length > 0 || importResult?.duplicates?.length > 0) ? (
                 <>
                   <Button variant="secondary" onClick={() => setImportModal(false)} disabled={archiving}>
                     Done
                   </Button>
                   <Button
-                    onClick={handleRemoveMissing}
-                    disabled={archiving || importResult.missing.length - keepIds.size === 0}
+                    onClick={handleRemove}
+                    disabled={archiving || totalRemoveCount() === 0}
                     className="ml-auto"
                   >
-                    {archiving ? 'Removing…' : `Remove ${importResult.missing.length - keepIds.size}`}
+                    {archiving ? 'Removing…' : `Remove ${totalRemoveCount()}`}
                   </Button>
                 </>
               ) : (
                 <>
                   {importResult && !importing && (
-                    <Button variant="secondary" onClick={() => { setImportResult(null); setImportError(''); setKeepIds(new Set()); }}>
+                    <Button variant="secondary" onClick={() => { setImportResult(null); setImportError(''); setKeepIds(new Set()); setRemoveDupeIds(new Set()); }}>
                       Import Another
                     </Button>
                   )}
