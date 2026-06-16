@@ -13,3 +13,4 @@ CLAUDE.md
 *.swp
 test-results/
 .DS_Store
+.vercel
