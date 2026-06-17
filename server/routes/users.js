@@ -1,19 +1,13 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
 const router = express.Router();
 const { requireManager, requireSensei, requireOwnLocation } = require('../middleware/auth');
+const { generateTempPassword } = require('../lib/tempPassword');
 
 const SALT_ROUNDS = 10;
 
 function validatePassword(pw) {
   return pw.length >= 6 && /[A-Z]/.test(pw) && /[^A-Za-z0-9]/.test(pw);
-}
-
-// Same generator the admin panel uses — staff set their real password during onboarding.
-function generateTempPassword() {
-  const digits = crypto.randomInt(1000, 9999);
-  return `Ninja${digits}!`;
 }
 
 // GET /api/users

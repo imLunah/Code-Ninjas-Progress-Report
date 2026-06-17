@@ -1,15 +1,10 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
 const router = express.Router();
 const { requireAdmin } = require('../middleware/auth');
+const { generateTempPassword } = require('../lib/tempPassword');
 
 const SALT_ROUNDS = 10;
-
-function generateTempPassword() {
-  const digits = crypto.randomInt(1000, 9999);
-  return `Ninja${digits}!`;
-}
 
 // GET /api/admin/locations
 router.get('/locations', requireAdmin, async (req, res) => {
