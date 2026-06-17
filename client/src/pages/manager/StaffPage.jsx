@@ -119,6 +119,8 @@ export default function StaffPage() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [editCredentialsSensei, setEditCredentialsSensei] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const { user, isReadOnly, viewAs } = useAuth();
   const isSenseiView = user?.role === 'admin' && viewAs === 'sensei';
   const isManager = ['manager', 'admin'].includes(user?.role) && !isSenseiView;
@@ -152,6 +154,19 @@ export default function StaffPage() {
       setSenseis((prev) => prev.filter((s) => s.id !== id));
     } catch (err) {
       setError(err.message || 'Failed to restore staff member');
+    }
+  };
+
+  const handlePermanentDelete = async (id) => {
+    setDeletingId(id);
+    try {
+      await api.delete(`/users/${id}/permanent`);
+      setSenseis((prev) => prev.filter((s) => s.id !== id));
+      setConfirmDeleteId(null);
+    } catch (err) {
+      setError(err.message || 'Failed to delete staff member');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -266,12 +281,39 @@ export default function StaffPage() {
                     <p className="font-ninja text-sm text-ninja-muted">@{s.username}</p>
                     <div className="flex items-center justify-end gap-2">
                       {showArchived ? (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleRestore(s.id); }}
-                          className="text-xs font-ninja font-semibold text-green-700 border border-green-300 rounded-lg px-3 py-1 hover:bg-green-50 transition-colors"
-                        >
-                          Restore
-                        </button>
+                        confirmDeleteId === s.id ? (
+                          <>
+                            <span className="text-xs font-ninja text-ninja-muted mr-1 hidden sm:inline">Delete forever?</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handlePermanentDelete(s.id); }}
+                              disabled={deletingId === s.id}
+                              className="text-xs font-ninja font-semibold text-ninja-red border border-red-300 rounded-lg px-3 py-1 hover:bg-red-50 transition-colors disabled:opacity-50"
+                            >
+                              {deletingId === s.id ? 'Deleting…' : 'Delete'}
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                              className="text-xs font-ninja font-semibold text-ninja-muted border border-ninja-border rounded-lg px-3 py-1 hover:bg-ninja-bg transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleRestore(s.id); }}
+                              className="text-xs font-ninja font-semibold text-green-700 border border-green-300 rounded-lg px-3 py-1 hover:bg-green-50 transition-colors"
+                            >
+                              Restore
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(s.id); }}
+                              className="text-xs font-ninja font-semibold text-ninja-red border border-red-300 rounded-lg px-3 py-1 hover:bg-red-50 transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </>
+                        )
                       ) : (
                         <span className={`text-lg font-bold font-ninja ${s.progress_log_count > 0 ? 'text-ninja-blue' : 'text-ninja-border'}`}>
                           {s.progress_log_count || 0}

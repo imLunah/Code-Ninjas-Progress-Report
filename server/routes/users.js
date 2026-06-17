@@ -259,4 +259,48 @@ router.patch('/:id/restore', requireManager, requireOwnLocation, async (req, res
   }
 });
 
+// DELETE /api/users/:id/permanent — hard-delete a sensei at the manager's own center
+router.delete('/:id/permanent', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, role FROM users WHERE id = $1 AND location_id = $2',
+      [id, req.session.activeLocationId]
+    );
+    const target = rows[0];
+    if (!target) return res.status(404).json({ error: 'User not found' });
+    if (target.id === req.session.userId) return res.status(403).json({ error: 'Cannot delete your own account' });
+    if (target.role !== 'sensei') return res.status(403).json({ error: 'Can only delete senseis' });
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      // Comments this sensei left on OTHER senseis' logs (not covered by the cascade below)
+      await client.query('DELETE FROM progress_log_comments WHERE user_id = $1', [id]);
+      // This sensei's own logs — cascades to remaining comments on those logs
+      await client.query('DELETE FROM progress_logs WHERE sensei_id = $1', [id]);
+      // Club session comments by this user (NOT NULL FK — can't nullify)
+      await client.query('DELETE FROM club_session_comments WHERE user_id = $1', [id]);
+      // Nullify nullable references so real clubs/sessions/assignments survive
+      await client.query('UPDATE daily_assignments SET sensei_id = NULL WHERE sensei_id = $1', [id]);
+      await client.query('UPDATE club_sessions SET sensei_id = NULL WHERE sensei_id = $1', [id]);
+      await client.query('UPDATE club_definitions SET created_by = NULL WHERE created_by = $1', [id]);
+      await client.query('UPDATE announcements SET created_by = NULL WHERE created_by = $1', [id]);
+      await client.query('DELETE FROM users WHERE id = $1', [id]);
+      await client.query('COMMIT');
+      res.json({ ok: true });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Error permanently deleting user:', err);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
 module.exports = router;
