@@ -751,7 +751,7 @@ export default function StudentRoster() {
                       )}
                       className="text-ninja-blue font-ninja text-xs font-semibold hover:underline mb-2"
                     >
-                      {keepIds.size === importResult.missing.length ? 'Uncheck all' : 'Keep all'}
+                      {keepIds.size === importResult.missing.length ? 'Clear all' : 'Select all'}
                     </button>
                     <ul className="text-ninja-navy font-ninja text-sm space-y-1 max-h-44 overflow-y-auto">
                       {importResult.missing.map((s) => (
