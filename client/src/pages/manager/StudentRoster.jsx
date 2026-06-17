@@ -666,7 +666,7 @@ export default function StudentRoster() {
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
             <h2 className="text-lg font-bold font-ninja text-ninja-navy mb-1">Import from MyStudio CSV</h2>
             <p className="text-ninja-muted font-ninja text-sm mb-5">
-              Export your membership list from MyStudio and upload it here. Programs and belt levels are auto-detected. Duplicates are skipped.
+              Export your membership list from MyStudio and upload it here. Programs and belt levels are auto-detected.
             </p>
 
             {!importResult && (
