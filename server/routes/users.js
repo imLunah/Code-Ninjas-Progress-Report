@@ -1,5 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const router = express.Router();
 const { requireManager, requireSensei, requireOwnLocation } = require('../middleware/auth');
 
@@ -7,6 +8,12 @@ const SALT_ROUNDS = 10;
 
 function validatePassword(pw) {
   return pw.length >= 6 && /[A-Z]/.test(pw) && /[^A-Za-z0-9]/.test(pw);
+}
+
+// Same generator the admin panel uses — staff set their real password during onboarding.
+function generateTempPassword() {
+  const digits = crypto.randomInt(1000, 9999);
+  return `Ninja${digits}!`;
 }
 
 // GET /api/users
@@ -75,14 +82,13 @@ router.get('/:id', requireSensei, async (req, res) => {
 // POST /api/users
 router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
-  const { username, password, display_name, role } = req.body;
+  const { username, display_name, role } = req.body;
 
-  if (!username || !password || !display_name || !role) {
+  if (!username || !display_name || !role) {
     return res.status(400).json({ error: 'All fields are required' });
   }
   if (username.length > 50) return res.status(400).json({ error: 'Username too long (max 50 chars)' });
   if (display_name.length > 80) return res.status(400).json({ error: 'Display name too long (max 80 chars)' });
-  if (!validatePassword(password)) return res.status(400).json({ error: 'Password must be at least 6 characters and include an uppercase letter and a special character' });
 
   if (!['manager', 'sensei'].includes(role)) {
     return res.status(400).json({ error: 'Invalid role' });
@@ -98,13 +104,15 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
     // Always use the manager's own location — never trust location_id from request body
     const locationId = req.session.activeLocationId;
 
-    const hash = await bcrypt.hash(password, SALT_ROUNDS);
+    // Match the admin flow: generate a temp password, force reset → onboarding on first login.
+    const tempPassword = generateTempPassword();
+    const hash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
     const { rows } = await pool.query(
       'INSERT INTO users (username, password_hash, display_name, role, location_id, must_reset_password) VALUES ($1, $2, $3, $4, $5, true) RETURNING id, username, display_name, role, location_id, created_at',
       [username, hash, display_name, role, locationId]
     );
 
-    res.status(201).json(rows[0]);
+    res.status(201).json({ ...rows[0], temp_password: tempPassword });
   } catch (err) {
     console.error('Error creating user:', err);
     res.status(500).json({ error: 'Failed to create user' });

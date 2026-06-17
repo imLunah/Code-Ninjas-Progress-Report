@@ -4,10 +4,12 @@ import Button from '../ui/Button';
 import { api } from '../../api/client';
 
 export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
-  const [form, setForm] = useState({ display_name: '', username: '', password: '' });
+  const [form, setForm] = useState({ display_name: '', username: '' });
   const [role, setRole] = useState('sensei');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [created, setCreated] = useState(null); // { username, temp_password } after success
+  const [copied, setCopied] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -15,21 +17,16 @@ export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
   };
 
   const handleClose = () => {
-    setForm({ display_name: '', username: '', password: '' });
+    setForm({ display_name: '', username: '' });
     setRole('sensei');
     setError('');
+    setCreated(null);
+    setCopied(false);
     onClose();
   };
 
-  const passwordValid = (pw) =>
-    pw.length >= 6 && /[A-Z]/.test(pw) && /[^A-Za-z0-9]/.test(pw);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!passwordValid(form.password)) {
-      setError('Password must be at least 6 characters and include an uppercase letter and a special character.');
-      return;
-    }
     setLoading(true);
     setError('');
     try {
@@ -38,14 +35,13 @@ export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
         ? `Sensei ${rawName}`
         : rawName;
 
-      const created = await api.post('/users', {
+      const result = await api.post('/users', {
         display_name,
         username: form.username,
-        password: form.password,
         role,
       });
-      onAdded && onAdded(created);
-      handleClose();
+      onAdded && onAdded(result);
+      setCreated({ username: result.username, temp_password: result.temp_password });
     } catch (err) {
       setError(err.message || 'Failed to create account');
     } finally {
@@ -53,106 +49,121 @@ export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
     }
   };
 
+  const copy = () => {
+    if (!created) return;
+    navigator.clipboard.writeText(created.temp_password);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Add Staff">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-ninja-red rounded-lg p-3 text-sm font-ninja">
-            {error}
+    <Modal isOpen={isOpen} onClose={handleClose} title={created ? 'Temporary Password' : 'Add Staff'}>
+      {created ? (
+        <div className="space-y-4">
+          <p className="text-ninja-muted font-ninja text-xs">
+            Share these with the new staff member. They'll set their own password during onboarding, so this password won't be shown again.
+          </p>
+          <div className="bg-ninja-bg rounded-xl p-4 space-y-2 font-mono text-sm border border-ninja-border">
+            <div><span className="text-ninja-muted">Username:</span> <span className="text-ninja-navy font-semibold">{created.username}</span></div>
+            <div><span className="text-ninja-muted">Password:</span> <span className="text-ninja-red font-bold">{created.temp_password}</span></div>
           </div>
-        )}
-
-        {/* Role toggle */}
-        <div>
-          <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-2 uppercase tracking-wide">
-            Role
-          </label>
-          <div className="flex gap-2">
-            {[
-              { value: 'sensei', label: 'Sensei' },
-              { value: 'manager', label: 'Center Director' },
-            ].map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setRole(opt.value)}
-                className={`flex-1 py-2 rounded-lg text-sm font-ninja font-semibold transition-colors border ${
-                  role === opt.value
-                    ? 'bg-ninja-blue text-white border-ninja-blue'
-                    : 'bg-white border-ninja-border text-ninja-navy hover:border-ninja-blue'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+          <div className="flex gap-3">
+            <Button type="button" onClick={copy} className="flex-1">
+              {copied ? 'Copied!' : 'Copy password'}
+            </Button>
+            <Button variant="secondary" type="button" onClick={handleClose}>
+              Done
+            </Button>
           </div>
-          {role === 'manager' && (
-            <p className="text-ninja-muted font-ninja text-xs mt-1.5">
-              Center Directors have full access — student management, staff, and settings.
-            </p>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-ninja-red rounded-lg p-3 text-sm font-ninja">
+              {error}
+            </div>
           )}
-        </div>
 
-        <div>
-          <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
-            Display Name
-          </label>
-          <input
-            type="text"
-            name="display_name"
-            value={form.display_name}
-            onChange={handleChange}
-            required
-            placeholder={role === 'sensei' ? 'e.g. Alex Kim' : 'e.g. Jordan Smith'}
-            className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-          />
-          {role === 'sensei' && form.display_name.trim() && !form.display_name.trim().toLowerCase().startsWith('sensei ') && (
-            <p className="text-ninja-muted font-ninja text-xs mt-1">
-              Will be saved as <span className="font-semibold text-ninja-navy">Sensei {form.display_name.trim()}</span>
-            </p>
-          )}
-        </div>
+          {/* Role toggle */}
+          <div>
+            <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-2 uppercase tracking-wide">
+              Role
+            </label>
+            <div className="flex gap-2">
+              {[
+                { value: 'sensei', label: 'Sensei' },
+                { value: 'manager', label: 'Center Director' },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setRole(opt.value)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-ninja font-semibold transition-colors border ${
+                    role === opt.value
+                      ? 'bg-ninja-blue text-white border-ninja-blue'
+                      : 'bg-white border-ninja-border text-ninja-navy hover:border-ninja-blue'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {role === 'manager' && (
+              <p className="text-ninja-muted font-ninja text-xs mt-1.5">
+                Center Directors have full access — student management, staff, and settings.
+              </p>
+            )}
+          </div>
 
-        <div>
-          <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
-            Username
-          </label>
-          <input
-            type="text"
-            name="username"
-            value={form.username}
-            onChange={handleChange}
-            required
-            placeholder={role === 'manager' ? 'e.g. director_kim' : 'e.g. sensei_alex'}
-            className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-          />
-        </div>
+          <div>
+            <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
+              Display Name
+            </label>
+            <input
+              type="text"
+              name="display_name"
+              value={form.display_name}
+              onChange={handleChange}
+              required
+              placeholder={role === 'sensei' ? 'e.g. Alex Kim' : 'e.g. Jordan Smith'}
+              className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+            />
+            {role === 'sensei' && form.display_name.trim() && !form.display_name.trim().toLowerCase().startsWith('sensei ') && (
+              <p className="text-ninja-muted font-ninja text-xs mt-1">
+                Will be saved as <span className="font-semibold text-ninja-navy">Sensei {form.display_name.trim()}</span>
+              </p>
+            )}
+          </div>
 
-        <div>
-          <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
-            Password
-          </label>
-          <input
-            type="password"
-            name="password"
-            value={form.password}
-            onChange={handleChange}
-            required
-            placeholder="Set a password"
-            className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-          />
-          <p className="text-ninja-muted font-ninja text-xs mt-1">Min 6 characters, one uppercase, one special character (e.g. Ninja@1)</p>
-        </div>
+          <div>
+            <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
+              Username
+            </label>
+            <input
+              type="text"
+              name="username"
+              value={form.username}
+              onChange={handleChange}
+              required
+              placeholder={role === 'manager' ? 'e.g. director_kim' : 'e.g. sensei_alex'}
+              className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
+            />
+          </div>
 
-        <div className="flex gap-3 pt-2">
-          <Button type="submit" disabled={loading} className="flex-1">
-            {loading ? 'Creating...' : `Add ${role === 'manager' ? 'Center Director' : 'Sensei'}`}
-          </Button>
-          <Button variant="secondary" type="button" onClick={handleClose}>
-            Cancel
-          </Button>
-        </div>
-      </form>
+          <p className="text-ninja-muted font-ninja text-xs">
+            A temporary password will be generated. The new staff member sets their own during onboarding.
+          </p>
+
+          <div className="flex gap-3 pt-2">
+            <Button type="submit" disabled={loading} className="flex-1">
+              {loading ? 'Creating...' : `Add ${role === 'manager' ? 'Center Director' : 'Sensei'}`}
+            </Button>
+            <Button variant="secondary" type="button" onClick={handleClose}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      )}
     </Modal>
   );
 }
