@@ -100,7 +100,7 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
 
     const hash = await bcrypt.hash(password, SALT_ROUNDS);
     const { rows } = await pool.query(
-      'INSERT INTO users (username, password_hash, display_name, role, location_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, display_name, role, location_id, created_at',
+      'INSERT INTO users (username, password_hash, display_name, role, location_id, must_reset_password) VALUES ($1, $2, $3, $4, $5, true) RETURNING id, username, display_name, role, location_id, created_at',
       [username, hash, display_name, role, locationId]
     );
 
