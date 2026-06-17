@@ -517,7 +517,6 @@ export default function StudentProfile() {
   const [confirmRemoveProgram, setConfirmRemoveProgram] = useState(null);
   const [editingEnrollment, setEditingEnrollment] = useState(null);
   const [showAddProgram, setShowAddProgram] = useState(false);
-  const [showParentQR, setShowParentQR] = useState(false);
   const [roadmapEnrollment, setRoadmapEnrollment] = useState(null);
 
   const isSenseiView = user?.role === 'admin' && viewAs === 'sensei';
@@ -1009,43 +1008,18 @@ export default function StudentProfile() {
                 {/* Parent contact */}
                 {isManager && (student.parent_name || student.parent_email || student.parent_phone) && (
                   <div className="mt-4 pt-4 border-t border-ninja-border space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="space-y-1 flex-1">
-                        {student.parent_name && (
-                          <p className="text-ninja-muted font-ninja text-sm">
-                            <span className="font-semibold text-ninja-navy">Parent:</span> {student.parent_name}
-                          </p>
-                        )}
-                        {student.parent_email && (
-                          <p className="text-ninja-muted font-ninja text-sm">
-                            <a href={`mailto:${student.parent_email}`} className="text-ninja-blue hover:underline">{student.parent_email}</a>
-                          </p>
-                        )}
-                        {student.parent_phone && (
-                          <p className="text-ninja-muted font-ninja text-sm">{student.parent_phone.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')}</p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => setShowParentQR(p => !p)}
-                        title="Parent portal QR code"
-                        className="text-ninja-muted hover:text-ninja-blue transition-colors flex-shrink-0"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                        </svg>
-                      </button>
-                    </div>
-                    {showParentQR && (
-                      <div className="pt-2 flex flex-col items-center gap-1.5">
-                        <img
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent('https://dojolink-neon.vercel.app/login?tab=parent')}`}
-                          alt="Parent portal QR code"
-                          className="rounded-lg border border-ninja-border"
-                          width={160}
-                          height={160}
-                        />
-                        <p className="text-ninja-muted font-ninja text-xs">Scan to open parent portal</p>
-                      </div>
+                    {student.parent_name && (
+                      <p className="text-ninja-muted font-ninja text-sm">
+                        <span className="font-semibold text-ninja-navy">Parent:</span> {student.parent_name}
+                      </p>
+                    )}
+                    {student.parent_email && (
+                      <p className="text-ninja-muted font-ninja text-sm">
+                        <a href={`mailto:${student.parent_email}`} className="text-ninja-blue hover:underline">{student.parent_email}</a>
+                      </p>
+                    )}
+                    {student.parent_phone && (
+                      <p className="text-ninja-muted font-ninja text-sm">{student.parent_phone.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')}</p>
                     )}
                   </div>
                 )}
