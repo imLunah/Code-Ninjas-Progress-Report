@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
+import { useParentAuth } from '../../context/ParentAuthContext';
 import { api } from '../../api/client';
 import ReleaseContent from './ReleaseContent';
 import { ONBOARDING_ENABLED } from '../../lib/features';
@@ -12,11 +13,15 @@ const PANEL_SPRING = { type: 'spring', stiffness: 320, damping: 30, mass: 0.9 };
 // pops a "What's New" modal. Closing marks everything published-so-far as seen.
 export default function WhatsNewModal() {
   const { user } = useAuth();
+  const parentAuth = useParentAuth();
+  const parent = parentAuth?.parent;
   const [releases, setReleases] = useState([]);
   const [open, setOpen] = useState(false);
   const checkedFor = useRef(null);
 
   useEffect(() => {
+    // Staff-only feature — never fetch the staff releases endpoint in a parent session.
+    if (parent) { setOpen(false); setReleases([]); checkedFor.current = null; return; }
     if (!user) { setOpen(false); setReleases([]); checkedFor.current = null; return; }
     // Force-reset + onboarding take priority; don't stack the What's New modal on top.
     if (user.mustResetPassword || (ONBOARDING_ENABLED && user.onboarded === false)) return;
@@ -27,7 +32,7 @@ export default function WhatsNewModal() {
         if (Array.isArray(rows) && rows.length) { setReleases(rows); setOpen(true); }
       })
       .catch(() => {});
-  }, [user]);
+  }, [user, parent]);
 
   useEffect(() => {
     if (!open) return;
