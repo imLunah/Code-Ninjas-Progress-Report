@@ -796,14 +796,14 @@ export default function StudentRoster() {
               {(importResult?.missing?.length > 0 || importResult?.conflicts?.length > 0) ? (
                 <>
                   <Button variant="secondary" onClick={() => setImportModal(false)} disabled={archiving}>
-                    Done
+                    Cancel
                   </Button>
                   <Button
                     onClick={handleApply}
                     disabled={archiving || totalChangeCount() === 0}
                     className="ml-auto"
                   >
-                    {archiving ? 'Applying…' : `Apply ${totalChangeCount()}`}
+                    {archiving ? 'Applying…' : `Apply Changes${totalChangeCount() ? ` (${totalChangeCount()})` : ''}`}
                   </Button>
                 </>
               ) : (
