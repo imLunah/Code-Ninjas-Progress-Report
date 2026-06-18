@@ -205,7 +205,7 @@ export default function SenseiProfileModal({
                 style={{ paddingBottom: 'max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 1.5rem))' }}
               >
                 {onManageCenters && centers.length > 1 && (
-                  <Button variant="secondary" className="flex-1" onClick={() => { handleClose(); onManageCenters(); }}>
+                  <Button variant="secondary" className="w-full" onClick={() => { handleClose(); onManageCenters(); }}>
                     Manage Centers
                   </Button>
                 )}
