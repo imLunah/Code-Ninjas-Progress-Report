@@ -744,7 +744,7 @@ export default function StudentRoster() {
                                 className="accent-ninja-blue"
                               />
                               <span className={overrideKeys.has(key) ? '' : 'text-ninja-muted'}>
-                                {c.full_name} <span className="text-ninja-muted">({c.program})</span>: {c.current_belt} → <span className="font-semibold">{c.new_belt}</span>
+                                {c.full_name} <span className="text-ninja-muted">({c.program})</span>: {c.current_belt || 'None'} → <span className="font-semibold">{c.new_belt}</span>
                               </span>
                             </label>
                           </li>

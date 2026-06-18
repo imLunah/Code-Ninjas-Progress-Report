@@ -622,10 +622,18 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
     return res.status(400).json({ error: 'No student data provided' });
   }
 
-  const BELT_MAP = {
-    'White Belt': 'White', 'Yellow Belt': 'Yellow', 'Orange Belt': 'Orange',
-    'Green Belt': 'Green', 'Blue Belt': 'Blue', 'Purple Belt': 'Purple',
-    'Brown Belt': 'Brown', 'Red Belt': 'Red', 'Black Belt': 'Black',
+  // Tolerant belt parse: match any known belt name appearing anywhere in the
+  // raw Rank string, case-insensitive. Handles "White Belt", "White Belt 4",
+  // "CREATE - White", "yellow belt", etc. Longest names first to avoid any
+  // partial-substring collisions.
+  const BELT_NAMES = [
+    'Platinum', 'Bronze', 'Silver', 'Yellow', 'Orange', 'Purple',
+    'Brown', 'Green', 'Black', 'White', 'Blue', 'Gold', 'Red',
+  ];
+  const parseBelt = (raw) => {
+    if (!raw) return null;
+    const s = String(raw).toLowerCase();
+    return BELT_NAMES.find((name) => s.includes(name.toLowerCase())) || null;
   };
 
   const added = [];
@@ -641,7 +649,7 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
       const program = row.program?.trim();
       if (!fullName || !program) continue;
 
-      const beltLevel = BELT_MAP[row.belt_raw?.trim()] || null;
+      const beltLevel = parseBelt(row.belt_raw);
 
       // Check for existing student with same name + program at this location
       const { rows: existing } = await client.query(
@@ -653,15 +661,16 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
 
       if (existing.length) {
         const currentBelt = existing[0].belt_level;
-        // Same name+program already enrolled. If the CSV carries a different
-        // belt for THIS program, surface it as a conflict the caller can choose
-        // to override, scoped to this one program, never touching others.
-        if (beltLevel && currentBelt && beltLevel !== currentBelt) {
+        // Same name+program already enrolled. If the CSV carries a belt that
+        // differs from what's on file for THIS program, surface it as a change
+        // the caller can choose to apply, scoped to this one program, never
+        // touching others.
+        if (beltLevel && beltLevel !== currentBelt) {
           conflicts.push({
             id: existing[0].id,
             full_name: fullName,
             program,
-            current_belt: currentBelt,
+            current_belt: currentBelt || null,
             new_belt: beltLevel,
           });
         } else {
