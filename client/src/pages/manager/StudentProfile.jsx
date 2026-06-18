@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import Layout from '../../components/layout/Layout';
 import BeltBadge from '../../components/ui/BeltBadge';
+import BeltIcon from '../../components/ui/BeltIcon';
 import ProgramBadge from '../../components/ui/ProgramBadge';
 import Button from '../../components/ui/Button';
 import ProgressHistory from '../../components/shared/ProgressHistory';
@@ -93,11 +94,7 @@ function MobileBeltJourney({ enrollment }) {
                   className="relative flex-shrink-0"
                   style={{ width: size, height: size }}
                 >
-                  <img
-                    src={`/belts/belt-${b.name.toLowerCase()}.png`}
-                    alt={b.name}
-                    className={`w-full h-full object-contain ${!isPast && !isCurrent ? 'opacity-25 grayscale' : ''}`}
-                  />
+                  <BeltIcon belt={b.name} size={size} dimmed={!isPast && !isCurrent} className="w-full h-full" />
                 </div>
               </React.Fragment>
             );

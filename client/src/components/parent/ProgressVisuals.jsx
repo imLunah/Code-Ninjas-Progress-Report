@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { BELTS, PROGRAM_LOGOS, getLevels } from '../../utils/beltConfig';
+import { BELTS, PROGRAM_LOGOS, getLevels, getBelt } from '../../utils/beltConfig';
+import BeltIcon from '../ui/BeltIcon';
 import { useCurriculum } from '../../context/CurriculumContext';
 import { formatDate } from '../../utils/dateUtils';
 
@@ -235,7 +236,16 @@ function BeltJourney({ enrollment }) {
     >
       <div className="p-5 relative">
         <div className="absolute pointer-events-none" style={{ right: -8, top: -8, opacity: 0.42 }}>
-          <img src={BELT_IMAGES[belt_level]} alt="" draggable={false} className="w-[110px] h-[110px] sm:w-40 sm:h-40 md:w-52 md:h-52" />
+          {BELT_IMAGES[belt_level] ? (
+            <img src={BELT_IMAGES[belt_level]} alt="" draggable={false} className="w-[110px] h-[110px] sm:w-40 sm:h-40 md:w-52 md:h-52" />
+          ) : (
+            <div
+              className="w-[110px] h-[110px] sm:w-40 sm:h-40 md:w-52 md:h-52 rounded-full flex items-center justify-center font-ninja font-black"
+              style={{ backgroundColor: getBelt(belt_level)?.color || '#9ca3af', color: getBelt(belt_level)?.textColor || '#fff' }}
+            >
+              <span style={{ fontSize: '3rem' }}>{belt_level[0]}</span>
+            </div>
+          )}
         </div>
 
         <p className="font-ninja text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.75)' }}>
@@ -270,20 +280,22 @@ function BeltJourney({ enrollment }) {
                       backgroundColor: reached ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.22)',
                     }} />
                   )}
-                  <motion.img
-                    src={BELT_IMAGES[belt.name]}
-                    alt={belt.name}
-                    draggable={false}
+                  <motion.div
                     initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: reached ? 1 : 0.45, scale: 1 }}
                     transition={{ type: 'spring', stiffness: 340, damping: 18, delay: i * 0.04 + 0.2 }}
-                    style={{
-                      width: imgSize, height: imgSize, display: 'block',
-                      filter: isCurrent
-                        ? 'drop-shadow(0 0 6px rgba(255,255,255,0.55))'
-                        : reached ? 'none' : 'grayscale(100%)',
-                    }}
-                  />
+                    style={{ flexShrink: 0, display: 'block' }}
+                  >
+                    <BeltIcon
+                      belt={belt.name}
+                      size={imgSize}
+                      style={{
+                        filter: isCurrent
+                          ? 'drop-shadow(0 0 6px rgba(255,255,255,0.55))'
+                          : reached ? 'none' : 'grayscale(100%)',
+                      }}
+                    />
+                  </motion.div>
                 </React.Fragment>
               );
             })}
