@@ -72,8 +72,6 @@ export default function StudentRoster() {
   const [importError, setImportError] = useState('');
   // Missing ninjas are removed by default — checking one KEEPS it.
   const [keepIds, setKeepIds] = useState(new Set());
-  // Duplicates are kept by default — checking one marks it for removal.
-  const [removeDupeIds, setRemoveDupeIds] = useState(new Set());
   // Belt conflicts are NOT overridden by default; checking one applies the
   // CSV belt to that program only. Keyed by `${id}::${program}`.
   const [overrideKeys, setOverrideKeys] = useState(new Set());
@@ -88,25 +86,20 @@ export default function StudentRoster() {
     });
   };
   const toggleKeep = toggleInSet(setKeepIds);
-  const toggleRemoveDupe = toggleInSet(setRemoveDupeIds);
   const toggleOverride = toggleInSet(setOverrideKeys);
 
   const conflictKey = (c) => `${c.id}::${c.program}`;
 
-  const missingRemoveCount = () => {
+  const totalRemoveCount = () => {
     const missing = importResult?.missing || [];
     return missing.filter((s) => !keepIds.has(s.id)).length;
   };
-  const totalRemoveCount = () => missingRemoveCount() + removeDupeIds.size;
   const totalChangeCount = () => totalRemoveCount() + overrideKeys.size;
 
   const handleApply = async () => {
     const missing = importResult?.missing || [];
     const conflicts = importResult?.conflicts || [];
-    const ids = [
-      ...missing.filter((s) => !keepIds.has(s.id)).map((s) => s.id),
-      ...removeDupeIds,
-    ];
+    const ids = missing.filter((s) => !keepIds.has(s.id)).map((s) => s.id);
     const updates = conflicts
       .filter((c) => overrideKeys.has(conflictKey(c)))
       .map((c) => ({ id: c.id, program: c.program, belt_level: c.new_belt }));
@@ -121,7 +114,6 @@ export default function StudentRoster() {
       }
       setImportResult((prev) => ({ ...prev, missing: [], duplicates: [], conflicts: [], removed }));
       setKeepIds(new Set());
-      setRemoveDupeIds(new Set());
       setOverrideKeys(new Set());
       loadStudents();
     } catch (err) {
@@ -264,7 +256,6 @@ export default function StudentRoster() {
     setImportError('');
     setImportResult(null);
     setKeepIds(new Set());
-    setRemoveDupeIds(new Set());
     setOverrideKeys(new Set());
     setImporting(true);
 
@@ -715,43 +706,12 @@ export default function StudentRoster() {
                       {importResult.removed} ninja{importResult.removed !== 1 ? 's' : ''} removed from the roster
                     </p>
                   )}
+                  {importResult.duplicates?.length > 0 && (
+                    <p className="text-green-700/80 font-ninja text-sm mt-1">
+                      {importResult.duplicates.length} already enrolled (skipped, no change)
+                    </p>
+                  )}
                 </div>
-                {importResult.duplicates?.length > 0 && (
-                  <div className="bg-ninja-bg border border-ninja-border rounded-lg p-3">
-                    <p className="text-ninja-navy font-ninja font-semibold text-sm mb-1">
-                      {importResult.duplicates.length} duplicate{importResult.duplicates.length !== 1 ? 's' : ''} skipped (already enrolled)
-                    </p>
-                    <p className="text-ninja-muted font-ninja text-xs mb-2">
-                      These are kept by default. Check any you want to remove (archive).
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setRemoveDupeIds(
-                        removeDupeIds.size === importResult.duplicates.length
-                          ? new Set()
-                          : new Set(importResult.duplicates.map((s) => s.id))
-                      )}
-                      className="text-ninja-blue font-ninja text-xs font-semibold hover:underline mb-2"
-                    >
-                      {removeDupeIds.size === importResult.duplicates.length ? 'Clear all' : 'Select all'}
-                    </button>
-                    <ul className="text-ninja-navy font-ninja text-sm space-y-1 max-h-44 overflow-y-auto">
-                      {importResult.duplicates.map((s) => (
-                        <li key={s.id}>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={removeDupeIds.has(s.id)}
-                              onChange={() => toggleRemoveDupe(s.id)}
-                              className="accent-ninja-red"
-                            />
-                            <span className={removeDupeIds.has(s.id) ? 'text-ninja-muted line-through' : ''}>{s.full_name}</span>
-                          </label>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
                 {importResult.conflicts?.length > 0 && (
                   <div className="bg-ninja-bg border border-ninja-border rounded-lg p-3">
                     <p className="text-ninja-navy font-ninja font-semibold text-sm mb-1">
@@ -833,7 +793,7 @@ export default function StudentRoster() {
             )}
 
             <div className="flex gap-2 mt-5">
-              {(importResult?.missing?.length > 0 || importResult?.duplicates?.length > 0 || importResult?.conflicts?.length > 0) ? (
+              {(importResult?.missing?.length > 0 || importResult?.conflicts?.length > 0) ? (
                 <>
                   <Button variant="secondary" onClick={() => setImportModal(false)} disabled={archiving}>
                     Done
@@ -849,7 +809,7 @@ export default function StudentRoster() {
               ) : (
                 <>
                   {importResult && !importing && (
-                    <Button variant="secondary" onClick={() => { setImportResult(null); setImportError(''); setKeepIds(new Set()); setRemoveDupeIds(new Set()); setOverrideKeys(new Set()); }}>
+                    <Button variant="secondary" onClick={() => { setImportResult(null); setImportError(''); setKeepIds(new Set()); setOverrideKeys(new Set()); }}>
                       Import Another
                     </Button>
                   )}
