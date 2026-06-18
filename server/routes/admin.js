@@ -172,7 +172,7 @@ router.get('/users', requireAdmin, async (req, res) => {
   try {
     let query = `
       SELECT u.id, u.username, u.display_name, u.role, u.active, u.location_id, u.created_at,
-             l.name AS location_name,
+             u.must_reset_password, l.name AS location_name,
              COALESCE(array_agg(DISTINCT ul.location_id) FILTER (WHERE ul.location_id IS NOT NULL), '{}') AS location_ids
       FROM users u
       LEFT JOIN locations l ON u.location_id = l.id

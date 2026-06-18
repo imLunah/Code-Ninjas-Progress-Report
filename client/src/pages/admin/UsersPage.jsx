@@ -398,6 +398,18 @@ export default function UsersPage() {
                 </div>
                 <AnimatePresence>
                   {users.map((u) => {
+                    const statusBadge = u.must_reset_password ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-ninja font-bold w-fit flex-shrink-0 bg-amber-100 text-amber-700">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        Awaiting sign-in
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-ninja font-bold w-fit flex-shrink-0 bg-green-100 text-green-700">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                        Signed in
+                      </span>
+                    );
+
                     const roleBadge = (
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-ninja font-bold w-fit flex-shrink-0 ${
                         u.role === 'manager' ? 'bg-blue-100 text-ninja-blue' : 'bg-ninja-bg text-ninja-muted border border-ninja-border'
@@ -442,7 +454,10 @@ export default function UsersPage() {
                       >
                         {/* Desktop row */}
                         <div className="hidden lg:grid grid-cols-[2fr_1.5fr_1fr_1.2fr_auto] gap-4 px-5 py-3.5 items-center border-b border-ninja-border/60 last:border-b-0 hover:bg-ninja-bg transition-colors">
-                          <p className="font-ninja font-semibold text-ninja-navy text-sm truncate">{u.display_name}</p>
+                          <div className="min-w-0">
+                            <p className="font-ninja font-semibold text-ninja-navy text-sm truncate">{u.display_name}</p>
+                            <div className="mt-0.5">{statusBadge}</div>
+                          </div>
                           <p className="font-ninja text-sm text-ninja-muted">@{u.username}</p>
                           {roleBadge}
                           <p className="font-ninja text-sm text-ninja-navy truncate" title={centerLabel(u)}>{centerLabel(u)}</p>
@@ -454,7 +469,8 @@ export default function UsersPage() {
                             <p className="font-ninja font-semibold text-ninja-navy text-sm leading-snug">{u.display_name}</p>
                             {roleBadge}
                           </div>
-                          <p className="font-ninja text-xs text-ninja-muted mb-2.5">@{u.username} · {centerLabel(u)}</p>
+                          <p className="font-ninja text-xs text-ninja-muted mb-1.5">@{u.username} · {centerLabel(u)}</p>
+                          <div className="mb-2.5">{statusBadge}</div>
                           <div className="flex items-center gap-3 flex-wrap">{actions}</div>
                         </div>
                       </motion.div>
