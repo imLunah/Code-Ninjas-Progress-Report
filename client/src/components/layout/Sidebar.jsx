@@ -103,7 +103,7 @@ export default function Sidebar({ onOpenBug }) {
       {/* Center switcher */}
       {user && (
         <div className="px-3 pt-3">
-          {['manager', 'admin'].includes(user.role) && !isSenseiView ? (
+          {(['manager', 'admin'].includes(user.role) || (user.availableLocations?.length > 1)) && !isSenseiView ? (
             <select
               value={user.activeLocation?.id ?? ''}
               onChange={(e) => switchLocation(Number(e.target.value))}

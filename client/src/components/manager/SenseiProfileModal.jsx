@@ -40,10 +40,14 @@ function StatCard({ value, label, delay = 0 }) {
 
 export default function SenseiProfileModal({
   isOpen, onClose, sensei, logs = [],
-  isManager, isReadOnly, onEditLogin, onRemove,
+  isManager, isReadOnly, onEditLogin, onRemove, onManageCenters, centers = [],
 }) {
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const touchStartY = useRef(null);
+
+  const centerNames = (sensei?.location_ids || [])
+    .map((id) => centers.find((c) => c.id === id)?.name)
+    .filter(Boolean);
 
   const handleClose = () => {
     setConfirmingRemove(false);
@@ -137,6 +141,21 @@ export default function SenseiProfileModal({
 
           {/* Scrollable body */}
           <div className="overflow-y-auto flex-1 min-h-0">
+            {centerNames.length > 0 && (
+              <div className="px-5 pt-4">
+                <p className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest mb-2">
+                  Centers
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {centerNames.map((name) => (
+                    <span key={name} className="inline-block px-2.5 py-0.5 bg-ninja-blue/10 border border-ninja-blue/20 rounded-full text-ninja-blue text-xs font-ninja font-semibold">
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="px-5 py-4">
               <p className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest mb-3">
                 Recent Logs
@@ -182,9 +201,14 @@ export default function SenseiProfileModal({
 
             {isManager && !isReadOnly && (
               <div
-                className="px-5 pt-2 border-t border-ninja-border flex gap-2"
+                className="px-5 pt-2 border-t border-ninja-border flex gap-2 flex-wrap"
                 style={{ paddingBottom: 'max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 1.5rem))' }}
               >
+                {onManageCenters && centers.length > 1 && (
+                  <Button variant="secondary" className="flex-1" onClick={() => { handleClose(); onManageCenters(); }}>
+                    Manage Centers
+                  </Button>
+                )}
                 {sensei.role !== 'manager' && (
                   <Button variant="secondary" className="flex-1" onClick={() => { handleClose(); onEditLogin(); }}>
                     Edit Login

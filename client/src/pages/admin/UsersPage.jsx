@@ -139,7 +139,11 @@ function UserFormModal({ locations, initial, onClose, onSaved }) {
   const [username, setUsername] = useState(initial?.username || '');
   const [displayName, setDisplayName] = useState(initial?.display_name || '');
   const [role, setRole] = useState(initial?.role || 'sensei');
-  const [locationId, setLocationId] = useState(initial?.location_id || (locations[0]?.id ?? ''));
+  const [locationIds, setLocationIds] = useState(
+    initial?.location_ids?.length ? initial.location_ids
+      : initial?.location_id ? [initial.location_id]
+      : (locations[0] ? [locations[0].id] : [])
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -147,10 +151,12 @@ function UserFormModal({ locations, initial, onClose, onSaved }) {
   const inputClass = 'w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue';
   const labelClass = 'block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1';
 
+  const toggleCenter = (id) => setLocationIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!displayName.trim() || !role || !locationId) return setError('All fields are required.');
+    if (!displayName.trim() || !role || !locationIds.length) return setError('Name, role, and at least one center are required.');
     if (!isEdit && !username.trim()) return setError('Username is required.');
     setSaving(true);
     try {
@@ -159,14 +165,14 @@ function UserFormModal({ locations, initial, onClose, onSaved }) {
         result = await api.patch(`/admin/users/${initial.id}`, {
           display_name: displayName.trim(),
           role,
-          location_id: Number(locationId),
+          location_ids: locationIds,
         });
       } else {
         result = await api.post('/admin/users', {
           username: username.trim(),
           display_name: displayName.trim(),
           role,
-          location_id: Number(locationId),
+          location_ids: locationIds,
         });
       }
       onSaved(result);
@@ -207,10 +213,21 @@ function UserFormModal({ locations, initial, onClose, onSaved }) {
             </select>
           </div>
           <div>
-            <label className={labelClass}>Location</label>
-            <select value={locationId} onChange={(e) => setLocationId(e.target.value)} className={inputClass}>
-              {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-            </select>
+            <label className={labelClass}>Centers</label>
+            <div className="space-y-1.5 max-h-44 overflow-y-auto border border-ninja-border rounded-lg p-2.5 bg-ninja-bg">
+              {locations.map((l) => (
+                <label key={l.id} className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={locationIds.includes(l.id)}
+                    onChange={() => toggleCenter(l.id)}
+                    className="w-4 h-4 rounded accent-ninja-blue"
+                  />
+                  <span className="font-ninja text-sm text-ninja-navy">{l.name}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-ninja-muted font-ninja text-xs mt-1">Full access at every selected center.</p>
           </div>
 
           {error && <p className="text-ninja-red text-xs font-ninja">{error}</p>}
@@ -293,6 +310,12 @@ export default function UsersPage() {
       setActionLoading(null);
       setConfirmResetId(null);
     }
+  };
+
+  const centerLabel = (u) => {
+    const ids = u.location_ids?.length ? u.location_ids : (u.location_id ? [u.location_id] : []);
+    const names = ids.map((id) => locations.find((l) => l.id === id)?.name).filter(Boolean);
+    return names.length ? names.join(', ') : (u.location_name || '—');
   };
 
   const handleSaved = (result) => {
@@ -422,7 +445,7 @@ export default function UsersPage() {
                           <p className="font-ninja font-semibold text-ninja-navy text-sm truncate">{u.display_name}</p>
                           <p className="font-ninja text-sm text-ninja-muted">@{u.username}</p>
                           {roleBadge}
-                          <p className="font-ninja text-sm text-ninja-navy truncate">{u.location_name}</p>
+                          <p className="font-ninja text-sm text-ninja-navy truncate" title={centerLabel(u)}>{centerLabel(u)}</p>
                           <div className="flex items-center gap-2 justify-end min-w-[220px]">{actions}</div>
                         </div>
                         {/* Mobile card */}
@@ -431,7 +454,7 @@ export default function UsersPage() {
                             <p className="font-ninja font-semibold text-ninja-navy text-sm leading-snug">{u.display_name}</p>
                             {roleBadge}
                           </div>
-                          <p className="font-ninja text-xs text-ninja-muted mb-2.5">@{u.username} · {u.location_name}</p>
+                          <p className="font-ninja text-xs text-ninja-muted mb-2.5">@{u.username} · {centerLabel(u)}</p>
                           <div className="flex items-center gap-3 flex-wrap">{actions}</div>
                         </div>
                       </motion.div>

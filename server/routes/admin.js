@@ -16,7 +16,8 @@ router.get('/locations', requireAdmin, async (req, res) => {
              COUNT(DISTINCT u.id) FILTER (WHERE u.active = true AND u.role IN ('manager','sensei'))::int AS staff_count
       FROM locations l
       LEFT JOIN students s ON s.location_id = l.id
-      LEFT JOIN users u ON u.location_id = l.id
+      LEFT JOIN user_locations ul ON ul.location_id = l.id
+      LEFT JOIN users u ON u.id = ul.user_id
       GROUP BY l.id
       ORDER BY l.created_at ASC
     `);
@@ -171,19 +172,21 @@ router.get('/users', requireAdmin, async (req, res) => {
   try {
     let query = `
       SELECT u.id, u.username, u.display_name, u.role, u.active, u.location_id, u.created_at,
-             l.name AS location_name
+             l.name AS location_name,
+             COALESCE(array_agg(DISTINCT ul.location_id) FILTER (WHERE ul.location_id IS NOT NULL), '{}') AS location_ids
       FROM users u
       LEFT JOIN locations l ON u.location_id = l.id
+      LEFT JOIN user_locations ul ON ul.user_id = u.id
       WHERE u.role != 'admin'
         AND u.active = $1
     `;
     const params = [!showInactive];
     let p = 1;
 
-    if (location_id) { p++; query += ` AND u.location_id = $${p}`; params.push(location_id); }
+    if (location_id) { p++; query += ` AND u.id IN (SELECT user_id FROM user_locations WHERE location_id = $${p})`; params.push(location_id); }
     if (role && ['manager', 'sensei'].includes(role)) { p++; query += ` AND u.role = $${p}`; params.push(role); }
 
-    query += ` ORDER BY l.name ASC, u.role ASC, u.display_name ASC`;
+    query += ` GROUP BY u.id, l.name ORDER BY l.name ASC, u.role ASC, u.display_name ASC`;
     const { rows } = await pool.query(query, params);
     res.json(rows);
   } catch (err) {
@@ -195,10 +198,15 @@ router.get('/users', requireAdmin, async (req, res) => {
 // POST /api/admin/users
 router.post('/users', requireAdmin, async (req, res) => {
   const pool = req.app.get('db');
-  const { username, display_name, role, location_id } = req.body;
+  const { username, display_name, role, location_id, location_ids } = req.body;
 
-  if (!username?.trim() || !display_name?.trim() || !role || !location_id) {
-    return res.status(400).json({ error: 'username, display_name, role, and location_id are required' });
+  // Accept a list of centers; fall back to the single location_id for older callers.
+  const requestedIds = Array.isArray(location_ids) && location_ids.length
+    ? [...new Set(location_ids.map(Number).filter(Boolean))]
+    : (location_id ? [Number(location_id)] : []);
+
+  if (!username?.trim() || !display_name?.trim() || !role || !requestedIds.length) {
+    return res.status(400).json({ error: 'username, display_name, role, and at least one center are required' });
   }
   if (!['manager', 'sensei'].includes(role)) {
     return res.status(400).json({ error: 'Invalid role' });
@@ -208,14 +216,34 @@ router.post('/users', requireAdmin, async (req, res) => {
     const { rows: existing } = await pool.query('SELECT id FROM users WHERE username = $1', [username.trim()]);
     if (existing[0]) return res.status(409).json({ error: 'Username already taken' });
 
+    const { rows: validLocs } = await pool.query('SELECT id FROM locations WHERE id = ANY($1)', [requestedIds]);
+    const validIds = validLocs.map((r) => r.id);
+    if (!validIds.length) return res.status(400).json({ error: 'No valid centers selected' });
+    const homeId = validIds[0];
+
     const tempPassword = generateTempPassword();
     const hash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
-    const { rows } = await pool.query(
-      'INSERT INTO users (username, password_hash, display_name, role, location_id, must_reset_password) VALUES ($1, $2, $3, $4, $5, true) RETURNING id, username, display_name, role, location_id, active, created_at',
-      [username.trim(), hash, display_name.trim(), role, location_id]
-    );
-    const { rows: locRows } = await pool.query('SELECT name FROM locations WHERE id = $1', [location_id]);
-    res.status(201).json({ ...rows[0], location_name: locRows[0]?.name, temp_password: tempPassword });
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const { rows } = await client.query(
+        'INSERT INTO users (username, password_hash, display_name, role, location_id, must_reset_password) VALUES ($1, $2, $3, $4, $5, true) RETURNING id, username, display_name, role, location_id, active, created_at',
+        [username.trim(), hash, display_name.trim(), role, homeId]
+      );
+      const newUser = rows[0];
+      for (const locId of validIds) {
+        await client.query('INSERT INTO user_locations (user_id, location_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [newUser.id, locId]);
+      }
+      const { rows: locRows } = await client.query('SELECT name FROM locations WHERE id = $1', [homeId]);
+      await client.query('COMMIT');
+      res.status(201).json({ ...newUser, location_ids: validIds, location_name: locRows[0]?.name, temp_password: tempPassword });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     console.error('Error creating admin user:', err);
     res.status(500).json({ error: 'Failed to create user' });
@@ -226,29 +254,58 @@ router.post('/users', requireAdmin, async (req, res) => {
 router.patch('/users/:id', requireAdmin, async (req, res) => {
   const pool = req.app.get('db');
   const { id } = req.params;
-  const { display_name, role, location_id, active } = req.body;
+  const { display_name, role, location_id, location_ids, active } = req.body;
 
+  // When a center list is supplied, replace the user's membership and reset home.
+  let validIds = null;
+  if (Array.isArray(location_ids)) {
+    const requestedIds = [...new Set(location_ids.map(Number).filter(Boolean))];
+    if (!requestedIds.length) return res.status(400).json({ error: 'Select at least one center' });
+    const { rows: validLocs } = await pool.query('SELECT id FROM locations WHERE id = ANY($1)', [requestedIds]);
+    validIds = validLocs.map((r) => r.id);
+    if (!validIds.length) return res.status(400).json({ error: 'No valid centers selected' });
+  }
+
+  const client = await pool.connect();
   try {
-    const { rows: existing } = await pool.query("SELECT * FROM users WHERE id = $1 AND role != 'admin'", [id]);
-    if (!existing[0]) return res.status(404).json({ error: 'User not found' });
+    await client.query('BEGIN');
+    const { rows: existing } = await client.query("SELECT * FROM users WHERE id = $1 AND role != 'admin'", [id]);
+    if (!existing[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'User not found' }); }
     const u = existing[0];
 
-    const { rows } = await pool.query(
+    // Keep the current home if still assigned, otherwise fall back to the first center.
+    const homeId = validIds
+      ? (validIds.includes(u.location_id) ? u.location_id : validIds[0])
+      : (location_id ?? u.location_id);
+
+    const { rows } = await client.query(
       `UPDATE users SET display_name = $1, role = $2, location_id = $3, active = $4
        WHERE id = $5 RETURNING id, username, display_name, role, location_id, active`,
       [
         display_name ?? u.display_name,
         (role && ['manager', 'sensei'].includes(role)) ? role : u.role,
-        location_id ?? u.location_id,
+        homeId,
         active !== undefined ? active : u.active,
         id,
       ]
     );
-    const { rows: locRows } = await pool.query('SELECT name FROM locations WHERE id = $1', [rows[0].location_id]);
-    res.json({ ...rows[0], location_name: locRows[0]?.name });
+
+    if (validIds) {
+      await client.query('DELETE FROM user_locations WHERE user_id = $1', [id]);
+      for (const locId of validIds) {
+        await client.query('INSERT INTO user_locations (user_id, location_id) VALUES ($1, $2)', [id, locId]);
+      }
+    }
+
+    const { rows: locRows } = await client.query('SELECT name FROM locations WHERE id = $1', [rows[0].location_id]);
+    await client.query('COMMIT');
+    res.json({ ...rows[0], location_ids: validIds ?? undefined, location_name: locRows[0]?.name });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error updating admin user:', err);
     res.status(500).json({ error: 'Failed to update user' });
+  } finally {
+    client.release();
   }
 });
 

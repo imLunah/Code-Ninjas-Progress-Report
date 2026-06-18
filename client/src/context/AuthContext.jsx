@@ -49,7 +49,11 @@ export function AuthProvider({ children }) {
     setUser(prev => ({ ...prev, activeLocation: data.activeLocation }));
   };
 
-  const isReadOnly = user?.role === 'manager' && user?.activeLocation?.id !== user?.homeLocationId;
+  // Read-only when a non-admin is viewing a center they're not assigned to. Admins write
+  // everywhere; senseis only ever switch within their membership so they're never read-only.
+  const isReadOnly = user?.role !== 'admin' &&
+    !!user?.activeLocation &&
+    !(user?.locationIds || []).includes(user?.activeLocation?.id);
 
   return (
     <AuthContext.Provider value={{ user, setUser, loading, login, logout, switchLocation, isReadOnly, viewAs, setViewAs }}>

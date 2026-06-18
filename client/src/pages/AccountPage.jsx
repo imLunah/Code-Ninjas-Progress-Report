@@ -300,7 +300,7 @@ export default function AccountPage() {
             className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm"
           >
             <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">Location</p>
-            {['manager', 'admin'].includes(user?.role) ? (
+            {(['manager', 'admin'].includes(user?.role) || (user?.availableLocations?.length > 1)) ? (
               <select
                 value={user?.activeLocation?.id ?? ''}
                 onChange={(e) => switchLocation(Number(e.target.value))}

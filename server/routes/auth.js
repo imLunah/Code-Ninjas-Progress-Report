@@ -2,7 +2,30 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
-const { requireManager } = require('../middleware/auth');
+const { requireManager, requireSensei } = require('../middleware/auth');
+
+// Membership = the centers a user belongs to: their home (users.location_id) plus any
+// user_locations rows. Backfill guarantees the home row exists, but we union home in
+// defensively so a user is never locked out of their own center.
+async function loadMembershipIds(pool, user) {
+  const { rows } = await pool.query(
+    'SELECT location_id FROM user_locations WHERE user_id = $1',
+    [user.id]
+  );
+  return [...new Set([user.location_id, ...rows.map((r) => r.location_id)].filter(Boolean))];
+}
+
+// availableLocations drives the location switcher. Managers/admins can view every active
+// center (read-only outside their membership); senseis only see centers they belong to.
+async function getAvailableLocations(pool, role, locationIds) {
+  if (['manager', 'admin'].includes(role)) {
+    return (await pool.query('SELECT id, name, slug FROM locations WHERE active = true ORDER BY name')).rows;
+  }
+  return (await pool.query(
+    'SELECT id, name, slug FROM locations WHERE active = true AND id = ANY($1) ORDER BY name',
+    [locationIds]
+  )).rows;
+}
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -54,8 +77,11 @@ router.post('/login', loginLimiter, async (req, res) => {
     req.session.userId = user.id;
     req.session.role = user.role;
     req.session.displayName = user.display_name;
+    const locationIds = await loadMembershipIds(pool, user);
+
     req.session.activeLocationId = user.location_id;
     req.session.homeLocationId = user.location_id;
+    req.session.locationIds = locationIds;
     req.session.mustResetPassword = !!user.must_reset_password;
     req.session.cookie.maxAge = keep_signed_in
       ? 30 * 24 * 60 * 60 * 1000  // 30 days
@@ -64,9 +90,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     await new Promise((resolve, reject) => {
       req.session.save((err) => (err ? reject(err) : resolve()));
     });
-    const availableLocations = ['manager', 'admin'].includes(user.role)
-      ? (await pool.query('SELECT id, name, slug FROM locations WHERE active = true ORDER BY name')).rows
-      : (activeLocation ? [activeLocation] : []);
+    const availableLocations = await getAvailableLocations(pool, user.role, locationIds);
 
     const { rows: annRows } = await pool.query(`SELECT value FROM app_settings WHERE key = 'announcement'`);
     const announcement = annRows[0]?.value || null;
@@ -77,6 +101,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       displayName: user.display_name,
       role: user.role,
       homeLocationId: user.location_id,
+      locationIds,
       profilePicUrl: user.profile_pic_url || null,
       activeLocation: activeLocation ?? null,
       availableLocations,
@@ -100,8 +125,10 @@ router.post('/logout', (req, res) => {
   });
 });
 
-// POST /api/auth/switch-location (manager only)
-router.post('/switch-location', requireManager, async (req, res) => {
+// POST /api/auth/switch-location
+// Managers/admins can switch to any active center (read-only outside their membership).
+// Senseis can only switch among the centers they belong to.
+router.post('/switch-location', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
   const { locationId } = req.body;
   if (!locationId) return res.status(400).json({ error: 'locationId is required' });
@@ -113,6 +140,10 @@ router.post('/switch-location', requireManager, async (req, res) => {
     );
     const location = rows[0];
     if (!location) return res.status(403).json({ error: 'Location not found or inactive' });
+    if (!['manager', 'admin'].includes(req.session.role) &&
+        !(req.session.locationIds || []).includes(location.id)) {
+      return res.status(403).json({ error: 'You are not assigned to that center' });
+    }
     req.session.activeLocationId = location.id;
     res.json({ activeLocation: location });
   } catch (err) {
@@ -143,9 +174,10 @@ router.get('/me', async (req, res) => {
       'SELECT id, name, slug FROM locations WHERE id = $1 AND active = true',
       [req.session.activeLocationId]
     );
-    const availableLocations = ['manager', 'admin'].includes(user.role)
-      ? (await pool.query('SELECT id, name, slug FROM locations WHERE active = true ORDER BY name')).rows
-      : (activeLocation ? [activeLocation] : []);
+    // Refresh membership in case the user's center assignments changed since login.
+    const locationIds = await loadMembershipIds(pool, user);
+    req.session.locationIds = locationIds;
+    const availableLocations = await getAvailableLocations(pool, user.role, locationIds);
 
     const { rows: annRows } = await pool.query(`SELECT value FROM app_settings WHERE key = 'announcement'`);
     const announcement = annRows[0]?.value || null;
@@ -156,6 +188,7 @@ router.get('/me', async (req, res) => {
       displayName: user.display_name,
       role: user.role,
       homeLocationId: user.location_id,
+      locationIds,
       profilePicUrl: user.profile_pic_url || null,
       activeLocation: activeLocation ?? null,
       availableLocations,

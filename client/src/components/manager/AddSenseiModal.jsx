@@ -1,24 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { api } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
+  const { user } = useAuth();
+  const centers = user?.availableLocations || [];
+  const activeId = user?.activeLocation?.id;
   const [form, setForm] = useState({ display_name: '', username: '' });
   const [role, setRole] = useState('sensei');
+  const [locationIds, setLocationIds] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState(null); // { username, temp_password } after success
   const [copied, setCopied] = useState(false);
+
+  // Default-check the current center each time the modal opens.
+  useEffect(() => {
+    if (isOpen) setLocationIds(activeId ? [activeId] : []);
+  }, [isOpen, activeId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const toggleCenter = (id) => {
+    setLocationIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  };
+
   const handleClose = () => {
     setForm({ display_name: '', username: '' });
     setRole('sensei');
+    setLocationIds(activeId ? [activeId] : []);
     setError('');
     setCreated(null);
     setCopied(false);
@@ -27,6 +42,7 @@ export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!locationIds.length) return setError('Select at least one center.');
     setLoading(true);
     setError('');
     try {
@@ -39,6 +55,7 @@ export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
         display_name,
         username: form.username,
         role,
+        location_ids: locationIds,
       });
       onAdded && onAdded(result);
       setCreated({ username: result.username, temp_password: result.temp_password });
@@ -149,6 +166,30 @@ export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
               className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
             />
           </div>
+
+          {centers.length > 1 && (
+            <div>
+              <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-2 uppercase tracking-wide">
+                Centers
+              </label>
+              <div className="space-y-1.5">
+                {centers.map((c) => (
+                  <label key={c.id} className="flex items-center gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={locationIds.includes(c.id)}
+                      onChange={() => toggleCenter(c.id)}
+                      className="w-4 h-4 rounded accent-ninja-blue"
+                    />
+                    <span className="font-ninja text-sm text-ninja-navy">{c.name}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-ninja-muted font-ninja text-xs mt-1.5">
+                Assign this person to one or more centers — they get full access at each.
+              </p>
+            </div>
+          )}
 
           <p className="text-ninja-muted font-ninja text-xs">
             A temporary password will be generated. The new staff member sets their own during onboarding.

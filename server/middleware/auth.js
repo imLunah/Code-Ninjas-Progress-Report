@@ -16,13 +16,15 @@ function requireSensei(req, res, next) {
   next();
 }
 
-// Blocks writes when a manager is viewing a center other than their own (admin bypasses).
-// Also re-validates on every write that the location is still active, so deactivating a
-// location mid-session immediately blocks new writes from existing sessions.
+// Blocks writes when a user is viewing a center they're not assigned to (admin bypasses).
+// Membership = the set of centers a user belongs to (home + user_locations rows), loaded
+// into the session at login / on /me. Also re-validates on every write that the location is
+// still active, so deactivating a location mid-session immediately blocks new writes.
 async function requireOwnLocation(req, res, next) {
   if (req.session.role === 'admin') return next();
-  if (req.session.activeLocationId !== req.session.homeLocationId) {
-    return res.status(403).json({ error: 'You can only make changes at your own center.' });
+  const memberIds = req.session.locationIds || [req.session.homeLocationId];
+  if (!memberIds.includes(req.session.activeLocationId)) {
+    return res.status(403).json({ error: 'You can only make changes at your assigned centers.' });
   }
   try {
     const pool = req.app.get('db');

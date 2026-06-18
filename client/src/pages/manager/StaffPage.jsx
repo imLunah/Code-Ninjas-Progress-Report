@@ -109,6 +109,54 @@ function EditCredentialsModal({ sensei, onClose }) {
   );
 }
 
+function ManageCentersModal({ sensei, centers, onClose, onSaved }) {
+  const [selected, setSelected] = useState(sensei.location_ids || []);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const toggle = (id) => setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+
+  const handleSave = async () => {
+    if (!selected.length) return setError('Select at least one center.');
+    setSaving(true);
+    setError('');
+    try {
+      const result = await api.patch(`/users/${sensei.id}/locations`, { location_ids: selected });
+      onSaved(sensei.id, result.location_ids || selected);
+    } catch (err) {
+      setError(err?.message || 'Failed to update centers.');
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ModalPortal><div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+        <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-1">Manage Centers — {sensei.display_name}</h2>
+        <p className="text-ninja-muted font-ninja text-xs mb-4">This staff member gets full access at every selected center.</p>
+        <div className="space-y-1.5 mb-4">
+          {centers.map((c) => (
+            <label key={c.id} className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selected.includes(c.id)}
+                onChange={() => toggle(c.id)}
+                className="w-4 h-4 rounded accent-ninja-blue"
+              />
+              <span className="font-ninja text-sm text-ninja-navy">{c.name}</span>
+            </label>
+          ))}
+        </div>
+        {error && <p className="text-ninja-red font-ninja text-sm mb-3">{error}</p>}
+        <div className="flex gap-2">
+          <Button onClick={handleSave} disabled={saving} className="flex-1">{saving ? 'Saving…' : 'Save'}</Button>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+        </div>
+      </div>
+    </div></ModalPortal>
+  );
+}
+
 export default function StaffPage() {
   const [senseis, setSenseis] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -118,6 +166,7 @@ export default function StaffPage() {
   const [profileLogs, setProfileLogs] = useState([]);
   const [profileLoading, setProfileLoading] = useState(false);
   const [editCredentialsSensei, setEditCredentialsSensei] = useState(null);
+  const [managingSensei, setManagingSensei] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -182,6 +231,12 @@ export default function StaffPage() {
     } finally {
       setProfileLoading(false);
     }
+  };
+
+  const handleCentersSaved = (id, locationIds) => {
+    setSenseis((prev) => prev.map((s) => s.id === id ? { ...s, location_ids: locationIds } : s));
+    setSelectedSensei((prev) => prev && prev.id === id ? { ...prev, location_ids: locationIds } : prev);
+    setManagingSensei(null);
   };
 
   const totalLogs = senseis.reduce((sum, s) => sum + (s.progress_log_count || 0), 0);
@@ -341,7 +396,9 @@ export default function StaffPage() {
         logs={profileLoading ? [] : profileLogs}
         isManager={isManager}
         isReadOnly={isReadOnly}
+        centers={user?.availableLocations || []}
         onEditLogin={() => setEditCredentialsSensei(selectedSensei)}
+        onManageCenters={() => setManagingSensei(selectedSensei)}
         onRemove={() => selectedSensei && handleRemove(selectedSensei.id)}
       />
 
@@ -349,6 +406,15 @@ export default function StaffPage() {
         <EditCredentialsModal
           sensei={editCredentialsSensei}
           onClose={() => setEditCredentialsSensei(null)}
+        />
+      )}
+
+      {managingSensei && (
+        <ManageCentersModal
+          sensei={managingSensei}
+          centers={user?.availableLocations || []}
+          onClose={() => setManagingSensei(null)}
+          onSaved={handleCentersSaved}
         />
       )}
     </Layout>

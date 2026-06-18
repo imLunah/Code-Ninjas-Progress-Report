@@ -19,22 +19,29 @@ router.get('/', requireSensei, async (req, res) => {
   try {
     if (role === 'sensei' || role === 'staff') {
       const roleFilter = role === 'staff' ? `u.role IN ('sensei', 'manager')` : `u.role = 'sensei'`;
+      // Scope by membership (user_locations) so staff assigned to this center show up
+      // even when it isn't their home center. location_ids carries every center the
+      // member belongs to so the client can render assigned-center badges.
       const { rows } = await pool.query(`
         SELECT u.id, u.username, u.display_name, u.role, u.location_id, u.created_at,
-               u.profile_pic_url, u.active, COUNT(pl.id)::int AS progress_log_count
+               u.profile_pic_url, u.active, COUNT(DISTINCT pl.id)::int AS progress_log_count,
+               COALESCE(array_agg(DISTINCT ul.location_id) FILTER (WHERE ul.location_id IS NOT NULL), '{}') AS location_ids
         FROM users u
         LEFT JOIN progress_logs pl ON pl.sensei_id = u.id
-        WHERE ${roleFilter} AND u.location_id = $1 AND u.active = $2
+        LEFT JOIN user_locations ul ON ul.user_id = u.id
+        WHERE ${roleFilter} AND u.active = $2
+          AND u.id IN (SELECT user_id FROM user_locations WHERE location_id = $1)
         GROUP BY u.id
         ORDER BY u.role ASC, u.display_name ASC
       `, [req.session.activeLocationId, !showInactive]);
       return res.json(rows);
     }
 
-    // Always filter by own location — never expose other locations' users
+    // Scope by membership — never expose users who aren't assigned to this center
     const { rows } = await pool.query(
       `SELECT id, username, display_name, role, location_id, created_at FROM users
-       WHERE location_id = $1 AND active = true ORDER BY role, display_name ASC`,
+       WHERE id IN (SELECT user_id FROM user_locations WHERE location_id = $1)
+         AND active = true ORDER BY role, display_name ASC`,
       [req.session.activeLocationId]
     );
     res.json(rows);
@@ -51,7 +58,9 @@ router.get('/:id', requireSensei, async (req, res) => {
 
   try {
     const { rows: userRows } = await pool.query(
-      'SELECT id, username, display_name, role, location_id, created_at, profile_pic_url FROM users WHERE id = $1 AND active = true AND location_id = $2',
+      `SELECT id, username, display_name, role, location_id, created_at, profile_pic_url FROM users
+       WHERE id = $1 AND active = true
+         AND EXISTS (SELECT 1 FROM user_locations ul WHERE ul.user_id = users.id AND ul.location_id = $2)`,
       [id, req.session.activeLocationId]
     );
     const user = userRows[0];
@@ -76,7 +85,7 @@ router.get('/:id', requireSensei, async (req, res) => {
 // POST /api/users
 router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
-  const { username, display_name, role } = req.body;
+  const { username, display_name, role, location_ids } = req.body;
 
   if (!username || !display_name || !role) {
     return res.status(400).json({ error: 'All fields are required' });
@@ -88,6 +97,11 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
     return res.status(400).json({ error: 'Invalid role' });
   }
 
+  // CDs may assign new staff to any active center; default to the CD's current center.
+  const requestedIds = Array.isArray(location_ids) && location_ids.length
+    ? [...new Set(location_ids.map(Number).filter(Boolean))]
+    : [req.session.activeLocationId];
+
   try {
     const { rows: existing } = await pool.query(
       'SELECT id FROM users WHERE username = $1',
@@ -95,21 +109,94 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
     );
     if (existing[0]) return res.status(409).json({ error: 'Username already taken' });
 
-    // Always use the manager's own location — never trust location_id from request body
-    const locationId = req.session.activeLocationId;
+    const { rows: validLocs } = await pool.query(
+      'SELECT id FROM locations WHERE id = ANY($1) AND active = true',
+      [requestedIds]
+    );
+    const validIds = validLocs.map((r) => r.id);
+    if (!validIds.length) return res.status(400).json({ error: 'No valid centers selected' });
+    // Home = the CD's active center if included, else the first valid center.
+    const homeId = validIds.includes(req.session.activeLocationId) ? req.session.activeLocationId : validIds[0];
 
     // Match the admin flow: generate a temp password, force reset → onboarding on first login.
     const tempPassword = generateTempPassword();
     const hash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
-    const { rows } = await pool.query(
-      'INSERT INTO users (username, password_hash, display_name, role, location_id, must_reset_password) VALUES ($1, $2, $3, $4, $5, true) RETURNING id, username, display_name, role, location_id, created_at',
-      [username, hash, display_name, role, locationId]
-    );
 
-    res.status(201).json({ ...rows[0], temp_password: tempPassword });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const { rows } = await client.query(
+        'INSERT INTO users (username, password_hash, display_name, role, location_id, must_reset_password) VALUES ($1, $2, $3, $4, $5, true) RETURNING id, username, display_name, role, location_id, created_at',
+        [username, hash, display_name, role, homeId]
+      );
+      const newUser = rows[0];
+      for (const locId of validIds) {
+        await client.query(
+          'INSERT INTO user_locations (user_id, location_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [newUser.id, locId]
+        );
+      }
+      await client.query('COMMIT');
+      res.status(201).json({ ...newUser, location_ids: validIds, temp_password: tempPassword });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     console.error('Error creating user:', err);
     res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+// PATCH /api/users/:id/locations — update a staff member's assigned centers
+router.patch('/:id/locations', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const targetId = parseInt(req.params.id, 10);
+  const { location_ids } = req.body;
+  const requestedIds = [...new Set((location_ids || []).map(Number).filter(Boolean))];
+  if (!requestedIds.length) return res.status(400).json({ error: 'Select at least one center' });
+
+  try {
+    // Target must be a non-admin staff member assigned to the CD's current center.
+    const { rows } = await pool.query(
+      `SELECT u.id FROM users u
+       WHERE u.id = $1 AND u.role != 'admin'
+         AND EXISTS (SELECT 1 FROM user_locations ul WHERE ul.user_id = u.id AND ul.location_id = $2)`,
+      [targetId, req.session.activeLocationId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Staff member not found' });
+
+    const { rows: validLocs } = await pool.query(
+      'SELECT id FROM locations WHERE id = ANY($1) AND active = true',
+      [requestedIds]
+    );
+    const validIds = validLocs.map((r) => r.id);
+    if (!validIds.length) return res.status(400).json({ error: 'No valid centers selected' });
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM user_locations WHERE user_id = $1', [targetId]);
+      for (const locId of validIds) {
+        await client.query('INSERT INTO user_locations (user_id, location_id) VALUES ($1, $2)', [targetId, locId]);
+      }
+      // Keep the current home if it's still assigned, otherwise fall back to the first center.
+      const { rows: cur } = await client.query('SELECT location_id FROM users WHERE id = $1', [targetId]);
+      const homeId = validIds.includes(cur[0]?.location_id) ? cur[0].location_id : validIds[0];
+      await client.query('UPDATE users SET location_id = $1 WHERE id = $2', [homeId, targetId]);
+      await client.query('COMMIT');
+      res.json({ ok: true, location_ids: validIds });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Error updating user locations:', err);
+    res.status(500).json({ error: 'Failed to update centers' });
   }
 });
 
@@ -193,7 +280,8 @@ router.patch('/:id/credentials', requireManager, requireOwnLocation, async (req,
   }
   try {
     const { rows } = await pool.query(
-      'SELECT id, role FROM users WHERE id = $1 AND location_id = $2 AND active = true',
+      `SELECT id, role FROM users WHERE id = $1 AND active = true
+         AND EXISTS (SELECT 1 FROM user_locations ul WHERE ul.user_id = users.id AND ul.location_id = $2)`,
       [targetId, req.session.activeLocationId]
     );
     if (!rows[0]) return res.status(404).json({ error: 'User not found' });
@@ -225,7 +313,8 @@ router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      'SELECT id, role FROM users WHERE id = $1 AND active = true AND location_id = $2',
+      `SELECT id, role FROM users WHERE id = $1 AND active = true
+         AND EXISTS (SELECT 1 FROM user_locations ul WHERE ul.user_id = users.id AND ul.location_id = $2)`,
       [id, req.session.activeLocationId]
     );
     const target = rows[0];
@@ -247,7 +336,8 @@ router.patch('/:id/restore', requireManager, requireOwnLocation, async (req, res
   const { id } = req.params;
   try {
     const { rows } = await pool.query(
-      'SELECT id FROM users WHERE id = $1 AND active = false AND location_id = $2',
+      `SELECT id FROM users WHERE id = $1 AND active = false
+         AND EXISTS (SELECT 1 FROM user_locations ul WHERE ul.user_id = users.id AND ul.location_id = $2)`,
       [id, req.session.activeLocationId]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Archived user not found' });
@@ -266,7 +356,8 @@ router.delete('/:id/permanent', requireManager, requireOwnLocation, async (req, 
 
   try {
     const { rows } = await pool.query(
-      'SELECT id, role FROM users WHERE id = $1 AND location_id = $2',
+      `SELECT id, role FROM users WHERE id = $1
+         AND EXISTS (SELECT 1 FROM user_locations ul WHERE ul.user_id = users.id AND ul.location_id = $2)`,
       [id, req.session.activeLocationId]
     );
     const target = rows[0];
