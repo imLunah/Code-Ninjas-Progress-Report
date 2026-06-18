@@ -74,7 +74,7 @@ export default function StudentRoster() {
   const [keepIds, setKeepIds] = useState(new Set());
   // Duplicates are kept by default — checking one marks it for removal.
   const [removeDupeIds, setRemoveDupeIds] = useState(new Set());
-  // Belt conflicts are NOT overridden by default — checking one applies the
+  // Belt conflicts are NOT overridden by default; checking one applies the
   // CSV belt to that program only. Keyed by `${id}::${program}`.
   const [overrideKeys, setOverrideKeys] = useState(new Set());
   const [archiving, setArchiving] = useState(false);
@@ -753,12 +753,12 @@ export default function StudentRoster() {
                   </div>
                 )}
                 {importResult.conflicts?.length > 0 && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <div className="bg-ninja-bg border border-ninja-border rounded-lg p-3">
                     <p className="text-ninja-navy font-ninja font-semibold text-sm mb-1">
                       {importResult.conflicts.length} belt change{importResult.conflicts.length !== 1 ? 's' : ''} found in this CSV
                     </p>
                     <p className="text-ninja-muted font-ninja text-xs mb-2">
-                      Check any you want to update. Only that program's belt changes — other programs are left alone.
+                      Check any you want to update. Only that program's belt changes; other programs are left alone.
                     </p>
                     <button
                       type="button"
@@ -781,7 +781,7 @@ export default function StudentRoster() {
                                 type="checkbox"
                                 checked={overrideKeys.has(key)}
                                 onChange={() => toggleOverride(key)}
-                                className="accent-amber-500"
+                                className="accent-ninja-blue"
                               />
                               <span className={overrideKeys.has(key) ? '' : 'text-ninja-muted'}>
                                 {c.full_name} <span className="text-ninja-muted">({c.program})</span>: {c.current_belt} → <span className="font-semibold">{c.new_belt}</span>

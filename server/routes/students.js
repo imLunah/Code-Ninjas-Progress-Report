@@ -655,7 +655,7 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
         const currentBelt = existing[0].belt_level;
         // Same name+program already enrolled. If the CSV carries a different
         // belt for THIS program, surface it as a conflict the caller can choose
-        // to override — scoped to this one program, never touching others.
+        // to override, scoped to this one program, never touching others.
         if (beltLevel && currentBelt && beltLevel !== currentBelt) {
           conflicts.push({
             id: existing[0].id,
@@ -726,7 +726,7 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
   res.json({ added: added.length, duplicates, conflicts, missing });
 });
 
-// POST /api/students/import/apply-belts — override belt for chosen programs
+// POST /api/students/import/apply-belts: override belt for chosen programs
 // (used after import surfaces belt conflicts). Scoped per program so other
 // programs (Robotics, AI, etc.) are never touched.
 router.post('/import/apply-belts', requireManager, requireOwnLocation, async (req, res) => {
