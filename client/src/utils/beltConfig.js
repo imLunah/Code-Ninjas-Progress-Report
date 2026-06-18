@@ -13,8 +13,8 @@ export const BELTS = [
   { name: 'Black',    color: '#111111', textColor: '#ffffff' },
   { name: 'Bronze',   color: '#cd7f32', textColor: '#ffffff', bonus: true },
   { name: 'Silver',   color: '#c0c0c0', textColor: '#1f2937', bonus: true },
-  { name: 'Gold',     color: '#d4af37', textColor: '#1f2937', bonus: true },
   { name: 'Platinum', color: '#e5e4e2', textColor: '#1f2937', bonus: true },
+  { name: 'Gold',     color: '#d4af37', textColor: '#1f2937', bonus: true },
 ];
 
 export const PROJECTS = ['Build 1', 'Build 2', 'Build 3', 'Build 4', 'Build 5', 'Solve 1', 'Solve 2', 'Solve 3', 'Solve 4', 'Solve 5', 'Adventure'];

@@ -81,7 +81,7 @@ router.get('/roadmap', requireSensei, async (req, res) => {
       `),
     ]);
 
-    const BELT_ORDER = ['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black', 'Bronze', 'Silver', 'Gold', 'Platinum'];
+    const BELT_ORDER = ['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black', 'Bronze', 'Silver', 'Platinum', 'Gold'];
     const programOrder = ['CREATE', 'JR', 'AI Academy', 'Robotics Academy', 'Silver', 'Gold Unity', 'Gold Godot'];
     const programMap = {};
 
