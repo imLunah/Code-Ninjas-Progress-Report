@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BeltBadge from '../ui/BeltBadge';
-import Button from '../ui/Button';
 import { formatDate } from '../../utils/dateUtils';
 
 function Avatar({ url, name }) {
@@ -40,10 +39,14 @@ function StatCard({ value, label, delay = 0 }) {
 
 export default function SenseiProfileModal({
   isOpen, onClose, sensei, logs = [],
-  isManager, isReadOnly, onEditLogin, onRemove, onManageCenters, centers = [],
+  isManager, isReadOnly, onEditLogin, onResetLogin, onRemove, onManageCenters, centers = [],
 }) {
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const touchStartY = useRef(null);
+
+  const isCD = sensei?.role === 'manager';
+  const showActions = isManager && !isReadOnly;
+  const heroBtn = 'px-3 py-1.5 rounded-lg text-xs font-ninja font-semibold transition-colors';
 
   const centerNames = (sensei?.location_ids || [])
     .map((id) => centers.find((c) => c.id === id)?.name)
@@ -133,6 +136,35 @@ export default function SenseiProfileModal({
               </motion.div>
             </div>
 
+            {showActions && (
+              <div className="flex flex-wrap gap-2 mb-5">
+                {isCD ? (
+                  <button className={`${heroBtn} bg-white/10 hover:bg-white/20 text-white`} onClick={() => { handleClose(); onResetLogin(); }}>
+                    Reset Login
+                  </button>
+                ) : (
+                  <button className={`${heroBtn} bg-white/10 hover:bg-white/20 text-white`} onClick={() => { handleClose(); onEditLogin(); }}>
+                    Edit Login
+                  </button>
+                )}
+                {onManageCenters && centers.length > 1 && (
+                  <button className={`${heroBtn} bg-white/10 hover:bg-white/20 text-white`} onClick={() => { handleClose(); onManageCenters(); }}>
+                    Manage Centers
+                  </button>
+                )}
+                {!isCD && (
+                  confirmingRemove ? (
+                    <>
+                      <button className={`${heroBtn} bg-ninja-red hover:opacity-90 text-white`} onClick={() => { onRemove(); handleClose(); }}>Confirm Remove</button>
+                      <button className={`${heroBtn} bg-white/10 hover:bg-white/20 text-white`} onClick={() => setConfirmingRemove(false)}>Cancel</button>
+                    </>
+                  ) : (
+                    <button className={`${heroBtn} bg-ninja-red/20 hover:bg-ninja-red/30 text-red-300`} onClick={() => setConfirmingRemove(true)}>Remove</button>
+                  )
+                )}
+              </div>
+            )}
+
             <div className="flex gap-2">
               <StatCard value={logs.length} label="Progress Logs" delay={0.15} />
               <StatCard value={joinYear} label="Joined" delay={0.2} />
@@ -199,33 +231,6 @@ export default function SenseiProfileModal({
               )}
             </div>
 
-            {isManager && !isReadOnly && (
-              <div
-                className="px-5 pt-2 border-t border-ninja-border flex gap-2 flex-wrap"
-                style={{ paddingBottom: 'max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 1.5rem))' }}
-              >
-                {onManageCenters && centers.length > 1 && (
-                  <Button variant="secondary" className="w-full" onClick={() => { handleClose(); onManageCenters(); }}>
-                    Manage Centers
-                  </Button>
-                )}
-                {sensei.role !== 'manager' && (
-                  <Button variant="secondary" className="flex-1" onClick={() => { handleClose(); onEditLogin(); }}>
-                    Edit Login
-                  </Button>
-                )}
-                {sensei.role !== 'manager' && (
-                  confirmingRemove ? (
-                    <>
-                      <Button variant="danger" onClick={() => { onRemove(); handleClose(); }}>Confirm</Button>
-                      <Button variant="secondary" onClick={() => setConfirmingRemove(false)}>Cancel</Button>
-                    </>
-                  ) : (
-                    <Button variant="danger" onClick={() => setConfirmingRemove(true)}>Remove</Button>
-                  )
-                )}
-              </div>
-            )}
           </div>
         </motion.div>
       </motion.div>

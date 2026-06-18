@@ -306,6 +306,34 @@ router.patch('/:id/credentials', requireManager, requireOwnLocation, async (req,
   }
 });
 
+// POST /api/users/:id/reset-login — regenerate a temp password and force onboarding.
+// Used for CD/admin staff (who set their own password via the welcome flow rather than
+// having a manager type one). Works for any non-admin staff member at the CD's center.
+router.post('/:id/reset-login', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const targetId = parseInt(req.params.id, 10);
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, username, role FROM users WHERE id = $1 AND active = true AND role != 'admin'
+         AND EXISTS (SELECT 1 FROM user_locations ul WHERE ul.user_id = users.id AND ul.location_id = $2)`,
+      [targetId, req.session.activeLocationId]
+    );
+    const target = rows[0];
+    if (!target) return res.status(404).json({ error: 'Staff member not found' });
+
+    const tempPassword = generateTempPassword();
+    const hash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
+    await pool.query(
+      'UPDATE users SET password_hash = $1, must_reset_password = true WHERE id = $2',
+      [hash, targetId]
+    );
+    res.json({ username: target.username, temp_password: tempPassword });
+  } catch (err) {
+    console.error('Error resetting login:', err);
+    res.status(500).json({ error: 'Failed to reset login' });
+  }
+});
+
 // DELETE /api/users/:id (soft delete — manager only, own location, senseis only)
 router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');

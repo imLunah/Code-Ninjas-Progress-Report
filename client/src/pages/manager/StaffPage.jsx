@@ -109,6 +109,33 @@ function EditCredentialsModal({ sensei, onClose }) {
   );
 }
 
+function ResetLoginModal({ data, onClose }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(data.temp_password);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <ModalPortal><div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+        <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-1">Login Reset</h2>
+        <p className="text-ninja-muted font-ninja text-xs mb-4">
+          Share these. They'll be asked to set a new password during onboarding, so this won't be shown again.
+        </p>
+        <div className="bg-ninja-bg rounded-xl p-4 space-y-2 font-mono text-sm border border-ninja-border mb-5">
+          <div><span className="text-ninja-muted">Username:</span> <span className="text-ninja-navy font-semibold">{data.username}</span></div>
+          <div><span className="text-ninja-muted">Password:</span> <span className="text-ninja-red font-bold">{data.temp_password}</span></div>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={copy} className="flex-1">{copied ? 'Copied!' : 'Copy password'}</Button>
+          <Button variant="secondary" onClick={onClose}>Done</Button>
+        </div>
+      </div>
+    </div></ModalPortal>
+  );
+}
+
 function ManageCentersModal({ sensei, centers, onClose, onSaved }) {
   const [selected, setSelected] = useState(sensei.location_ids || []);
   const [saving, setSaving] = useState(false);
@@ -167,6 +194,7 @@ export default function StaffPage() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [editCredentialsSensei, setEditCredentialsSensei] = useState(null);
   const [managingSensei, setManagingSensei] = useState(null);
+  const [resetLoginData, setResetLoginData] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -230,6 +258,15 @@ export default function StaffPage() {
       setProfileLogs([]);
     } finally {
       setProfileLoading(false);
+    }
+  };
+
+  const handleResetLogin = async (sensei) => {
+    try {
+      const result = await api.post(`/users/${sensei.id}/reset-login`, {});
+      setResetLoginData(result);
+    } catch (err) {
+      setError(err.message || 'Failed to reset login');
     }
   };
 
@@ -398,6 +435,7 @@ export default function StaffPage() {
         isReadOnly={isReadOnly}
         centers={user?.availableLocations || []}
         onEditLogin={() => setEditCredentialsSensei(selectedSensei)}
+        onResetLogin={() => selectedSensei && handleResetLogin(selectedSensei)}
         onManageCenters={() => setManagingSensei(selectedSensei)}
         onRemove={() => selectedSensei && handleRemove(selectedSensei.id)}
       />
@@ -416,6 +454,10 @@ export default function StaffPage() {
           onClose={() => setManagingSensei(null)}
           onSaved={handleCentersSaved}
         />
+      )}
+
+      {resetLoginData && (
+        <ResetLoginModal data={resetLoginData} onClose={() => setResetLoginData(null)} />
       )}
     </Layout>
   );
