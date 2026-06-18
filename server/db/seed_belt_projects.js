@@ -26,11 +26,11 @@ const BELT_LEVEL_PROJECTS = {
     5: ['Cookie Clicker Game!', 'Debugging Functions', 'Snowflake Catch', 'Debugging Functions with Parameters', 'Creating with Functions!'],
   },
   Green: {
-    6:  ['Cactus Jump', 'Debugging Acceleration and Velocity', 'Avoid the Roadblocks', 'Debugging 2D Tilemaps Designs', 'Lava Escape Platformer', 'Debugging 2D Tilemaps', 'Creating with 2D Platformer Tilemaps and Physics!'],
-    7:  ['Magic Coin Scavenger Hunt', 'Debugging AND Booleans', 'Raindrop Invincibility', 'Debugging NOT Booleans', 'Snake Pit!', 'Debugging OR Booleans', 'Creating with Booleans and Logic Operators!'],
-    8:  ['Bubble Pop!', 'Debugging For Index Loops', 'Bee Catcher', 'Debugging While Loops', 'Creating with Index and While Loops!'],
-    9:  ['Block Jumper', 'Debugging Tilemap Location Blocks', 'Bridge Builder', 'Debugging Tilemap Location Blocks and Operators', 'Dino Defender', 'Debugging Tilemap Extension Blocks', 'Creating with Tilemap Location and Extension Blocks!'],
-    10: ['Scenic Drive', 'Debugging Scroller Extension Blocks', 'Burger Dash', 'Debugging Status Bar Extension Blocks', 'Yellow Belt Belt-Up Project!'],
+    1: ['Cactus Jump', 'Debugging Acceleration and Velocity', 'Avoid the Roadblocks', 'Debugging 2D Tilemaps Designs', 'Lava Escape Platformer', 'Debugging 2D Tilemaps', 'Creating with 2D Platformer Tilemaps and Physics!'],
+    2: ['Magic Coin Scavenger Hunt', 'Debugging AND Booleans', 'Raindrop Invincibility', 'Debugging NOT Booleans', 'Snake Pit!', 'Debugging OR Booleans', 'Creating with Booleans and Logic Operators!'],
+    3: ['Bubble Pop!', 'Debugging For Index Loops', 'Bee Catcher', 'Debugging While Loops', 'Creating with Index and While Loops!'],
+    4: ['Block Jumper', 'Debugging Tilemap Location Blocks', 'Bridge Builder', 'Debugging Tilemap Location Blocks and Operators', 'Dino Defender', 'Debugging Tilemap Extension Blocks', 'Creating with Tilemap Location and Extension Blocks!'],
+    5: ['Scenic Drive', 'Debugging Scroller Extension Blocks', 'Burger Dash', 'Debugging Status Bar Extension Blocks', 'Yellow Belt Belt-Up Project!'],
   },
   Blue: {
     1: ['Hello World!', 'Debugging Setting Sprites', 'Bouncing on the Walls', 'Debugging Sprite Effects', 'Follow Me!', 'Debugging Sprite Movement', 'Creating with Javascript Code and Syntax!'],

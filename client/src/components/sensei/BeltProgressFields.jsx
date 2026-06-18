@@ -31,7 +31,7 @@ export default function BeltProgressFields({ beltLevel, setBeltLevel, beltSublev
         >
           <option value="">Select belt...</option>
           {BELTS.map((b) => (
-            <option key={b.name} value={b.name}>{b.bonus ? `${b.name} (Bonus)` : b.name}</option>
+            <option key={b.name} value={b.name}>{b.name}</option>
           ))}
         </select>
       </div>
