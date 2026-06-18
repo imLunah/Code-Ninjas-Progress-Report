@@ -697,22 +697,22 @@ export default function StudentRoster() {
 
             {importResult && (
               <div className="space-y-3">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <p className="text-green-700 font-ninja font-semibold text-sm">
+                <div className="bg-ninja-bg border border-ninja-border rounded-lg p-3">
+                  <p className="text-ninja-navy font-ninja font-semibold text-sm">
                     {importResult.added} ninja{importResult.added !== 1 ? 's' : ''} imported successfully
                   </p>
                   {importResult.removed > 0 && (
-                    <p className="text-green-700 font-ninja text-sm mt-1">
+                    <p className="text-ninja-navy font-ninja text-sm mt-1">
                       {importResult.removed} ninja{importResult.removed !== 1 ? 's' : ''} removed from the roster
                     </p>
                   )}
                   {importResult.duplicates?.length > 0 && (
                     <details className="mt-1 group">
-                      <summary className="text-green-700/80 font-ninja text-sm cursor-pointer list-none flex items-center gap-1">
+                      <summary className="text-ninja-muted font-ninja text-sm cursor-pointer list-none flex items-center gap-1">
                         <span className="transition-transform group-open:rotate-90">▸</span>
                         {importResult.duplicates.length} already enrolled (skipped, no change)
                       </summary>
-                      <ul className="text-green-700/90 font-ninja text-sm mt-2 pl-4 space-y-1 max-h-44 overflow-y-auto">
+                      <ul className="text-ninja-navy font-ninja text-sm mt-2 pl-4 space-y-1 max-h-44 overflow-y-auto">
                         {importResult.duplicates.map((s) => (
                           <li key={s.id}>{s.full_name}</li>
                         ))}
