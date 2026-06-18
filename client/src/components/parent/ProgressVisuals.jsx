@@ -271,7 +271,7 @@ function BeltJourney({ enrollment }) {
         )}
         {!current_project && !last_session_date && <div className="mb-5" />}
 
-        <div className="overflow-x-auto" style={{ margin: '0 -4px', padding: '4px' }}>
+        <div className="overflow-x-auto no-scrollbar" style={{ margin: '0 -4px', padding: '4px' }}>
           <div className="flex items-center" style={{ minWidth: 'max-content' }}>
             {BELTS.map((belt, i) => {
               const reached = i <= currentIndex;
@@ -408,7 +408,7 @@ function ModuleGrid({ modules, visited, accentColor, dotDelay = 0 }) {
 
 function KitPath({ kitOrder, kitShort, currentKitIndex, barColor }) {
   return (
-    <div className="overflow-x-auto mb-5" style={{ margin: '0 -4px 20px', padding: '4px' }}>
+    <div className="overflow-x-auto no-scrollbar mb-5" style={{ margin: '0 -4px 20px', padding: '4px' }}>
       <div className="flex items-start" style={{ minWidth: 'max-content' }}>
         {kitOrder.map((kit, i) => {
           const reached = i <= currentKitIndex;
