@@ -630,6 +630,7 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
 
   const added = [];
   const duplicates = [];
+  const conflicts = [];
   const client = await pool.connect();
 
   try {
@@ -644,14 +645,28 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
 
       // Check for existing student with same name + program at this location
       const { rows: existing } = await client.query(
-        `SELECT s.id FROM students s
+        `SELECT s.id, sp.belt_level FROM students s
          JOIN student_programs sp ON sp.student_id = s.id
          WHERE LOWER(s.full_name) = LOWER($1) AND s.location_id = $2 AND sp.program = $3 AND s.active = true`,
         [fullName, locationId, program]
       );
 
       if (existing.length) {
-        duplicates.push({ id: existing[0].id, full_name: fullName });
+        const currentBelt = existing[0].belt_level;
+        // Same name+program already enrolled. If the CSV carries a different
+        // belt for THIS program, surface it as a conflict the caller can choose
+        // to override — scoped to this one program, never touching others.
+        if (beltLevel && currentBelt && beltLevel !== currentBelt) {
+          conflicts.push({
+            id: existing[0].id,
+            full_name: fullName,
+            program,
+            current_belt: currentBelt,
+            new_belt: beltLevel,
+          });
+        } else {
+          duplicates.push({ id: existing[0].id, full_name: fullName });
+        }
         continue;
       }
 
@@ -708,7 +723,46 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
     (s) => !incomingNames.has(s.full_name.trim().toLowerCase())
   );
 
-  res.json({ added: added.length, duplicates, missing });
+  res.json({ added: added.length, duplicates, conflicts, missing });
+});
+
+// POST /api/students/import/apply-belts — override belt for chosen programs
+// (used after import surfaces belt conflicts). Scoped per program so other
+// programs (Robotics, AI, etc.) are never touched.
+router.post('/import/apply-belts', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { updates } = req.body; // [{ id, program, belt_level }]
+  const locationId = req.session.activeLocationId;
+
+  if (!Array.isArray(updates) || updates.length === 0) {
+    return res.status(400).json({ error: 'No belt updates provided' });
+  }
+
+  const client = await pool.connect();
+  let updated = 0;
+  try {
+    await client.query('BEGIN');
+    for (const u of updates) {
+      if (!u.id || !u.program || !u.belt_level) continue;
+      const { rowCount } = await client.query(
+        `UPDATE student_programs sp
+         SET belt_level = $1, belt_sublevel = 1
+         FROM students s
+         WHERE sp.student_id = s.id
+           AND sp.student_id = $2 AND sp.program = $3 AND s.location_id = $4`,
+        [u.belt_level, u.id, u.program, locationId]
+      );
+      updated += rowCount;
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  res.json({ updated });
 });
 
 // POST /api/students/bulk-archive — archive (soft-delete) many students at once

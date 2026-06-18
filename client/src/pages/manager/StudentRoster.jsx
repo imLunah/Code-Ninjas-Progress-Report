@@ -74,6 +74,9 @@ export default function StudentRoster() {
   const [keepIds, setKeepIds] = useState(new Set());
   // Duplicates are kept by default — checking one marks it for removal.
   const [removeDupeIds, setRemoveDupeIds] = useState(new Set());
+  // Belt conflicts are NOT overridden by default — checking one applies the
+  // CSV belt to that program only. Keyed by `${id}::${program}`.
+  const [overrideKeys, setOverrideKeys] = useState(new Set());
   const [archiving, setArchiving] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -86,29 +89,43 @@ export default function StudentRoster() {
   };
   const toggleKeep = toggleInSet(setKeepIds);
   const toggleRemoveDupe = toggleInSet(setRemoveDupeIds);
+  const toggleOverride = toggleInSet(setOverrideKeys);
+
+  const conflictKey = (c) => `${c.id}::${c.program}`;
 
   const missingRemoveCount = () => {
     const missing = importResult?.missing || [];
     return missing.filter((s) => !keepIds.has(s.id)).length;
   };
   const totalRemoveCount = () => missingRemoveCount() + removeDupeIds.size;
+  const totalChangeCount = () => totalRemoveCount() + overrideKeys.size;
 
-  const handleRemove = async () => {
+  const handleApply = async () => {
     const missing = importResult?.missing || [];
+    const conflicts = importResult?.conflicts || [];
     const ids = [
       ...missing.filter((s) => !keepIds.has(s.id)).map((s) => s.id),
       ...removeDupeIds,
     ];
-    if (ids.length === 0) return;
+    const updates = conflicts
+      .filter((c) => overrideKeys.has(conflictKey(c)))
+      .map((c) => ({ id: c.id, program: c.program, belt_level: c.new_belt }));
+    if (ids.length === 0 && updates.length === 0) return;
     setArchiving(true);
     try {
-      const result = await api.post('/students/bulk-archive', { ids });
-      setImportResult((prev) => ({ ...prev, missing: [], duplicates: [], removed: result.archived }));
+      let removed = 0;
+      if (updates.length) await api.post('/students/import/apply-belts', { updates });
+      if (ids.length) {
+        const result = await api.post('/students/bulk-archive', { ids });
+        removed = result.archived;
+      }
+      setImportResult((prev) => ({ ...prev, missing: [], duplicates: [], conflicts: [], removed }));
       setKeepIds(new Set());
       setRemoveDupeIds(new Set());
+      setOverrideKeys(new Set());
       loadStudents();
     } catch (err) {
-      setImportError(err.message || 'Could not remove students');
+      setImportError(err.message || 'Could not apply changes');
     } finally {
       setArchiving(false);
     }
@@ -248,6 +265,7 @@ export default function StudentRoster() {
     setImportResult(null);
     setKeepIds(new Set());
     setRemoveDupeIds(new Set());
+    setOverrideKeys(new Set());
     setImporting(true);
 
     Papa.parse(file, {
@@ -734,6 +752,47 @@ export default function StudentRoster() {
                     </ul>
                   </div>
                 )}
+                {importResult.conflicts?.length > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-ninja-navy font-ninja font-semibold text-sm mb-1">
+                      {importResult.conflicts.length} belt change{importResult.conflicts.length !== 1 ? 's' : ''} found in this CSV
+                    </p>
+                    <p className="text-ninja-muted font-ninja text-xs mb-2">
+                      Check any you want to update. Only that program's belt changes — other programs are left alone.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setOverrideKeys(
+                        overrideKeys.size === importResult.conflicts.length
+                          ? new Set()
+                          : new Set(importResult.conflicts.map((c) => conflictKey(c)))
+                      )}
+                      className="text-ninja-blue font-ninja text-xs font-semibold hover:underline mb-2"
+                    >
+                      {overrideKeys.size === importResult.conflicts.length ? 'Clear all' : 'Select all'}
+                    </button>
+                    <ul className="text-ninja-navy font-ninja text-sm space-y-1 max-h-44 overflow-y-auto">
+                      {importResult.conflicts.map((c) => {
+                        const key = conflictKey(c);
+                        return (
+                          <li key={key}>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={overrideKeys.has(key)}
+                                onChange={() => toggleOverride(key)}
+                                className="accent-amber-500"
+                              />
+                              <span className={overrideKeys.has(key) ? '' : 'text-ninja-muted'}>
+                                {c.full_name} <span className="text-ninja-muted">({c.program})</span>: {c.current_belt} → <span className="font-semibold">{c.new_belt}</span>
+                              </span>
+                            </label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
                 {importResult.missing?.length > 0 && (
                   <div className="bg-ninja-bg border border-ninja-border rounded-lg p-3">
                     <p className="text-ninja-navy font-ninja font-semibold text-sm mb-1">
@@ -774,23 +833,23 @@ export default function StudentRoster() {
             )}
 
             <div className="flex gap-2 mt-5">
-              {(importResult?.missing?.length > 0 || importResult?.duplicates?.length > 0) ? (
+              {(importResult?.missing?.length > 0 || importResult?.duplicates?.length > 0 || importResult?.conflicts?.length > 0) ? (
                 <>
                   <Button variant="secondary" onClick={() => setImportModal(false)} disabled={archiving}>
                     Done
                   </Button>
                   <Button
-                    onClick={handleRemove}
-                    disabled={archiving || totalRemoveCount() === 0}
+                    onClick={handleApply}
+                    disabled={archiving || totalChangeCount() === 0}
                     className="ml-auto"
                   >
-                    {archiving ? 'Removing…' : `Remove ${totalRemoveCount()}`}
+                    {archiving ? 'Applying…' : `Apply ${totalChangeCount()}`}
                   </Button>
                 </>
               ) : (
                 <>
                   {importResult && !importing && (
-                    <Button variant="secondary" onClick={() => { setImportResult(null); setImportError(''); setKeepIds(new Set()); setRemoveDupeIds(new Set()); }}>
+                    <Button variant="secondary" onClick={() => { setImportResult(null); setImportError(''); setKeepIds(new Set()); setRemoveDupeIds(new Set()); setOverrideKeys(new Set()); }}>
                       Import Another
                     </Button>
                   )}
