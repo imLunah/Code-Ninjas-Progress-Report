@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
-import { BELTS, PROJECTS, STATUSES, getMaxLevel } from '../../utils/beltConfig';
+import { BELTS, PROJECTS, STATUSES, getLevels } from '../../utils/beltConfig';
 
-const UPPER_BELTS = ['Black'];
+// Black + bonus tracks don't use an explicit level.
+const NO_LEVEL_BELTS = ['Black', 'Bronze', 'Silver', 'Platinum'];
 
 export default function EnrollmentEditModal({ isOpen, onClose, studentId, enrollment, onSaved }) {
   const [form, setForm] = useState({
@@ -28,7 +29,7 @@ export default function EnrollmentEditModal({ isOpen, onClose, studentId, enroll
     }
   }, [enrollment, isOpen]);
 
-  const maxLevel = getMaxLevel(form.belt_level);
+  const levels = NO_LEVEL_BELTS.includes(form.belt_level) ? [] : getLevels(form.belt_level);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -90,20 +91,20 @@ export default function EnrollmentEditModal({ isOpen, onClose, studentId, enroll
           </select>
         </div>
 
-        {maxLevel && !UPPER_BELTS.includes(form.belt_level) && (
+        {levels.length > 0 && (
           <div>
             <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
-              Sublevel (1–{maxLevel})
+              Level
             </label>
-            <input
-              type="number"
+            <select
               name="belt_sublevel"
               value={form.belt_sublevel}
               onChange={handleChange}
-              min={1}
-              max={maxLevel}
               className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-            />
+            >
+              <option value="">Select level...</option>
+              {levels.map((lv) => <option key={lv} value={lv}>Level {lv}</option>)}
+            </select>
           </div>
         )}
 

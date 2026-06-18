@@ -1,9 +1,10 @@
-import { BELTS, getMaxLevel } from '../../utils/beltConfig';
+import { BELTS, getLevels } from '../../utils/beltConfig';
 
-const UPPER_BELTS = ['Purple', 'Brown', 'Red', 'Black'];
+// Black + bonus tracks don't use an explicit level step (the project implies it).
+const NO_LEVEL_BELTS = ['Black', 'Bronze', 'Silver', 'Platinum'];
 
 export default function BeltProgressFields({ beltLevel, setBeltLevel, beltSublevel, setBeltSublevel, setProject }) {
-  const maxLevel = getMaxLevel(beltLevel);
+  const levels = NO_LEVEL_BELTS.includes(beltLevel) ? [] : getLevels(beltLevel);
 
   const handleBeltChange = (e) => {
     setBeltLevel(e.target.value);
@@ -13,9 +14,6 @@ export default function BeltProgressFields({ beltLevel, setBeltLevel, beltSublev
 
   const handleSublevelChange = (e) => {
     const raw = e.target.value;
-    if (raw === '') { setBeltSublevel(''); setProject?.(''); return; }
-    const val = parseInt(raw);
-    if (!val || val < 1 || (maxLevel && val > maxLevel)) return;
     setBeltSublevel(raw);
     setProject?.('');
   };
@@ -33,30 +31,26 @@ export default function BeltProgressFields({ beltLevel, setBeltLevel, beltSublev
         >
           <option value="">Select belt...</option>
           {BELTS.map((b) => (
-            <option key={b.name} value={b.name}>{b.name}</option>
+            <option key={b.name} value={b.name}>{b.bonus ? `${b.name} (Bonus)` : b.name}</option>
           ))}
         </select>
       </div>
 
-      {beltLevel && maxLevel && !UPPER_BELTS.includes(beltLevel) && (
+      {beltLevel && levels.length > 0 && (
         <div>
           <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
-            Sublevel (1–{maxLevel})
+            Level
           </label>
-          <input
-            type="number"
+          <select
             value={beltSublevel}
             onChange={handleSublevelChange}
-            min={1}
-            max={maxLevel}
-            placeholder={`1 to ${maxLevel}`}
             className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-          />
-          {beltSublevel && parseInt(beltSublevel) > maxLevel && (
-            <p className="text-ninja-red text-xs font-ninja mt-1">
-              Sublevel cannot exceed {maxLevel} for {beltLevel} belt
-            </p>
-          )}
+          >
+            <option value="">Select level...</option>
+            {levels.map((lv) => (
+              <option key={lv} value={lv}>Level {lv}</option>
+            ))}
+          </select>
         </div>
       )}
     </div>

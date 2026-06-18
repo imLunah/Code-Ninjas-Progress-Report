@@ -13,7 +13,7 @@ import PinnedNote from '../../components/shared/PinnedNote';
 import EditStudentModal from '../../components/manager/EditStudentModal';
 import EnrollmentEditModal from '../../components/manager/EnrollmentEditModal';
 import { api } from '../../api/client';
-import { PROGRAMS as STATIC_PROGRAMS, BELTS, PROJECTS, STATUSES, getMaxLevel, getBelt, PROGRAM_LOGOS } from '../../utils/beltConfig';
+import { PROGRAMS as STATIC_PROGRAMS, BELTS, PROJECTS, STATUSES, getMaxLevel, getLevels, getBelt, PROGRAM_LOGOS } from '../../utils/beltConfig';
 import { useCurriculum } from '../../context/CurriculumContext';
 
 // ── Animation variants ────────────────────────────────────────────────────────
@@ -45,7 +45,9 @@ function MobileBeltJourney({ enrollment }) {
   const { belt_level, belt_sublevel, current_project } = enrollment;
   const belt = getBelt(belt_level);
   const maxLevel = getMaxLevel(belt_level);
-  const progress = maxLevel ? Math.round((belt_sublevel / maxLevel) * 100) : null;
+  const _levels = getLevels(belt_level);
+  const _pos = belt_sublevel != null ? _levels.indexOf(parseInt(belt_sublevel)) : -1;
+  const progress = _levels.length && _pos >= 0 ? Math.round(((_pos + 1) / _levels.length) * 100) : null;
   const beltIdx = BELTS.findIndex(b => b.name === belt_level);
   const currentIconRef = React.useRef(null);
   const scrollRef = React.useRef(null);
@@ -283,7 +285,9 @@ function DesktopBeltJourney({ enrollment }) {
   const { belt_level, belt_sublevel, current_project, project_status } = enrollment;
   const belt = getBelt(belt_level);
   const maxLevel = getMaxLevel(belt_level);
-  const progress = maxLevel ? Math.round((belt_sublevel / maxLevel) * 100) : null;
+  const _levels = getLevels(belt_level);
+  const _pos = belt_sublevel != null ? _levels.indexOf(parseInt(belt_sublevel)) : -1;
+  const progress = _levels.length && _pos >= 0 ? Math.round(((_pos + 1) / _levels.length) * 100) : null;
   const beltIdx = BELTS.findIndex((b) => b.name === belt_level);
 
   return (
@@ -428,7 +432,7 @@ function AddProgramForm({ studentId, existingPrograms, onAdded, onCancel }) {
   ];
 
   const isCreate = program === 'CREATE';
-  const maxLevel = getMaxLevel(beltLevel);
+  const levelOpts = ['Black', 'Bronze', 'Silver', 'Platinum'].includes(beltLevel) ? [] : getLevels(beltLevel);
   const available = allPrograms.filter((p) => !existingPrograms.includes(p));
 
   const handleSubmit = async (e) => {
@@ -474,10 +478,12 @@ function AddProgramForm({ studentId, existingPrograms, onAdded, onCancel }) {
             <option value="">Select belt (optional)...</option>
             {BELTS.map((b) => <option key={b.name} value={b.name}>{b.name}</option>)}
           </select>
-          {maxLevel && beltLevel && (
-            <input type="number" value={beltSublevel} onChange={(e) => setBeltSublevel(e.target.value)}
-              min={1} max={maxLevel} placeholder={`Sublevel (1–${maxLevel})`}
-              className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors" />
+          {levelOpts.length > 0 && (
+            <select value={beltSublevel} onChange={(e) => setBeltSublevel(e.target.value)}
+              className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors">
+              <option value="">Select level (optional)...</option>
+              {levelOpts.map((lv) => <option key={lv} value={lv}>Level {lv}</option>)}
+            </select>
           )}
           <select value={currentProject} onChange={(e) => setCurrentProject(e.target.value)}
             className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors">

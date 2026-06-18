@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { BELTS, PROGRAM_LOGOS } from '../../utils/beltConfig';
+import { BELTS, PROGRAM_LOGOS, getLevels } from '../../utils/beltConfig';
 import { useCurriculum } from '../../context/CurriculumContext';
 import { formatDate } from '../../utils/dateUtils';
 
@@ -206,11 +206,13 @@ function ActivityChart({ logs }) {
 
 function BeltJourney({ enrollment }) {
   const { belt_level, belt_sublevel, last_session_date, current_project, project_status } = enrollment;
-  const currentIndex = belt_level ? BELTS.findIndex((b) => b.name === belt_level) : -1;
-  const currentBelt = currentIndex >= 0 ? BELTS[currentIndex] : null;
-  const maxLevel = currentBelt?.levels ?? null;
+  const levels = belt_level ? getLevels(belt_level) : [];
+  const maxLevel = levels.length ? levels[levels.length - 1] : null;
   const sublevel = belt_sublevel != null ? parseInt(belt_sublevel) : null;
-  const progress = maxLevel && sublevel ? Math.round((sublevel / maxLevel) * 100) : null;
+  // Progress within the belt = position of the current level among the belt's
+  // levels (handles non-1-based belts like Green = levels 6–10).
+  const levelPos = sublevel != null ? levels.indexOf(sublevel) : -1;
+  const progress = levels.length && levelPos >= 0 ? Math.round(((levelPos + 1) / levels.length) * 100) : null;
 
   if (!belt_level) {
     return (

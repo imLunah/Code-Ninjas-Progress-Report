@@ -13,11 +13,13 @@ const stagger = {
 };
 import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
-import { BELTS, PROJECTS, STATUSES, PROGRAMS, getMaxLevel } from '../../utils/beltConfig';
+import { BELTS, PROJECTS, STATUSES, PROGRAMS, getLevels } from '../../utils/beltConfig';
+
+const NO_LEVEL_BELTS = ['Black', 'Bronze', 'Silver', 'Platinum'];
 
 function EnrollmentRow({ enrollment, index, onChange, onRemove, showRemove }) {
   const isCreate = enrollment.program === 'CREATE';
-  const maxLevel = getMaxLevel(enrollment.belt_level);
+  const levels = NO_LEVEL_BELTS.includes(enrollment.belt_level) ? [] : getLevels(enrollment.belt_level);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -76,17 +78,16 @@ function EnrollmentRow({ enrollment, index, onChange, onRemove, showRemove }) {
             {BELTS.map((b) => <option key={b.name} value={b.name}>{b.name}</option>)}
           </select>
 
-          {maxLevel && enrollment.belt_level && (
-            <input
-              type="number"
+          {levels.length > 0 && (
+            <select
               name="belt_sublevel"
               value={enrollment.belt_sublevel}
               onChange={handleChange}
-              min={1}
-              max={maxLevel}
-              placeholder={`Sublevel (1–${maxLevel})`}
               className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-            />
+            >
+              <option value="">Select level...</option>
+              {levels.map((lv) => <option key={lv} value={lv}>Level {lv}</option>)}
+            </select>
           )}
 
           <select

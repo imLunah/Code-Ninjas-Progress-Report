@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { PROJECTS, STATUSES, BELT_LEVEL_PROJECTS, getLevelProjects } from '../../utils/beltConfig';
 
-const UPPER_BELTS = ['Purple', 'Brown', 'Red', 'Black'];
+// Belts whose projects are picked from one flat list (no Build/Solve/Adventure
+// labels, no level step): the Black capstone + the three bonus tracks.
+const UPPER_BELTS = ['Black', 'Bronze', 'Silver', 'Platinum'];
 
 function getSectionLabel(index, total) {
   if (index === total - 1) return 'Adventure';

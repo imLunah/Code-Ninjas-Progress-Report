@@ -16,6 +16,10 @@ const BELT_COLORS = {
   Purple: { bg: '#faf5ff', border: '#a855f7', text: '#581c87' },
   Brown:  { bg: '#fdf8f0', border: '#92400e', text: '#451a03' },
   Red:    { bg: '#fef2f2', border: '#cc0000', text: '#7f1d1d' },
+  Black:  { bg: '#f3f4f6', border: '#111111', text: '#111827' },
+  Bronze: { bg: '#fdf3e7', border: '#b45309', text: '#7c2d12' },
+  Silver: { bg: '#f8fafc', border: '#94a3b8', text: '#334155' },
+  Platinum: { bg: '#f0f9ff', border: '#38bdf8', text: '#075985' },
 };
 
 function AdminNav() {
