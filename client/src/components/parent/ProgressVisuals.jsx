@@ -27,6 +27,9 @@ const BELT_IMAGES = {
   Brown:  '/belts/belt-brown.png',
   Red:    '/belts/belt-red.png',
   Black:  '/belts/belt-black.png',
+  Bronze: '/belts/belt-bronze.png',
+  Silver: '/belts/belt-silver.png',
+  Platinum: '/belts/belt-platinum.png',
 };
 
 function abbrevModule(name) {
