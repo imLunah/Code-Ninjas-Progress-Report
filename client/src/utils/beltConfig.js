@@ -136,6 +136,9 @@ export const BELT_LEVEL_PROJECTS = {
     3: ['Sulky Slimes'],
     4: ['Chef Codey'],
   },
+  Gold: {
+    1: ['Custom'],
+  },
 };
 
 export function getBelt(name) {
