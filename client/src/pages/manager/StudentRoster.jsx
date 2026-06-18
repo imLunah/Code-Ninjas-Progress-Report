@@ -699,7 +699,7 @@ export default function StudentRoster() {
               <div className="space-y-3">
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <p className="text-green-700 font-ninja font-semibold text-sm">
-                    ✓ {importResult.added} ninja{importResult.added !== 1 ? 's' : ''} imported successfully
+                    {importResult.added} ninja{importResult.added !== 1 ? 's' : ''} imported successfully
                   </p>
                   {importResult.removed > 0 && (
                     <p className="text-green-700 font-ninja text-sm mt-1">
@@ -707,9 +707,17 @@ export default function StudentRoster() {
                     </p>
                   )}
                   {importResult.duplicates?.length > 0 && (
-                    <p className="text-green-700/80 font-ninja text-sm mt-1">
-                      {importResult.duplicates.length} already enrolled (skipped, no change)
-                    </p>
+                    <details className="mt-1 group">
+                      <summary className="text-green-700/80 font-ninja text-sm cursor-pointer list-none flex items-center gap-1">
+                        <span className="transition-transform group-open:rotate-90">▸</span>
+                        {importResult.duplicates.length} already enrolled (skipped, no change)
+                      </summary>
+                      <ul className="text-green-700/90 font-ninja text-sm mt-2 pl-4 space-y-1 max-h-44 overflow-y-auto">
+                        {importResult.duplicates.map((s) => (
+                          <li key={s.id}>{s.full_name}</li>
+                        ))}
+                      </ul>
+                    </details>
                   )}
                 </div>
                 {importResult.conflicts?.length > 0 && (
