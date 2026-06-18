@@ -211,6 +211,7 @@ function ActivityChart({ logs }) {
 
 function BeltJourney({ enrollment }) {
   const { belt_level, belt_sublevel, last_session_date, current_project, project_status } = enrollment;
+  const currentIndex = belt_level ? BELTS.findIndex((b) => b.name === belt_level) : -1;
   const levels = belt_level ? getLevels(belt_level) : [];
   const maxLevel = levels.length ? levels[levels.length - 1] : null;
   const sublevel = belt_sublevel != null ? parseInt(belt_sublevel) : null;
