@@ -2,7 +2,7 @@ import { getBelt } from '../../utils/beltConfig';
 
 // Belts that ship a PNG icon (all of them now). Any belt missing an image falls
 // back to a colored swatch tinted with the belt's color.
-const IMAGE_BELTS = new Set(['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black', 'Bronze', 'Silver', 'Platinum']);
+const IMAGE_BELTS = new Set(['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black', 'Bronze', 'Silver', 'Gold', 'Platinum']);
 
 export default function BeltIcon({ belt, size = 40, dimmed = false, className = '', style = {} }) {
   if (!belt) return null;

@@ -13,6 +13,7 @@ export const BELTS = [
   { name: 'Black',    color: '#111111', textColor: '#ffffff' },
   { name: 'Bronze',   color: '#cd7f32', textColor: '#ffffff', bonus: true },
   { name: 'Silver',   color: '#c0c0c0', textColor: '#1f2937', bonus: true },
+  { name: 'Gold',     color: '#d4af37', textColor: '#1f2937', bonus: true },
   { name: 'Platinum', color: '#e5e4e2', textColor: '#1f2937', bonus: true },
 ];
 

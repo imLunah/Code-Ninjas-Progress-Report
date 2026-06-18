@@ -19,6 +19,7 @@ const BELT_COLORS = {
   Black:  { bg: '#f3f4f6', border: '#111111', text: '#111827' },
   Bronze: { bg: '#fdf3e7', border: '#cd7f32', text: '#7c2d12' },
   Silver: { bg: '#f4f6f8', border: '#c0c0c0', text: '#334155' },
+  Gold:   { bg: '#fdf6e3', border: '#d4af37', text: '#7c5e10' },
   Platinum: { bg: '#f7fafc', border: '#cbd5e1', text: '#334155' },
 };
 

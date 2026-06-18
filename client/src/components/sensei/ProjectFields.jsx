@@ -3,7 +3,7 @@ import { PROJECTS, STATUSES, BELT_LEVEL_PROJECTS, getLevelProjects } from '../..
 
 // Belts whose projects are picked from one flat list (no Build/Solve/Adventure
 // labels, no level step): the Black capstone + the three bonus tracks.
-const UPPER_BELTS = ['Black', 'Bronze', 'Silver', 'Platinum'];
+const UPPER_BELTS = ['Black', 'Bronze', 'Silver', 'Gold', 'Platinum'];
 
 function getSectionLabel(index, total) {
   if (index === total - 1) return 'Adventure';

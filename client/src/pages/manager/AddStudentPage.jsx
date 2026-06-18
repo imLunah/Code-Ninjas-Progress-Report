@@ -15,7 +15,7 @@ import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
 import { BELTS, PROJECTS, STATUSES, PROGRAMS, getLevels } from '../../utils/beltConfig';
 
-const NO_LEVEL_BELTS = ['Black', 'Bronze', 'Silver', 'Platinum'];
+const NO_LEVEL_BELTS = ['Black', 'Bronze', 'Silver', 'Gold', 'Platinum'];
 
 function EnrollmentRow({ enrollment, index, onChange, onRemove, showRemove }) {
   const isCreate = enrollment.program === 'CREATE';

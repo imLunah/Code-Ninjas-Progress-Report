@@ -7,7 +7,7 @@ import { useCurriculum } from '../../context/CurriculumContext';
 import { PROJECTS, STATUSES, BELT_LEVEL_PROJECTS, getLevelProjects } from '../../utils/beltConfig';
 
 // Flat-project-list belts (no level / Build-Solve labels): Black capstone + bonus tracks.
-const UPPER_BELTS = ['Black', 'Bronze', 'Silver', 'Platinum'];
+const UPPER_BELTS = ['Black', 'Bronze', 'Silver', 'Gold', 'Platinum'];
 
 function getSectionLabel(index, total) {
   if (index === total - 1) return 'Adventure';
