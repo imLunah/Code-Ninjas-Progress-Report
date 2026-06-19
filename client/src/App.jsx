@@ -12,32 +12,37 @@ import AdminBar from './components/ui/AdminBar';
 import WhatsNewModal from './components/shared/WhatsNewModal';
 import ThemeSync from './components/ThemeSync';
 
+// Eager: only the pages on the unauthenticated first-paint path.
 import LoginPage from './pages/LoginPage';
-import ManagerDashboard from './pages/manager/ManagerDashboard';
-import StudentRoster from './pages/manager/StudentRoster';
-import AddStudentPage from './pages/manager/AddStudentPage';
-import StudentProfile from './pages/manager/StudentProfile';
-import StaffPage from './pages/manager/StaffPage';
-import ReportsPage from './pages/manager/ReportsPage';
-import AccountPage from './pages/AccountPage';
-import SenseiDashboard from './pages/sensei/SenseiDashboard';
-import LogProgressPage from './pages/sensei/LogProgressPage';
-import LogClubPage from './pages/sensei/LogClubPage';
-import ClubsPage from './pages/ClubsPage';
-import ClubProfilePage from './pages/ClubProfilePage';
-import ClubSessionPage from './pages/ClubSessionPage';
-import ParentDashboard from './pages/parent/ParentDashboard';
-import ParentStudentProfile from './pages/parent/ParentStudentProfile';
-import PrivacyPage from './pages/PrivacyPage';
-import TermsPage from './pages/TermsPage';
-import AccessibilityPage from './pages/AccessibilityPage';
 import LandingPage from './pages/LandingPage';
-import CurriculumRoadmapPage from './pages/CurriculumRoadmapPage';
-import LocationsPage from './pages/admin/LocationsPage';
-import CurriculumPage from './pages/admin/CurriculumPage';
-import UsersPage from './pages/admin/UsersPage';
-import SettingsPage from './pages/admin/SettingsPage';
-import ChangelogPage from './pages/ChangelogPage';
+
+// Lazy: everything behind auth. Keeps the initial bundle small and pushes heavy deps
+// (emoji picker on club pages, markdown, papaparse, crop) into per-route chunks that
+// only download when that route is actually visited.
+const ManagerDashboard = lazy(() => import('./pages/manager/ManagerDashboard'));
+const StudentRoster = lazy(() => import('./pages/manager/StudentRoster'));
+const AddStudentPage = lazy(() => import('./pages/manager/AddStudentPage'));
+const StudentProfile = lazy(() => import('./pages/manager/StudentProfile'));
+const StaffPage = lazy(() => import('./pages/manager/StaffPage'));
+const ReportsPage = lazy(() => import('./pages/manager/ReportsPage'));
+const AccountPage = lazy(() => import('./pages/AccountPage'));
+const SenseiDashboard = lazy(() => import('./pages/sensei/SenseiDashboard'));
+const LogProgressPage = lazy(() => import('./pages/sensei/LogProgressPage'));
+const LogClubPage = lazy(() => import('./pages/sensei/LogClubPage'));
+const ClubsPage = lazy(() => import('./pages/ClubsPage'));
+const ClubProfilePage = lazy(() => import('./pages/ClubProfilePage'));
+const ClubSessionPage = lazy(() => import('./pages/ClubSessionPage'));
+const ParentDashboard = lazy(() => import('./pages/parent/ParentDashboard'));
+const ParentStudentProfile = lazy(() => import('./pages/parent/ParentStudentProfile'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+const AccessibilityPage = lazy(() => import('./pages/AccessibilityPage'));
+const CurriculumRoadmapPage = lazy(() => import('./pages/CurriculumRoadmapPage'));
+const LocationsPage = lazy(() => import('./pages/admin/LocationsPage'));
+const CurriculumPage = lazy(() => import('./pages/admin/CurriculumPage'));
+const UsersPage = lazy(() => import('./pages/admin/UsersPage'));
+const SettingsPage = lazy(() => import('./pages/admin/SettingsPage'));
+const ChangelogPage = lazy(() => import('./pages/ChangelogPage'));
 // Lazy — pulls in lottie; keep it out of the main bundle (only new accounts / revisits load it).
 const GettingStartedPage = lazy(() => import('./pages/GettingStartedPage'));
 const AppearancePage = lazy(() => import('./pages/AppearancePage'));
@@ -51,6 +56,7 @@ export default function App() {
       <CurriculumProvider>
       <ParentAuthProvider>
       <AuthProvider>
+          <Suspense fallback={null}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/" element={<LandingPage />} />
@@ -87,12 +93,12 @@ export default function App() {
             {/* Curriculum Roadmap */}
             <Route path="/curriculum-roadmap" element={<ProtectedRoute role="sensei"><CurriculumRoadmapPage /></ProtectedRoute>} />
             <Route path="/changelog" element={<ProtectedRoute role="sensei"><ChangelogPage /></ProtectedRoute>} />
-            <Route path="/welcome" element={<ProtectedRoute role="sensei"><Suspense fallback={null}><WelcomePage /></Suspense></ProtectedRoute>} />
-            <Route path="/getting-started" element={<ProtectedRoute role="sensei"><Suspense fallback={null}><GettingStartedPage /></Suspense></ProtectedRoute>} />
+            <Route path="/welcome" element={<ProtectedRoute role="sensei"><WelcomePage /></ProtectedRoute>} />
+            <Route path="/getting-started" element={<ProtectedRoute role="sensei"><GettingStartedPage /></ProtectedRoute>} />
 
             {/* Account */}
             <Route path="/account" element={<ProtectedRoute role="sensei"><AccountPage /></ProtectedRoute>} />
-            <Route path="/appearance" element={<ProtectedRoute role="sensei"><Suspense fallback={null}><AppearancePage /></Suspense></ProtectedRoute>} />
+            <Route path="/appearance" element={<ProtectedRoute role="sensei"><AppearancePage /></ProtectedRoute>} />
 
             {/* Public */}
             <Route path="/privacy"       element={<PrivacyPage />} />
@@ -101,6 +107,7 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
           <ThemeSync />
           <AdminBar />
           <WhatsNewModal />

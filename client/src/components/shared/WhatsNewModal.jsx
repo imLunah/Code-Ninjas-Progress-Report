@@ -1,11 +1,14 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { api } from '../../api/client';
-import ReleaseContent from './ReleaseContent';
 import { ONBOARDING_ENABLED } from '../../lib/features';
+
+// Lazy — pulls in react-markdown (~150kB). This modal is always mounted but only renders
+// content when an unseen release pops, so keep markdown out of the initial bundle.
+const ReleaseContent = lazy(() => import('./ReleaseContent'));
 
 const PANEL_SPRING = { type: 'spring', stiffness: 320, damping: 30, mass: 0.9 };
 
@@ -110,7 +113,7 @@ export default function WhatsNewModal() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 + Math.min(i, 6) * 0.08, ...PANEL_SPRING }}
                 >
-                  <ReleaseContent release={r} />
+                  <Suspense fallback={null}><ReleaseContent release={r} /></Suspense>
                 </motion.div>
               ))}
             </div>
