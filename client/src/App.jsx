@@ -10,6 +10,7 @@ import ProtectedRoute from './components/layout/ProtectedRoute';
 import ParentRoute from './components/layout/ParentRoute';
 import AdminBar from './components/ui/AdminBar';
 import WhatsNewModal from './components/shared/WhatsNewModal';
+import ThemeSync from './components/ThemeSync';
 
 import LoginPage from './pages/LoginPage';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
@@ -100,6 +101,7 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <ThemeSync />
           <AdminBar />
           <WhatsNewModal />
       </AuthProvider>

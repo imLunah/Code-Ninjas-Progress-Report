@@ -46,7 +46,7 @@ router.post('/login', loginLimiter, async (req, res) => {
   try {
     const pool = req.app.get('db');
     const { rows } = await pool.query(
-      'SELECT id, username, display_name, role, location_id, profile_pic_url, password_hash, must_reset_password FROM users WHERE LOWER(username) = LOWER($1) AND active = true',
+      'SELECT id, username, display_name, role, location_id, profile_pic_url, password_hash, must_reset_password, theme_mode, theme_accent FROM users WHERE LOWER(username) = LOWER($1) AND active = true',
       [username]
     );
     const user = rows[0];
@@ -107,6 +107,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       availableLocations,
       announcement,
       mustResetPassword: !!user.must_reset_password,
+      theme: (user.theme_mode || user.theme_accent) ? { mode: user.theme_mode || null, accent: user.theme_accent || null } : null,
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -161,7 +162,7 @@ router.get('/me', async (req, res) => {
   try {
     const pool = req.app.get('db');
     const { rows } = await pool.query(
-      'SELECT id, username, display_name, role, location_id, profile_pic_url, must_reset_password, onboarded_at FROM users WHERE id = $1',
+      'SELECT id, username, display_name, role, location_id, profile_pic_url, must_reset_password, onboarded_at, theme_mode, theme_accent FROM users WHERE id = $1',
       [req.session.userId]
     );
     const user = rows[0];
@@ -195,6 +196,7 @@ router.get('/me', async (req, res) => {
       announcement,
       mustResetPassword: req.session.mustResetPassword ?? false,
       onboarded: !!user.onboarded_at,
+      theme: (user.theme_mode || user.theme_accent) ? { mode: user.theme_mode || null, accent: user.theme_accent || null } : null,
     });
   } catch (err) {
     console.error('Me error:', err);

@@ -61,13 +61,26 @@ export function ThemeProvider({ children }) {
   // without touching React state or localStorage (no app-wide re-render).
   const previewAccent = useCallback((hex) => writeAccentVars(hex, dark), [dark]);
 
-  const toggle = () => setDark((d) => !d);
-  const setMode = (mode) => setDark(mode === 'dark');
-  const setAccent = (id) => {
+  // rev bumps on every user-initiated change (not on hydrate) so the account-sync
+  // bridge can tell a real preference change from applying the saved one.
+  const [rev, setRev] = useState(0);
+  const bump = () => setRev((r) => r + 1);
+
+  const applyAccent = (id) => {
     if (isDefaultAccent(id)) return setAccentState('default');
     if (isCustomAccent(id)) return setAccentState(id);
     setAccentState(getAccent(id).id);
   };
+
+  const toggle = () => { setDark((d) => !d); bump(); };
+  const setMode = (mode) => { setDark(mode === 'dark'); bump(); };
+  const setAccent = (id) => { applyAccent(id); bump(); };
+
+  // Apply a saved theme from the account without marking it as a user change.
+  const hydrate = useCallback((mode, accentId) => {
+    if (mode) setDark(mode === 'dark');
+    if (accentId !== undefined && accentId !== null) applyAccent(accentId);
+  }, []);
 
   const settings = useMemo(
     () => ({ mode: dark ? 'dark' : 'light', accentColor: accent }),
@@ -75,8 +88,8 @@ export function ThemeProvider({ children }) {
   );
 
   const value = useMemo(
-    () => ({ dark, toggle, setMode, accent, setAccent, previewAccent, settings }),
-    [dark, accent, settings, previewAccent]
+    () => ({ dark, toggle, setMode, accent, setAccent, previewAccent, settings, rev, hydrate }),
+    [dark, accent, settings, previewAccent, rev, hydrate]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

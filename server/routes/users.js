@@ -226,6 +226,28 @@ router.patch('/me/avatar', requireSensei, async (req, res) => {
   }
 });
 
+// PATCH /api/users/me/theme — persist the user's theme so it follows them across devices
+router.patch('/me/theme', requireSensei, async (req, res) => {
+  const pool = req.app.get('db');
+  const { mode, accent } = req.body;
+  if (mode && !['light', 'dark'].includes(mode)) {
+    return res.status(400).json({ error: 'Invalid mode' });
+  }
+  if (accent && (typeof accent !== 'string' || accent.length > 20)) {
+    return res.status(400).json({ error: 'Invalid accent' });
+  }
+  try {
+    await pool.query(
+      'UPDATE users SET theme_mode = $1, theme_accent = $2 WHERE id = $3',
+      [mode || null, accent || null, req.session.userId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Theme save error:', err);
+    res.status(500).json({ error: 'Failed to save theme' });
+  }
+});
+
 // PATCH /api/users/me — any staff can update their own username/password
 router.patch('/me', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
