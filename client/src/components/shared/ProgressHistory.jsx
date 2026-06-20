@@ -219,7 +219,7 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                             >
                               Edit
                             </button>
-                            {isManager && (
+                            {(isManager || log.sensei_id === user?.id) && (
                               isConfirmingDelete ? (
                                 <>
                                   <Button variant="danger" size="sm" onClick={() => handleDelete(log.id)} disabled={deleting}>
