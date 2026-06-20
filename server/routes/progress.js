@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { requireSensei, requireManager, requireOwnLocation } = require('../middleware/auth');
+const { requireSensei, requireOwnLocation } = require('../middleware/auth');
 
 const STANDARD_BELTS = new Set(['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black']);
 
@@ -232,18 +232,25 @@ router.patch('/:id', requireSensei, requireOwnLocation, async (req, res) => {
   }
 });
 
-// DELETE /api/progress/:id — manager deletes a progress log
-router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
+// DELETE /api/progress/:id — managers delete any log in their center; senseis delete only their own
+router.delete('/:id', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
+  const isManager = ['manager', 'admin'].includes(req.session.role);
   try {
+    const ownershipClause = isManager ? '' : 'AND progress_logs.sensei_id = $3';
+    const params = isManager
+      ? [req.params.id, req.session.activeLocationId]
+      : [req.params.id, req.session.activeLocationId, req.session.userId];
+
     const { rows } = await pool.query(
       `DELETE FROM progress_logs
        USING students s
        WHERE progress_logs.id = $1 AND progress_logs.student_id = s.id AND s.location_id = $2
+       ${ownershipClause}
        RETURNING progress_logs.id`,
-      [req.params.id, req.session.activeLocationId]
+      params
     );
-    if (!rows[0]) return res.status(404).json({ error: 'Log not found' });
+    if (!rows[0]) return res.status(404).json({ error: 'Log not found or not yours' });
     res.json({ ok: true });
   } catch (err) {
     console.error('Progress log delete error:', err);
