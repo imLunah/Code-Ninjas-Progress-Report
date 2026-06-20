@@ -56,6 +56,15 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     );
     if (!studentRows[0]) return res.status(404).json({ error: 'Student not found' });
 
+    // Reject anything that isn't a program the student is actually enrolled in.
+    // Without this, an arbitrary `program` string lands in progress_logs and
+    // daily_assignments and then pollutes the TodayBoard program filter.
+    const { rows: enrollRows } = await pool.query(
+      'SELECT 1 FROM student_programs WHERE student_id = $1 AND program = $2',
+      [student_id, program]
+    );
+    if (!enrollRows[0]) return res.status(400).json({ error: 'Student not enrolled in this program' });
+
     let lastLogId = null;
     let lastEntry = entries[entries.length - 1];
     const client = await pool.connect();
