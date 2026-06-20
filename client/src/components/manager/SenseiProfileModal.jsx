@@ -138,11 +138,6 @@ export default function SenseiProfileModal({
 
             {showActions && (
               <div className="flex flex-wrap gap-2 mb-5">
-                {!isCD && (
-                  <button className={`${heroBtn} bg-white/10 hover:bg-white/20 text-white`} onClick={() => { handleClose(); onEditLogin(); }}>
-                    Edit Login
-                  </button>
-                )}
                 <button className={`${heroBtn} bg-white/10 hover:bg-white/20 text-white`} onClick={() => { handleClose(); onResetLogin(); }}>
                   Reset Login
                 </button>
