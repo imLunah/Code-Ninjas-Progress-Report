@@ -538,6 +538,18 @@ export default function StudentProfile() {
 
   const handleSaved = (updated) => setStudent((prev) => ({ ...prev, ...updated }));
 
+  const handleLogUpdated = (logId, patch) =>
+    setStudent((prev) => ({
+      ...prev,
+      progress_logs: (prev.progress_logs || []).map((l) => (l.id === logId ? { ...l, ...patch } : l)),
+    }));
+
+  const handleLogDeleted = (logId) =>
+    setStudent((prev) => ({
+      ...prev,
+      progress_logs: (prev.progress_logs || []).filter((l) => l.id !== logId),
+    }));
+
   const handleEnrollmentSaved = (updated) => {
     setStudent((prev) => ({
       ...prev,
@@ -711,46 +723,8 @@ export default function StudentProfile() {
           {displayLogs.length > 0 && (
             <motion.div variants={fadeUp} className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
               <h2 className="font-ninja font-bold text-ninja-navy mb-3">Recent Progress</h2>
-              <div className="space-y-4 max-h-72 overflow-y-auto no-scrollbar">
-                {displayLogs.map((log, i) => (
-                  <motion.div
-                    key={log.id}
-                    className="flex gap-3"
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, ease: 'easeOut', delay: i * 0.05 + 0.3 }}
-                  >
-                    <div className="w-1 rounded-full bg-ninja-blue flex-shrink-0 self-stretch" />
-                    <div className="min-w-0">
-                      <p className="font-ninja font-bold text-ninja-navy text-sm leading-snug">
-                        {new Date(String(log.session_date).split('T')[0] + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                        {log.sensei_name && (
-                          <span className="font-normal text-ninja-muted"> · {log.sensei_name}</span>
-                        )}
-                      </p>
-                      {(log.sub_program || log.module_name || log.lesson_name || log.belt_level_at || log.project_at) && (
-                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                          {log.sub_program && (
-                            <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-md font-ninja font-semibold">{log.sub_program}</span>
-                          )}
-                          {log.belt_level_at && <BeltBadge belt={log.belt_level_at} sublevel={log.belt_sublevel_at} size="xs" />}
-                          {log.project_at && (
-                            <span className="text-xs text-ninja-muted font-ninja"><span className="font-semibold text-ninja-navy">Project:</span> {log.project_at}</span>
-                          )}
-                          {log.module_name && (
-                            <span className="text-xs text-ninja-muted font-ninja"><span className="font-semibold text-ninja-navy">Module:</span> {log.module_name}</span>
-                          )}
-                          {log.lesson_name && (
-                            <span className="text-xs text-ninja-muted font-ninja"><span className="font-semibold text-ninja-navy">Lesson:</span> {log.lesson_name}</span>
-                          )}
-                        </div>
-                      )}
-                      {log.notes && (
-                        <p className="text-ninja-muted font-ninja text-sm mt-0.5 leading-snug">{log.notes}</p>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
+              <div className="max-h-80 overflow-y-auto no-scrollbar">
+                <ProgressHistory logs={displayLogs} onLogUpdated={handleLogUpdated} onLogDeleted={handleLogDeleted} />
               </div>
             </motion.div>
           )}
@@ -852,50 +826,9 @@ export default function StudentProfile() {
               {/* Recent Progress */}
               {displayLogs.length > 0 && (
                 <motion.div variants={fadeUp} className="bg-white rounded-2xl p-5 border border-ninja-border shadow-sm">
-                  <h2 className="font-ninja font-bold text-ninja-navy mb-1">Recent Progress</h2>
-                  <div className="max-h-80 overflow-y-auto no-scrollbar">
-                    {displayLogs.map((log, i) => (
-                      <motion.div
-                        key={log.id}
-                        className="flex gap-3 py-3 border-t border-ninja-border/60 first:border-t-0 first:pt-0"
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.3, ease: 'easeOut', delay: i * 0.05 + 0.3 }}
-                      >
-                        <div className="w-0.5 rounded-full bg-ninja-blue flex-shrink-0 self-stretch min-h-[1rem]" />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                            <span className="font-ninja font-bold text-ninja-navy text-sm">
-                              {new Date(String(log.session_date).split('T')[0] + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                            </span>
-                            {log.sensei_name && (
-                              <span className="text-ninja-muted font-ninja text-sm">Sensei {log.sensei_name}</span>
-                            )}
-                            {log.program && <ProgramBadge program={log.program} size="xs" />}
-                          </div>
-                          {(log.sub_program || log.module_name || log.lesson_name || log.belt_level_at || log.project_at) && (
-                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mb-0.5">
-                              {log.sub_program && (
-                                <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-md font-ninja font-semibold">{log.sub_program}</span>
-                              )}
-                              {log.belt_level_at && <BeltBadge belt={log.belt_level_at} sublevel={log.belt_sublevel_at} size="xs" />}
-                              {log.project_at && (
-                                <span className="text-xs text-ninja-muted font-ninja"><span className="font-semibold text-ninja-navy">Project:</span> {log.project_at}</span>
-                              )}
-                              {log.module_name && (
-                                <span className="text-xs text-ninja-muted font-ninja"><span className="font-semibold text-ninja-navy">Module:</span> {log.module_name}</span>
-                              )}
-                              {log.lesson_name && (
-                                <span className="text-xs text-ninja-muted font-ninja"><span className="font-semibold text-ninja-navy">Lesson:</span> {log.lesson_name}</span>
-                              )}
-                            </div>
-                          )}
-                          {log.notes && (
-                            <p className="text-ninja-muted font-ninja text-sm leading-snug">{log.notes}</p>
-                          )}
-                        </div>
-                      </motion.div>
-                    ))}
+                  <h2 className="font-ninja font-bold text-ninja-navy mb-3">Recent Progress</h2>
+                  <div className="max-h-[32rem] overflow-y-auto no-scrollbar">
+                    <ProgressHistory logs={displayLogs} onLogUpdated={handleLogUpdated} onLogDeleted={handleLogDeleted} />
                   </div>
                 </motion.div>
               )}
