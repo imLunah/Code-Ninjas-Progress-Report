@@ -3,6 +3,14 @@ const router = express.Router();
 const { requireSensei, requireOwnLocation } = require('../middleware/auth');
 
 const STANDARD_BELTS = new Set(['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black']);
+// Every real belt label that may be stored in a log row. Superset of STANDARD_BELTS:
+// the four bonus-track belts (Bronze/Silver/Platinum/Gold) can be logged but never
+// auto-overwrite the student's tracked belt — see the STANDARD_BELTS gate below.
+const ALL_BELTS = new Set([...STANDARD_BELTS, 'Bronze', 'Silver', 'Platinum', 'Gold']);
+// Free-text curriculum/progress fields are intentionally freeform (senseis log custom
+// lesson/module names not in the curriculum tables), so they're bounded by length
+// rather than a closed vocabulary — same defense-in-depth as the notes cap.
+const MAX_FIELD = 200;
 
 // POST /api/progress
 // Accepts either single-lesson fields OR lesson_entries array for multi-lesson sessions.
@@ -34,9 +42,42 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     ? lesson_entries
     : [{ sub_program: sub_program || null, module_name: module_name || null, lesson_name: lesson_name || null }];
 
+  // belt_level_at must be a real belt label (or absent) — block junk stored verbatim
+  // in the log row. The narrower STANDARD_BELTS gate on the overwrite path is unchanged.
+  if (belt_level_at != null && !ALL_BELTS.has(belt_level_at)) {
+    return res.status(400).json({ error: 'Invalid belt level' });
+  }
+  // belt_sublevel_at is an integer that gets written straight into the log AND
+  // student_programs.belt_sublevel — so it must be a sane positive integer, not an
+  // arbitrary value (its range is bounded against belt_level_projects below).
+  if (belt_sublevel_at != null && (!Number.isInteger(belt_sublevel_at) || belt_sublevel_at < 1)) {
+    return res.status(400).json({ error: 'Invalid belt level' });
+  }
+  // Bound every free-text curriculum/progress field (top-level + per-entry) by length.
+  const cappedFields = [
+    sub_program, module_name, lesson_name, project_at, status_at,
+    ...entries.flatMap((e) => [e.sub_program, e.module_name, e.lesson_name, e.project_at, e.status]),
+  ];
+  if (cappedFields.some((v) => typeof v === 'string' && v.length > MAX_FIELD)) {
+    return res.status(400).json({ error: `Field too long (max ${MAX_FIELD} chars)` });
+  }
+
   const senseiId = req.session.userId;
 
   try {
+    // Bound belt_sublevel_at against the real max for the belt (source of truth:
+    // belt_level_projects). With a known belt it's capped at that belt's max; with
+    // no belt given it's capped at the global max. Blocks values like 1000.
+    if (belt_sublevel_at != null) {
+      const { rows: maxRows } = await pool.query(
+        'SELECT COALESCE(MAX(sublevel), 0) AS max_sub FROM belt_level_projects WHERE $1::text IS NULL OR belt_name = $1',
+        [belt_level_at ?? null]
+      );
+      if (belt_sublevel_at > parseInt(maxRows[0].max_sub, 10)) {
+        return res.status(400).json({ error: 'Invalid belt level' });
+      }
+    }
+
     // Prefer today's pending assignment so logging clears the kid from the board.
     const pacificToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
     const { rows: assignmentRows } = await pool.query(
