@@ -62,6 +62,17 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     return res.status(400).json({ error: `Field too long (max ${MAX_FIELD} chars)` });
   }
 
+  // session_date (when provided) is written straight into progress_logs, so it must
+  // be a real calendar date — not the future, not absurdly old. Without this an
+  // authenticated sensei can backdate/post-date a log to any year (e.g. 2030).
+  const pacificToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+  if (session_date != null) {
+    const validFormat = /^\d{4}-\d{2}-\d{2}$/.test(session_date) && !Number.isNaN(Date.parse(session_date));
+    if (!validFormat || session_date > pacificToday || session_date < '2020-01-01') {
+      return res.status(400).json({ error: 'Invalid session date' });
+    }
+  }
+
   const senseiId = req.session.userId;
 
   try {
@@ -79,7 +90,6 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     }
 
     // Prefer today's pending assignment so logging clears the kid from the board.
-    const pacificToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
     const { rows: assignmentRows } = await pool.query(
       `SELECT id, session_date FROM daily_assignments
        WHERE student_id = $1 AND program = $2 AND completed = false

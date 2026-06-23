@@ -78,6 +78,15 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
     return res.status(400).json({ error: 'student_id and program are required' });
   }
 
+  // session_date (when provided) must be a real calendar date — not the future,
+  // not absurdly old. It lands in daily_assignments and flows into progress_logs.
+  if (session_date != null) {
+    const validFormat = /^\d{4}-\d{2}-\d{2}$/.test(session_date) && !Number.isNaN(Date.parse(session_date));
+    if (!validFormat || session_date > todayDate() || session_date < '2020-01-01') {
+      return res.status(400).json({ error: 'Invalid session date' });
+    }
+  }
+
   const date = session_date || todayDate();
 
   try {
