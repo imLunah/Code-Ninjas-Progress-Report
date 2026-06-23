@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuth, requireManager, requireSensei, requireOwnLocation } = require('../middleware/auth');
+const { ALL_BELTS, isValidBelt, validateSublevel } = require('../lib/belts');
 
 const PROGRAMS_SUBQUERY = `
   COALESCE(
@@ -184,7 +185,15 @@ router.post('/:id/programs', requireManager, requireOwnLocation, async (req, res
 
   if (!program) return res.status(400).json({ error: 'program is required' });
 
+  // belt_level must be a real belt label (or absent); belt_sublevel must be a
+  // sane in-range integer. Without this a manager can store an arbitrary belt
+  // string or an out-of-range sublevel (e.g. 1000) — belt_level has no DB CHECK.
+  if (!isValidBelt(belt_level || null)) return res.status(400).json({ error: 'Invalid belt level' });
+
   try {
+    const subError = await validateSublevel(pool, belt_level || null, belt_sublevel ?? null);
+    if (subError) return res.status(400).json({ error: subError });
+
     const { rows: studentRows } = await pool.query(
       'SELECT id FROM students WHERE id = $1 AND active = true AND location_id = $2',
       [id, req.session.activeLocationId]
@@ -211,7 +220,18 @@ router.patch('/:id/programs/:program', requireManager, requireOwnLocation, async
   const { id, program } = req.params;
   const { belt_level, belt_sublevel, current_project, project_status } = req.body;
 
+  if (belt_level !== undefined && !isValidBelt(belt_level)) {
+    return res.status(400).json({ error: 'Invalid belt level' });
+  }
+
   try {
+    const subError = await validateSublevel(
+      pool,
+      belt_level !== undefined ? belt_level : null,
+      belt_sublevel !== undefined ? belt_sublevel : null
+    );
+    if (subError) return res.status(400).json({ error: subError });
+
     const { rows } = await pool.query(`
       UPDATE student_programs sp
       SET belt_level = $1, belt_sublevel = $2, current_project = $3, project_status = $4
@@ -762,6 +782,9 @@ router.post('/import/apply-belts', requireManager, requireOwnLocation, async (re
     await client.query('BEGIN');
     for (const u of updates) {
       if (!u.id || !u.program || !u.belt_level) continue;
+      // Skip any row whose belt isn't a real belt label — never store junk
+      // (belt_level has no DB CHECK to fall back on).
+      if (!ALL_BELTS.has(u.belt_level)) continue;
       const { rowCount } = await client.query(
         `UPDATE student_programs sp
          SET belt_level = $1, belt_sublevel = 1

@@ -198,7 +198,17 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   const validClubs = await getValidClubNames(pool, req.session.activeLocationId);
   if (!validClubs.has(club_name)) return res.status(400).json({ error: 'Invalid club name' });
 
-  const date = session_date || new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T')[0];
+  // session_date (when provided) must be a real calendar date, not future, not
+  // absurdly old — it's stored on the session and feeds the student activity chart.
+  if (session_date != null) {
+    const validFormat = /^\d{4}-\d{2}-\d{2}$/.test(session_date) && !Number.isNaN(Date.parse(session_date));
+    if (!validFormat || session_date > today || session_date < '2020-01-01') {
+      return res.status(400).json({ error: 'Invalid session date' });
+    }
+  }
+
+  const date = session_date || today;
   const ids = Array.isArray(student_ids) ? student_ids : [];
   const client = await pool.connect();
   try {
