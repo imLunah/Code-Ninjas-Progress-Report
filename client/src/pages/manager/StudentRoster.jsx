@@ -698,9 +698,26 @@ export default function StudentRoster() {
             {importResult && (
               <div className="space-y-3">
                 <div className="bg-ninja-bg border border-ninja-border rounded-lg p-3">
-                  <p className="text-ninja-navy font-ninja font-semibold text-sm">
-                    {importResult.added} ninja{importResult.added !== 1 ? 's' : ''} imported successfully
-                  </p>
+                  {importResult.added_students?.length > 0 ? (
+                    <details className="group" open>
+                      <summary className="text-ninja-navy font-ninja font-semibold text-sm cursor-pointer list-none flex items-center gap-1">
+                        <span className="transition-transform group-open:rotate-90">▸</span>
+                        {importResult.added} ninja{importResult.added !== 1 ? 's' : ''} imported successfully
+                      </summary>
+                      <ul className="text-ninja-navy font-ninja text-sm mt-2 pl-4 space-y-1 max-h-44 overflow-y-auto">
+                        {importResult.added_students.map((s) => (
+                          <li key={`${s.id}-${s.program}`} className="flex items-center gap-2">
+                            <span>{s.full_name}</span>
+                            <ProgramBadge program={s.program} size="xs" />
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : (
+                    <p className="text-ninja-navy font-ninja font-semibold text-sm">
+                      {importResult.added} ninja{importResult.added !== 1 ? 's' : ''} imported successfully
+                    </p>
+                  )}
                   {importResult.removed > 0 && (
                     <p className="text-ninja-navy font-ninja text-sm mt-1">
                       {importResult.removed} ninja{importResult.removed !== 1 ? 's' : ''} removed from the roster

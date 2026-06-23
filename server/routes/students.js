@@ -717,7 +717,7 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
         [studentId, program, beltLevel, beltLevel ? 1 : null]
       );
 
-      added.push(fullName);
+      added.push({ id: studentId, full_name: fullName, program });
     }
 
     await client.query('COMMIT');
@@ -741,7 +741,7 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
     (s) => !incomingNames.has(s.full_name.trim().toLowerCase())
   );
 
-  res.json({ added: added.length, duplicates, conflicts, missing });
+  res.json({ added: added.length, added_students: added, duplicates, conflicts, missing });
 });
 
 // POST /api/students/import/apply-belts: override belt for chosen programs
