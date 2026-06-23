@@ -607,18 +607,23 @@ export default function StudentProfile() {
   const createEnrollment = programs.find((p) => p.program === 'CREATE');
   const nonCreatePrograms = programs.filter((p) => p.program !== 'CREATE');
   const logs = student.progress_logs || [];
+  const clubSessions = student.club_sessions || [];
+  // Club attendance counts as activity sessions alongside progress logs (chart + stats only,
+  // not the editable Recent Progress list which holds real progress logs)
+  const activitySessions = [...logs, ...clubSessions];
   const locationName = user?.availableLocations?.find(l => l.id === student.location_id)?.name;
 
   // Desktop stats
   const now = new Date();
-  const logsThisMonth = logs.filter((l) => {
+  const sessionsThisMonth = activitySessions.filter((l) => {
     const d = new Date(String(l.session_date).split('T')[0] + 'T00:00:00');
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
   const sortedLogs = [...logs].sort((a, b) => new Date(b.session_date) - new Date(a.session_date));
   const displayLogs = sortedLogs.filter(l => l.notes !== 'Marked complete from roadmap');
-  const lastSessionStr = sortedLogs[0]
-    ? new Date(String(sortedLogs[0].session_date).split('T')[0] + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const sortedSessions = [...activitySessions].sort((a, b) => new Date(b.session_date) - new Date(a.session_date));
+  const lastSessionStr = sortedSessions[0]
+    ? new Date(String(sortedSessions[0].session_date).split('T')[0] + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '—';
 
   return (
@@ -709,13 +714,13 @@ export default function StudentProfile() {
           ))}
 
           {/* Activity chart */}
-          {logs.length > 0 && (
+          {activitySessions.length > 0 && (
             <motion.div variants={fadeUp} className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-ninja font-bold text-ninja-navy">Activity</h2>
-                <span className="text-ninja-blue font-ninja font-bold text-sm">{logs.length} sessions</span>
+                <span className="text-ninja-blue font-ninja font-bold text-sm">{activitySessions.length} sessions</span>
               </div>
-              <MobileActivityChart logs={logs} />
+              <MobileActivityChart logs={activitySessions} />
             </motion.div>
           )}
 
@@ -729,7 +734,7 @@ export default function StudentProfile() {
             </motion.div>
           )}
 
-          {logs.length === 0 && (
+          {activitySessions.length === 0 && (
             <motion.div variants={fadeUp} className="bg-white rounded-2xl p-8 shadow-sm border border-ninja-border text-center">
               <p className="text-ninja-muted font-ninja text-sm italic">No sessions logged yet.</p>
             </motion.div>
@@ -817,10 +822,10 @@ export default function StudentProfile() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="font-ninja font-bold text-ninja-navy">Activity</h2>
                   <span className="text-ninja-blue font-ninja font-bold text-sm">
-                    {logs.length} sessions · last 6 months
+                    {activitySessions.length} sessions · last 6 months
                   </span>
                 </div>
-                <DesktopActivityChart logs={logs} />
+                <DesktopActivityChart logs={activitySessions} />
               </motion.div>
 
               {/* Recent Progress */}
@@ -923,8 +928,8 @@ export default function StudentProfile() {
                 {/* Stats 2×2 */}
                 <div className="grid grid-cols-2 gap-2.5">
                   {[
-                    { label: 'Sessions', value: logs.length },
-                    { label: 'This month', value: logsThisMonth },
+                    { label: 'Sessions', value: activitySessions.length },
+                    { label: 'This month', value: sessionsThisMonth },
                     { label: 'Current belt', value: createEnrollment?.belt_level || '—' },
                     { label: 'Last session', value: lastSessionStr },
                   ].map((s, i) => (
