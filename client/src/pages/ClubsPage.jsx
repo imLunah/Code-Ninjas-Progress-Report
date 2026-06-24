@@ -36,11 +36,11 @@ function ClubCard({ club, onClick, onDelete, onEdit, canManage }) {
       <button onClick={onClick} className="flex-1 flex flex-col text-left">
         {/* Identity header — cover image or a color wash with a faded monogram */}
         <div
-          className="relative h-40 overflow-hidden"
-          style={hasCover ? undefined : { background: `linear-gradient(135deg, ${c.solid} 0%, ${c.solid}b3 100%)` }}
+          className="relative aspect-video overflow-hidden"
+          style={{ background: `linear-gradient(135deg, ${c.solid} 0%, ${c.solid}b3 100%)` }}
         >
           {hasCover ? (
-            <img src={club.cover_image_url} alt={club.name} onError={() => setCoverError(true)} className="w-full h-full object-cover" />
+            <img src={club.cover_image_url} alt={club.name} onError={() => setCoverError(true)} className="w-full h-full object-contain" />
           ) : (
             <span className="absolute right-3 top-1/2 -translate-y-1/2 font-ninja font-black text-white/15 leading-none select-none" style={{ fontSize: '3.75rem' }}>
               {initial}
