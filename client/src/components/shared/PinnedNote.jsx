@@ -99,7 +99,12 @@ export default function PinnedNote({ studentId, initialNote, onUpdated }) {
         </div>
       ) : hasNote ? (
         <div className="font-ninja text-sm leading-relaxed text-amber-900">
-          <ReactMarkdown components={MARKDOWN_COMPONENTS}>{note}</ReactMarkdown>
+          <ReactMarkdown
+            components={MARKDOWN_COMPONENTS}
+            urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
+          >
+            {note}
+          </ReactMarkdown>
         </div>
       ) : (
         <p className="font-ninja text-sm leading-relaxed text-amber-500 italic">
