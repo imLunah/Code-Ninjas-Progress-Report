@@ -682,15 +682,7 @@ export default function StudentProfile() {
             </div>
           </motion.div>
 
-          {/* Special Instructions */}
-          {student.special_instructions && (
-            <motion.div variants={fadeUp} className="rounded-2xl border border-ninja-border bg-ninja-bg p-4">
-              <h2 className="font-ninja font-bold text-sm uppercase tracking-wide text-ninja-muted mb-2">Note From Parent</h2>
-              <p className="font-ninja text-sm leading-relaxed whitespace-pre-wrap text-ninja-blue">{student.special_instructions}</p>
-            </motion.div>
-          )}
-
-          {/* Pinned Note */}
+          {/* Pinned Note — first so senseis can't miss it */}
           <motion.div variants={fadeUp}>
             <PinnedNote
               studentId={student.id}
@@ -698,6 +690,14 @@ export default function StudentProfile() {
               onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
             />
           </motion.div>
+
+          {/* Special Instructions */}
+          {student.special_instructions && (
+            <motion.div variants={fadeUp} className="rounded-2xl border border-ninja-border bg-ninja-bg p-4">
+              <h2 className="font-ninja font-bold text-sm uppercase tracking-wide text-ninja-muted mb-2">Note From Parent</h2>
+              <p className="font-ninja text-sm leading-relaxed whitespace-pre-wrap text-ninja-blue">{student.special_instructions}</p>
+            </motion.div>
+          )}
 
           {/* Belt Journey (CREATE) */}
           {createEnrollment?.belt_level && (
@@ -803,6 +803,15 @@ export default function StudentProfile() {
               initial="hidden"
               animate="show"
             >
+              {/* Pinned Note — top of page so senseis can't miss it */}
+              <motion.div variants={fadeUp}>
+                <PinnedNote
+                  studentId={student.id}
+                  initialNote={student.pinned_note}
+                  onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
+                />
+              </motion.div>
+
               {/* Belt Journey */}
               {createEnrollment?.belt_level && (
                 <motion.div variants={fadeUp}>
@@ -965,13 +974,6 @@ export default function StudentProfile() {
                   </div>
                 )}
               </div>
-
-              {/* Pinned note */}
-              <PinnedNote
-                studentId={student.id}
-                initialNote={student.pinned_note}
-                onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
-              />
 
               {/* Special instructions */}
               {student.special_instructions && (

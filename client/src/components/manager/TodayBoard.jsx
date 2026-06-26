@@ -155,6 +155,14 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                         {sessionCount} sessions
                       </span>
                     )}
+                    {group.pinned_note && group.pinned_note.trim() && (
+                      <span
+                        className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300"
+                        title="This ninja has a pinned note — tap the card to review"
+                      >
+                        📌 Note
+                      </span>
+                    )}
                     {isOverdue && (
                       <span className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600 border border-red-200">
                         Overdue
@@ -251,6 +259,15 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                     <span className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
                       {sessionCount} sessions
                     </span>
+                  )}
+                  {group.pinned_note && group.pinned_note.trim() && (
+                    <button
+                      onClick={() => navigate(`/manager/students/${group.student_id}`)}
+                      className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200 transition-colors"
+                      title="This ninja has a pinned note — click to review"
+                    >
+                      📌 Note
+                    </button>
                   )}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 mt-1">

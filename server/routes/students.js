@@ -352,6 +352,13 @@ router.patch('/:id/note', requireSensei, requireOwnLocation, async (req, res) =>
   const { id } = req.params;
   const { pinned_note } = req.body;
 
+  if (pinned_note != null && typeof pinned_note !== 'string') {
+    return res.status(400).json({ error: 'Invalid note' });
+  }
+  if (typeof pinned_note === 'string' && pinned_note.length > 2000) {
+    return res.status(400).json({ error: 'Note too long (max 2000 characters)' });
+  }
+
   try {
     const { rows } = await pool.query(
       'UPDATE students SET pinned_note = $1 WHERE id = $2 AND active = true AND location_id = $3 RETURNING pinned_note',
