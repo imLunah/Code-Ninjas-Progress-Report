@@ -98,15 +98,16 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
     );
     if (!enrollmentRows[0]) return res.status(404).json({ error: 'Ninja not enrolled in this program' });
 
-    // If the ninja already has an unlogged session for this program (e.g. an
-    // overdue one), reuse it and move it to today instead of stacking a
-    // duplicate — checking them in shouldn't pile an extra session onto the
-    // overdue.
+    // If the ninja already has an OVERDUE (past-date) unlogged session for this
+    // program, reuse it and move it to today instead of stacking a duplicate —
+    // checking them in shouldn't pile an extra session onto the overdue. A same-
+    // day incomplete is left alone so a second check-in today creates a second
+    // loggable session.
     const { rows: existing } = await pool.query(
       `SELECT id FROM daily_assignments
-       WHERE student_id = $1 AND program = $2 AND completed = false
+       WHERE student_id = $1 AND program = $2 AND completed = false AND session_date < $3
        ORDER BY session_date ASC LIMIT 1`,
-      [student_id, program]
+      [student_id, program, date]
     );
 
     let assignmentId;
