@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+
+// Tiptap pulls a fair amount of JS — only load it when a sensei actually edits.
+const MarkdownEditor = lazy(() => import('./MarkdownEditor'));
 
 // A real thumbtack glyph instead of an emoji — keeps the card on-brand and
 // crisp at any size / dark mode.
@@ -80,27 +83,13 @@ export default function PinnedNote({ studentId, initialNote, onUpdated }) {
 
         {editing ? (
           <div className="space-y-2.5">
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              rows={5}
-              placeholder={"What should every sensei know before class?\n\n- Prefers step-by-step instructions\n- Responds well to encouragement\n- **Avoid** rushing between projects"}
-              className="w-full bg-white border border-amber-200 text-ninja-navy rounded-xl px-3 py-2.5 font-ninja text-sm leading-relaxed focus:outline-none focus:border-amber-400 transition-colors resize-y"
-              autoFocus
-            />
-            {draft.trim() && (
-              <div>
-                <p className="text-[11px] font-ninja font-bold uppercase tracking-wide text-amber-600/80 mb-1">Preview</p>
-                <div className="rounded-xl bg-white border border-amber-200 px-3 py-2.5 font-ninja text-sm leading-relaxed text-amber-900">
-                  <ReactMarkdown
-                    components={MARKDOWN_COMPONENTS}
-                    urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
-                  >
-                    {draft}
-                  </ReactMarkdown>
-                </div>
-              </div>
-            )}
+            <Suspense fallback={<div className="rounded-xl bg-white border border-amber-200 px-3 py-2.5 font-ninja text-sm text-amber-400">Loading editor…</div>}>
+              <MarkdownEditor
+                value={draft}
+                onChange={setDraft}
+                placeholder="What should every sensei know before class? Try **bold** or start a line with '- ' for a list."
+              />
+            </Suspense>
             {error && <p className="text-ninja-red text-xs font-ninja">{error}</p>}
             <div className="flex items-center gap-1">
               <button
