@@ -3,6 +3,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import BeltBadge from '../ui/BeltBadge';
 import { formatDate } from '../../utils/dateUtils';
 
+// Strip markdown syntax for compact one/two-line previews where rendered
+// formatting would break the line-clamp.
+function stripMarkdown(text = '') {
+  return text
+    .replace(/[*_`#>]/g, '')
+    .replace(/^\s*[-+]\s+/gm, '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/\n+/g, ' ')
+    .trim();
+}
+
 function Avatar({ url, name }) {
   const [imgError, setImgError] = useState(false);
   const initials = name?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || '?';
@@ -217,7 +228,7 @@ export default function SenseiProfileModal({
                         </div>
                       )}
                       {log.notes && (
-                        <p className="text-ninja-muted font-ninja text-sm leading-relaxed line-clamp-2">{log.notes}</p>
+                        <p className="text-ninja-muted font-ninja text-sm leading-relaxed line-clamp-2">{stripMarkdown(log.notes)}</p>
                       )}
                     </motion.div>
                   ))}

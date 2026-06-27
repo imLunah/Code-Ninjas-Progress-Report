@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import Button from '../ui/Button';
+import LazyMarkdownEditor from '../shared/LazyMarkdownEditor';
 import BeltProgressFields from './BeltProgressFields';
 import { useCurriculum } from '../../context/CurriculumContext';
 import { PROJECTS, STATUSES, BELT_LEVEL_PROJECTS, getLevelProjects } from '../../utils/beltConfig';
@@ -497,13 +498,10 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
         <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
           Session Notes *
         </label>
-        <textarea
+        <LazyMarkdownEditor
           value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          onChange={setNotes}
           placeholder="What did the ninja work on today? Any breakthroughs or challenges?"
-          rows={4}
-          className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors resize-none"
-          required
         />
       </div>
 

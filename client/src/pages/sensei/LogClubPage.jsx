@@ -14,6 +14,7 @@ const stagger = {
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { ClubBadge } from '../../components/shared/ClubSessionsPanel';
+import LazyMarkdownEditor from '../../components/shared/LazyMarkdownEditor';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { today, formatDate } from '../../utils/dateUtils';
@@ -222,12 +223,10 @@ export default function LogClubPage() {
                 <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-2">
                   Session Notes <span className="normal-case font-normal">(optional)</span>
                 </label>
-                <textarea
+                <LazyMarkdownEditor
                   value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                  onChange={setNotes}
                   placeholder="How did the session go? What did the group work on?"
-                  rows={4}
-                  className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
                 />
               </div>
 

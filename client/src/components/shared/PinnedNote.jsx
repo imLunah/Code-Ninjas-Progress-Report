@@ -1,10 +1,8 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-
-// Tiptap pulls a fair amount of JS — only load it when a sensei actually edits.
-const MarkdownEditor = lazy(() => import('./MarkdownEditor'));
+import LazyMarkdownEditor from './LazyMarkdownEditor';
 
 // A real thumbtack glyph instead of an emoji — keeps the card on-brand and
 // crisp at any size / dark mode.
@@ -83,13 +81,11 @@ export default function PinnedNote({ studentId, initialNote, onUpdated }) {
 
         {editing ? (
           <div className="space-y-2.5">
-            <Suspense fallback={<div className="rounded-xl bg-white border border-amber-200 px-3 py-2.5 font-ninja text-sm text-amber-400">Loading editor…</div>}>
-              <MarkdownEditor
-                value={draft}
-                onChange={setDraft}
-                placeholder="What should every sensei know before class? Try **bold** or start a line with '- ' for a list."
-              />
-            </Suspense>
+            <LazyMarkdownEditor
+              value={draft}
+              onChange={setDraft}
+              placeholder="What should every sensei know before class? Try **bold** or start a line with '- ' for a list."
+            />
             {error && <p className="text-ninja-red text-xs font-ninja">{error}</p>}
             <div className="flex items-center gap-1">
               <button

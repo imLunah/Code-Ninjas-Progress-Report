@@ -5,6 +5,8 @@ import { api } from '../../api/client';
 import BeltBadge from '../ui/BeltBadge';
 import ProgramBadge from '../ui/ProgramBadge';
 import Button from '../ui/Button';
+import LazyMarkdownEditor from './LazyMarkdownEditor';
+import MarkdownView from './MarkdownView';
 
 function LogComment({ comment }) {
   return (
@@ -257,13 +259,7 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
 
                       {isEditing ? (
                         <div className="space-y-2 mt-1">
-                          <textarea
-                            value={editDraft}
-                            onChange={(e) => setEditDraft(e.target.value)}
-                            rows={4}
-                            className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
-                            autoFocus
-                          />
+                          <LazyMarkdownEditor value={editDraft} onChange={setEditDraft} placeholder="Update the session notes…" />
                           <div className="flex gap-2">
                             <Button size="sm" onClick={() => saveEdit(log.id)} disabled={savingEdit || !editDraft.trim()}>
                               {savingEdit ? 'Saving...' : 'Save'}
@@ -273,7 +269,7 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                           {editError && <p className="text-ninja-red font-ninja text-xs mt-1">{editError}</p>}
                         </div>
                       ) : (
-                        log.notes && <p className="text-ninja-navy font-ninja text-sm leading-relaxed">{log.notes}</p>
+                        log.notes && <MarkdownView className="text-ninja-navy font-ninja text-sm leading-relaxed">{log.notes}</MarkdownView>
                       )}
 
                       {allComments.length > 0 && (
