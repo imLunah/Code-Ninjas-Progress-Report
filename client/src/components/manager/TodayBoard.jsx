@@ -15,6 +15,42 @@ function PinGlyph({ className }) {
   );
 }
 
+// Amber "Note" pill that reveals the ninja's pinned note on hover or click.
+function PinnedNotePill({ note }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <span
+      className="relative inline-flex"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        className="inline-flex items-center gap-1 text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200 transition-colors"
+      >
+        <PinGlyph className="w-3 h-3 -rotate-12" />
+        Note
+      </button>
+      {open && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="absolute z-30 top-full left-0 mt-1.5 w-64 max-w-[80vw] rounded-xl bg-white border border-ninja-border shadow-lg p-3 text-left cursor-default"
+        >
+          <div className="flex items-center gap-1.5 text-amber-700 mb-1.5">
+            <PinGlyph className="w-3 h-3 -rotate-12" />
+            <span className="font-ninja font-bold text-[11px] uppercase tracking-wide">Pinned note</span>
+          </div>
+          <p className="font-ninja text-sm leading-relaxed text-ninja-navy whitespace-pre-wrap break-words max-h-48 overflow-y-auto no-scrollbar">
+            {note}
+          </p>
+        </div>
+      )}
+    </span>
+  );
+}
+
 export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlogged' }) {
   const { isReadOnly } = useAuth();
   const navigate = useNavigate();
@@ -164,13 +200,7 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                       </span>
                     )}
                     {group.pinned_note && group.pinned_note.trim() && (
-                      <span
-                        className="inline-flex items-center gap-1 text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300"
-                        title="This ninja has a pinned note — tap the card to review"
-                      >
-                        <PinGlyph className="w-3 h-3 -rotate-12" />
-                        Note
-                      </span>
+                      <PinnedNotePill note={group.pinned_note} />
                     )}
                     {isOverdue && (
                       <span className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600 border border-red-200">
@@ -270,14 +300,7 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                     </span>
                   )}
                   {group.pinned_note && group.pinned_note.trim() && (
-                    <button
-                      onClick={() => navigate(`/manager/students/${group.student_id}`)}
-                      className="inline-flex items-center gap-1 text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200 transition-colors"
-                      title="This ninja has a pinned note — click to review"
-                    >
-                      <PinGlyph className="w-3 h-3 -rotate-12" />
-                      Note
-                    </button>
+                    <PinnedNotePill note={group.pinned_note} />
                   )}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 mt-1">

@@ -61,11 +61,8 @@ export default function PinnedNote({ studentId, initialNote, onUpdated }) {
   const hasNote = Boolean(note && note.trim());
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-amber-50 ring-1 ring-amber-200/80 shadow-sm">
-      {/* warm spine down the left edge — reads as a tabbed note, not an alert box */}
-      <div className="absolute inset-y-0 left-0 w-1 bg-amber-400" />
-
-      <div className="pl-5 pr-4 py-4">
+    <div className="rounded-2xl bg-amber-50 ring-1 ring-amber-200/80 shadow-sm">
+      <div className="px-4 py-4">
         <div className="flex items-center justify-between gap-3 mb-2.5">
           <div className="flex items-center gap-2 text-amber-700">
             <Pin className="w-4 h-4 -rotate-12" />
