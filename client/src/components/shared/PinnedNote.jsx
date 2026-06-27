@@ -79,18 +79,28 @@ export default function PinnedNote({ studentId, initialNote, onUpdated }) {
         </div>
 
         {editing ? (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               rows={5}
               placeholder={"What should every sensei know before class?\n\n- Prefers step-by-step instructions\n- Responds well to encouragement\n- **Avoid** rushing between projects"}
-              className="w-full bg-white/80 border border-amber-200 text-ninja-navy rounded-xl px-3 py-2.5 font-ninja text-sm leading-relaxed placeholder:text-amber-400/70 focus:outline-none focus:border-amber-400 focus:bg-white transition-colors resize-y"
+              className="w-full bg-white border border-amber-200 text-ninja-navy rounded-xl px-3 py-2.5 font-ninja text-sm leading-relaxed focus:outline-none focus:border-amber-400 transition-colors resize-y"
               autoFocus
             />
-            <p className="text-[11px] font-ninja text-amber-600/90">
-              Use <span className="font-mono text-amber-700">-</span> for a list, <span className="font-mono text-amber-700">**bold**</span> for emphasis, and a blank line to start a new paragraph.
-            </p>
+            {draft.trim() && (
+              <div>
+                <p className="text-[11px] font-ninja font-bold uppercase tracking-wide text-amber-600/80 mb-1">Preview</p>
+                <div className="rounded-xl bg-white border border-amber-200 px-3 py-2.5 font-ninja text-sm leading-relaxed text-amber-900">
+                  <ReactMarkdown
+                    components={MARKDOWN_COMPONENTS}
+                    urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
+                  >
+                    {draft}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            )}
             {error && <p className="text-ninja-red text-xs font-ninja">{error}</p>}
             <div className="flex items-center gap-1">
               <button
