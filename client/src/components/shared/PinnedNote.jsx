@@ -3,17 +3,27 @@ import ReactMarkdown from 'react-markdown';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
+// A real thumbtack glyph instead of an emoji — keeps the card on-brand and
+// crisp at any size / dark mode.
+function Pin({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M15.5 2.5a1 1 0 0 0 0 1.4l.3.3-4.2 4.2-2.6-.5a1 1 0 0 0-.9.27l-.7.7a1 1 0 0 0 0 1.42l3 3-3.9 3.9a1 1 0 1 0 1.4 1.42l3.9-3.9 3 3a1 1 0 0 0 1.42 0l.7-.7a1 1 0 0 0 .27-.9l-.5-2.6 4.2-4.2.3.3a1 1 0 0 0 1.4-1.42l-6-6a1 1 0 0 0-1.4 0z" />
+    </svg>
+  );
+}
+
 // Markdown rendered inside the note. Constrained set of elements so a sensei's
 // quick formatting (bullets, bold, line breaks) reads cleanly without letting
 // arbitrary HTML/headings blow up the card.
 const MARKDOWN_COMPONENTS = {
   p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-  ul: ({ children }) => <ul className="list-disc pl-5 mb-2 last:mb-0 space-y-1">{children}</ul>,
-  ol: ({ children }) => <ol className="list-decimal pl-5 mb-2 last:mb-0 space-y-1">{children}</ol>,
-  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+  ul: ({ children }) => <ul className="list-disc marker:text-amber-400 pl-5 mb-2 last:mb-0 space-y-1">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal marker:text-amber-400 pl-5 mb-2 last:mb-0 space-y-1">{children}</ol>,
+  li: ({ children }) => <li className="leading-relaxed pl-0.5">{children}</li>,
   strong: ({ children }) => <strong className="font-bold text-amber-950">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
-  a: ({ children, href }) => <a href={href} target="_blank" rel="noreferrer" className="underline">{children}</a>,
+  a: ({ children, href }) => <a href={href} target="_blank" rel="noreferrer" className="underline decoration-amber-400 underline-offset-2">{children}</a>,
   h1: ({ children }) => <p className="font-bold mb-2">{children}</p>,
   h2: ({ children }) => <p className="font-bold mb-2">{children}</p>,
   h3: ({ children }) => <p className="font-bold mb-2">{children}</p>,
@@ -51,66 +61,71 @@ export default function PinnedNote({ studentId, initialNote, onUpdated }) {
   const hasNote = Boolean(note && note.trim());
 
   return (
-    <div className={`rounded-2xl border-2 p-5 ${hasNote ? 'border-amber-300 bg-amber-50 shadow-sm ring-1 ring-amber-200' : 'border-amber-200 border-dashed bg-amber-50/50'}`}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-amber-500 text-lg leading-none" aria-hidden>📌</span>
-          <h3 className="text-sm font-ninja font-bold text-amber-800 uppercase tracking-wide">Pinned Note</h3>
+    <div className="relative overflow-hidden rounded-2xl bg-amber-50 ring-1 ring-amber-200/80 shadow-sm">
+      {/* warm spine down the left edge — reads as a tabbed note, not an alert box */}
+      <div className="absolute inset-y-0 left-0 w-1 bg-amber-400" />
+
+      <div className="pl-5 pr-4 py-4">
+        <div className="flex items-center justify-between gap-3 mb-2.5">
+          <div className="flex items-center gap-2 text-amber-700">
+            <Pin className="w-4 h-4 -rotate-12" />
+            <h3 className="font-ninja font-bold text-[15px] text-amber-900">Pinned note</h3>
+          </div>
+          {!isReadOnly && !editing && (
+            <button
+              onClick={() => { setDraft(note); setEditing(true); }}
+              className="font-ninja text-xs font-bold text-amber-700 hover:text-amber-900 transition-colors"
+            >
+              {hasNote ? 'Edit' : 'Add note'}
+            </button>
+          )}
         </div>
-        {!isReadOnly && !editing && (
-          <button
-            onClick={() => { setDraft(note); setEditing(true); }}
-            className="text-xs font-ninja font-bold text-amber-600 hover:text-amber-800 transition-colors"
-          >
-            {hasNote ? 'Edit' : '+ Add Note'}
-          </button>
+
+        {editing ? (
+          <div className="space-y-2">
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              rows={5}
+              placeholder={"What should every sensei know before class?\n\n- Prefers step-by-step instructions\n- Responds well to encouragement\n- **Avoid** rushing between projects"}
+              className="w-full bg-white/80 border border-amber-200 text-ninja-navy rounded-xl px-3 py-2.5 font-ninja text-sm leading-relaxed placeholder:text-amber-400/70 focus:outline-none focus:border-amber-400 focus:bg-white transition-colors resize-y"
+              autoFocus
+            />
+            <p className="text-[11px] font-ninja text-amber-600/90">
+              Use <span className="font-mono text-amber-700">-</span> for a list, <span className="font-mono text-amber-700">**bold**</span> for emphasis, and a blank line to start a new paragraph.
+            </p>
+            {error && <p className="text-ninja-red text-xs font-ninja">{error}</p>}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="font-ninja text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Saving…' : 'Save note'}
+              </button>
+              <button
+                onClick={handleCancel}
+                className="font-ninja text-xs font-bold text-amber-700 hover:text-amber-900 px-3 py-1.5 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : hasNote ? (
+          <div className="font-ninja text-sm leading-relaxed text-amber-900">
+            <ReactMarkdown
+              components={MARKDOWN_COMPONENTS}
+              urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
+            >
+              {note}
+            </ReactMarkdown>
+          </div>
+        ) : (
+          <p className="font-ninja text-sm leading-relaxed text-amber-700/70">
+            Nothing pinned yet — jot down learning style or anything the next sensei should know.
+          </p>
         )}
       </div>
-
-      {editing ? (
-        <div className="space-y-2">
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            rows={5}
-            placeholder={"Prefers step-by-step instructions.\n\n- Responds well to encouragement\n- **Avoid** rushing between projects"}
-            className="w-full bg-white border border-amber-300 text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-amber-500 transition-colors resize-y"
-            autoFocus
-          />
-          <p className="text-[11px] font-ninja text-amber-600">
-            Formatting: <span className="font-mono">- item</span> for bullets, <span className="font-mono">**bold**</span>, blank line for a new paragraph.
-          </p>
-          {error && <p className="text-ninja-red text-xs font-ninja">{error}</p>}
-          <div className="flex gap-2">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="text-xs font-ninja font-semibold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-            <button
-              onClick={handleCancel}
-              className="text-xs font-ninja font-semibold text-amber-700 hover:text-amber-900 px-3 py-1.5 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : hasNote ? (
-        <div className="font-ninja text-sm leading-relaxed text-amber-900">
-          <ReactMarkdown
-            components={MARKDOWN_COMPONENTS}
-            urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
-          >
-            {note}
-          </ReactMarkdown>
-        </div>
-      ) : (
-        <p className="font-ninja text-sm leading-relaxed text-amber-500 italic">
-          No pinned note yet. Add learning-style notes or parent requests so every sensei sees them.
-        </p>
-      )}
     </div>
   );
 }

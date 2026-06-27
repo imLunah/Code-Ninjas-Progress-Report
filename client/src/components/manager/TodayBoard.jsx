@@ -7,6 +7,14 @@ import { today } from '../../utils/dateUtils';
 import ProgramBadge from '../ui/ProgramBadge';
 import { isBirthdayToday } from '../shared/BirthdayConfetti';
 
+function PinGlyph({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M15.5 2.5a1 1 0 0 0 0 1.4l.3.3-4.2 4.2-2.6-.5a1 1 0 0 0-.9.27l-.7.7a1 1 0 0 0 0 1.42l3 3-3.9 3.9a1 1 0 1 0 1.4 1.42l3.9-3.9 3 3a1 1 0 0 0 1.42 0l.7-.7a1 1 0 0 0 .27-.9l-.5-2.6 4.2-4.2.3.3a1 1 0 0 0 1.4-1.42l-6-6a1 1 0 0 0-1.4 0z" />
+    </svg>
+  );
+}
+
 export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlogged' }) {
   const { isReadOnly } = useAuth();
   const navigate = useNavigate();
@@ -157,10 +165,11 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                     )}
                     {group.pinned_note && group.pinned_note.trim() && (
                       <span
-                        className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300"
+                        className="inline-flex items-center gap-1 text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300"
                         title="This ninja has a pinned note — tap the card to review"
                       >
-                        📌 Note
+                        <PinGlyph className="w-3 h-3 -rotate-12" />
+                        Note
                       </span>
                     )}
                     {isOverdue && (
@@ -263,10 +272,11 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                   {group.pinned_note && group.pinned_note.trim() && (
                     <button
                       onClick={() => navigate(`/manager/students/${group.student_id}`)}
-                      className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200 transition-colors"
+                      className="inline-flex items-center gap-1 text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200 transition-colors"
                       title="This ninja has a pinned note — click to review"
                     >
-                      📌 Note
+                      <PinGlyph className="w-3 h-3 -rotate-12" />
+                      Note
                     </button>
                   )}
                 </div>
