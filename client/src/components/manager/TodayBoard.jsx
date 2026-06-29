@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { today } from '../../utils/dateUtils';
 import ProgramBadge from '../ui/ProgramBadge';
 import { isBirthdayToday } from '../shared/BirthdayConfetti';
+import { MARKDOWN_COMPONENTS } from '../shared/PinnedNote';
 
 function PinGlyph({ className }) {
   return (
@@ -42,9 +44,14 @@ function PinnedNotePill({ note }) {
             <PinGlyph className="w-3 h-3 -rotate-12" />
             <span className="font-ninja font-bold text-[11px] uppercase tracking-wide">Pinned note</span>
           </div>
-          <p className="font-ninja text-sm leading-relaxed text-ninja-navy whitespace-pre-wrap break-words max-h-48 overflow-y-auto no-scrollbar">
-            {note}
-          </p>
+          <div className="font-ninja text-sm leading-relaxed text-ninja-navy break-words max-h-48 overflow-y-auto no-scrollbar">
+            <ReactMarkdown
+              components={MARKDOWN_COMPONENTS}
+              urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
+            >
+              {note}
+            </ReactMarkdown>
+          </div>
         </div>
       )}
     </span>
