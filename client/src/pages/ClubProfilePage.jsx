@@ -14,8 +14,9 @@ const stagger = {
 import remarkGfm from 'remark-gfm';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
-import EmojiButton from '../components/ui/EmojiButton';
 import CropModal from '../components/ui/CropModal';
+import LazyMarkdownEditor from '../components/shared/LazyMarkdownEditor';
+import { Pin, MARKDOWN_COMPONENTS } from '../components/shared/PinnedNote';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { formatDate, today } from '../utils/dateUtils';
@@ -52,22 +53,7 @@ function PinnedNoteSection({ clubName, initialNote, initialAuthor, initialUpdate
   const [draft, setDraft] = useState(initialNote || '');
   const [author, setAuthor] = useState(initialAuthor || '');
   const [updatedAt, setUpdatedAt] = useState(initialUpdatedAt || null);
-  const [preview, setPreview] = useState(false);
   const [saving, setSaving] = useState(false);
-  const textareaRef = useRef(null);
-
-  const insertEmoji = (emoji) => {
-    const el = textareaRef.current;
-    if (!el) { setDraft((d) => d + emoji); return; }
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    const next = draft.slice(0, start) + emoji + draft.slice(end);
-    setDraft(next);
-    requestAnimationFrame(() => {
-      el.selectionStart = el.selectionEnd = start + emoji.length;
-      el.focus();
-    });
-  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -92,75 +78,71 @@ function PinnedNoteSection({ clubName, initialNote, initialAuthor, initialUpdate
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  return (
-    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-amber-500 text-lg">📌</span>
-          <div>
-            <span className="text-amber-800 font-ninja font-semibold text-sm">
-              {author ? `Pinned by ${author}` : 'Pinned Note'}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          {updatedAt && (
-            <span className="text-amber-500 font-ninja text-xs">{relativeDate(updatedAt)}</span>
-          )}
-          {!isReadOnly && !editing && (
-            <button
-              onClick={() => { setDraft(note); setEditing(true); setPreview(false); }}
-              className="text-xs font-ninja font-semibold text-amber-600 hover:text-amber-800 transition-colors"
-            >
-              {note ? 'Edit' : '+ Add Note'}
-            </button>
-          )}
-        </div>
-      </div>
+  const hasNote = Boolean(note && note.trim());
 
-      {editing ? (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-1">
-              <button type="button" onClick={() => setPreview(false)}
-                className={`text-xs font-ninja font-semibold px-2 py-1 rounded transition-colors ${!preview ? 'bg-amber-200 text-amber-900' : 'text-amber-600 hover:text-amber-800'}`}>
-                Write
-              </button>
-              <button type="button" onClick={() => setPreview(true)}
-                className={`text-xs font-ninja font-semibold px-2 py-1 rounded transition-colors ${preview ? 'bg-amber-200 text-amber-900' : 'text-amber-600 hover:text-amber-800'}`}>
-                Preview
-              </button>
-            </div>
-            <EmojiButton onSelect={insertEmoji} />
+  return (
+    <div className="rounded-2xl bg-amber-50 ring-1 ring-amber-200/80 shadow-sm">
+      <div className="px-4 py-4">
+        <div className="flex items-center justify-between gap-3 mb-2.5">
+          <div className="flex items-center gap-2 text-amber-700">
+            <Pin className="w-4 h-4 -rotate-12" />
+            <h3 className="font-ninja font-bold text-[15px] text-amber-900">
+              {author ? `Pinned by ${author}` : 'Pinned note'}
+            </h3>
           </div>
-          {preview ? (
-            <div className="min-h-[72px] bg-white border border-amber-300 rounded-lg px-3 py-2 font-ninja text-sm text-amber-900 leading-relaxed">
-              {draft ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{draft}</ReactMarkdown>
-                : <span className="text-amber-400 italic">Nothing to preview.</span>}
-            </div>
-          ) : (
-            <textarea ref={textareaRef} value={draft} onChange={(e) => setDraft(e.target.value)}
-              rows={4} placeholder="Notes, tips, reminders for this club..."
-              className="w-full bg-white border border-amber-300 text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-amber-500 resize-none"
-              autoFocus />
-          )}
-          <div className="flex gap-2">
-            <button onClick={handleSave} disabled={saving}
-              className="text-xs font-ninja font-semibold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-            <button onClick={() => setEditing(false)}
-              className="text-xs font-ninja font-semibold text-amber-700 hover:text-amber-900 px-3 py-1.5 transition-colors">
-              Cancel
-            </button>
+          <div className="flex items-center gap-3">
+            {updatedAt && (
+              <span className="text-amber-500 font-ninja text-xs">{relativeDate(updatedAt)}</span>
+            )}
+            {!isReadOnly && !editing && (
+              <button
+                onClick={() => { setDraft(note); setEditing(true); }}
+                className="font-ninja text-xs font-bold text-amber-700 hover:text-amber-900 transition-colors"
+              >
+                {hasNote ? 'Edit' : 'Add note'}
+              </button>
+            )}
           </div>
         </div>
-      ) : (
-        <div className={`font-ninja text-sm leading-relaxed ${note ? 'text-amber-900' : 'text-amber-400 italic'}`}>
-          {note ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{note}</ReactMarkdown>
-            : 'No pinned note yet.'}
-        </div>
-      )}
+
+        {editing ? (
+          <div className="space-y-2.5">
+            <LazyMarkdownEditor
+              value={draft}
+              onChange={setDraft}
+              placeholder="Notes, tips, reminders for this club..."
+            />
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="font-ninja text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Saving…' : 'Save note'}
+              </button>
+              <button
+                onClick={() => setEditing(false)}
+                className="font-ninja text-xs font-bold text-amber-700 hover:text-amber-900 px-3 py-1.5 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : hasNote ? (
+          <div className="font-ninja text-sm leading-relaxed text-amber-900">
+            <ReactMarkdown
+              components={MARKDOWN_COMPONENTS}
+              urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
+            >
+              {note}
+            </ReactMarkdown>
+          </div>
+        ) : (
+          <p className="font-ninja text-sm leading-relaxed text-amber-700/70">
+            Nothing pinned yet.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

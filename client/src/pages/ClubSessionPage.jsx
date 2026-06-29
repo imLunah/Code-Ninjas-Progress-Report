@@ -15,6 +15,7 @@ import remarkGfm from 'remark-gfm';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
 import EmojiButton from '../components/ui/EmojiButton';
+import LazyMarkdownEditor from '../components/shared/LazyMarkdownEditor';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/dateUtils';
@@ -73,9 +74,7 @@ export default function ClubSessionPage() {
   // Notes editing
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState('');
-  const [notesPreview, setNotesPreview] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
-  const notesRef = useRef(null);
 
   // Comments
   const [comments, setComments] = useState([]);
@@ -257,7 +256,7 @@ export default function ClubSessionPage() {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-ninja-navy font-ninja font-bold text-lg">Session Notes</h2>
             {!isReadOnly && !editingNotes && (
-              <button onClick={() => { setEditingNotes(true); setNotesPreview(false); }}
+              <button onClick={() => setEditingNotes(true)}
                 className="text-ninja-blue font-ninja text-sm font-semibold hover:underline">
                 {session.notes ? 'Edit' : '+ Add Notes'}
               </button>
@@ -266,43 +265,11 @@ export default function ClubSessionPage() {
 
           {editingNotes ? (
             <div className="space-y-2">
-              {/* Toolbar */}
-              <div className="flex items-center justify-between">
-                <div className="flex gap-1">
-                  {['Write', 'Preview'].map((tab) => {
-                    const active = tab === 'Preview' ? notesPreview : !notesPreview;
-                    return (
-                      <button key={tab} type="button" onClick={() => setNotesPreview(tab === 'Preview')}
-                        className={`text-xs font-ninja font-semibold px-2 py-1 rounded transition-colors ${
-                          active ? 'bg-ninja-bg text-ninja-navy border border-ninja-border' : 'text-ninja-muted hover:text-ninja-navy'
-                        }`}>
-                        {tab}
-                      </button>
-                    );
-                  })}
-                </div>
-                <EmojiButton onSelect={(emoji) => insertAtCursor(notesRef, notesDraft, emoji, setNotesDraft)} />
-              </div>
-
-              {notesPreview ? (
-                <div className="min-h-[100px] bg-ninja-bg border border-ninja-border rounded-lg px-3 py-2 font-ninja text-sm text-ninja-navy leading-relaxed">
-                  {notesDraft ? (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{notesDraft}</ReactMarkdown>
-                  ) : (
-                    <span className="text-ninja-muted italic">Nothing to preview.</span>
-                  )}
-                </div>
-              ) : (
-                <textarea
-                  ref={notesRef}
-                  value={notesDraft}
-                  onChange={(e) => setNotesDraft(e.target.value)}
-                  rows={5}
-                  placeholder="How did the session go? Supports **markdown**."
-                  className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
-                  autoFocus
-                />
-              )}
+              <LazyMarkdownEditor
+                value={notesDraft}
+                onChange={setNotesDraft}
+                placeholder="How did the session go?"
+              />
               <div className="flex gap-2">
                 <Button size="sm" onClick={handleSaveNotes} disabled={savingNotes}>
                   {savingNotes ? 'Saving...' : 'Save'}

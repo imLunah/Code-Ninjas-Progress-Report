@@ -6,7 +6,7 @@ import LazyMarkdownEditor from './LazyMarkdownEditor';
 
 // A real thumbtack glyph instead of an emoji — keeps the card on-brand and
 // crisp at any size / dark mode.
-function Pin({ className }) {
+export function Pin({ className }) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
       <path d="M15.5 2.5a1 1 0 0 0 0 1.4l.3.3-4.2 4.2-2.6-.5a1 1 0 0 0-.9.27l-.7.7a1 1 0 0 0 0 1.42l3 3-3.9 3.9a1 1 0 1 0 1.4 1.42l3.9-3.9 3 3a1 1 0 0 0 1.42 0l.7-.7a1 1 0 0 0 .27-.9l-.5-2.6 4.2-4.2.3.3a1 1 0 0 0 1.4-1.42l-6-6a1 1 0 0 0-1.4 0z" />
@@ -17,7 +17,7 @@ function Pin({ className }) {
 // Markdown rendered inside the note. Constrained set of elements so a sensei's
 // quick formatting (bullets, bold, line breaks) reads cleanly without letting
 // arbitrary HTML/headings blow up the card.
-const MARKDOWN_COMPONENTS = {
+export const MARKDOWN_COMPONENTS = {
   p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
   ul: ({ children }) => <ul className="list-disc marker:text-amber-400 pl-5 mb-2 last:mb-0 space-y-1">{children}</ul>,
   ol: ({ children }) => <ol className="list-decimal marker:text-amber-400 pl-5 mb-2 last:mb-0 space-y-1">{children}</ol>,
