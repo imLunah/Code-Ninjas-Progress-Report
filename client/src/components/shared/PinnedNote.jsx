@@ -114,7 +114,7 @@ export default function PinnedNote({ studentId, initialNote, onUpdated }) {
           </div>
         ) : (
           <p className="font-ninja text-sm leading-relaxed text-amber-700/70">
-            Nothing pinned yet — jot down learning style or anything the next sensei should know.
+            Nothing pinned yet.
           </p>
         )}
       </div>
