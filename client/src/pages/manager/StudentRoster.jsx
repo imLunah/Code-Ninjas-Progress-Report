@@ -277,7 +277,11 @@ export default function StudentRoster() {
             program: parseProgram(row['Membership']),
             belt_raw: row['Rank'] || null,
           }))
-          .filter((s) => s.full_name && s.program);
+          // Keep every named row, even when the program doesn't parse. Rows with
+          // no program are skipped on insert server-side, but their presence
+          // still protects an existing ninja from being flagged "missing" and
+          // archived (which was silently deleting advanced-program kids).
+          .filter((s) => s.full_name);
 
         if (students.length === 0) {
           setImportError('No valid students found in this file. Make sure it\'s a MyStudio export.');
