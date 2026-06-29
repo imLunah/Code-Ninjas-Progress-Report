@@ -22,7 +22,7 @@ export const MARKDOWN_COMPONENTS = {
   ul: ({ children }) => <ul className="list-disc marker:text-amber-400 pl-5 mb-2 last:mb-0 space-y-1">{children}</ul>,
   ol: ({ children }) => <ol className="list-decimal marker:text-amber-400 pl-5 mb-2 last:mb-0 space-y-1">{children}</ol>,
   li: ({ children }) => <li className="leading-relaxed pl-0.5">{children}</li>,
-  strong: ({ children }) => <strong className="font-bold text-amber-950">{children}</strong>,
+  strong: ({ children }) => <strong className="font-bold text-amber-950 dark:text-amber-100">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
   a: ({ children, href }) => <a href={href} target="_blank" rel="noreferrer" className="underline decoration-amber-400 underline-offset-2">{children}</a>,
   h1: ({ children }) => <p className="font-bold mb-2">{children}</p>,
@@ -62,7 +62,7 @@ export default function PinnedNote({ studentId, initialNote, onUpdated }) {
   const hasNote = Boolean(note && note.trim());
 
   return (
-    <div className="rounded-2xl bg-amber-50 ring-1 ring-amber-200/80 shadow-sm">
+    <div className="rounded-2xl bg-[#fffbeb] dark:bg-[#2e2a20] ring-1 ring-amber-200/80 dark:ring-amber-400/20 shadow-sm">
       <div className="px-4 py-4">
         <div className="flex items-center justify-between gap-3 mb-2.5">
           <div className="flex items-center gap-2 text-amber-700">
@@ -113,7 +113,7 @@ export default function PinnedNote({ studentId, initialNote, onUpdated }) {
             </ReactMarkdown>
           </div>
         ) : (
-          <p className="font-ninja text-sm leading-relaxed text-amber-700/70">
+          <p className="font-ninja text-sm leading-relaxed text-amber-700/70 dark:text-amber-200/40">
             Nothing pinned yet.
           </p>
         )}
