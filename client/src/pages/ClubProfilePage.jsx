@@ -81,7 +81,7 @@ function PinnedNoteSection({ clubName, initialNote, initialAuthor, initialUpdate
   const hasNote = Boolean(note && note.trim());
 
   return (
-    <div className="rounded-2xl bg-[#fffbeb] dark:bg-[#2e2a20] ring-1 ring-amber-200/80 dark:ring-amber-400/20 shadow-sm">
+    <div className="rounded-2xl bg-amber-50 ring-1 ring-amber-200/80 shadow-sm">
       <div className="px-4 py-4">
         <div className="flex items-center justify-between gap-3 mb-2.5">
           <div className="flex items-center gap-2 text-amber-700">
