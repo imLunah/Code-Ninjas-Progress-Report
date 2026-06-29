@@ -70,6 +70,8 @@ export default function StudentRoster() {
   const [importResult, setImportResult] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState('');
+  // Parsed rows held between the preview step and the confirmed import.
+  const [pendingStudents, setPendingStudents] = useState(null);
   // Missing ninjas are removed by default — checking one KEEPS it.
   const [keepIds, setKeepIds] = useState(new Set());
   // Belt conflicts are NOT overridden by default; checking one applies the
@@ -255,6 +257,7 @@ export default function StudentRoster() {
     if (!file) return;
     setImportError('');
     setImportResult(null);
+    setPendingStudents(null);
     setKeepIds(new Set());
     setOverrideKeys(new Set());
     setImporting(true);
@@ -283,9 +286,10 @@ export default function StudentRoster() {
         }
 
         try {
-          const result = await api.post('/students/import', { students });
+          // Preview only — nothing is written until the user confirms.
+          const result = await api.post('/students/import', { students, dryRun: true });
           setImportResult(result);
-          loadStudents();
+          setPendingStudents(students);
         } catch (err) {
           setImportError(err.message || 'Import failed');
         } finally {
@@ -298,6 +302,24 @@ export default function StudentRoster() {
         setImporting(false);
       },
     });
+  };
+
+  // Commit the previewed import for real, then surface the post-import
+  // summary + missing/conflict apply step.
+  const handleConfirmImport = async () => {
+    if (!pendingStudents) return;
+    setImporting(true);
+    setImportError('');
+    try {
+      const result = await api.post('/students/import', { students: pendingStudents });
+      setImportResult(result);
+      setPendingStudents(null);
+      loadStudents();
+    } catch (err) {
+      setImportError(err.message || 'Import failed');
+    } finally {
+      setImporting(false);
+    }
   };
 
   const chipCounts = FILTER_CHIPS.reduce((acc, chip) => {
@@ -367,7 +389,7 @@ export default function StudentRoster() {
               </Button>
               {!showArchived && (
                 <>
-                  <Button variant="secondary" onClick={() => { setImportModal(true); setImportResult(null); setImportError(''); }}>
+                  <Button variant="secondary" onClick={() => { setImportModal(true); setImportResult(null); setImportError(''); setPendingStudents(null); setKeepIds(new Set()); setOverrideKeys(new Set()); }}>
                     Import CSV
                   </Button>
                   <Button onClick={() => navigate('/manager/students/new')}>+ Add Ninja</Button>
@@ -695,7 +717,60 @@ export default function StudentRoster() {
               </>
             )}
 
-            {importResult && (
+            {importResult?.preview && (
+              <div className="space-y-3">
+                {importError && (
+                  <div className="bg-red-50 border border-red-200 text-ninja-red rounded-lg p-3 text-sm font-ninja">
+                    {importError}
+                  </div>
+                )}
+                <div className="bg-ninja-bg border border-ninja-border rounded-lg p-3">
+                  {importResult.added_students?.length > 0 ? (
+                    <details className="group" open>
+                      <summary className="text-ninja-navy font-ninja font-semibold text-sm cursor-pointer list-none flex items-center gap-1">
+                        <span className="transition-transform group-open:rotate-90">▸</span>
+                        {importResult.added} ninja{importResult.added !== 1 ? 's' : ''} will be added
+                      </summary>
+                      <ul className="text-ninja-navy font-ninja text-sm mt-2 pl-4 space-y-1 max-h-44 overflow-y-auto">
+                        {importResult.added_students.map((s) => (
+                          <li key={`${s.full_name}-${s.program}`} className="flex items-center gap-2">
+                            <span>{s.full_name}</span>
+                            <ProgramBadge program={s.program} size="xs" />
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : (
+                    <p className="text-ninja-navy font-ninja font-semibold text-sm">
+                      No new ninjas to add.
+                    </p>
+                  )}
+                  {importResult.duplicates?.length > 0 && (
+                    <details className="mt-1 group">
+                      <summary className="text-ninja-muted font-ninja text-sm cursor-pointer list-none flex items-center gap-1">
+                        <span className="transition-transform group-open:rotate-90">▸</span>
+                        {importResult.duplicates.length} already enrolled (will be skipped)
+                      </summary>
+                      <ul className="text-ninja-navy font-ninja text-sm mt-2 pl-4 space-y-1 max-h-44 overflow-y-auto">
+                        {importResult.duplicates.map((s) => (
+                          <li key={s.id}>{s.full_name}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </div>
+                {(importResult.conflicts?.length > 0 || importResult.missing?.length > 0) && (
+                  <p className="text-ninja-muted font-ninja text-xs px-1">
+                    {importResult.conflicts?.length > 0 && `${importResult.conflicts.length} belt change${importResult.conflicts.length !== 1 ? 's' : ''}`}
+                    {importResult.conflicts?.length > 0 && importResult.missing?.length > 0 && ' and '}
+                    {importResult.missing?.length > 0 && `${importResult.missing.length} roster ninja${importResult.missing.length !== 1 ? 's' : ''} not in this CSV`}
+                    {' '}— you'll review these after confirming.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {importResult && !importResult.preview && (
               <div className="space-y-3">
                 <div className="bg-ninja-bg border border-ninja-border rounded-lg p-3">
                   {importResult.added_students?.length > 0 ? (
@@ -818,7 +893,20 @@ export default function StudentRoster() {
             )}
 
             <div className="flex gap-2 mt-5">
-              {(importResult?.missing?.length > 0 || importResult?.conflicts?.length > 0) ? (
+              {importResult?.preview ? (
+                <>
+                  <Button variant="secondary" onClick={() => setImportModal(false)} disabled={importing}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleConfirmImport}
+                    disabled={importing || (importResult.added === 0 && !importResult.conflicts?.length && !importResult.missing?.length)}
+                    className="ml-auto"
+                  >
+                    {importing ? 'Importing…' : `Confirm Import${importResult.added ? ` (${importResult.added})` : ''}`}
+                  </Button>
+                </>
+              ) : (importResult?.missing?.length > 0 || importResult?.conflicts?.length > 0) ? (
                 <>
                   <Button variant="secondary" onClick={() => setImportModal(false)} disabled={archiving}>
                     Cancel
@@ -834,7 +922,7 @@ export default function StudentRoster() {
               ) : (
                 <>
                   {importResult && !importing && (
-                    <Button variant="secondary" onClick={() => { setImportResult(null); setImportError(''); setKeepIds(new Set()); setOverrideKeys(new Set()); }}>
+                    <Button variant="secondary" onClick={() => { setImportResult(null); setImportError(''); setPendingStudents(null); setKeepIds(new Set()); setOverrideKeys(new Set()); }}>
                       Import Another
                     </Button>
                   )}

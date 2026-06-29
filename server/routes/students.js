@@ -652,6 +652,9 @@ router.post('/:id/roadmap/uncomplete', requireSensei, requireOwnLocation, async 
 router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { students: incoming } = req.body;
+  // Dry run: classify rows (added / duplicate / conflict / missing) WITHOUT
+  // writing anything, so the caller can confirm before the real import.
+  const dryRun = req.body.dryRun === true;
   const locationId = req.session.activeLocationId;
 
   if (!Array.isArray(incoming) || incoming.length === 0) {
@@ -715,6 +718,13 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
         continue;
       }
 
+      // New enrollment. On a dry run, just record what WOULD be added and skip
+      // every write (no real student id exists yet).
+      if (dryRun) {
+        added.push({ full_name: fullName, program });
+        continue;
+      }
+
       // Find or create the student (they may exist but not in this program yet)
       const { rows: existingStudent } = await client.query(
         'SELECT id FROM students WHERE LOWER(full_name) = LOWER($1) AND location_id = $2 AND active = true',
@@ -747,7 +757,8 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
       added.push({ id: studentId, full_name: fullName, program });
     }
 
-    await client.query('COMMIT');
+    // Dry run never persists — roll back so the preview leaves no trace.
+    await client.query(dryRun ? 'ROLLBACK' : 'COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -768,7 +779,7 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
     (s) => !incomingNames.has(s.full_name.trim().toLowerCase())
   );
 
-  res.json({ added: added.length, added_students: added, duplicates, conflicts, missing });
+  res.json({ added: added.length, added_students: added, duplicates, conflicts, missing, preview: dryRun });
 });
 
 // POST /api/students/import/apply-belts: override belt for chosen programs
