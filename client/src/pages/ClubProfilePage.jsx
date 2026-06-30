@@ -147,10 +147,26 @@ function PinnedNoteSection({ clubName, initialNote, initialAuthor, initialUpdate
   );
 }
 
-function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isReadOnly }) {
+function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isReadOnly, onDeleted }) {
   const [expanded, setExpanded] = useState(false);
+  const [confirmId, setConfirmId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const todayStr = today();
   const shown = expanded ? sessions : sessions.slice(0, 4);
+  const canDelete = isManager && !isReadOnly;
+
+  const handleDelete = async (id) => {
+    setDeletingId(id);
+    try {
+      await api.delete(`/clubs/${id}`);
+      onDeleted && onDeleted(id);
+      setConfirmId(null);
+    } catch {
+      // leave confirm open so the CD can retry
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
@@ -173,10 +189,13 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
             const isOverdue = !hasNotes && String(s.session_date).split('T')[0] < todayStr;
             const borderColor = hasNotes ? '#4ade80' : isOverdue ? '#f87171' : '#fbbf24';
             return (
-              <button
+              <div
                 key={s.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => navigate(`/clubs/${slug}/sessions/${s.id}`)}
-                className="w-full text-left py-3.5 flex items-start gap-4 hover:bg-ninja-bg transition-colors first:pt-0 last:pb-0 px-1 -mx-1 rounded-lg"
+                onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/clubs/${slug}/sessions/${s.id}`); }}
+                className="w-full text-left py-3.5 flex items-start gap-4 hover:bg-ninja-bg transition-colors first:pt-0 last:pb-0 px-1 -mx-1 rounded-lg cursor-pointer"
               >
                 <div className="w-0.5 self-stretch rounded-full flex-shrink-0 mt-0.5" style={{ backgroundColor: borderColor }} />
                 <div className="flex-1 min-w-0">
@@ -199,7 +218,34 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
                 <span className="font-ninja font-semibold text-sm text-ninja-muted flex-shrink-0 mt-0.5">
                   {s.attendees?.length ?? 0}{memberCount > 0 ? `/${memberCount}` : ''}
                 </span>
-              </button>
+                {canDelete && (
+                  confirmId === s.id ? (
+                    <span className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleDelete(s.id)}
+                        disabled={deletingId === s.id}
+                        className="text-[11px] font-ninja font-bold text-ninja-red hover:underline disabled:opacity-50"
+                      >
+                        {deletingId === s.id ? '…' : 'Delete'}
+                      </button>
+                      <button
+                        onClick={() => setConfirmId(null)}
+                        className="text-[11px] font-ninja font-bold text-ninja-muted hover:underline"
+                      >
+                        Cancel
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setConfirmId(s.id); }}
+                      title="Delete session"
+                      className="text-ninja-muted hover:text-ninja-red transition-colors flex-shrink-0 text-lg leading-none -mt-0.5"
+                    >
+                      &times;
+                    </button>
+                  )
+                )}
+              </div>
             );
           })}
         </div>
@@ -573,6 +619,7 @@ export default function ClubProfilePage() {
               navigate={navigate}
               isManager={isManager}
               isReadOnly={isReadOnly}
+              onDeleted={(id) => setSessions((prev) => prev.filter((s) => s.id !== id))}
             />
           </div>
 
