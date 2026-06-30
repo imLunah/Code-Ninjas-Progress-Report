@@ -279,7 +279,7 @@ function BugIcon() {
 function BulbIcon() {
   return (
     <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 21h6m-5 0v-1a7 7 0 11-2-4.9A7 7 0 0117 8a7 7 0 01-2 4.9V14a3 3 0 01-3 3H9z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3a6 6 0 00-3.6 10.8c.4.3.6.77.6 1.27V16a1 1 0 001 1h4a1 1 0 001-1v-.93c0-.5.2-.97.6-1.27A6 6 0 0012 3z" />
     </svg>
   );
 }
