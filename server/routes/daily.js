@@ -166,16 +166,6 @@ router.post('/match-attendance', requireManager, requireOwnLocation, async (req,
       [req.session.activeLocationId]
     );
 
-    // Ninjas already checked in AND finished (logged) today — these should be
-    // skipped on import so a completed session isn't re-added.
-    const { rows: doneRows } = await pool.query(
-      `SELECT da.student_id, da.program FROM daily_assignments da
-       JOIN students s ON da.student_id = s.id
-       WHERE s.location_id = $1 AND da.session_date = $2 AND da.completed = true`,
-      [req.session.activeLocationId, todayDate()]
-    );
-    const doneSet = new Set(doneRows.map((r) => `${r.student_id}::${r.program}`));
-
     const norm = (x) => String(x || '').trim().toLowerCase();
 
     const results = names
@@ -197,15 +187,7 @@ router.post('/match-attendance', requireManager, requireOwnLocation, async (req,
           // Board last names are usually a single initial; match by prefix.
           if (last.length === 1) return norm(sLast).startsWith(norm(last));
           return norm(sLast) === norm(last) || norm(sLast).startsWith(norm(last));
-        }).map((s) => ({
-          id: s.id,
-          full_name: s.full_name,
-          programs: s.programs,
-          // Programs this ninja already finished (logged) today → skip on import.
-          done_programs: (s.programs || [])
-            .map((p) => p.program)
-            .filter((prog) => doneSet.has(`${s.id}::${prog}`)),
-        }));
+        }).map((s) => ({ id: s.id, full_name: s.full_name, programs: s.programs }));
 
         return { raw: cleaned, first, last, candidates };
       });

@@ -38,9 +38,7 @@ export default function ImportAttendanceModal({ isOpen, onClose, onAdded }) {
         const studentId = r.candidates.length === 1 ? r.candidates[0].id : null;
         const chosen = r.candidates.find((c) => c.id === studentId);
         const program = chosen && chosen.programs.length === 1 ? chosen.programs[0].program : null;
-        // Pre-uncheck anyone whose auto-picked program is already finished today.
-        const alreadyDone = Boolean(chosen && program && (chosen.done_programs || []).includes(program));
-        return { ...r, studentId, program, include: !alreadyDone };
+        return { ...r, studentId, program, include: true };
       });
       setRows(seeded);
     } catch (err) {
@@ -65,12 +63,7 @@ export default function ImportAttendanceModal({ isOpen, onClose, onAdded }) {
 
   const chosenFor = (r) => r.candidates.find((c) => c.id === r.studentId);
   const isResolved = (r) => Boolean(r.studentId && r.program);
-  // Already checked in + finished today for the chosen program → never re-import.
-  const isDoneToday = (r) => {
-    const chosen = chosenFor(r);
-    return Boolean(chosen && r.program && (chosen.done_programs || []).includes(r.program));
-  };
-  const readyRows = (rows || []).filter((r) => r.include && isResolved(r) && !isDoneToday(r));
+  const readyRows = (rows || []).filter((r) => r.include && isResolved(r));
 
   const handleCheckIn = async () => {
     setSubmitting(true);
@@ -155,25 +148,22 @@ export default function ImportAttendanceModal({ isOpen, onClose, onAdded }) {
               const none = r.candidates.length === 0;
               const chosen = chosenFor(r);
               const programs = chosen?.programs || [];
-              const done = isDoneToday(r);
               return (
                 <div
                   key={i}
-                  className={`border rounded-xl p-3 ${none || done ? 'border-ninja-border opacity-60' : 'border-ninja-border bg-ninja-bg'}`}
+                  className={`border rounded-xl p-3 ${none ? 'border-ninja-border opacity-60' : 'border-ninja-border bg-ninja-bg'}`}
                 >
                   <div className="flex items-center gap-2">
                     {!none && (
                       <input
                         type="checkbox"
-                        checked={r.include && !done}
-                        disabled={done}
+                        checked={r.include}
                         onChange={() => updateRow(i, { include: !r.include })}
                         className="accent-ninja-blue"
                       />
                     )}
                     <span className="text-ninja-navy font-ninja font-semibold text-sm">{r.raw}</span>
                     {none && <span className="text-ninja-red font-ninja text-xs ml-auto">No match</span>}
-                    {done && <span className="text-ninja-muted font-ninja text-xs ml-auto">Already done today</span>}
                   </div>
 
                   {!none && (
