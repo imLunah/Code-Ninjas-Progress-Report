@@ -548,7 +548,7 @@ export default function ClubProfilePage() {
             </p>
           </div>
           {isManager && !isReadOnly && (
-            <Button onClick={() => navigate(`/manager/clubs/log?club=${encodeURIComponent(clubDef.name)}`)}>
+            <Button onClick={() => navigate(`/clubs/log?club=${encodeURIComponent(clubDef.name)}`)}>
               + New session
             </Button>
           )}
