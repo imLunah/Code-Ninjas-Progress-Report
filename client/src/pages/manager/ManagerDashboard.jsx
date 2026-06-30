@@ -5,7 +5,6 @@ import TodayBoard from '../../components/manager/TodayBoard';
 import DashboardFilters from '../../components/shared/DashboardFilters';
 import BoardStats from '../../components/shared/BoardStats';
 import AddStudentToday from '../../components/manager/AddStudentToday';
-import ImportAttendanceModal from '../../components/manager/ImportAttendanceModal';
 import CheckInClubModal from '../../components/manager/CheckInClubModal';
 import ClubSessionsPanel from '../../components/shared/ClubSessionsPanel';
 import Button from '../../components/ui/Button';
@@ -19,7 +18,6 @@ export default function ManagerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showImportAttendance, setShowImportAttendance] = useState(false);
   const [showCheckInClub, setShowCheckInClub] = useState(false);
   const [clubSessions, setClubSessions] = useState([]);
   const [statusFilter, setStatusFilter] = useState('unlogged');
@@ -93,14 +91,9 @@ export default function ManagerDashboard() {
             )}
           </div>
           {!isReadOnly && (
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => setShowImportAttendance(true)} size="md">
-                Import Attendance
-              </Button>
-              <Button onClick={() => setShowAddModal(true)} size="md">
-                + Check In Ninja
-              </Button>
-            </div>
+            <Button onClick={() => setShowAddModal(true)} size="md">
+              + Check In Ninja
+            </Button>
           )}
         </div>
 
@@ -144,12 +137,6 @@ export default function ManagerDashboard() {
         onClose={() => setShowAddModal(false)}
         onAdded={handleAdded}
         existingEntries={existingEntries}
-      />
-
-      <ImportAttendanceModal
-        isOpen={showImportAttendance}
-        onClose={() => setShowImportAttendance(false)}
-        onAdded={handleAdded}
       />
 
       <CheckInClubModal
