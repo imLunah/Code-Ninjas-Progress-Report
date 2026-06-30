@@ -22,7 +22,7 @@ export const MARKDOWN_COMPONENTS = {
   ul: ({ children }) => <ul className="list-disc marker:text-amber-400 pl-5 mb-2 last:mb-0 space-y-1">{children}</ul>,
   ol: ({ children }) => <ol className="list-decimal marker:text-amber-400 pl-5 mb-2 last:mb-0 space-y-1">{children}</ol>,
   li: ({ children }) => <li className="leading-relaxed pl-0.5">{children}</li>,
-  strong: ({ children }) => <strong className="font-bold text-amber-950 dark:text-white">{children}</strong>,
+  strong: ({ children }) => <strong className="font-bold text-gray-900 dark:text-white">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
   a: ({ children, href }) => <a href={href} target="_blank" rel="noreferrer" className="underline decoration-amber-400 underline-offset-2">{children}</a>,
   h1: ({ children }) => <p className="font-bold mb-2">{children}</p>,
@@ -104,7 +104,7 @@ export default function PinnedNote({ studentId, initialNote, onUpdated }) {
             </div>
           </div>
         ) : hasNote ? (
-          <div className="font-ninja text-sm leading-relaxed text-amber-900">
+          <div className="font-ninja text-sm leading-relaxed text-gray-900 dark:text-white">
             <ReactMarkdown
               components={MARKDOWN_COMPONENTS}
               urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
