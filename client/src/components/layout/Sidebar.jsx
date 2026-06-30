@@ -171,7 +171,7 @@ export default function Sidebar({ onOpenBug }) {
           </Link>
           <button
             onClick={onOpenBug}
-            title="Report a bug"
+            title="Report a bug or suggest a feature"
             className="text-ninja-muted hover:text-ninja-red transition-colors flex-shrink-0 p-1"
           >
             <BugIcon />

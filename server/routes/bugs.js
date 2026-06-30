@@ -14,7 +14,8 @@ function requireAnySession(req, res, next) {
 }
 
 router.post('/', requireAnySession, async (req, res) => {
-  const { category, description, screenshot, pageUrl, userAgent, screenSize, timestamp, consoleErrors, reporter } = req.body;
+  const { type, category, description, screenshot, pageUrl, userAgent, screenSize, timestamp, consoleErrors, reporter } = req.body;
+  const isFeature = type === 'feature';
 
   if (!description?.trim()) {
     return res.status(400).json({ error: 'Description is required.' });
@@ -39,7 +40,9 @@ router.post('/', requireAnySession, async (req, res) => {
       : 'Unknown';
 
     const cat = escHtml(category || 'Other');
-    const subject = `[DojoLink Bug] [${cat}] ${description.trim().slice(0, 50)}${description.trim().length > 50 ? '…' : ''}`;
+    const label = isFeature ? 'Feature' : 'Bug';
+    const heading = isFeature ? 'Feature Request' : 'Bug Report';
+    const subject = `[DojoLink ${label}] [${cat}] ${description.trim().slice(0, 50)}${description.trim().length > 50 ? '…' : ''}`;
 
     const reportedAt = timestamp
       ? new Date(timestamp).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'medium', timeStyle: 'short' }) + ' PT'
@@ -52,7 +55,7 @@ router.post('/', requireAnySession, async (req, res) => {
 
     const html = `
       <div style="font-family:sans-serif;max-width:600px">
-        <h2 style="color:#1a2e4a;margin-bottom:4px">Bug Report</h2>
+        <h2 style="color:#1a2e4a;margin-bottom:4px">${heading}</h2>
         <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
           <tr><td style="padding:6px 0;color:#888;width:110px">Category</td><td style="padding:6px 0;font-weight:600;color:#1d4ed8">${cat}</td></tr>
           <tr><td style="padding:6px 0;color:#888">Reporter</td><td style="padding:6px 0;font-weight:600">${reporterLine}</td></tr>
@@ -69,7 +72,7 @@ router.post('/', requireAnySession, async (req, res) => {
     `;
 
     const mailOptions = {
-      from: `"DojoLink Bug Reports" <${process.env.GMAIL_USER}>`,
+      from: `"DojoLink ${isFeature ? 'Feature Requests' : 'Bug Reports'}" <${process.env.GMAIL_USER}>`,
       to: process.env.GMAIL_USER,
       subject,
       html,

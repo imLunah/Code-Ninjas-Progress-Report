@@ -49,7 +49,7 @@ export default function ParentLayout({ children, wide = false }) {
       </main>
       <button
         onClick={() => setBugOpen(true)}
-        title="Report a bug"
+        title="Report a bug or suggest a feature"
         className="fixed bottom-6 right-6 z-40 bg-white border border-ninja-border text-ninja-muted hover:text-ninja-red shadow-lg rounded-full w-9 h-9 flex items-center justify-center transition-all hover:shadow-xl"
       >
         <BugIcon />
