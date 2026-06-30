@@ -187,7 +187,6 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
           {shown.map((s) => {
             const hasNotes = !!s.notes;
             const isOverdue = !hasNotes && String(s.session_date).split('T')[0] < todayStr;
-            const borderColor = hasNotes ? '#4ade80' : isOverdue ? '#f87171' : '#fbbf24';
             return (
               <div
                 key={s.id}
@@ -197,7 +196,6 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
                 onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/clubs/${slug}/sessions/${s.id}`); }}
                 className="w-full text-left py-3.5 flex items-start gap-4 hover:bg-ninja-bg transition-colors first:pt-0 last:pb-0 px-1 -mx-1 rounded-lg cursor-pointer"
               >
-                <div className="w-0.5 self-stretch rounded-full flex-shrink-0 mt-0.5" style={{ backgroundColor: borderColor }} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="font-ninja font-bold text-ninja-navy text-sm">
