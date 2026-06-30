@@ -129,7 +129,7 @@ function PinnedNoteSection({ clubName, initialNote, initialAuthor, initialUpdate
             </div>
           </div>
         ) : hasNote ? (
-          <div className="font-ninja text-sm leading-relaxed text-amber-900">
+          <div className="font-ninja text-sm leading-relaxed text-gray-900 dark:text-white">
             <ReactMarkdown
               components={MARKDOWN_COMPONENTS}
               urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
