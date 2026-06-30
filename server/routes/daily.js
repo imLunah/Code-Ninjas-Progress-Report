@@ -135,6 +135,70 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   }
 });
 
+// POST /api/daily/match-attendance — match a pasted attendance list (Live-Ninjas
+// style "First L" names) to active ninjas at this location. Read-only: returns
+// candidate matches + each candidate's programs so the client can preview before
+// any check-in. Never writes.
+router.post('/match-attendance', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { names } = req.body;
+
+  if (!Array.isArray(names) || names.length === 0) {
+    return res.status(400).json({ error: 'No names provided' });
+  }
+  if (names.length > 200) {
+    return res.status(400).json({ error: 'Too many names (max 200)' });
+  }
+
+  try {
+    const { rows: roster } = await pool.query(
+      `SELECT s.id, s.full_name,
+        COALESCE((
+          SELECT json_agg(json_build_object(
+            'program', sp.program,
+            'belt_level', sp.belt_level,
+            'belt_sublevel', sp.belt_sublevel
+          ) ORDER BY sp.program)
+          FROM student_programs sp WHERE sp.student_id = s.id
+        ), '[]') AS programs
+       FROM students s
+       WHERE s.location_id = $1 AND s.active = true`,
+      [req.session.activeLocationId]
+    );
+
+    const norm = (x) => String(x || '').trim().toLowerCase();
+
+    const results = names
+      .map((raw) => String(raw))
+      .filter((raw) => raw.trim())
+      .map((raw) => {
+        // Strip a trailing " - 16:04" time stamp the board appends, collapse space.
+        const cleaned = raw.split(' - ')[0].trim().replace(/\s+/g, ' ');
+        const tokens = cleaned.split(' ').filter(Boolean);
+        const first = tokens[0] || '';
+        const last = tokens.length > 1 ? tokens[tokens.length - 1] : '';
+
+        const candidates = roster.filter((s) => {
+          const parts = s.full_name.trim().split(/\s+/);
+          const sFirst = parts[0] || '';
+          const sLast = parts.length > 1 ? parts[parts.length - 1] : '';
+          if (norm(sFirst) !== norm(first)) return false;
+          if (!last) return true;
+          // Board last names are usually a single initial; match by prefix.
+          if (last.length === 1) return norm(sLast).startsWith(norm(last));
+          return norm(sLast) === norm(last) || norm(sLast).startsWith(norm(last));
+        }).map((s) => ({ id: s.id, full_name: s.full_name, programs: s.programs }));
+
+        return { raw: cleaned, first, last, candidates };
+      });
+
+    res.json({ results });
+  } catch (err) {
+    console.error('Error matching attendance:', err);
+    res.status(500).json({ error: 'Failed to match attendance' });
+  }
+});
+
 // PATCH /api/daily/:id/assign
 router.patch('/:id/assign', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
