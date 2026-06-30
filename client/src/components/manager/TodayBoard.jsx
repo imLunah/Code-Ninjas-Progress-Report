@@ -38,7 +38,7 @@ function PinnedNotePill({ note }) {
       {open && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="absolute z-30 top-full left-0 mt-1.5 w-64 max-w-[80vw] rounded-xl bg-white border border-ninja-border shadow-lg p-3 text-left cursor-default"
+          className="absolute z-30 top-full right-0 mt-1.5 w-64 max-w-[calc(100vw-2rem)] rounded-xl bg-white border border-ninja-border shadow-lg p-3 text-left cursor-default"
         >
           <div className="flex items-center gap-1.5 text-amber-700 mb-1.5">
             <PinGlyph className="w-3 h-3 -rotate-12" />
