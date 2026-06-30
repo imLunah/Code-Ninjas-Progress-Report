@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { api } from '../../api/client';
 import ModalPortal from './ModalPortal';
 
@@ -154,7 +155,13 @@ export default function BugReportButton({ reporter, open, onClose }) {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
 
-                <div className="grid grid-cols-2 gap-1 bg-ninja-bg border border-ninja-border rounded-xl p-1">
+                <div className="relative flex bg-ninja-bg border border-ninja-border rounded-2xl p-1">
+                  <motion.div
+                    className="absolute top-1 bottom-1 bg-white rounded-xl shadow-sm"
+                    layout
+                    transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+                    style={{ width: 'calc(50% - 4px)', left: type === 'bug' ? 4 : 'calc(50%)' }}
+                  />
                   {[
                     { key: 'bug', label: 'Report a bug' },
                     { key: 'feature', label: 'Suggest a feature' },
@@ -163,10 +170,8 @@ export default function BugReportButton({ reporter, open, onClose }) {
                       key={key}
                       type="button"
                       onClick={() => switchType(key)}
-                      className={`font-ninja text-sm font-bold py-2 rounded-lg transition-colors ${
-                        type === key
-                          ? 'bg-white text-ninja-navy shadow-sm'
-                          : 'text-ninja-muted hover:text-ninja-navy'
+                      className={`relative z-10 flex-1 py-2 font-ninja font-bold text-sm rounded-xl transition-colors duration-200 ${
+                        type === key ? 'text-ninja-navy' : 'text-ninja-muted'
                       }`}
                     >
                       {label}
