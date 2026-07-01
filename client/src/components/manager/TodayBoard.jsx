@@ -21,7 +21,9 @@ function PinGlyph({ className }) {
 // Amber "Note" pill that reveals the ninja's pinned note on hover or click.
 const POPOVER_WIDTH = 256; // matches w-64
 
-function PinnedNotePill({ note }) {
+function PinnedNotePill({ note, parentNote }) {
+  const hasNote = Boolean(note && note.trim());
+  const hasParent = Boolean(parentNote && parentNote.trim());
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const btnRef = useRef(null);
@@ -62,17 +64,36 @@ function PinnedNotePill({ note }) {
           style={{ position: 'fixed', top: coords.top, left: coords.left, width: POPOVER_WIDTH, maxWidth: 'calc(100vw - 16px)' }}
           className="z-50 rounded-xl bg-white border border-ninja-border shadow-lg p-3 text-left cursor-default"
         >
-          <div className="flex items-center gap-1.5 text-amber-700 mb-1.5">
-            <PinGlyph className="w-3 h-3 -rotate-12" />
-            <span className="font-ninja font-bold text-[11px] uppercase tracking-wide">Pinned note</span>
-          </div>
-          <div className="font-ninja text-sm leading-relaxed text-ninja-navy break-words max-h-48 overflow-y-auto no-scrollbar">
-            <ReactMarkdown
-              components={MARKDOWN_COMPONENTS}
-              urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
-            >
-              {note}
-            </ReactMarkdown>
+          <div className="max-h-64 overflow-y-auto no-scrollbar">
+            {hasNote && (
+              <>
+                <div className="flex items-center gap-1.5 text-amber-700 mb-1.5">
+                  <PinGlyph className="w-3 h-3 -rotate-12" />
+                  <span className="font-ninja font-bold text-[11px] uppercase tracking-wide">Pinned note</span>
+                </div>
+                <div className="font-ninja text-sm leading-relaxed text-ninja-navy break-words">
+                  <ReactMarkdown
+                    components={MARKDOWN_COMPONENTS}
+                    urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
+                  >
+                    {note}
+                  </ReactMarkdown>
+                </div>
+              </>
+            )}
+            {hasParent && (
+              <div className={hasNote ? 'mt-3 pt-3 border-t border-ninja-border' : ''}>
+                <span className="font-ninja font-bold text-[11px] uppercase tracking-wide text-ninja-muted block mb-1">Note from parent</span>
+                <div className="font-ninja text-sm leading-relaxed text-ninja-navy break-words">
+                  <ReactMarkdown
+                    components={MARKDOWN_COMPONENTS}
+                    urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
+                  >
+                    {parentNote}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            )}
           </div>
         </div>,
         document.body
@@ -229,8 +250,8 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                         {sessionCount} sessions
                       </span>
                     )}
-                    {group.pinned_note && group.pinned_note.trim() && (
-                      <PinnedNotePill note={group.pinned_note} />
+                    {((group.pinned_note && group.pinned_note.trim()) || (group.special_instructions && group.special_instructions.trim())) && (
+                      <PinnedNotePill note={group.pinned_note} parentNote={group.special_instructions} />
                     )}
                     {isOverdue && (
                       <span className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600 border border-red-200">
@@ -329,8 +350,8 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                       {sessionCount} sessions
                     </span>
                   )}
-                  {group.pinned_note && group.pinned_note.trim() && (
-                    <PinnedNotePill note={group.pinned_note} />
+                  {((group.pinned_note && group.pinned_note.trim()) || (group.special_instructions && group.special_instructions.trim())) && (
+                    <PinnedNotePill note={group.pinned_note} parentNote={group.special_instructions} />
                   )}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 mt-1">

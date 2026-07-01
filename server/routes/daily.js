@@ -18,6 +18,7 @@ const ASSIGNMENT_SELECT = `
     s.full_name as student_name,
     s.birthday,
     s.pinned_note,
+    s.special_instructions,
     sp.belt_level,
     sp.belt_sublevel,
     sp.current_project,
