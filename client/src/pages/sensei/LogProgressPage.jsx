@@ -5,7 +5,8 @@ import Layout from '../../components/layout/Layout';
 import BeltBadge from '../../components/ui/BeltBadge';
 import Card from '../../components/ui/Card';
 import LogEntryForm from '../../components/sensei/LogEntryForm';
-import PinnedNote from '../../components/shared/PinnedNote';
+import ReactMarkdown from 'react-markdown';
+import PinnedNote, { MARKDOWN_COMPONENTS } from '../../components/shared/PinnedNote';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import BirthdayConfetti, { isBirthdayToday } from '../../components/shared/BirthdayConfetti';
@@ -193,9 +194,14 @@ export default function LogProgressPage() {
             {student.special_instructions && (
               <div className="rounded-2xl border border-ninja-border bg-ninja-bg p-4">
                 <h2 className="font-ninja font-bold text-sm uppercase tracking-wide text-ninja-muted mb-2">Note From Parent</h2>
-                <p className="font-ninja text-sm leading-relaxed whitespace-pre-wrap text-ninja-blue">
-                  {student.special_instructions}
-                </p>
+                <div className="font-ninja text-sm leading-relaxed text-ninja-blue">
+                  <ReactMarkdown
+                    components={MARKDOWN_COMPONENTS}
+                    urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
+                  >
+                    {student.special_instructions}
+                  </ReactMarkdown>
+                </div>
               </div>
             )}
           </div>

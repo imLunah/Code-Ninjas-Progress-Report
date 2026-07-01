@@ -10,7 +10,8 @@ import BeltIcon from '../../components/ui/BeltIcon';
 import ProgramBadge from '../../components/ui/ProgramBadge';
 import Button from '../../components/ui/Button';
 import ProgressHistory from '../../components/shared/ProgressHistory';
-import PinnedNote from '../../components/shared/PinnedNote';
+import ReactMarkdown from 'react-markdown';
+import PinnedNote, { MARKDOWN_COMPONENTS } from '../../components/shared/PinnedNote';
 import EditStudentModal from '../../components/manager/EditStudentModal';
 import EnrollmentEditModal from '../../components/manager/EnrollmentEditModal';
 import { api } from '../../api/client';
@@ -695,7 +696,14 @@ export default function StudentProfile() {
           {student.special_instructions && (
             <motion.div variants={fadeUp} className="rounded-2xl border border-ninja-border bg-ninja-bg p-4">
               <h2 className="font-ninja font-bold text-sm uppercase tracking-wide text-ninja-muted mb-2">Note From Parent</h2>
-              <p className="font-ninja text-sm leading-relaxed whitespace-pre-wrap text-ninja-blue">{student.special_instructions}</p>
+              <div className="font-ninja text-sm leading-relaxed text-ninja-blue">
+                <ReactMarkdown
+                  components={MARKDOWN_COMPONENTS}
+                  urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
+                >
+                  {student.special_instructions}
+                </ReactMarkdown>
+              </div>
             </motion.div>
           )}
 
@@ -979,7 +987,14 @@ export default function StudentProfile() {
               {student.special_instructions && (
                 <div className="rounded-2xl border border-ninja-border bg-ninja-bg p-4">
                   <h3 className="font-ninja font-bold text-sm uppercase tracking-wide text-ninja-muted mb-2">Note From Parent</h3>
-                  <p className="font-ninja text-sm leading-relaxed whitespace-pre-wrap text-ninja-blue">{student.special_instructions}</p>
+                  <div className="font-ninja text-sm leading-relaxed text-ninja-blue">
+                <ReactMarkdown
+                  components={MARKDOWN_COMPONENTS}
+                  urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
+                >
+                  {student.special_instructions}
+                </ReactMarkdown>
+              </div>
                 </div>
               )}
 
