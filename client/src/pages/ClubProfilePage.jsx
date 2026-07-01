@@ -193,7 +193,7 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
                 role="button"
                 tabIndex={0}
                 onClick={() => navigate(`/clubs/${slug}/sessions/${s.id}`)}
-                onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/clubs/${slug}/sessions/${s.id}`); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/clubs/${slug}/sessions/${s.id}`); } }}
                 className="w-full text-left py-3.5 flex items-start gap-4 hover:bg-ninja-bg transition-colors first:pt-0 last:pb-0 px-1 -mx-1 rounded-lg cursor-pointer"
               >
                 <div className="flex-1 min-w-0">
@@ -237,6 +237,7 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
                     <button
                       onClick={(e) => { e.stopPropagation(); setConfirmId(s.id); }}
                       title="Delete session"
+                      aria-label="Delete session"
                       className="text-ninja-muted hover:text-ninja-red transition-colors flex-shrink-0 text-lg leading-none -mt-0.5"
                     >
                       &times;

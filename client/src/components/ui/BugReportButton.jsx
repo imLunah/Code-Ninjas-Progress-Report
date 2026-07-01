@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { api } from '../../api/client';
 import ModalPortal from './ModalPortal';
 
-const CATEGORIES = [
+const BUG_CATEGORIES = [
   'Login Issue',
   'Student Progress',
   'Check-In Issue',
@@ -11,6 +12,44 @@ const CATEGORIES = [
   'Slow Performance',
   'Other',
 ];
+
+const FEATURE_CATEGORIES = [
+  'Check-In',
+  'Student Progress',
+  'Clubs',
+  'Reports',
+  'Parent Portal',
+  'UI / Design',
+  'Other',
+];
+
+// Per-type copy so one modal handles both bug reports and feature ideas.
+const COPY = {
+  bug: {
+    title: 'Report a Bug',
+    categories: BUG_CATEGORIES,
+    descLabel: 'What happened?',
+    descPlaceholder: '',
+    shotLabel: 'Screenshot',
+    submit: 'Send Report',
+    sending: 'Sending…',
+    doneTitle: 'Report sent!',
+    doneBody: "Thanks — we'll look into it soon.",
+    footer: "We'll automatically include your current page, browser, screen size, and account info.",
+  },
+  feature: {
+    title: 'Suggest a Feature',
+    categories: FEATURE_CATEGORIES,
+    descLabel: 'What would you like to see?',
+    descPlaceholder: 'Describe the idea and how it would help.',
+    shotLabel: 'Screenshot / mockup',
+    submit: 'Send Suggestion',
+    sending: 'Sending…',
+    doneTitle: 'Suggestion sent!',
+    doneBody: "Thanks — we'll take a look.",
+    footer: "We'll automatically include your current page and account info.",
+  },
+};
 
 // Capture recent console errors to include in bug reports
 const recentConsoleErrors = [];
@@ -24,6 +63,7 @@ console.error = (...args) => {
 };
 
 export default function BugReportButton({ reporter, open, onClose }) {
+  const [type, setType] = useState('bug');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [screenshot, setScreenshot] = useState(null);
@@ -31,6 +71,15 @@ export default function BugReportButton({ reporter, open, onClose }) {
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
   const fileRef = useRef();
+
+  const copy = COPY[type];
+
+  const switchType = (next) => {
+    if (next === type) return;
+    setType(next);
+    setCategory(''); // category lists differ between types
+    setError('');
+  };
 
   const handleFile = (e) => {
     const file = e.target.files[0];
@@ -52,6 +101,7 @@ export default function BugReportButton({ reporter, open, onClose }) {
     setError('');
     try {
       await api.post('/bugs', {
+        type,
         category: category || 'Other',
         description: description.trim(),
         screenshot: screenshot || undefined,
@@ -59,7 +109,8 @@ export default function BugReportButton({ reporter, open, onClose }) {
         userAgent: navigator.userAgent,
         screenSize: `${window.innerWidth}×${window.innerHeight}`,
         timestamp: new Date().toISOString(),
-        consoleErrors: recentConsoleErrors.slice(),
+        // Console errors only matter for bug diagnosis, not feature ideas.
+        consoleErrors: type === 'bug' ? recentConsoleErrors.slice() : [],
         reporter,
       });
       setDone(true);
@@ -72,6 +123,7 @@ export default function BugReportButton({ reporter, open, onClose }) {
 
   const handleClose = () => {
     onClose();
+    setType('bug');
     setCategory('');
     setDescription('');
     setScreenshot(null);
@@ -88,7 +140,7 @@ export default function BugReportButton({ reporter, open, onClose }) {
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold font-ninja text-ninja-navy flex items-center gap-2">
-                <BugIcon /> Report a Bug
+                {type === 'bug' ? <BugIcon /> : <BulbIcon />} {copy.title}
               </h2>
               <button onClick={handleClose} className="text-ninja-muted hover:text-ninja-navy text-xl leading-none">✕</button>
             </div>
@@ -96,12 +148,36 @@ export default function BugReportButton({ reporter, open, onClose }) {
             {done ? (
               <div className="text-center py-8 space-y-3">
                 <p className="text-4xl">✓</p>
-                <p className="font-ninja font-bold text-ninja-navy text-lg">Report sent!</p>
-                <p className="text-ninja-muted font-ninja text-sm">Thanks — we'll look into it soon.</p>
+                <p className="font-ninja font-bold text-ninja-navy text-lg">{copy.doneTitle}</p>
+                <p className="text-ninja-muted font-ninja text-sm">{copy.doneBody}</p>
                 <button onClick={handleClose} className="mt-2 text-ninja-blue font-ninja text-sm font-semibold hover:underline">Close</button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
+
+                <div className="relative flex bg-ninja-bg border border-ninja-border rounded-2xl p-1">
+                  <motion.div
+                    className="absolute top-1 bottom-1 bg-white rounded-xl shadow-sm"
+                    layout
+                    transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+                    style={{ width: 'calc(50% - 4px)', left: type === 'bug' ? 4 : 'calc(50%)' }}
+                  />
+                  {[
+                    { key: 'bug', label: 'Report a bug' },
+                    { key: 'feature', label: 'Suggest a feature' },
+                  ].map(({ key, label }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => switchType(key)}
+                      className={`relative z-10 flex-1 py-2 font-ninja font-bold text-sm rounded-xl transition-colors duration-200 ${
+                        type === key ? 'text-ninja-navy' : 'text-ninja-muted'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
 
                 <div>
                   <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1.5">
@@ -114,7 +190,7 @@ export default function BugReportButton({ reporter, open, onClose }) {
                     className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-xl px-3 py-2.5 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
                   >
                     <option value="" disabled>Select a category</option>
-                    {CATEGORIES.map(c => (
+                    {copy.categories.map(c => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
@@ -122,7 +198,7 @@ export default function BugReportButton({ reporter, open, onClose }) {
 
                 <div>
                   <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1.5">
-                    What happened? <span className="text-ninja-red">*</span>
+                    {copy.descLabel} <span className="text-ninja-red">*</span>
                   </label>
                   <textarea
                     value={description}
@@ -130,6 +206,7 @@ export default function BugReportButton({ reporter, open, onClose }) {
                     rows={4}
                     maxLength={2000}
                     required
+                    placeholder={copy.descPlaceholder}
                     className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-xl px-3 py-2.5 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
                   />
                   <p className="text-right text-ninja-muted font-ninja text-xs mt-0.5">{description.length}/2000</p>
@@ -137,7 +214,7 @@ export default function BugReportButton({ reporter, open, onClose }) {
 
                 <div>
                   <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1.5">
-                    Screenshot <span className="font-normal normal-case text-ninja-muted">(optional)</span>
+                    {copy.shotLabel} <span className="font-normal normal-case text-ninja-muted">(optional)</span>
                   </label>
                   <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
                   {screenshot ? (
@@ -175,12 +252,12 @@ export default function BugReportButton({ reporter, open, onClose }) {
                     disabled={submitting || !description.trim() || !category}
                     className="flex-1 bg-ninja-blue text-white font-ninja font-bold text-sm py-2.5 rounded-xl disabled:opacity-50 hover:bg-ninja-blue-hover transition-colors"
                   >
-                    {submitting ? 'Sending…' : 'Send Report'}
+                    {submitting ? copy.sending : copy.submit}
                   </button>
                 </div>
 
                 <p className="text-ninja-muted font-ninja text-xs text-center leading-relaxed">
-                  We'll automatically include your current page, browser, screen size, and account info.
+                  {copy.footer}
                 </p>
               </form>
             )}
@@ -195,6 +272,14 @@ function BugIcon() {
   return (
     <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+  );
+}
+
+function BulbIcon() {
+  return (
+    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3a6 6 0 00-3.6 10.8c.4.3.6.77.6 1.27V16a1 1 0 001 1h4a1 1 0 001-1v-.93c0-.5.2-.97.6-1.27A6 6 0 0012 3z" />
     </svg>
   );
 }
