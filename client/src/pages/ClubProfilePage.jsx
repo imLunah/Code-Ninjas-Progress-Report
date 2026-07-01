@@ -87,7 +87,7 @@ function PinnedNoteSection({ clubName, initialNote, initialAuthor, initialUpdate
           <div className="flex items-center gap-2 text-amber-700">
             <Pin className="w-4 h-4 -rotate-12" />
             <h3 className="font-ninja font-bold text-[15px] text-amber-900">
-              {author ? `Pinned by ${author}` : 'Pinned note'}
+              {hasNote && author ? `Pinned by ${author}` : 'Pinned note'}
             </h3>
           </div>
           <div className="flex items-center gap-3">
