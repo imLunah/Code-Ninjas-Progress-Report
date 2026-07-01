@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
@@ -18,27 +19,48 @@ function PinGlyph({ className }) {
 }
 
 // Amber "Note" pill that reveals the ninja's pinned note on hover or click.
+const POPOVER_WIDTH = 256; // matches w-64
+
 function PinnedNotePill({ note }) {
   const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const btnRef = useRef(null);
+  const closeTimer = useRef(null);
+
+  // Position a viewport-fixed popover clamped inside the window, so it never
+  // clips off the left or right edge regardless of which column the card is in.
+  // (The dashboard cards use framer transforms, which would otherwise trap an
+  // absolutely-positioned popover and let overflow clip it.)
+  const place = () => {
+    const r = btnRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const margin = 8;
+    const maxLeft = window.innerWidth - POPOVER_WIDTH - margin;
+    const left = Math.min(Math.max(r.left, margin), Math.max(margin, maxLeft));
+    setCoords({ top: r.bottom + 6, left });
+  };
+
+  const show = () => { clearTimeout(closeTimer.current); place(); setOpen(true); };
+  const hide = () => { closeTimer.current = setTimeout(() => setOpen(false), 80); };
 
   return (
-    <span
-      className="relative inline-flex"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
+    <span className="relative inline-flex" onMouseEnter={show} onMouseLeave={hide}>
       <button
+        ref={btnRef}
         type="button"
-        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        onClick={(e) => { e.stopPropagation(); open ? setOpen(false) : show(); }}
         className="inline-flex items-center gap-1 text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200 transition-colors"
       >
         <PinGlyph className="w-3 h-3 -rotate-12" />
         Note
       </button>
-      {open && (
+      {open && createPortal(
         <div
+          onMouseEnter={show}
+          onMouseLeave={hide}
           onClick={(e) => e.stopPropagation()}
-          className="absolute z-30 top-full right-0 mt-1.5 w-64 max-w-[calc(100vw-2rem)] rounded-xl bg-white border border-ninja-border shadow-lg p-3 text-left cursor-default"
+          style={{ position: 'fixed', top: coords.top, left: coords.left, width: POPOVER_WIDTH, maxWidth: 'calc(100vw - 16px)' }}
+          className="z-50 rounded-xl bg-white border border-ninja-border shadow-lg p-3 text-left cursor-default"
         >
           <div className="flex items-center gap-1.5 text-amber-700 mb-1.5">
             <PinGlyph className="w-3 h-3 -rotate-12" />
@@ -52,7 +74,8 @@ function PinnedNotePill({ note }) {
               {note}
             </ReactMarkdown>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </span>
   );
