@@ -4,11 +4,13 @@ import { useParentAuth } from '../../context/ParentAuthContext';
 import ParentLayout from '../../components/layout/ParentLayout';
 import BeltBadge from '../../components/ui/BeltBadge';
 import ProgramBadge from '../../components/ui/ProgramBadge';
-import Button from '../../components/ui/Button';
+import ReactMarkdown from 'react-markdown';
 import { api } from '../../api/client';
 import { formatDate } from '../../utils/dateUtils';
 import ProgressVisuals from '../../components/parent/ProgressVisuals';
 import { ClubBadge } from '../../components/shared/ClubSessionsPanel';
+import { Pin, MARKDOWN_COMPONENTS } from '../../components/shared/PinnedNote';
+import LazyMarkdownEditor from '../../components/shared/LazyMarkdownEditor';
 
 function calcAge(birthday) {
   if (!birthday || typeof birthday !== 'string' || !birthday.trim()) return null;
@@ -116,52 +118,59 @@ export default function ParentStudentProfile() {
 
           {/* Right rail — note + session history */}
           <div className="space-y-5 lg:sticky lg:top-6">
-            {/* Note for senseis — pinned note style */}
-        <div className="rounded-2xl overflow-hidden" style={{ background: '#fffbeb', border: '1.5px dashed #fcd34d' }}>
-          <div className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-base">📌</span>
-                <h2 className="font-ninja font-bold text-sm" style={{ color: '#92400e' }}>Note for Senseis</h2>
+            {/* Note for senseis — shared pinned-note style */}
+        <div className="rounded-2xl bg-amber-50 ring-1 ring-amber-200/80 shadow-sm">
+          <div className="px-4 py-4">
+            <div className="flex items-center justify-between gap-3 mb-2.5">
+              <div className="flex items-center gap-2 text-amber-700">
+                <Pin className="w-4 h-4 -rotate-12" />
+                <h3 className="font-ninja font-bold text-[15px] text-amber-900">Note for Senseis</h3>
               </div>
               {!editing && (
                 <button
                   onClick={() => { setDraft(instructions); setEditing(true); }}
-                  className="font-ninja text-sm font-semibold hover:underline flex-shrink-0"
-                  style={{ color: '#92400e', opacity: 0.7 }}
+                  className="font-ninja text-xs font-bold text-amber-700 hover:text-amber-900 transition-colors"
                 >
-                  {instructions ? 'Edit' : '+ Add'}
+                  {instructions && instructions.trim() ? 'Edit' : 'Add note'}
                 </button>
               )}
             </div>
 
             {editing ? (
-              <div className="space-y-3">
-                <textarea
+              <div className="space-y-2.5">
+                <LazyMarkdownEditor
                   value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  rows={4}
-                  placeholder="e.g. Has a peanut allergy. Gets picked up by grandma on Tuesdays. Prefers written instructions."
-                  autoFocus
-                  className="w-full border rounded-xl px-4 py-3 font-ninja text-sm focus:outline-none resize-none"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.7)', borderColor: '#fcd34d', color: '#78350f' }}
+                  onChange={setDraft}
+                  placeholder="Allergies, pickup notes, learning style — anything the senseis should know."
                 />
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={handleSave} disabled={saving}>
-                    {saving ? 'Saving...' : 'Save'}
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={() => { setEditing(false); setDraft(instructions); }}>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="font-ninja text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {saving ? 'Saving…' : 'Save note'}
+                  </button>
+                  <button
+                    onClick={() => { setEditing(false); setDraft(instructions); }}
+                    className="font-ninja text-xs font-bold text-amber-700 hover:text-amber-900 px-3 py-1.5 transition-colors"
+                  >
                     Cancel
-                  </Button>
+                  </button>
                 </div>
               </div>
-            ) : instructions ? (
-              <p className="font-ninja text-sm leading-relaxed whitespace-pre-wrap" style={{ color: '#78350f' }}>
-                {instructions}
-              </p>
+            ) : instructions && instructions.trim() ? (
+              <div className="font-ninja text-sm leading-relaxed text-gray-900 dark:text-white">
+                <ReactMarkdown
+                  components={MARKDOWN_COMPONENTS}
+                  urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
+                >
+                  {instructions}
+                </ReactMarkdown>
+              </div>
             ) : (
-              <p className="font-ninja text-sm italic" style={{ color: '#a16207' }}>
-                Tap Edit to leave a note for your child's senseis — allergies, pickup notes, etc.
+              <p className="font-ninja text-sm leading-relaxed text-amber-700/70 dark:text-amber-200/40">
+                Nothing pinned yet.
               </p>
             )}
           </div>
