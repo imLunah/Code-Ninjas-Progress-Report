@@ -123,11 +123,11 @@ export default function PinnedNote({ studentId, initialNote, onUpdated, parentNo
         )}
 
         {parentNote && parentNote.trim() && (
-          <div className="mt-3 pt-3 border-t border-amber-200/70">
-            <h4 className="font-ninja font-bold text-[11px] uppercase tracking-wide text-amber-700/80 mb-1">
+          <div className="mt-3 pt-3 border-t border-ninja-border">
+            <h4 className="font-ninja font-bold text-[11px] uppercase tracking-wide text-ninja-muted mb-1">
               Note from parent
             </h4>
-            <div className="font-ninja text-sm leading-relaxed text-ninja-blue">
+            <div className="font-ninja text-sm leading-relaxed text-ninja-navy">
               <ReactMarkdown
                 components={MARKDOWN_COMPONENTS}
                 urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
