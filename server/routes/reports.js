@@ -7,7 +7,14 @@ router.get('/overview', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
   const locationId = req.session.activeLocationId;
   try {
-    const [enrollment, belts, inactive, beltLog] = await Promise.all([
+    const [totalStudents, enrollment, belts, inactive, beltLog] = await Promise.all([
+      // Distinct active students at this location (not double-counted across programs)
+      pool.query(`
+        SELECT COUNT(*)::int AS count
+        FROM students s
+        WHERE s.location_id = $1 AND s.active = true
+      `, [locationId]),
+
       // Students per program
       pool.query(`
         SELECT sp.program, COUNT(DISTINCT sp.student_id)::int AS count
@@ -57,6 +64,7 @@ router.get('/overview', requireSensei, async (req, res) => {
     ]);
 
     res.json({
+      totalStudents: totalStudents.rows[0].count,
       enrollment: enrollment.rows,
       belts: belts.rows,
       inactive: inactive.rows,

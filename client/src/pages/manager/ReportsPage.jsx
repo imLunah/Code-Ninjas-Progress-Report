@@ -150,7 +150,7 @@ export default function ReportsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const totalStudents = data?.enrollment.reduce((s, r) => s + r.count, 0) ?? 0;
+  const totalStudents = data?.totalStudents ?? data?.enrollment.reduce((s, r) => s + r.count, 0) ?? 0;
 
   return (
     <Layout>
