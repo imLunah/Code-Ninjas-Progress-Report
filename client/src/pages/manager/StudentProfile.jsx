@@ -10,8 +10,7 @@ import BeltIcon from '../../components/ui/BeltIcon';
 import ProgramBadge from '../../components/ui/ProgramBadge';
 import Button from '../../components/ui/Button';
 import ProgressHistory from '../../components/shared/ProgressHistory';
-import ReactMarkdown from 'react-markdown';
-import PinnedNote, { MARKDOWN_COMPONENTS } from '../../components/shared/PinnedNote';
+import PinnedNote from '../../components/shared/PinnedNote';
 import EditStudentModal from '../../components/manager/EditStudentModal';
 import EnrollmentEditModal from '../../components/manager/EnrollmentEditModal';
 import { api } from '../../api/client';
@@ -683,29 +682,15 @@ export default function StudentProfile() {
             </div>
           </motion.div>
 
-          {/* Pinned Note — first so senseis can't miss it */}
+          {/* Pinned Note — first so senseis can't miss it. Parent note folded in. */}
           <motion.div variants={fadeUp}>
             <PinnedNote
               studentId={student.id}
               initialNote={student.pinned_note}
+              parentNote={student.special_instructions}
               onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
             />
           </motion.div>
-
-          {/* Special Instructions */}
-          {student.special_instructions && (
-            <motion.div variants={fadeUp} className="rounded-2xl border border-ninja-border bg-ninja-bg p-4">
-              <h2 className="font-ninja font-bold text-sm uppercase tracking-wide text-ninja-muted mb-2">Note From Parent</h2>
-              <div className="font-ninja text-sm leading-relaxed text-ninja-blue">
-                <ReactMarkdown
-                  components={MARKDOWN_COMPONENTS}
-                  urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
-                >
-                  {student.special_instructions}
-                </ReactMarkdown>
-              </div>
-            </motion.div>
-          )}
 
           {/* Belt Journey (CREATE) */}
           {createEnrollment?.belt_level && (
@@ -816,6 +801,7 @@ export default function StudentProfile() {
                 <PinnedNote
                   studentId={student.id}
                   initialNote={student.pinned_note}
+                  parentNote={student.special_instructions}
                   onUpdated={(note) => setStudent((prev) => ({ ...prev, pinned_note: note }))}
                 />
               </motion.div>
@@ -982,21 +968,6 @@ export default function StudentProfile() {
                   </div>
                 )}
               </div>
-
-              {/* Special instructions */}
-              {student.special_instructions && (
-                <div className="rounded-2xl border border-ninja-border bg-ninja-bg p-4">
-                  <h3 className="font-ninja font-bold text-sm uppercase tracking-wide text-ninja-muted mb-2">Note From Parent</h3>
-                  <div className="font-ninja text-sm leading-relaxed text-ninja-blue">
-                <ReactMarkdown
-                  components={MARKDOWN_COMPONENTS}
-                  urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
-                >
-                  {student.special_instructions}
-                </ReactMarkdown>
-              </div>
-                </div>
-              )}
 
               {/* Archive / Delete */}
               {isManager && !isReadOnly && (

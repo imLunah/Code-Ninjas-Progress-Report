@@ -34,7 +34,7 @@ export const MARKDOWN_COMPONENTS = {
   h3: ({ children }) => <p className="font-bold mb-2">{children}</p>,
 };
 
-export default function PinnedNote({ studentId, initialNote, onUpdated }) {
+export default function PinnedNote({ studentId, initialNote, onUpdated, parentNote }) {
   const { isReadOnly } = useAuth();
   const [editing, setEditing] = useState(false);
   const [note, setNote] = useState(initialNote || '');
@@ -120,6 +120,22 @@ export default function PinnedNote({ studentId, initialNote, onUpdated }) {
           <p className="font-ninja text-sm leading-relaxed text-amber-700/70 dark:text-amber-200/40">
             Nothing pinned yet.
           </p>
+        )}
+
+        {parentNote && parentNote.trim() && (
+          <div className="mt-3 pt-3 border-t border-amber-200/70">
+            <h4 className="font-ninja font-bold text-[11px] uppercase tracking-wide text-amber-700/80 mb-1">
+              Note from parent
+            </h4>
+            <div className="font-ninja text-sm leading-relaxed text-ninja-blue">
+              <ReactMarkdown
+                components={MARKDOWN_COMPONENTS}
+                urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
+              >
+                {parentNote}
+              </ReactMarkdown>
+            </div>
+          </div>
         )}
       </div>
     </div>
