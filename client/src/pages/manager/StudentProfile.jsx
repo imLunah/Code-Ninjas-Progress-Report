@@ -43,12 +43,16 @@ function getInitials(name) {
 
 // ── Mobile: Belt Journey card ─────────────────────────────────────────────────
 function MobileBeltJourney({ enrollment }) {
-  const { belt_level, belt_sublevel, current_project } = enrollment;
+  const { belt_level, belt_sublevel, current_project, project_status } = enrollment;
   const belt = getBelt(belt_level);
   const maxLevel = getMaxLevel(belt_level);
   const _levels = getLevels(belt_level);
   const _pos = belt_sublevel != null ? _levels.indexOf(parseInt(belt_sublevel)) : -1;
-  const progress = _levels.length && _pos >= 0 ? Math.round(((_pos + 1) / _levels.length) * 100) : null;
+  // "% to next belt" = sublevels actually completed. The current sublevel only
+  // counts once its project is Completed — otherwise the top sublevel would read
+  // 100% while still Working On (see Joel Shelton, White #4 of 4 Working On).
+  const _done = _pos >= 0 ? _pos + (project_status === 'Completed' ? 1 : 0) : -1;
+  const progress = _levels.length && _pos >= 0 ? Math.round((_done / _levels.length) * 100) : null;
   const beltIdx = BELTS.findIndex(b => b.name === belt_level);
   const currentIconRef = React.useRef(null);
   const scrollRef = React.useRef(null);
@@ -284,7 +288,9 @@ function DesktopBeltJourney({ enrollment }) {
   const maxLevel = getMaxLevel(belt_level);
   const _levels = getLevels(belt_level);
   const _pos = belt_sublevel != null ? _levels.indexOf(parseInt(belt_sublevel)) : -1;
-  const progress = _levels.length && _pos >= 0 ? Math.round(((_pos + 1) / _levels.length) * 100) : null;
+  // Completed sublevels — current one counts only when its project is Completed.
+  const _done = _pos >= 0 ? _pos + (project_status === 'Completed' ? 1 : 0) : -1;
+  const progress = _levels.length && _pos >= 0 ? Math.round((_done / _levels.length) * 100) : null;
   const beltIdx = BELTS.findIndex((b) => b.name === belt_level);
 
   return (
