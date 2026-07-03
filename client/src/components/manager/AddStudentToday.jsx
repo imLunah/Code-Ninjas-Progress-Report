@@ -126,7 +126,7 @@ export default function AddStudentToday({ isOpen, onClose, onAdded, existingEntr
                 {/* Generic check-in — no class picked; the sensei chooses at log time */}
                 <div className="flex items-center justify-between gap-2 pt-2 border-t border-ninja-border">
                   <span className="text-ninja-muted font-ninja text-sm">
-                    Not sure which class?
+                    Add without class
                   </span>
                   <Button
                     variant={isGenericAdded(student.id) ? 'secondary' : 'primary'}
@@ -136,7 +136,7 @@ export default function AddStudentToday({ isOpen, onClose, onAdded, existingEntr
                   >
                     {adding === `${student.id}:null`
                       ? '...'
-                      : isGenericAdded(student.id) ? 'Add Again' : 'Check in'}
+                      : isGenericAdded(student.id) ? 'Add Again' : 'Add'}
                   </Button>
                 </div>
               </div>
