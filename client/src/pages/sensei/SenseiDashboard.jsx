@@ -49,7 +49,7 @@ export default function SenseiDashboard() {
     return () => controller.abort();
   }, [todayStr, user?.activeLocation?.id, refreshKey]);
 
-  const programs = [...new Set(assignments.map((a) => a.program))];
+  const programs = [...new Set(assignments.map((a) => a.program))].filter(Boolean);
   const filteredAssignments = programFilter
     ? assignments.filter((a) => a.program === programFilter)
     : assignments;
@@ -162,6 +162,12 @@ export default function SenseiDashboard() {
                 student={group}
                 onClick={() => navigate(`/manager/students/${group.student_id}`)}
                 onLogProgress={() => {
+                  // Generic (no-class) check-in — let the sensei pick any enrolled
+                  // class on the log page (don't pass a programs filter).
+                  if (group.assignments.some((a) => !a.program)) {
+                    navigate(`/sensei/student/${group.student_id}`);
+                    return;
+                  }
                   // Build per-program info from pending assignments (sorted ASC by server)
                   const programInfo = {};
                   group.assignments.forEach(a => {

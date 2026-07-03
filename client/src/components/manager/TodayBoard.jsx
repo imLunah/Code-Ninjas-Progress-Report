@@ -181,6 +181,11 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
   }
 
   const buildLogUrl = (group) => {
+    // A generic (no-class) check-in has no program — let the sensei pick any
+    // enrolled class on the log page (no programs filter passed).
+    if (group.assignments.some((a) => !a.program)) {
+      return `/sensei/student/${group.student_id}`;
+    }
     const programInfo = {};
     group.assignments.forEach((a) => {
       const d = a.session_date ? String(a.session_date).split('T')[0] : null;
@@ -295,7 +300,12 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  {uniquePrograms.map((p) => <ProgramBadge key={p} program={p} size="sm" />)}
+                  {uniquePrograms.filter(Boolean).map((p) => <ProgramBadge key={p} program={p} size="sm" />)}
+                {uniquePrograms.some((p) => !p) && (
+                  <span className="inline-flex items-center text-sm font-ninja font-bold px-2.5 py-1 rounded-md bg-ninja-border/20 text-ninja-muted border border-ninja-border">
+                    Class TBD
+                  </span>
+                )}
                 </div>
                 {group.assignments[0].sensei_name && (
                   <p className="text-ninja-muted font-ninja text-xs mt-1">
@@ -384,7 +394,12 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {uniquePrograms.map((p) => <ProgramBadge key={p} program={p} size="sm" />)}
+                {uniquePrograms.filter(Boolean).map((p) => <ProgramBadge key={p} program={p} size="sm" />)}
+                {uniquePrograms.some((p) => !p) && (
+                  <span className="inline-flex items-center text-sm font-ninja font-bold px-2.5 py-1 rounded-md bg-ninja-border/20 text-ninja-muted border border-ninja-border">
+                    Class TBD
+                  </span>
+                )}
               </div>
               {allDone ? (
                 <p className="text-green-600 font-ninja font-semibold text-xs">Logged ✓</p>

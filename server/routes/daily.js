@@ -76,8 +76,10 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { student_id, program, session_date } = req.body;
 
-  if (!student_id || !program) {
-    return res.status(400).json({ error: 'student_id and program are required' });
+  // program is OPTIONAL — omitting it is a "generic" check-in (no class chosen yet).
+  // The sensei picks the actual class at log time. Only student_id is required.
+  if (!student_id) {
+    return res.status(400).json({ error: 'student_id is required' });
   }
 
   // session_date (when provided) must be a real calendar date — not the future,
@@ -92,34 +94,49 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   const date = session_date || todayDate();
 
   try {
-    const { rows: enrollmentRows } = await pool.query(
-      `SELECT sp.id FROM student_programs sp
-       JOIN students s ON sp.student_id = s.id
-       WHERE sp.student_id = $1 AND sp.program = $2 AND s.active = true AND s.location_id = $3`,
-      [student_id, program, req.session.activeLocationId]
+    // Validate the ninja exists, is active, and belongs to this location (both paths).
+    const { rows: studentRows } = await pool.query(
+      `SELECT s.id FROM students s WHERE s.id = $1 AND s.active = true AND s.location_id = $2`,
+      [student_id, req.session.activeLocationId]
     );
-    if (!enrollmentRows[0]) return res.status(404).json({ error: 'Ninja not enrolled in this program' });
-
-    // If the ninja already has an OVERDUE (past-date) unlogged session for this
-    // program, reuse it and move it to today instead of stacking a duplicate —
-    // checking them in shouldn't pile an extra session onto the overdue. A same-
-    // day incomplete is left alone so a second check-in today creates a second
-    // loggable session.
-    const { rows: existing } = await pool.query(
-      `SELECT id FROM daily_assignments
-       WHERE student_id = $1 AND program = $2 AND completed = false AND session_date < $3
-       ORDER BY session_date ASC LIMIT 1`,
-      [student_id, program, date]
-    );
+    if (!studentRows[0]) return res.status(404).json({ error: 'Ninja not found at this location' });
 
     let assignmentId;
-    if (existing[0]) {
-      await pool.query('UPDATE daily_assignments SET session_date = $1 WHERE id = $2', [date, existing[0].id]);
-      assignmentId = existing[0].id;
-    } else {
-      const { rows: inserted } = await pool.query(
-        'INSERT INTO daily_assignments (student_id, program, session_date) VALUES ($1, $2, $3) RETURNING id',
+    if (program) {
+      const { rows: enrollmentRows } = await pool.query(
+        `SELECT sp.id FROM student_programs sp WHERE sp.student_id = $1 AND sp.program = $2`,
+        [student_id, program]
+      );
+      if (!enrollmentRows[0]) return res.status(404).json({ error: 'Ninja not enrolled in this program' });
+
+      // If the ninja already has an OVERDUE (past-date) unlogged session for this
+      // program, reuse it and move it to today instead of stacking a duplicate —
+      // checking them in shouldn't pile an extra session onto the overdue. A same-
+      // day incomplete is left alone so a second check-in today creates a second
+      // loggable session.
+      const { rows: existing } = await pool.query(
+        `SELECT id FROM daily_assignments
+         WHERE student_id = $1 AND program = $2 AND completed = false AND session_date < $3
+         ORDER BY session_date ASC LIMIT 1`,
         [student_id, program, date]
+      );
+
+      if (existing[0]) {
+        await pool.query('UPDATE daily_assignments SET session_date = $1 WHERE id = $2', [date, existing[0].id]);
+        assignmentId = existing[0].id;
+      } else {
+        const { rows: inserted } = await pool.query(
+          'INSERT INTO daily_assignments (student_id, program, session_date) VALUES ($1, $2, $3) RETURNING id',
+          [student_id, program, date]
+        );
+        assignmentId = inserted[0].id;
+      }
+    } else {
+      // Generic check-in — no class chosen. Sensei picks the class when logging,
+      // which claims this row (sets its program) via the progress route.
+      const { rows: inserted } = await pool.query(
+        'INSERT INTO daily_assignments (student_id, program, session_date) VALUES ($1, NULL, $2) RETURNING id',
+        [student_id, date]
       );
       assignmentId = inserted[0].id;
     }

@@ -45,6 +45,10 @@ export default function AddStudentToday({ isOpen, onClose, onAdded, existingEntr
   const isEntryAdded = (studentId, program) =>
     existingEntries.some((e) => e.student_id === studentId && e.program === program);
 
+  // A generic (no-class) check-in is stored with a null program.
+  const isGenericAdded = (studentId) =>
+    existingEntries.some((e) => e.student_id === studentId && !e.program);
+
   const handleAdd = async (student, program) => {
     const key = `${student.id}:${program}`;
     setAdding(key);
@@ -118,6 +122,23 @@ export default function AddStudentToday({ isOpen, onClose, onAdded, existingEntr
                     </div>
                   );
                 })}
+
+                {/* Generic check-in — no class picked; the sensei chooses at log time */}
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-ninja-border">
+                  <span className="text-ninja-muted font-ninja text-sm">
+                    Not sure which class?
+                  </span>
+                  <Button
+                    variant={isGenericAdded(student.id) ? 'secondary' : 'primary'}
+                    size="sm"
+                    disabled={adding === `${student.id}:null`}
+                    onClick={() => handleAdd(student, null)}
+                  >
+                    {adding === `${student.id}:null`
+                      ? '...'
+                      : isGenericAdded(student.id) ? 'Add Again' : 'Check in'}
+                  </Button>
+                </div>
               </div>
             );
           })}

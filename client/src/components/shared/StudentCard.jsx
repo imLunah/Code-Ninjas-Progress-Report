@@ -56,9 +56,14 @@ export default function StudentCard({ student, onClick, onLogProgress }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 mt-1">
-            {[...new Set(assignments.map(a => a.program))].map((program) => (
+            {[...new Set(assignments.map(a => a.program))].filter(Boolean).map((program) => (
               <ProgramBadge key={program} program={program} size="sm" />
             ))}
+            {assignments.some((a) => !a.program) && (
+              <span className="inline-flex items-center text-sm font-ninja font-bold px-2.5 py-1 rounded-md bg-ninja-border/20 text-ninja-muted border border-ninja-border">
+                Class TBD
+              </span>
+            )}
           </div>
 
           {someCompleted && (

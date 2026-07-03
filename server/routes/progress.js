@@ -71,10 +71,13 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     if (subError) return res.status(400).json({ error: subError });
 
     // Prefer today's pending assignment so logging clears the kid from the board.
+    // A generic check-in (program IS NULL) is also eligible — the sensei picking a
+    // class here claims it. Exact program matches win over a generic row.
     const { rows: assignmentRows } = await pool.query(
       `SELECT id, session_date FROM daily_assignments
-       WHERE student_id = $1 AND program = $2 AND completed = false
-       ORDER BY (session_date = $3::date) DESC, session_date ASC, created_at ASC LIMIT 1`,
+       WHERE student_id = $1 AND completed = false AND (program = $2 OR program IS NULL)
+       ORDER BY (CASE WHEN program = $2 THEN 0 ELSE 1 END),
+                (session_date = $3::date) DESC, session_date ASC, created_at ASC LIMIT 1`,
       [student_id, program, pacificToday]
     );
     const date = assignmentRows[0]
@@ -175,9 +178,11 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     // If the ninja was never checked in (no assignment), create one already-completed so the
     // logged session still lands on Today's Board under "Logged" instead of vanishing.
     if (assignmentId) {
+      // Also stamp the program — this claims a generic (null-program) check-in for
+      // the class the sensei chose; harmless when the row already had this program.
       await client.query(
-        'UPDATE daily_assignments SET completed = true WHERE id = $1',
-        [assignmentId]
+        'UPDATE daily_assignments SET completed = true, program = $2 WHERE id = $1',
+        [assignmentId, program]
       );
     } else {
       await client.query(

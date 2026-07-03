@@ -25,7 +25,7 @@ export default function ManagerDashboard() {
 
   const todayStr = today();
 
-  const programs = [...new Set(assignments.map((a) => a.program))];
+  const programs = [...new Set(assignments.map((a) => a.program))].filter(Boolean);
   const visibleAssignments = programFilter
     ? assignments.filter((a) => a.program === programFilter)
     : assignments;
