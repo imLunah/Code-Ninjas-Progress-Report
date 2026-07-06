@@ -135,9 +135,6 @@ export default function Sidebar({ onOpenBug }) {
                   : 'text-ninja-navy hover:bg-ninja-bg'
               }`}
             >
-              {isActive && (
-                <span className="absolute left-0 inset-y-2 w-0.5 bg-ninja-blue rounded-r-full" />
-              )}
               <NavIcon id={link.icon} svg={link.svg} />
               <span>{link.label}</span>
             </Link>
