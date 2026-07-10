@@ -392,9 +392,14 @@ router.patch('/:id/sticker', requireSensei, requireOwnLocation, async (req, res)
 
   try {
     if (codeorg_sticker != null) {
+      // Scope to the active location so the response can't be used to probe
+      // enrollment of students at other centers (400 vs 404 oracle)
       const { rows: enrolled } = await pool.query(
-        `SELECT 1 FROM student_programs WHERE student_id = $1 AND program = 'JR'`,
-        [id]
+        `SELECT 1 FROM student_programs sp
+           JOIN students s ON s.id = sp.student_id
+          WHERE sp.student_id = $1 AND sp.program = 'JR'
+            AND s.location_id = $2 AND s.active = true`,
+        [id, req.session.activeLocationId]
       );
       if (!enrolled[0]) {
         return res.status(400).json({ error: 'Stickers are only for ninjas enrolled in JR' });
