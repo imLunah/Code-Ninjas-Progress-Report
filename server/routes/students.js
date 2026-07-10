@@ -3,6 +3,14 @@ const router = express.Router();
 const { requireAuth, requireManager, requireSensei, requireOwnLocation } = require('../middleware/auth');
 const { ALL_BELTS, isValidBelt, validateSublevel } = require('../lib/belts');
 
+// Code.AI (Code.org) login sticker set — must match the students.codeorg_sticker
+// DB CHECK list and CODEORG_STICKERS in client/src/utils/stickers.js.
+const CODEORG_STICKERS = [
+  'alien', 'bat', 'bird', 'cat', 'dinosaur', 'dog', 'dragon', 'ghost', 'knight',
+  'monster', 'ninja', 'ninja2', 'octopus', 'penguin', 'pirate', 'princess',
+  'robot', 'spacebot', 'squirrel', 'unicorn', 'witch', 'wizard', 'zombie',
+];
+
 const PROGRAMS_SUBQUERY = `
   COALESCE(
     (SELECT json_agg(
@@ -369,6 +377,38 @@ router.patch('/:id/note', requireSensei, requireOwnLocation, async (req, res) =>
   } catch (err) {
     console.error('Error updating pinned note:', err);
     res.status(500).json({ error: 'Failed to update note' });
+  }
+});
+
+// PATCH /api/students/:id/sticker — assign a Code.AI login sticker (JR only)
+router.patch('/:id/sticker', requireSensei, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+  const { codeorg_sticker } = req.body;
+
+  if (codeorg_sticker != null && !CODEORG_STICKERS.includes(codeorg_sticker)) {
+    return res.status(400).json({ error: 'Invalid sticker' });
+  }
+
+  try {
+    if (codeorg_sticker != null) {
+      const { rows: enrolled } = await pool.query(
+        `SELECT 1 FROM student_programs WHERE student_id = $1 AND program = 'JR'`,
+        [id]
+      );
+      if (!enrolled[0]) {
+        return res.status(400).json({ error: 'Stickers are only for ninjas enrolled in JR' });
+      }
+    }
+    const { rows } = await pool.query(
+      'UPDATE students SET codeorg_sticker = $1 WHERE id = $2 AND active = true AND location_id = $3 RETURNING codeorg_sticker',
+      [codeorg_sticker || null, id, req.session.activeLocationId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Student not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Error updating sticker:', err);
+    res.status(500).json({ error: 'Failed to update sticker' });
   }
 });
 

@@ -13,6 +13,8 @@ import ProgressHistory from '../../components/shared/ProgressHistory';
 import PinnedNote from '../../components/shared/PinnedNote';
 import EditStudentModal from '../../components/manager/EditStudentModal';
 import EnrollmentEditModal from '../../components/manager/EnrollmentEditModal';
+import StickerPickerModal from '../../components/shared/StickerPickerModal';
+import { stickerUrl, stickerLabel } from '../../utils/stickers';
 import { api } from '../../api/client';
 import { PROGRAMS as STATIC_PROGRAMS, BELTS, PROJECTS, STATUSES, getMaxLevel, getLevels, getBelt, PROGRAM_LOGOS } from '../../utils/beltConfig';
 import { useCurriculum } from '../../context/CurriculumContext';
@@ -39,6 +41,46 @@ function getAvatarColor(name) {
 function getInitials(name) {
   const parts = name.trim().split(/\s+/);
   return parts.length === 1 ? parts[0].slice(0, 2).toUpperCase() : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// Avatar circle — shows the ninja's Code.AI sticker when one is assigned,
+// otherwise colored initials. Tappable (with a + badge when empty) for
+// JR-enrolled ninjas so staff can assign the sticker.
+function StudentAvatar({ student, size = 'md', canEditSticker, onEditSticker, delay = 0.15 }) {
+  const sticker = stickerUrl(student.codeorg_sticker);
+  const circle = (
+    <motion.div
+      className={`rounded-full flex items-center justify-center text-white font-ninja font-bold flex-shrink-0 overflow-hidden ${size === 'lg' ? 'w-16 h-16 text-xl' : 'w-14 h-14 text-lg'}`}
+      style={sticker
+        ? { backgroundColor: '#fff', border: '1px solid #e2e8f0' }
+        : { backgroundColor: getAvatarColor(student.full_name) }}
+      initial={{ scale: 0.5, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: 'spring', damping: 14, stiffness: 260, delay }}
+    >
+      {sticker
+        ? <img src={sticker} alt={`${stickerLabel(student.codeorg_sticker)} sticker`} className="w-full h-full object-contain p-1" />
+        : getInitials(student.full_name)}
+    </motion.div>
+  );
+
+  if (!canEditSticker) return circle;
+  return (
+    <button
+      type="button"
+      onClick={onEditSticker}
+      className="relative flex-shrink-0"
+      title="Code.AI sticker"
+      aria-label="Set Code.AI sticker"
+    >
+      {circle}
+      {!sticker && (
+        <span className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-ninja-blue text-white flex items-center justify-center text-xs font-bold leading-none border-2 border-white">
+          +
+        </span>
+      )}
+    </button>
+  );
 }
 
 // ── Mobile: Belt Journey card ─────────────────────────────────────────────────
@@ -527,6 +569,7 @@ export default function StudentProfile() {
   const [editingEnrollment, setEditingEnrollment] = useState(null);
   const [showAddProgram, setShowAddProgram] = useState(false);
   const [roadmapEnrollment, setRoadmapEnrollment] = useState(null);
+  const [showStickerPicker, setShowStickerPicker] = useState(false);
 
   const isSenseiView = user?.role === 'admin' && viewAs === 'sensei';
   const isManager = ['manager', 'admin'].includes(user?.role) && !isSenseiView;
@@ -612,6 +655,8 @@ export default function StudentProfile() {
   const programs = student.programs || [];
   const createEnrollment = programs.find((p) => p.program === 'CREATE');
   const nonCreatePrograms = programs.filter((p) => p.program !== 'CREATE');
+  // Code.AI stickers only apply to JR ninjas (JR curriculum runs on Code.AI)
+  const canEditSticker = !isReadOnly && programs.some((p) => p.program === 'JR');
   const logs = student.progress_logs || [];
   const clubSessions = student.club_sessions || [];
   // Club attendance counts as activity sessions alongside progress logs (chart + stats only,
@@ -656,15 +701,11 @@ export default function StudentProfile() {
           {/* Compact header */}
           <motion.div variants={fadeUp} className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
             <div className="flex items-center gap-3">
-              <motion.div
-                className="w-14 h-14 rounded-full flex items-center justify-center text-white font-ninja font-bold text-lg flex-shrink-0"
-                style={{ backgroundColor: getAvatarColor(student.full_name) }}
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', damping: 14, stiffness: 260, delay: 0.15 }}
-              >
-                {getInitials(student.full_name)}
-              </motion.div>
+              <StudentAvatar
+                student={student}
+                canEditSticker={canEditSticker}
+                onEditSticker={() => setShowStickerPicker(true)}
+              />
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
                   <h1 className="text-xl font-bold font-ninja text-ninja-navy leading-tight">{student.full_name}{isStudentBirthday && <span className="ml-2">🎂</span>}</h1>
@@ -913,15 +954,15 @@ export default function StudentProfile() {
               {/* Student info card */}
               <div className="bg-white rounded-2xl p-5 border border-ninja-border shadow-sm">
                 <div className="flex flex-col items-center text-center mb-4">
-                  <motion.div
-                    className="w-16 h-16 rounded-full flex items-center justify-center text-white font-ninja font-bold text-xl mb-3 flex-shrink-0"
-                    style={{ backgroundColor: getAvatarColor(student.full_name) }}
-                    initial={{ scale: 0.5, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', damping: 14, stiffness: 260, delay: 0.22 }}
-                  >
-                    {getInitials(student.full_name)}
-                  </motion.div>
+                  <div className="mb-3">
+                    <StudentAvatar
+                      student={student}
+                      size="lg"
+                      delay={0.22}
+                      canEditSticker={canEditSticker}
+                      onEditSticker={() => setShowStickerPicker(true)}
+                    />
+                  </div>
                   <h2 className="font-ninja font-bold text-ninja-navy text-lg leading-tight">{student.full_name}</h2>
                   <p className="text-ninja-muted font-ninja text-sm mt-0.5">
                     {student.birthday
@@ -1029,6 +1070,12 @@ export default function StudentProfile() {
       </div>
 
       <EditStudentModal isOpen={showEdit} onClose={() => setShowEdit(false)} student={student} onSaved={handleSaved} />
+      <StickerPickerModal
+        isOpen={showStickerPicker}
+        onClose={() => setShowStickerPicker(false)}
+        student={student}
+        onSaved={(sticker) => setStudent((prev) => ({ ...prev, codeorg_sticker: sticker }))}
+      />
       <EnrollmentEditModal isOpen={!!editingEnrollment} onClose={() => setEditingEnrollment(null)} studentId={student.id} enrollment={editingEnrollment} onSaved={handleEnrollmentSaved} />
       <RoadmapModal
         open={!!roadmapEnrollment}
