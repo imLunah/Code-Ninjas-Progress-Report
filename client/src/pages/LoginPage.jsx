@@ -153,11 +153,14 @@ export default function LoginPage() {
               >
                 {/* Username */}
                 <div>
-                  <label className="block text-ninja-navy font-ninja font-bold text-xs uppercase tracking-widest mb-2">
+                  <label htmlFor="login-username" className="block text-ninja-navy font-ninja font-bold text-xs uppercase tracking-widest mb-2">
                     Username
                   </label>
                   <input
+                    id="login-username"
+                    name="username"
                     type="text"
+                    autoComplete="username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="e.g. sensei_alex"
@@ -169,12 +172,15 @@ export default function LoginPage() {
 
                 {/* Password */}
                 <div>
-                  <label className="block text-ninja-navy font-ninja font-bold text-xs uppercase tracking-widest mb-2">
+                  <label htmlFor="login-password" className="block text-ninja-navy font-ninja font-bold text-xs uppercase tracking-widest mb-2">
                     Password
                   </label>
                   <div className="relative">
                     <input
+                      id="login-password"
+                      name="password"
                       type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••"
@@ -195,6 +201,8 @@ export default function LoginPage() {
                 <label className="flex items-center gap-3 cursor-pointer group">
                   <div className="relative flex-shrink-0">
                     <input
+                      id="keep-signed-in"
+                      name="keepSignedIn"
                       type="checkbox"
                       checked={keepSignedIn}
                       onChange={(e) => setKeepSignedIn(e.target.checked)}
@@ -235,11 +243,14 @@ export default function LoginPage() {
                 exit={{    opacity: 0, y: -8 }}
                 transition={{ duration: 0.22, ease: 'easeOut' }}
               >
-                <label className="block text-ninja-navy font-ninja font-bold text-xs uppercase tracking-widest mb-2">
+                <label htmlFor="parent-email" className="block text-ninja-navy font-ninja font-bold text-xs uppercase tracking-widest mb-2">
                   Email Address
                 </label>
                 <input
+                  id="parent-email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   value={parentEmail}
                   onChange={(e) => setParentEmail(e.target.value)}
                   placeholder="you@email.com"
