@@ -10,6 +10,7 @@ import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
 import { PROGRAMS, getBelt } from '../../utils/beltConfig';
 import { formatDate } from '../../utils/dateUtils';
+import { stickerUrl } from '../../utils/stickers';
 import { useAuth } from '../../context/AuthContext';
 
 
@@ -36,6 +37,23 @@ function getInitials(name) {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// Roster avatar — Code.AI sticker when assigned, colored initials otherwise
+function RosterAvatar({ student, className }) {
+  const sticker = stickerUrl(student.codeorg_sticker);
+  return (
+    <div
+      className={`rounded-full flex items-center justify-center flex-shrink-0 text-white font-ninja font-bold overflow-hidden ${className}`}
+      style={sticker
+        ? { backgroundColor: '#fff', border: '1px solid #e2e8f0' }
+        : { backgroundColor: getAvatarColor(student.full_name) }}
+    >
+      {sticker
+        ? <img src={sticker} alt="" className="w-full h-full object-contain p-0.5" />
+        : getInitials(student.full_name)}
+    </div>
+  );
 }
 
 const FILTER_CHIPS = [
@@ -455,12 +473,7 @@ export default function StudentRoster() {
                     className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-ninja-bg transition-colors"
                     onClick={() => handleRowClick(s)}
                   >
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-white font-ninja font-bold text-sm"
-                      style={{ backgroundColor: getAvatarColor(s.full_name) }}
-                    >
-                      {getInitials(s.full_name)}
-                    </div>
+                    <RosterAvatar student={s} className="w-10 h-10 text-sm" />
                     <div className="flex-1 min-w-0">
                       <p className="font-ninja font-bold text-ninja-navy truncate">{s.full_name}</p>
                       <div className="flex flex-wrap items-center gap-1 mt-0.5">
@@ -621,12 +634,7 @@ export default function StudentRoster() {
 
                       {/* Name + avatar */}
                       <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white font-ninja font-bold text-xs"
-                          style={{ backgroundColor: getAvatarColor(s.full_name) }}
-                        >
-                          {getInitials(s.full_name)}
-                        </div>
+                        <RosterAvatar student={s} className="w-8 h-8 text-xs" />
                         <span className="font-ninja font-bold text-ninja-navy text-sm truncate">{s.full_name}</span>
                       </div>
 
