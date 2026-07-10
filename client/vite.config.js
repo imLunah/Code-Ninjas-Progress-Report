@@ -3,6 +3,14 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      // Full lottie-web uses eval() (expressions support), which our CSP
+      // script-src correctly blocks. The light player is eval-free; our
+      // animations don't use expressions. Do NOT add 'unsafe-eval' to CSP.
+      'lottie-web': 'lottie-web/build/player/lottie_light',
+    },
+  },
   // es2020 everywhere for the same reason as build.target below — the dev
   // server and dep prebundle pass their own targets to esbuild.
   esbuild: { target: 'es2020' },
