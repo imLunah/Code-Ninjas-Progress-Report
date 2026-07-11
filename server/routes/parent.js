@@ -84,7 +84,7 @@ router.get('/students', requireParent, async (req, res) => {
     const { rows } = await pool.query(`
       SELECT s.id, s.full_name, s.birthday, s.created_at,
         ${STUDENT_PROGRAMS_SUBQUERY},
-        (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id) AS last_activity
+        (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id AND pl.notes IS DISTINCT FROM 'Marked complete from roadmap') AS last_activity
       FROM students s
       WHERE LOWER(s.parent_email) = LOWER($1) AND s.active = true
       ORDER BY s.full_name
@@ -112,7 +112,8 @@ router.get('/students/:id', requireParent, async (req, res) => {
 
     const { rows: logs } = await pool.query(`
       SELECT pl.session_date, pl.program, pl.sub_program, pl.module_name, pl.lesson_name,
-        pl.belt_level_at, pl.belt_sublevel_at, pl.project_at, pl.status_at
+        pl.belt_level_at, pl.belt_sublevel_at, pl.project_at, pl.status_at,
+        (pl.notes = 'Marked complete from roadmap') AS from_roadmap
       FROM progress_logs pl
       WHERE pl.student_id = $1
       ORDER BY pl.session_date DESC, pl.created_at DESC

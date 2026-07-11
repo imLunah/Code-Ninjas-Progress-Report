@@ -42,7 +42,7 @@ router.get('/', requireAuth, async (req, res) => {
   const showInactive = req.query.inactive === 'true' && ['manager', 'admin'].includes(req.session.role);
 
   const SORT_ORDERS = {
-    last_active: `(SELECT MAX(pl2.session_date) FROM progress_logs pl2 WHERE pl2.student_id = s.id) DESC NULLS LAST, s.full_name ASC`,
+    last_active: `(SELECT MAX(pl2.session_date) FROM progress_logs pl2 WHERE pl2.student_id = s.id AND pl2.notes IS DISTINCT FROM 'Marked complete from roadmap') DESC NULLS LAST, s.full_name ASC`,
     joined: `s.created_at DESC, s.full_name ASC`,
     name: `s.full_name ASC`,
   };
@@ -53,7 +53,7 @@ router.get('/', requireAuth, async (req, res) => {
   let query = `
     SELECT s.*,
       COUNT(*) OVER() AS total_count,
-      (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id) AS last_activity,
+      (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id AND pl.notes IS DISTINCT FROM 'Marked complete from roadmap') AS last_activity,
       ${PROGRAMS_SUBQUERY}
     FROM students s
     WHERE s.active = $2 AND s.location_id = $1

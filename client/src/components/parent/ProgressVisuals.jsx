@@ -158,6 +158,9 @@ function ProgressBar({ pct, color, delay = 0.3, label, value }) {
 // ─── Activity bar chart ───────────────────────────────────────────────────────
 
 function ActivityChart({ logs }) {
+  // Roadmap bulk-completions are stored as logs for curriculum tracking, but are NOT sessions —
+  // exclude them from the activity chart and the session count.
+  const sessions = logs.filter((l) => !l.from_roadmap);
   const months = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date();
@@ -169,7 +172,7 @@ function ActivityChart({ logs }) {
       count: 0,
     });
   }
-  logs.forEach((log) => {
+  sessions.forEach((log) => {
     const bucket = months.find((m) => m.key === toMonthKey(log.session_date));
     if (bucket) bucket.count++;
   });
@@ -181,7 +184,7 @@ function ActivityChart({ logs }) {
     <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-ninja-navy font-ninja font-bold text-lg">Activity</h2>
-        <span className="text-ninja-blue font-ninja font-bold text-sm">{logs.length} total sessions</span>
+        <span className="text-ninja-blue font-ninja font-bold text-sm">{sessions.length} total sessions</span>
       </div>
 
       <div className="flex items-end gap-2">
@@ -462,7 +465,7 @@ function KitPath({ kitOrder, kitShort, currentKitIndex, barColor }) {
 
 function ModuleProgress({ program, enrollment, logs }) {
   const { curriculum: CURRICULUM } = useCurriculum();
-  const totalSessions = logs.length;
+  const totalSessions = logs.filter((l) => !l.from_roadmap).length;
   const lastDate = enrollment?.last_session_date;
   const barColor = PROGRAM_BAR_COLORS[program] || '#006ADD';
 

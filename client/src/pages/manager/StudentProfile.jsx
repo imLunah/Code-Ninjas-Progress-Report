@@ -659,9 +659,12 @@ export default function StudentProfile() {
   const canEditSticker = !isReadOnly && programs.some((p) => p.program === 'JR');
   const logs = student.progress_logs || [];
   const clubSessions = student.club_sessions || [];
-  // Club attendance counts as activity sessions alongside progress logs (chart + stats only,
-  // not the editable Recent Progress list which holds real progress logs)
-  const activitySessions = [...logs, ...clubSessions];
+  // Roadmap bulk-completions are stored as progress_logs for curriculum tracking, but they are
+  // NOT real sessions — a session only counts when there's an actual logged session. Drop the
+  // roadmap marks before building the activity stats (and the Recent Progress list below).
+  const sessionLogs = logs.filter((l) => l.notes !== 'Marked complete from roadmap');
+  // Club attendance counts as activity sessions alongside real progress logs (chart + stats only).
+  const activitySessions = [...sessionLogs, ...clubSessions];
   const locationName = user?.availableLocations?.find(l => l.id === student.location_id)?.name;
 
   // Desktop stats
@@ -670,8 +673,7 @@ export default function StudentProfile() {
     const d = new Date(String(l.session_date).split('T')[0] + 'T00:00:00');
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
-  const sortedLogs = [...logs].sort((a, b) => new Date(b.session_date) - new Date(a.session_date));
-  const displayLogs = sortedLogs.filter(l => l.notes !== 'Marked complete from roadmap');
+  const displayLogs = [...sessionLogs].sort((a, b) => new Date(b.session_date) - new Date(a.session_date));
   const sortedSessions = [...activitySessions].sort((a, b) => new Date(b.session_date) - new Date(a.session_date));
   const lastSessionStr = sortedSessions[0]
     ? new Date(String(sortedSessions[0].session_date).split('T')[0] + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
