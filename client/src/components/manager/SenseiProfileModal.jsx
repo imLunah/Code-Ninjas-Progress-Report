@@ -40,10 +40,10 @@ function StatCard({ value, label, delay = 0 }) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.3, ease: 'easeOut' }}
-      className="flex-1 bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center"
+      className="flex-1 bg-ninja-navy/10 backdrop-blur-sm rounded-xl p-3 text-center"
     >
-      <p className="text-white font-ninja font-bold text-2xl leading-none">{value}</p>
-      <p className="text-white/70 font-ninja text-xs mt-1">{label}</p>
+      <p className="text-ninja-navy font-ninja font-bold text-2xl leading-none">{value}</p>
+      <p className="text-ninja-muted font-ninja text-xs mt-1">{label}</p>
     </motion.div>
   );
 }
@@ -106,7 +106,7 @@ export default function SenseiProfileModal({
         >
           {/* Hero header — touch here to swipe-dismiss */}
           <div
-            className="relative bg-ninja-hero px-6 pt-8 pb-6 flex-shrink-0"
+            className="relative bg-[#dbe4f2] dark:bg-ninja-hero px-6 pt-8 pb-6 flex-shrink-0"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
@@ -122,7 +122,7 @@ export default function SenseiProfileModal({
               className="absolute top-0 left-0 right-0 h-8 sm:hidden flex items-center justify-center"
               aria-label="Close"
             >
-              <span className="block w-10 h-1 rounded-full bg-white/40" />
+              <span className="block w-10 h-1 rounded-full bg-ninja-navy/30" />
             </button>
 
             <div className="flex items-end gap-4 mb-5">
@@ -139,8 +139,8 @@ export default function SenseiProfileModal({
                 transition={{ delay: 0.1, duration: 0.3 }}
                 className="pb-1"
               >
-                <p className="text-white font-ninja font-bold text-xl leading-tight">{sensei.display_name}</p>
-                <p className="text-white/60 font-ninja text-sm mt-0.5">@{sensei.username}</p>
+                <p className="text-ninja-navy font-ninja font-bold text-xl leading-tight">{sensei.display_name}</p>
+                <p className="text-ninja-muted font-ninja text-sm mt-0.5">@{sensei.username}</p>
                 <span className="inline-block mt-2 px-2.5 py-0.5 bg-ninja-blue/30 border border-ninja-blue/40 rounded-full text-ninja-blue text-[10px] font-ninja font-bold uppercase tracking-wider">
                   {sensei.role === 'manager' ? 'Center Director' : 'Sensei'}
                 </span>
@@ -149,11 +149,11 @@ export default function SenseiProfileModal({
 
             {showActions && (
               <div className="flex flex-wrap gap-2 mb-5">
-                <button className={`${heroBtn} bg-white/10 hover:bg-white/20 text-white`} onClick={() => { handleClose(); onResetLogin(); }}>
+                <button className={`${heroBtn} bg-ninja-navy/10 hover:bg-ninja-navy/20 text-ninja-navy`} onClick={() => { handleClose(); onResetLogin(); }}>
                   Reset Login
                 </button>
                 {onManageCenters && centers.length > 1 && (
-                  <button className={`${heroBtn} bg-white/10 hover:bg-white/20 text-white`} onClick={() => { handleClose(); onManageCenters(); }}>
+                  <button className={`${heroBtn} bg-ninja-navy/10 hover:bg-ninja-navy/20 text-ninja-navy`} onClick={() => { handleClose(); onManageCenters(); }}>
                     Manage Centers
                   </button>
                 )}
@@ -161,10 +161,10 @@ export default function SenseiProfileModal({
                   confirmingRemove ? (
                     <>
                       <button className={`${heroBtn} bg-ninja-red hover:opacity-90 text-white`} onClick={() => { onRemove(); handleClose(); }}>Confirm Remove</button>
-                      <button className={`${heroBtn} bg-white/10 hover:bg-white/20 text-white`} onClick={() => setConfirmingRemove(false)}>Cancel</button>
+                      <button className={`${heroBtn} bg-ninja-navy/10 hover:bg-ninja-navy/20 text-ninja-navy`} onClick={() => setConfirmingRemove(false)}>Cancel</button>
                     </>
                   ) : (
-                    <button className={`${heroBtn} bg-ninja-red/20 hover:bg-ninja-red/30 text-red-300`} onClick={() => setConfirmingRemove(true)}>Remove</button>
+                    <button className={`${heroBtn} bg-ninja-red/15 hover:bg-ninja-red/25 text-ninja-red dark:text-red-300`} onClick={() => setConfirmingRemove(true)}>Remove</button>
                   )
                 )}
               </div>

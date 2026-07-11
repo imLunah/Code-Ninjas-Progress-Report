@@ -122,15 +122,15 @@ export default function AccountPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: 'easeOut' }}
-          className="relative bg-ninja-hero rounded-2xl overflow-hidden px-6 pt-7 pb-6 shadow-lg"
+          className="relative bg-[#dbe4f2] dark:bg-ninja-hero rounded-2xl overflow-hidden px-6 pt-7 pb-6 shadow-lg"
         >
           <img src="/CodeNinjasIcon.svg" alt="" className="absolute right-4 top-4 w-20 opacity-[0.08] pointer-events-none" />
           <div className="flex items-center gap-4 relative z-10">
             <div className="relative flex-shrink-0">
               {user?.profilePicUrl ? (
-                <img src={user.profilePicUrl} alt={user.displayName} className="w-16 h-16 rounded-full object-cover border-3 border-white/30 shadow-lg" />
+                <img src={user.profilePicUrl} alt={user.displayName} className="w-16 h-16 rounded-full object-cover border-3 border-ninja-navy/15 dark:border-white/30 shadow-lg" />
               ) : (
-                <div className="w-16 h-16 rounded-full bg-ninja-blue border-2 border-white/20 flex items-center justify-center text-white font-ninja font-bold text-xl shadow-lg">
+                <div className="w-16 h-16 rounded-full bg-ninja-blue border-2 border-ninja-navy/15 dark:border-white/20 flex items-center justify-center text-white font-ninja font-bold text-xl shadow-lg">
                   {initials}
                 </div>
               )}
@@ -141,12 +141,12 @@ export default function AccountPage() {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white font-ninja font-bold text-lg leading-tight truncate">{user?.displayName}</p>
-              <p className="text-white/50 font-ninja text-xs mt-0.5 capitalize">{user?.role === 'manager' ? 'Center Director' : user?.role === 'admin' ? 'Admin' : 'Sensei'}</p>
-              <p className="text-white/40 font-ninja text-xs">@{user?.username}</p>
+              <p className="text-ninja-navy font-ninja font-bold text-lg leading-tight truncate">{user?.displayName}</p>
+              <p className="text-ninja-muted font-ninja text-xs mt-0.5 capitalize">{user?.role === 'manager' ? 'Center Director' : user?.role === 'admin' ? 'Admin' : 'Sensei'}</p>
+              <p className="text-ninja-muted/70 font-ninja text-xs">@{user?.username}</p>
             </div>
           </div>
-          {avatarError && <p className="text-red-300 font-ninja text-xs mt-2 relative z-10">{avatarError}</p>}
+          {avatarError && <p className="text-ninja-red dark:text-red-300 font-ninja text-xs mt-2 relative z-10">{avatarError}</p>}
         </motion.div>
 
         {/* Forced reset banner */}
