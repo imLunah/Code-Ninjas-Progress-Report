@@ -4,7 +4,7 @@ DojoLink is the day-to-day operations tool for three Code Ninjas centers (Yorba 
 
 It replaced a pile of Discord threads and spreadsheets. Each center's data stays in its own lane — staff at Fullerton never see Yorba Linda's roster unless they're an admin.
 
-**Live:** [dojolink-neon.vercel.app](https://dojolink-neon.vercel.app)
+**Live:** [dojolink.app](https://www.dojolink.app)
 
 ---
 
