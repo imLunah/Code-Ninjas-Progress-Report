@@ -43,6 +43,31 @@ const loginLimiter = rateLimit({
   message: { error: 'Too many login attempts. Try again in 15 minutes.' },
 });
 
+// Flood protection on all state-changing requests (POST/PATCH/PUT/DELETE).
+// Reads (dashboards poll) are never throttled. 200/15min per IP is generous
+// for a real staff burst (CSV import + belt-apply fire several writes) while
+// capping an abusive replay loop like the session-26 ZAP scan.
+const writeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => process.env.NODE_ENV === 'test' || SAFE_METHODS.has(req.method),
+  message: { error: 'Too many requests. Slow down and try again shortly.' },
+});
+app.use('/api', writeLimiter);
+
+// Strict cap on bug/feature reports — the POST sends a Gmail message, so an
+// authenticated user could otherwise flood the inbox / burn the Gmail quota.
+const bugLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test',
+  message: { error: 'Too many reports submitted. Please wait a bit before sending another.' },
+});
+
 const sessionConfig = {
   store: new pgSession({ pool, tableName: 'session' }),
   secret: SESSION_SECRET,
@@ -86,6 +111,7 @@ app.use('/api/bugs',
     if (req.session?.userId) return next();
     parentSession(req, res, next);
   }),
+  bugLimiter,
   require('./routes/bugs')
 );
 

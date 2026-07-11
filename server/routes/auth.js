@@ -32,6 +32,7 @@ const loginLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test', // integration tests log in many times from one IP
   message: { error: 'Too many login attempts. Try again in 15 minutes.' },
 });
 
