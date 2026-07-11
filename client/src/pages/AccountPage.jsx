@@ -122,7 +122,7 @@ export default function AccountPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: 'easeOut' }}
-          className="relative bg-ninja-navy rounded-2xl overflow-hidden px-6 pt-7 pb-6 shadow-lg"
+          className="relative bg-ninja-hero rounded-2xl overflow-hidden px-6 pt-7 pb-6 shadow-lg"
         >
           <img src="/CodeNinjasIcon.svg" alt="" className="absolute right-4 top-4 w-20 opacity-[0.08] pointer-events-none" />
           <div className="flex items-center gap-4 relative z-10">

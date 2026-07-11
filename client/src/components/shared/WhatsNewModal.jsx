@@ -55,7 +55,7 @@ export default function WhatsNewModal() {
       {open && (
         <motion.div
           key="whatsnew-backdrop"
-          className="fixed inset-0 z-[120] flex flex-col bg-ninja-bg lg:bg-ninja-navy/50 lg:items-center lg:justify-center lg:p-6"
+          className="fixed inset-0 z-[120] flex flex-col bg-ninja-bg lg:bg-black/50 lg:items-center lg:justify-center lg:p-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

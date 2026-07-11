@@ -12,7 +12,7 @@ export default function Modal({ isOpen, onClose, title, children, subheader, wid
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex flex-col bg-ninja-bg md:bg-ninja-navy/50 md:items-center md:justify-center md:p-6"
+      className="fixed inset-0 z-[100] flex flex-col bg-ninja-bg md:bg-black/50 md:items-center md:justify-center md:p-6"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       onTouchStart={(e) => e.stopPropagation()}
       onTouchEnd={(e) => e.stopPropagation()}

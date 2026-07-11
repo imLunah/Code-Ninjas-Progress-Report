@@ -38,6 +38,7 @@
   --ninja-blue-hover:  0 88 184;
   --ninja-navy:        26 46 74;
   --ninja-muted:       80 102 144;
+  --ninja-hero:        26 46 74;   /* fixed brand navy for hero banners — does NOT flip in dark */
 }
 
 .dark {
@@ -47,6 +48,7 @@
   --ninja-blue-hover:  28 138 255;
   --ninja-navy:        208 218 234; /* #d0daed — cool near-white */
   --ninja-muted:       138 155 184; /* #8a9bb8 — cool blue-gray, WCAG AA */
+  --ninja-hero:        26 46 74;    /* intentionally NOT flipped — hero banners stay navy in dark */
 }
 
 /* ── Theme-locked subtrees ── */

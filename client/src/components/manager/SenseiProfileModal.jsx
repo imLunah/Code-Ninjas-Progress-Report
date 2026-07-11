@@ -106,7 +106,7 @@ export default function SenseiProfileModal({
         >
           {/* Hero header — touch here to swipe-dismiss */}
           <div
-            className="relative bg-ninja-navy px-6 pt-8 pb-6 flex-shrink-0"
+            className="relative bg-ninja-hero px-6 pt-8 pb-6 flex-shrink-0"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >

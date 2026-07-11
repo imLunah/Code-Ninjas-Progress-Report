@@ -368,7 +368,7 @@ export default function UsersPage() {
             onClick={() => setShowInactive((v) => !v)}
             className={`px-3 py-1.5 rounded-lg font-ninja text-sm font-semibold border transition-colors ${
               showInactive
-                ? 'bg-ninja-navy text-white border-ninja-navy'
+                ? 'bg-ninja-hero text-white border-ninja-hero'
                 : 'bg-white text-ninja-muted border-ninja-border hover:border-ninja-navy'
             }`}
           >

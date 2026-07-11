@@ -10,6 +10,7 @@ export default {
           blue:         'rgb(var(--ninja-blue) / <alpha-value>)',
           'blue-hover': 'rgb(var(--ninja-blue-hover) / <alpha-value>)',
           navy:         'rgb(var(--ninja-navy) / <alpha-value>)',
+          hero:         'rgb(var(--ninja-hero) / <alpha-value>)',
           muted:        'rgb(var(--ninja-muted) / <alpha-value>)',
           red:          '#e51520',
         }
