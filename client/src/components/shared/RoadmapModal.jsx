@@ -3,7 +3,14 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../api/client';
 
-const PROGRAM_SUB_PROGRAMS = { JR: ['JR Coding', 'Snap Circuits'] };
+// Programs whose curriculum is split across sub-programs (kits). The roadmap query
+// requires a sub_program that matches curriculum_modules, so any program whose modules
+// all live under kits MUST be listed here or the modal sends a null sub_program and the
+// roadmap 404s ("No curriculum found"). Names must match the DB sub_program values exactly.
+const PROGRAM_SUB_PROGRAMS = {
+  JR: ['JR Coding', 'Snap Circuits'],
+  'Robotics Academy': ['LEGO Spike Essentials', 'LEGO Spike Prime', 'Ozobot Evo', 'VEX GO'],
+};
 
 export default function RoadmapModal({ open, onClose, student, enrollment, onUpdate }) {
   const [modules, setModules] = useState([]);
