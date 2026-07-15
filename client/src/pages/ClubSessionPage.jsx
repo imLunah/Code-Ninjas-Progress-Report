@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import ReactMarkdown from 'react-markdown';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 14 },
@@ -11,55 +10,14 @@ const stagger = {
   hidden: {},
   show: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
 };
-import remarkGfm from 'remark-gfm';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
-import EmojiButton from '../components/ui/EmojiButton';
 import LazyMarkdownEditor from '../components/shared/LazyMarkdownEditor';
+import MarkdownView from '../components/shared/MarkdownView';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/dateUtils';
-import { COLOR_SETS, getClubColors } from '../utils/clubUtils';
-
-const mdComponents = {
-  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-  strong: ({ children }) => <strong className="font-bold">{children}</strong>,
-  em: ({ children }) => <em className="italic">{children}</em>,
-  ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-0.5">{children}</ul>,
-  ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-0.5">{children}</ol>,
-  li: ({ children }) => <li>{children}</li>,
-  a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-ninja-blue hover:underline">{children}</a>,
-  code: ({ children }) => <code className="bg-ninja-bg px-1 rounded font-mono text-xs">{children}</code>,
-};
-
-function Comment({ comment }) {
-  return (
-    <div className="flex gap-3">
-      <div className="w-1 flex-shrink-0 bg-ninja-blue rounded-full" />
-      <div className="flex-1 min-w-0">
-        <div className="font-ninja text-sm text-ninja-navy leading-relaxed">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{comment.body}</ReactMarkdown>
-        </div>
-        <p className="text-ninja-muted font-ninja text-xs mt-1">
-          {comment.user_name} · {formatDate(comment.created_at)}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function insertAtCursor(ref, current, emoji, setter) {
-  const el = ref.current;
-  if (!el) { setter(current + emoji); return; }
-  const start = el.selectionStart;
-  const end = el.selectionEnd;
-  const next = current.slice(0, start) + emoji + current.slice(end);
-  setter(next);
-  requestAnimationFrame(() => {
-    el.selectionStart = el.selectionEnd = start + emoji.length;
-    el.focus();
-  });
-}
+import { getClubColors } from '../utils/clubUtils';
 
 export default function ClubSessionPage() {
   const { slug, id } = useParams();
@@ -75,12 +33,6 @@ export default function ClubSessionPage() {
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
-
-  // Comments
-  const [comments, setComments] = useState([]);
-  const [commentBody, setCommentBody] = useState('');
-  const [postingComment, setPostingComment] = useState(false);
-  const commentRef = useRef(null);
 
   // Attendee editing (manager only)
   const [editingAttendees, setEditingAttendees] = useState(false);
@@ -100,7 +52,6 @@ export default function ClubSessionPage() {
       if (!data) return;
       setSession(data);
       setNotesDraft(data.notes || '');
-      setComments(data.comments || []);
       setSelectedIds(new Set((data.attendees || []).map((a) => a.id)));
     }).catch((err) => {
       if (err?.status === 404) setNotFound(true);
@@ -115,20 +66,6 @@ export default function ClubSessionPage() {
       setEditingNotes(false);
     } catch { /* editing panel stays open so user can retry */ } finally {
       setSavingNotes(false);
-    }
-  };
-
-  const handlePostComment = async () => {
-    if (!commentBody.trim()) return;
-    setPostingComment(true);
-    try {
-      const c = await api.post(`/clubs/${id}/comments`, { body: commentBody.trim() });
-      setComments((prev) => [...prev, c]);
-      setCommentBody('');
-    } catch {
-      alert('Failed to post comment. Please try again.');
-    } finally {
-      setPostingComment(false);
     }
   };
 
@@ -280,57 +217,13 @@ export default function ClubSessionPage() {
               </div>
             </div>
           ) : (
-            <div className={`font-ninja text-sm leading-relaxed ${session.notes ? 'text-ninja-navy' : 'text-ninja-muted italic'}`}>
-              {session.notes ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{session.notes}</ReactMarkdown>
-              ) : 'No notes added yet.'}
-            </div>
+            session.notes ? (
+              <MarkdownView className="font-ninja text-sm leading-relaxed text-ninja-navy">{session.notes}</MarkdownView>
+            ) : (
+              <div className="font-ninja text-sm leading-relaxed text-ninja-muted italic">No notes added yet.</div>
+            )
           )}
         </motion.div>
-
-        {/* Comments — only available once session notes have been written */}
-        {!session.notes && (
-          <div className="bg-white border border-ninja-border rounded-xl p-5 shadow-sm text-center">
-            <p className="text-ninja-muted font-ninja text-sm italic">Comments will be available once session notes are added.</p>
-          </div>
-        )}
-        {session.notes && <div className="bg-white border border-ninja-border rounded-xl p-5 shadow-sm">
-          <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-4">
-            Comments {comments.length > 0 && <span className="text-ninja-muted font-normal text-base">({comments.length})</span>}
-          </h2>
-
-          {comments.length === 0 ? (
-            <p className="text-ninja-muted font-ninja text-sm italic mb-4">No comments yet.</p>
-          ) : (
-            <div className="space-y-4 mb-4">
-              {comments.map((c) => <Comment key={c.id} comment={c} />)}
-            </div>
-          )}
-
-          {!isReadOnly && (
-            <div className="space-y-2 border-t border-ninja-border pt-4">
-              <div className="relative">
-                <textarea
-                  ref={commentRef}
-                  value={commentBody}
-                  onChange={(e) => setCommentBody(e.target.value)}
-                  rows={2}
-                  placeholder="Add a comment... (supports **markdown**)"
-                  className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 pr-10 font-ninja text-sm focus:outline-none focus:border-ninja-blue resize-none"
-                />
-                <div className="absolute top-2 right-2">
-                  <EmojiButton
-                    onSelect={(emoji) => insertAtCursor(commentRef, commentBody, emoji, setCommentBody)}
-                    position="top"
-                  />
-                </div>
-              </div>
-              <Button size="sm" onClick={handlePostComment} disabled={postingComment || !commentBody.trim()}>
-                {postingComment ? 'Posting...' : 'Post Comment'}
-              </Button>
-            </div>
-          )}
-        </div>}
       </motion.div>
     </Layout>
   );
