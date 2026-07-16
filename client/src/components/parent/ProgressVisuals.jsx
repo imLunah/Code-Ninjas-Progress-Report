@@ -90,7 +90,7 @@ function ProgramCardBanner({ program, lastDate, sessions }) {
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
       >
         <p style={{
-          color: 'rgba(255,255,255,0.45)', fontSize: 10, fontWeight: 700,
+          color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 700,
           textTransform: 'uppercase', letterSpacing: '0.13em', marginBottom: 4,
           fontFamily: 'Nunito, sans-serif',
         }}>
@@ -109,7 +109,7 @@ function ProgramCardBanner({ program, lastDate, sessions }) {
           </p>
         )}
         {sessions !== undefined && (
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontFamily: 'Nunito, sans-serif' }}>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'Nunito, sans-serif' }}>
             {sessions} session{sessions !== 1 ? 's' : ''}
           </p>
         )}
@@ -325,7 +325,7 @@ function BeltJourney({ enrollment }) {
                   {i > 0 && <div style={{ width: '12px', flexShrink: 0 }} />}
                   <div style={{ width: imgSize, textAlign: 'center' }}>
                     <span style={{
-                      fontSize: '9px', fontFamily: 'Nunito, sans-serif',
+                      fontSize: '12px', fontFamily: 'Nunito, sans-serif',
                       fontWeight: isCurrent ? 700 : 400,
                       color: reached ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)',
                       whiteSpace: 'nowrap', display: 'block',
@@ -342,7 +342,7 @@ function BeltJourney({ enrollment }) {
 
       {progress !== null && (
         <div className="px-5 pb-5">
-          <div className="flex justify-between font-ninja mb-1.5" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>
+          <div className="flex justify-between font-ninja mb-1.5" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
             <span>Sublevel progress</span>
             <motion.span
               className="font-bold"
@@ -449,12 +449,12 @@ function KitPath({ kitOrder, kitShort, currentKitIndex, barColor }) {
                   animate="show"
                   transition={{ delay: i * 0.12 + 0.15 }}
                 >
-                  <span style={{ color: reached ? 'white' : '#cbd5e1', fontSize: '11px', fontWeight: 700 }}>
+                  <span style={{ color: reached ? 'white' : '#cbd5e1', fontSize: '12px', fontWeight: 700 }}>
                     {i + 1}
                   </span>
                 </motion.div>
                 <span style={{
-                  fontSize: '10px', fontFamily: 'Nunito, sans-serif',
+                  fontSize: '12px', fontFamily: 'Nunito, sans-serif',
                   fontWeight: isCurrent ? 700 : 400,
                   color: isCurrent ? barColor : reached ? '#506690' : '#cbd5e1',
                   whiteSpace: 'nowrap',

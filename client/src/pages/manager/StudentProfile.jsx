@@ -214,7 +214,7 @@ function MobileProgramCard({ enrollment, onOpenRoadmap }) {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
         >
-          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 3, fontFamily: 'Nunito, sans-serif' }}>
+          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 3, fontFamily: 'Nunito, sans-serif' }}>
             Code Ninjas
           </p>
           <h2 style={{ color: 'white', fontWeight: 800, fontSize: 18, lineHeight: 1.1, fontFamily: 'Nunito, sans-serif' }}>
