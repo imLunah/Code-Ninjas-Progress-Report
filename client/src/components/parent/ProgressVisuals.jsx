@@ -17,6 +17,13 @@ const PROGRAM_BAR_COLORS = {
   'JR':               '#7c3aed',
 };
 
+const JR_CODING_MODULES = ['Module 1','Module 2','Module 3','Module 4','Module 5','Module 6','Module 7','Module 8','Module 9','Module 10'];
+const SNAP_CIRCUITS_TOTAL = 24;
+
+const KIT_ORDER  = ['LEGO Spike Essentials', 'LEGO Spike Prime', 'VEX GO', 'Ozobot Evo'];
+const KIT_SHORT  = { 'LEGO Spike Essentials': 'Essentials', 'LEGO Spike Prime': 'Prime', 'VEX GO': 'VEX GO', 'Ozobot Evo': 'Ozobot' };
+const KIT_TOTALS = { 'LEGO Spike Essentials': 8, 'LEGO Spike Prime': 4, 'VEX GO': 4, 'Ozobot Evo': 2 };
+
 const BELT_IMAGES = {
   White:  '/belts/belt-white.png',
   Yellow: '/belts/belt-yellow.png',
@@ -97,7 +104,7 @@ function ProgramCardBanner({ program, lastDate, sessions }) {
           {program}
         </h2>
         {lastDate && (
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontFamily: 'Nunito, sans-serif' }}>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'Nunito, sans-serif' }}>
             Last: {formatDate(lastDate)}
           </p>
         )}
@@ -357,7 +364,7 @@ function BeltJourney({ enrollment }) {
             />
           </div>
           {maxLevel && sublevel && (
-            <p className="font-ninja mt-1" style={{ fontSize: '10px', color: 'rgba(255,255,255,0.55)' }}>
+            <p className="font-ninja mt-1" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.55)' }}>
               Level {sublevel} of {maxLevel}
             </p>
           )}
@@ -524,9 +531,6 @@ function ModuleProgress({ program, enrollment, logs }) {
 
   // ── JR ───────────────────────────────────────────────────────────────────────
   if (program === 'JR') {
-    const JR_CODING_MODULES = ['Module 1','Module 2','Module 3','Module 4','Module 5','Module 6','Module 7','Module 8','Module 9','Module 10'];
-    const SNAP_CIRCUITS_TOTAL = 24;
-
     const jrCodingLogs = logs.filter((l) => l.sub_program === 'JR Coding');
     const jrCodingHighestIdx = Math.max(-1, ...jrCodingLogs
       .map((l) => JR_CODING_MODULES.indexOf(l.module_name)).filter((i) => i >= 0));
@@ -626,10 +630,6 @@ function ModuleProgress({ program, enrollment, logs }) {
 
   // ── Robotics Academy ─────────────────────────────────────────────────────────
   if (program === 'Robotics Academy') {
-    const KIT_ORDER  = ['LEGO Spike Essentials', 'LEGO Spike Prime', 'VEX GO', 'Ozobot Evo'];
-    const KIT_SHORT  = { 'LEGO Spike Essentials': 'Essentials', 'LEGO Spike Prime': 'Prime', 'VEX GO': 'VEX GO', 'Ozobot Evo': 'Ozobot' };
-    const KIT_TOTALS = { 'LEGO Spike Essentials': 8, 'LEGO Spike Prime': 4, 'VEX GO': 4, 'Ozobot Evo': 2 };
-
     const currentKit = enrollment?.last_sub_program;
     const currentKitIndex = currentKit ? KIT_ORDER.indexOf(currentKit) : -1;
     const totalModules = currentKit ? (KIT_TOTALS[currentKit] ?? 0) : 0;

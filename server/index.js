@@ -14,7 +14,9 @@ const PORT = process.env.PORT || 3001;
 if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET environment variable must be set in production');
 }
-const SESSION_SECRET = process.env.SESSION_SECRET || 'codeninjas-dev-secret-do-not-use-in-prod';
+// No committed secret literal. Production already fails closed above; in dev,
+// mint an ephemeral per-process secret so there is nothing hardcoded to leak.
+const SESSION_SECRET = process.env.SESSION_SECRET || require('crypto').randomBytes(32).toString('hex');
 
 app.set('db', pool);
 

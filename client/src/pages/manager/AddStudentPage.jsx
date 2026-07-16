@@ -117,12 +117,16 @@ function EnrollmentRow({ enrollment, index, onChange, onRemove, showRemove }) {
 
 const EMPTY_ENROLLMENT = { program: '', belt_level: '', belt_sublevel: '', current_project: '', project_status: '' };
 
+// Stable row ids so React keys survive add/remove (index keys bleed row DOM state).
+let _enrollSeq = 0;
+const newEnrollment = () => ({ ...EMPTY_ENROLLMENT, _uid: `enroll-${++_enrollSeq}` });
+
 export default function AddStudentPage() {
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [birthday, setBirthday] = useState('');
   const [showBirthday, setShowBirthday] = useState(false);
-  const [enrollments, setEnrollments] = useState([{ ...EMPTY_ENROLLMENT }]);
+  const [enrollments, setEnrollments] = useState([newEnrollment()]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -131,7 +135,7 @@ export default function AddStudentPage() {
   };
 
   const addEnrollment = () => {
-    setEnrollments((prev) => [...prev, { ...EMPTY_ENROLLMENT }]);
+    setEnrollments((prev) => [...prev, newEnrollment()]);
   };
 
   const removeEnrollment = (index) => {
@@ -162,16 +166,16 @@ export default function AddStudentPage() {
       });
       createdStudentId = student.id;
 
-      for (const enrollment of valid) {
+      await Promise.all(valid.map((enrollment) => {
         const isCreate = enrollment.program === 'CREATE';
-        await api.post(`/students/${student.id}/programs`, {
+        return api.post(`/students/${student.id}/programs`, {
           program: enrollment.program,
           belt_level: isCreate && enrollment.belt_level ? enrollment.belt_level : null,
           belt_sublevel: isCreate && enrollment.belt_sublevel ? parseInt(enrollment.belt_sublevel) : null,
           current_project: isCreate && enrollment.current_project ? enrollment.current_project : null,
           project_status: isCreate && enrollment.project_status ? enrollment.project_status : null,
         });
-      }
+      }));
 
       navigate(`/manager/students/${student.id}`);
     } catch (err) {
@@ -261,7 +265,7 @@ export default function AddStudentPage() {
               <div className="space-y-3">
                 {enrollments.map((enrollment, index) => (
                   <EnrollmentRow
-                    key={index}
+                    key={enrollment._uid}
                     enrollment={enrollment}
                     index={index}
                     onChange={handleEnrollmentChange}

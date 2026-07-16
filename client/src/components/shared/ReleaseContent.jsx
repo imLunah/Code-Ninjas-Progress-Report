@@ -56,8 +56,8 @@ export default function ReleaseContent({ release, showDate = true }) {
       )}
       {media.length > 0 && (
         <div className="space-y-3">
-          {media.map((m, i) => (
-            <MediaItem key={i} item={m} />
+          {media.map((m) => (
+            <MediaItem key={m.url} item={m} />
           ))}
         </div>
       )}

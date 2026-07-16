@@ -17,6 +17,11 @@ function ItalicIcon({ className }) {
   );
 }
 
+const btn = (active) =>
+  `flex items-center justify-center font-ninja text-sm font-bold w-8 h-8 rounded-lg transition-colors ${
+    active ? 'bg-ninja-blue/15 text-ninja-blue' : 'text-ninja-muted hover:bg-ninja-bg'
+  }`;
+
 export default function MarkdownEditor({ value, onChange, placeholder }) {
   const editor = useEditor({
     extensions: [
@@ -37,11 +42,6 @@ export default function MarkdownEditor({ value, onChange, placeholder }) {
       },
     },
   });
-
-  const btn = (active) =>
-    `flex items-center justify-center font-ninja text-sm font-bold w-8 h-8 rounded-lg transition-colors ${
-      active ? 'bg-ninja-blue/15 text-ninja-blue' : 'text-ninja-muted hover:bg-ninja-bg'
-    }`;
 
   return (
     <div className="rounded-xl bg-white border border-ninja-border focus-within:border-ninja-blue transition-colors overflow-hidden">

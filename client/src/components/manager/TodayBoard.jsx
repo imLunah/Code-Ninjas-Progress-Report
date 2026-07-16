@@ -102,6 +102,29 @@ function PinnedNotePill({ note, parentNote }) {
   );
 }
 
+function buildLogUrl(group) {
+  // A generic (no-class) check-in has no program — let the sensei pick any
+  // enrolled class on the log page (no programs filter passed).
+  if (group.assignments.some((a) => !a.program)) {
+    return `/sensei/student/${group.student_id}`;
+  }
+  const programInfo = {};
+  group.assignments.forEach((a) => {
+    const d = a.session_date ? String(a.session_date).split('T')[0] : null;
+    if (!programInfo[a.program]) programInfo[a.program] = { date: d, count: 0 };
+    programInfo[a.program].count++;
+  });
+  const uniquePrograms = [...new Set(group.assignments.map((a) => a.program))];
+  const datesStr = Object.entries(programInfo).map(([p, { date }]) => `${p}:${date}`).join(',');
+  const countsStr = Object.entries(programInfo).map(([p, { count }]) => `${p}:${count}`).join(',');
+  return (
+    `/sensei/student/${group.student_id}` +
+    `?programs=${encodeURIComponent(uniquePrograms.join(','))}` +
+    `&dates=${encodeURIComponent(datesStr)}` +
+    `&counts=${encodeURIComponent(countsStr)}`
+  );
+}
+
 export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlogged' }) {
   const { isReadOnly } = useAuth();
   const navigate = useNavigate();
@@ -179,29 +202,6 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
       </motion.div>
     );
   }
-
-  const buildLogUrl = (group) => {
-    // A generic (no-class) check-in has no program — let the sensei pick any
-    // enrolled class on the log page (no programs filter passed).
-    if (group.assignments.some((a) => !a.program)) {
-      return `/sensei/student/${group.student_id}`;
-    }
-    const programInfo = {};
-    group.assignments.forEach((a) => {
-      const d = a.session_date ? String(a.session_date).split('T')[0] : null;
-      if (!programInfo[a.program]) programInfo[a.program] = { date: d, count: 0 };
-      programInfo[a.program].count++;
-    });
-    const uniquePrograms = [...new Set(group.assignments.map((a) => a.program))];
-    const datesStr = Object.entries(programInfo).map(([p, { date }]) => `${p}:${date}`).join(',');
-    const countsStr = Object.entries(programInfo).map(([p, { count }]) => `${p}:${count}`).join(',');
-    return (
-      `/sensei/student/${group.student_id}` +
-      `?programs=${encodeURIComponent(uniquePrograms.join(','))}` +
-      `&dates=${encodeURIComponent(datesStr)}` +
-      `&counts=${encodeURIComponent(countsStr)}`
-    );
-  };
 
   return (
     <>

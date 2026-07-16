@@ -1,18 +1,3 @@
-// Static fallback list — runtime list comes from GET /api/clubs/definitions
-export const CLUBS = ['3D Design Club', 'Minecraft Club', 'Roblox Club'];
-
-export const CLUB_SLUG_TO_NAME = {
-  'minecraft':  'Minecraft Club',
-  'roblox':     'Roblox Club',
-  '3d-design':  '3D Design Club',
-};
-
-export const CLUB_NAME_TO_SLUG = {
-  'Minecraft Club':  'minecraft',
-  'Roblox Club':     'roblox',
-  '3D Design Club':  '3d-design',
-};
-
 // Color sets keyed by color_key stored in club_definitions
 export const COLOR_SETS = {
   purple: { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-200', solid: '#7c3aed' },
@@ -31,12 +16,6 @@ export const CLUB_COLORS = {
   '3D Design Club': COLOR_SETS.purple,
   'Minecraft Club':  COLOR_SETS.green,
   'Roblox Club':     COLOR_SETS.red,
-};
-
-export const CLUB_DESCRIPTIONS = {
-  '3D Design Club': 'Learn 3D modeling, design thinking, and creative spatial reasoning.',
-  'Minecraft Club':  'Build, explore, and code in the world of Minecraft.',
-  'Roblox Club':     'Design games and experiences in Roblox Studio.',
 };
 
 export function toSlug(name) {

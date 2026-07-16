@@ -71,8 +71,3 @@ export const CURRICULUM = {
     { module: 'Elenco', lessons: Array.from({ length: 24 }, (_, i) => `Project ${i + 1}`) },
   ],
 };
-
-export function getCurriculum(program, subProgram) {
-  if (subProgram) return CURRICULUM[subProgram] || null;
-  return CURRICULUM[program] || null;
-}

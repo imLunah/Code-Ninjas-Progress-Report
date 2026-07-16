@@ -64,6 +64,16 @@ const FILTER_CHIPS = [
   { label: 'JR', value: 'JR' },
 ];
 
+const toggleInSet = (setter) => (id) => {
+  setter((prev) => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+};
+
+const conflictKey = (c) => `${c.id}::${c.program}`;
+
 export default function StudentRoster() {
   const [students, setStudents] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -98,17 +108,8 @@ export default function StudentRoster() {
   const [archiving, setArchiving] = useState(false);
   const fileInputRef = useRef(null);
 
-  const toggleInSet = (setter) => (id) => {
-    setter((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
   const toggleKeep = toggleInSet(setKeepIds);
   const toggleOverride = toggleInSet(setOverrideKeys);
-
-  const conflictKey = (c) => `${c.id}::${c.program}`;
 
   const totalRemoveCount = () => {
     const missing = importResult?.missing || [];

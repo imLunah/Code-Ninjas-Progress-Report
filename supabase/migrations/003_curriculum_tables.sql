@@ -20,3 +20,15 @@ CREATE TABLE IF NOT EXISTS curriculum_lessons (
 );
 
 CREATE INDEX IF NOT EXISTS curriculum_lessons_module_idx ON curriculum_lessons(module_id);
+
+-- Deny-all RLS: all DB access goes through the Express server on a role that
+-- bypasses RLS; the anon/PostgREST role gets nothing. RESTRICTIVE deny_all for
+-- all roles. Idempotent (drop-if-exists before create).
+ALTER TABLE curriculum_modules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE curriculum_lessons ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS deny_all ON curriculum_modules;
+CREATE POLICY deny_all ON curriculum_modules AS RESTRICTIVE FOR ALL USING (false) WITH CHECK (false);
+
+DROP POLICY IF EXISTS deny_all ON curriculum_lessons;
+CREATE POLICY deny_all ON curriculum_lessons AS RESTRICTIVE FOR ALL USING (false) WITH CHECK (false);

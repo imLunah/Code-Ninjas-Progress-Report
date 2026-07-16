@@ -10,6 +10,15 @@ import { PROJECTS, STATUSES, BELT_LEVEL_PROJECTS, getLevelProjects } from '../..
 // Flat-project-list belts (no level / Build-Solve labels): Black capstone + bonus tracks.
 const UPPER_BELTS = ['Black', 'Bronze', 'Silver', 'Gold', 'Platinum'];
 
+const emptyCreateEntry = { project: '', status: '', isCustom: false, customProject: '' };
+const emptyEntry = { subProgram: '', moduleName: '', lessonName: '', customModule: '', customLesson: '', status: '' };
+
+// Stable row ids so React keys survive add/remove (index keys bleed row DOM state).
+let _rowSeq = 0;
+const rowUid = () => `row-${++_rowSeq}`;
+const newLessonEntry = () => ({ ...emptyEntry, _uid: rowUid() });
+const newCreateEntry = (init) => ({ ...emptyCreateEntry, ...init, _uid: rowUid() });
+
 function getSectionLabel(index, total) {
   if (index === total - 1) return 'Adventure';
   const num = Math.floor(index / 2) + 1;
@@ -283,16 +292,12 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
   const [beltLevel, setBeltLevel] = useState(enrollment?.belt_level || '');
   const [beltSublevel, setBeltSublevel] = useState(enrollment?.belt_sublevel || '');
 
-  const emptyCreateEntry = { project: '', status: '', isCustom: false, customProject: '' };
-  const [createEntries, setCreateEntries] = useState([{
+  const [createEntries, setCreateEntries] = useState([newCreateEntry({
     project: enrollment?.current_project || '',
     status: enrollment?.project_status || '',
-    isCustom: false,
-    customProject: '',
-  }]);
+  })]);
 
-  const emptyEntry = { subProgram: '', moduleName: '', lessonName: '', customModule: '', customLesson: '', status: '' };
-  const [lessonEntries, setLessonEntries] = useState([{ ...emptyEntry }]);
+  const [lessonEntries, setLessonEntries] = useState([newLessonEntry()]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -303,13 +308,11 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
   const hasLessonFields = !!(subPrograms[program] || curriculum[program]?.length);
 
   useEffect(() => {
-    setLessonEntries([{ ...emptyEntry }]);
-    setCreateEntries([{
+    setLessonEntries([newLessonEntry()]);
+    setCreateEntries([newCreateEntry({
       project: enrollment?.current_project || '',
       status: enrollment?.project_status || '',
-      isCustom: false,
-      customProject: '',
-    }]);
+    })]);
   }, [program]);
 
   const updateEntry = (index, field, value) => {
@@ -324,13 +327,13 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
     );
   };
 
-  const addEntry = () => setLessonEntries((prev) => [...prev, { ...emptyEntry }]);
+  const addEntry = () => setLessonEntries((prev) => [...prev, newLessonEntry()]);
   const removeEntry = (index) => setLessonEntries((prev) => prev.filter((_, i) => i !== index));
 
   const updateCreateEntry = (index, field, value) => {
     setCreateEntries((prev) => prev.map((e, i) => i !== index ? e : { ...e, [field]: value }));
   };
-  const addCreateEntry = () => setCreateEntries((prev) => [...prev, { ...emptyCreateEntry }]);
+  const addCreateEntry = () => setCreateEntries((prev) => [...prev, newCreateEntry()]);
   const removeCreateEntry = (index) => setCreateEntries((prev) => prev.filter((_, i) => i !== index));
 
   const handleBeltClearProjects = () => {
@@ -413,8 +416,8 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
       const log = await api.post('/progress', payload);
       setSuccess(true);
       setNotes('');
-      setLessonEntries([{ ...emptyEntry }]);
-      setCreateEntries([{ ...emptyCreateEntry }]);
+      setLessonEntries([newLessonEntry()]);
+      setCreateEntries([newCreateEntry()]);
       onLogged && onLogged(log);
     } catch (err) {
       setError(err.message || 'Failed to save log');
@@ -473,7 +476,7 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
         <div className="space-y-3">
           {lessonEntries.map((entry, i) => (
             <LessonEntryRow
-              key={i}
+              key={entry._uid}
               entry={entry}
               index={i}
               total={lessonEntries.length}
@@ -520,7 +523,7 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
           <div className="space-y-3">
             {createEntries.map((entry, i) => (
               <CreateProjectRow
-                key={i}
+                key={entry._uid}
                 entry={entry}
                 index={i}
                 total={createEntries.length}

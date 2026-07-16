@@ -3,14 +3,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import { api } from '../../api/client';
 
+const ADMIN_NAV_LINKS = [
+  { to: '/admin/locations', label: 'Locations' },
+  { to: '/admin/users', label: 'Users' },
+  { to: '/admin/curriculum', label: 'Curriculum' },
+  { to: '/admin/settings', label: 'Settings' },
+];
+
 function AdminNav() {
   const path = window.location.pathname;
-  const links = [
-    { to: '/admin/locations', label: 'Locations' },
-    { to: '/admin/users', label: 'Users' },
-    { to: '/admin/curriculum', label: 'Curriculum' },
-    { to: '/admin/settings', label: 'Settings' },
-  ];
+  const links = ADMIN_NAV_LINKS;
   return (
     <div className="flex items-center gap-4 mb-6 border-b border-ninja-border pb-4">
       {links.map((l) => (

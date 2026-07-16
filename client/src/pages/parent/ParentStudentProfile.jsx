@@ -190,8 +190,8 @@ export default function ParentStudentProfile() {
                 ...(student.club_attendance || []).map((c) => ({ ...c, _type: 'club' })),
               ]
                 .sort((a, b) => String(b.session_date).localeCompare(String(a.session_date)))
-                .map((entry, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 bg-ninja-bg border border-ninja-border rounded-xl">
+                .map((entry) => (
+                  <div key={`${entry._type}-${entry.id}`} className="flex items-start gap-3 p-3 bg-ninja-bg border border-ninja-border rounded-xl">
                     <div className="flex-shrink-0 w-20 text-ninja-muted font-ninja text-xs pt-0.5">
                       {formatDate(entry.session_date)}
                     </div>

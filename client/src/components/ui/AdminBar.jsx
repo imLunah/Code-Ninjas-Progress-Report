@@ -3,6 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 
+const pillStyle = {
+  background: 'rgba(15, 18, 30, 0.92)',
+  border: '1px solid rgba(56,161,255,0.25)',
+  backdropFilter: 'blur(12px)',
+};
+
 export default function AdminBar() {
   const { user, viewAs, setViewAs } = useAuth();
   const navigate = useNavigate();
@@ -40,12 +46,6 @@ export default function AdminBar() {
   }, []);
 
   if (user?.role !== 'admin') return null;
-
-  const pillStyle = {
-    background: 'rgba(15, 18, 30, 0.92)',
-    border: '1px solid rgba(56,161,255,0.25)',
-    backdropFilter: 'blur(12px)',
-  };
 
   return (
     <>

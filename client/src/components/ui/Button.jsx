@@ -5,6 +5,12 @@ const VARIANTS = {
   danger: 'bg-red-50 border border-red-200 text-ninja-red hover:bg-red-100 font-ninja font-bold rounded-lg px-5 py-2.5 transition-colors',
 };
 
+const sizeClasses = {
+  sm: 'text-sm px-3 py-1.5',
+  md: 'text-base',
+  lg: 'text-lg px-6 py-3',
+};
+
 export default function Button({
   children,
   variant = 'primary',
@@ -14,12 +20,6 @@ export default function Button({
   type = 'button',
   size = 'md',
 }) {
-  const sizeClasses = {
-    sm: 'text-sm px-3 py-1.5',
-    md: 'text-base',
-    lg: 'text-lg px-6 py-3',
-  };
-
   return (
     <button
       type={type}

@@ -23,6 +23,17 @@ import { formatDate, today } from '../utils/dateUtils';
 import { COLOR_SETS, getClubColors } from '../utils/clubUtils';
 import { uploadToSigned } from '../lib/supabase';
 
+const relativeDate = (ts) => {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const now = new Date();
+  const diffDays = Math.floor((now - d) / 86400000);
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
 const mdComponents = {
   h1: ({ children }) => <h1 className="text-lg font-bold text-ninja-navy mb-1">{children}</h1>,
   h2: ({ children }) => <h2 className="text-base font-bold text-ninja-navy mb-1">{children}</h2>,
@@ -67,16 +78,6 @@ function PinnedNoteSection({ clubName, initialNote, initialAuthor, initialUpdate
     }
   };
 
-  const relativeDate = (ts) => {
-    if (!ts) return '';
-    const d = new Date(ts);
-    const now = new Date();
-    const diffDays = Math.floor((now - d) / 86400000);
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
 
   const hasNote = Boolean(note && note.trim());
 

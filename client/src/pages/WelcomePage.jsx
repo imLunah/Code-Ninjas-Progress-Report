@@ -116,9 +116,9 @@ export default function WelcomePage() {
       <div className="relative flex-1 lg:flex-none flex flex-col max-w-md w-full mx-auto px-6 pt-[max(env(safe-area-inset-top),28px)] pb-[max(env(safe-area-inset-bottom),28px)] lg:my-10 lg:px-10 lg:py-10 lg:rounded-3xl lg:border lg:border-ninja-border lg:bg-ninja-bg/75 lg:backdrop-blur-xl lg:shadow-2xl">
         {/* Progress */}
         <div className="flex items-center gap-1.5 py-2">
-          {STEPS.map((_, i) => (
+          {STEPS.map((stepName, i) => (
             <motion.span
-              key={i}
+              key={stepName}
               className="h-1.5 rounded-full bg-ninja-blue"
               animate={{ width: i === step ? 26 : 8, opacity: i <= step ? 1 : 0.25 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}

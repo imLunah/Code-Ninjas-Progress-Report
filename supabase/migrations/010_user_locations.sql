@@ -18,3 +18,10 @@ CREATE INDEX IF NOT EXISTS idx_user_locations_location ON user_locations (locati
 INSERT INTO user_locations (user_id, location_id)
 SELECT id, location_id FROM users WHERE location_id IS NOT NULL
 ON CONFLICT DO NOTHING;
+
+-- Deny-all RLS: all DB access goes through the Express server on a role that
+-- bypasses RLS; the anon/PostgREST role gets nothing. RESTRICTIVE deny_all for
+-- all roles. Idempotent (drop-if-exists before create).
+ALTER TABLE user_locations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS deny_all ON user_locations;
+CREATE POLICY deny_all ON user_locations AS RESTRICTIVE FOR ALL USING (false) WITH CHECK (false);

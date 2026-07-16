@@ -9,6 +9,8 @@ const BELT_COLOR = Object.fromEntries(BELTS.map(b => [b.name, b.color]));
 const BELT_TEXT = Object.fromEntries(BELTS.map(b => [b.name, b.textColor]));
 const BELT_ORDER = BELTS.map(b => b.name);
 
+const ENROLLMENT_COLORS = { CREATE: '#006ADD', 'Robotics Academy': '#7c3aed', 'AI Academy': '#0891b2', JR: '#16a34a' };
+
 function StatCard({ label, value, sub }) {
   return (
     <div className="bg-white border border-ninja-border rounded-2xl p-4 shadow-sm">
@@ -21,7 +23,7 @@ function StatCard({ label, value, sub }) {
 
 function EnrollmentChart({ data }) {
   const total = data.reduce((s, r) => s + r.count, 0);
-  const colors = { CREATE: '#006ADD', 'Robotics Academy': '#7c3aed', 'AI Academy': '#0891b2', JR: '#16a34a' };
+  const colors = ENROLLMENT_COLORS;
   return (
     <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
       <h3 className="text-ninja-navy font-ninja font-bold text-base mb-4">Enrollment by Program</h3>
@@ -121,8 +123,8 @@ function BeltLog({ data }) {
         <p className="text-ninja-muted font-ninja text-sm">No belt advancements recorded yet.</p>
       ) : (
         <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-          {data.map((row, i) => (
-            <div key={i} className="flex items-center gap-3 py-1.5 border-b border-ninja-border last:border-0">
+          {data.map((row) => (
+            <div key={`${row.full_name}-${row.session_date}-${row.belt_level_at}`} className="flex items-center gap-3 py-1.5 border-b border-ninja-border last:border-0">
               <span
                 className="px-2 py-0.5 rounded-full font-ninja text-xs font-semibold"
                 style={{ background: BELT_COLOR[row.belt_level_at] || '#e5e7eb', color: BELT_TEXT[row.belt_level_at] || '#000', border: row.belt_level_at === 'White' ? '1px solid #d1d5db' : 'none' }}

@@ -124,8 +124,8 @@ export default function GettingStartedPage() {
         {/* Top: progress dots + skip */}
         <div className="flex items-center justify-between py-4">
           <div className="flex items-center gap-1.5">
-            {screens.map((_, i) => (
-              <motion.span key={i} className="h-1.5 rounded-full bg-ninja-blue"
+            {screens.map((s, i) => (
+              <motion.span key={s.title} className="h-1.5 rounded-full bg-ninja-blue"
                 animate={{ width: i === page ? 22 : 7, opacity: i === page ? 1 : 0.3 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }} />
             ))}

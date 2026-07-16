@@ -41,6 +41,26 @@ function BugIcon() {
   );
 }
 
+const ROADMAP_LINK = { to: '/curriculum-roadmap', label: 'Roadmap', icon: 'roadmap' };
+
+const managerLinks = [
+  { to: '/manager/dashboard', label: "Today's Board", icon: 'today' },
+  { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
+  { to: '/clubs', label: 'Clubs', icon: 'clubs' },
+  { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
+  { to: '/manager/reports', label: 'Reports', icon: 'report' },
+  ROADMAP_LINK,
+];
+
+const senseiLinks = [
+  { to: '/sensei/dashboard', label: "Today's Board", icon: 'today' },
+  { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
+  { to: '/clubs', label: 'Clubs', icon: 'clubs' },
+  { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
+  { to: '/manager/reports', label: 'Reports', icon: 'report' },
+  ROADMAP_LINK,
+];
+
 export default function Sidebar({ onOpenBug }) {
   const { user, logout, switchLocation, viewAs } = useAuth();
   const location = useLocation();
@@ -60,26 +80,6 @@ export default function Sidebar({ onOpenBug }) {
     }
     tapTimer.current = setTimeout(() => { tapCount.current = 0; }, 1200);
   };
-
-  const ROADMAP_LINK = { to: '/curriculum-roadmap', label: 'Roadmap', icon: 'roadmap' };
-
-  const managerLinks = [
-    { to: '/manager/dashboard', label: "Today's Board", icon: 'today' },
-    { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
-    { to: '/clubs', label: 'Clubs', icon: 'clubs' },
-    { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
-    { to: '/manager/reports', label: 'Reports', icon: 'report' },
-    ROADMAP_LINK,
-  ];
-
-  const senseiLinks = [
-    { to: '/sensei/dashboard', label: "Today's Board", icon: 'today' },
-    { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
-    { to: '/clubs', label: 'Clubs', icon: 'clubs' },
-    { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
-    { to: '/manager/reports', label: 'Reports', icon: 'report' },
-    ROADMAP_LINK,
-  ];
 
   const isSenseiView = user?.role === 'admin' && viewAs === 'sensei';
   const navLinks = isSenseiView ? senseiLinks : ['manager', 'admin'].includes(user?.role) ? managerLinks : user?.role === 'sensei' ? senseiLinks : [];

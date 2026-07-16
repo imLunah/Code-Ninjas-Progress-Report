@@ -221,7 +221,7 @@ function MobileProgramCard({ enrollment, onOpenRoadmap }) {
             {program}
           </h2>
           {last_session_date && (
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 3, fontFamily: 'Nunito, sans-serif' }}>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 3, fontFamily: 'Nunito, sans-serif' }}>
               Last: {new Date(String(last_session_date).split('T')[0] + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </p>
           )}
