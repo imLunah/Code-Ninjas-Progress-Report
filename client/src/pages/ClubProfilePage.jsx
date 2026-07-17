@@ -34,6 +34,33 @@ const relativeDate = (ts) => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
+// Flatten markdown to a plain-text one-liner for list previews (no ** _ # - leaking).
+const stripMarkdown = (text = '') =>
+  text
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+    .replace(/^\s*>\s?/gm, '')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/^\s*\d+\.\s+/gm, '')
+    .replace(/(\*\*|__)(.*?)\1/g, '$2')
+    .replace(/(\*|_)(.*?)\1/g, '$2')
+    .replace(/\n+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+const UsersIcon = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+    strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+
 const mdComponents = {
   h1: ({ children }) => <h1 className="text-lg font-bold text-ninja-navy mb-1">{children}</h1>,
   h2: ({ children }) => <h2 className="text-base font-bold text-ninja-navy mb-1">{children}</h2>,
@@ -184,10 +211,12 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
       {sessions.length === 0 ? (
         <p className="text-ninja-muted font-ninja text-sm italic">No sessions logged yet.</p>
       ) : (
-        <div className="space-y-0 divide-y divide-ninja-border">
+        <div className="space-y-2">
           {shown.map((s) => {
-            const hasNotes = !!s.notes;
-            const isOverdue = !hasNotes && String(s.session_date).split('T')[0] < todayStr;
+            const notesText = stripMarkdown(s.notes || '');
+            const isOverdue = !s.notes && String(s.session_date).split('T')[0] < todayStr;
+            const present = s.attendees?.length ?? 0;
+            const rel = relativeDate(s.session_date);
             return (
               <div
                 key={s.id}
@@ -195,55 +224,64 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
                 tabIndex={0}
                 onClick={() => navigate(`/clubs/${slug}/sessions/${s.id}`)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/clubs/${slug}/sessions/${s.id}`); } }}
-                className="w-full text-left py-3.5 flex items-start gap-4 hover:bg-ninja-bg transition-colors first:pt-0 last:pb-0 px-1 -mx-1 rounded-lg cursor-pointer"
+                className="group w-full text-left rounded-xl border border-ninja-border bg-ninja-bg p-3.5 hover:border-ninja-blue/40 hover:shadow-sm transition-all cursor-pointer"
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="font-ninja font-bold text-ninja-navy text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-ninja font-bold text-ninja-navy text-sm truncate">
                       {formatDate(s.session_date)}
                     </span>
+                    {rel && (
+                      <span className="font-ninja text-[11px] text-ninja-muted flex-shrink-0">{rel}</span>
+                    )}
                     {isOverdue && (
-                      <span className="text-[10px] font-ninja font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 border border-red-200 uppercase tracking-wide">
+                      <span className="text-[10px] font-ninja font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 border border-red-200 uppercase tracking-wide flex-shrink-0">
                         Overdue
                       </span>
                     )}
                   </div>
-                  {s.notes ? (
-                    <p className="text-ninja-muted font-ninja text-xs leading-snug truncate">{s.notes}</p>
-                  ) : (
-                    <p className="text-ninja-muted font-ninja text-xs italic">No notes yet</p>
-                  )}
-                </div>
-                <span className="font-ninja font-semibold text-sm text-ninja-muted flex-shrink-0 mt-0.5">
-                  {s.attendees?.length ?? 0}{memberCount > 0 ? `/${memberCount}` : ''}
-                </span>
-                {canDelete && (
-                  confirmId === s.id ? (
-                    <span className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => handleDelete(s.id)}
-                        disabled={deletingId === s.id}
-                        className="text-[11px] font-ninja font-bold text-ninja-red hover:underline disabled:opacity-50"
-                      >
-                        {deletingId === s.id ? '…' : 'Delete'}
-                      </button>
-                      <button
-                        onClick={() => setConfirmId(null)}
-                        className="text-[11px] font-ninja font-bold text-ninja-muted hover:underline"
-                      >
-                        Cancel
-                      </button>
-                    </span>
-                  ) : (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setConfirmId(s.id); }}
-                      title="Delete session"
-                      aria-label="Delete session"
-                      className="text-ninja-muted hover:text-ninja-red transition-colors flex-shrink-0 text-lg leading-none -mt-0.5"
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span
+                      title="Present"
+                      className="inline-flex items-center gap-1 rounded-full bg-white border border-ninja-border px-2 py-0.5 font-ninja text-xs font-semibold text-ninja-navy"
                     >
-                      &times;
-                    </button>
-                  )
+                      <UsersIcon className="w-3 h-3 text-ninja-muted" />
+                      {present}{memberCount > 0 ? `/${memberCount}` : ''}
+                    </span>
+                    {canDelete && (
+                      confirmId === s.id ? (
+                        <span className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => handleDelete(s.id)}
+                            disabled={deletingId === s.id}
+                            className="text-[11px] font-ninja font-bold text-ninja-red hover:underline disabled:opacity-50"
+                          >
+                            {deletingId === s.id ? '…' : 'Delete'}
+                          </button>
+                          <button
+                            onClick={() => setConfirmId(null)}
+                            className="text-[11px] font-ninja font-bold text-ninja-muted hover:underline"
+                          >
+                            Cancel
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setConfirmId(s.id); }}
+                          title="Delete session"
+                          aria-label="Delete session"
+                          className="text-ninja-muted hover:text-ninja-red transition-colors text-lg leading-none"
+                        >
+                          &times;
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+                {notesText ? (
+                  <p className="mt-1.5 text-ninja-muted font-ninja text-xs leading-snug line-clamp-2">{notesText}</p>
+                ) : (
+                  <p className="mt-1.5 text-ninja-muted/70 font-ninja text-xs italic">No notes yet</p>
                 )}
               </div>
             );
