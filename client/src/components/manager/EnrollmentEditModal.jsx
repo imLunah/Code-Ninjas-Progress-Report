@@ -5,7 +5,7 @@ import Button from '../ui/Button';
 import { BELTS, PROJECTS, STATUSES, getLevels } from '../../utils/beltConfig';
 
 // Black + bonus tracks don't use an explicit level.
-const NO_LEVEL_BELTS = ['Black', 'Bronze', 'Silver', 'Gold', 'Platinum'];
+const NO_LEVEL_BELTS = ['Black', 'Bronze', 'Silver', 'Platinum'];
 
 export default function EnrollmentEditModal({ isOpen, onClose, studentId, enrollment, onSaved }) {
   const [form, setForm] = useState({

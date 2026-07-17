@@ -477,7 +477,7 @@ function AddProgramForm({ studentId, existingPrograms, onAdded, onCancel }) {
   ];
 
   const isCreate = program === 'CREATE';
-  const levelOpts = ['Black', 'Bronze', 'Silver', 'Gold', 'Platinum'].includes(beltLevel) ? [] : getLevels(beltLevel);
+  const levelOpts = ['Black', 'Bronze', 'Silver', 'Platinum'].includes(beltLevel) ? [] : getLevels(beltLevel);
   const available = allPrograms.filter((p) => !existingPrograms.includes(p));
 
   const handleSubmit = async (e) => {

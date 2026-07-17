@@ -107,7 +107,12 @@ const BELT_LEVEL_PROJECTS = {
     4: ['Chef Codey'],
   },
   Gold: {
-    1: ['Custom'],
+    1: ['Planning Phase'],
+    2: ['Prototyping Phase'],
+    3: ['Alpha Phase'],
+    4: ['Beta Phase'],
+    5: ['Release Candidate Phase'],
+    6: ['Going Gold Phase'],
   },
 };
 

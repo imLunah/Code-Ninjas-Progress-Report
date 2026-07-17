@@ -1,7 +1,7 @@
 import { BELTS, getLevels } from '../../utils/beltConfig';
 
 // Black + bonus tracks don't use an explicit level step (the project implies it).
-const NO_LEVEL_BELTS = ['Black', 'Bronze', 'Silver', 'Gold', 'Platinum'];
+const NO_LEVEL_BELTS = ['Black', 'Bronze', 'Silver', 'Platinum'];
 
 export default function BeltProgressFields({ beltLevel, setBeltLevel, beltSublevel, setBeltSublevel, setProject }) {
   const levels = NO_LEVEL_BELTS.includes(beltLevel) ? [] : getLevels(beltLevel);
