@@ -1,4 +1,5 @@
 import { PROGRAM_LOGOS } from '../../utils/beltConfig';
+import BeltIcon from './BeltIcon';
 
 // Program class tags keep their OWN fixed identity colors — they do NOT follow
 // the theme accent: JR = purple, Robotics + AI + CREATE = blue.
@@ -19,29 +20,37 @@ const SIZE = {
 };
 
 const AVATAR = {
-  xs: 'w-7 h-7',
-  sm: 'w-11 h-11',
-  md: 'w-14 h-14',
+  xs: { cls: 'w-7 h-7', px: 28 },
+  sm: { cls: 'w-11 h-11', px: 44 },
+  md: { cls: 'w-14 h-14', px: 56 },
 };
 
-// Circular program photo. Falls back to a neutral "class" glyph when the
-// program is unset or has no logo. Used on check-in cards (photo on the left).
-export function ProgramAvatar({ program, size = 'md' }) {
+// Bare transparent program symbol (no circle/frame). CREATE shows the ninja's
+// belt icon instead of the program logo when a belt is known. Falls back to a
+// neutral "class" glyph when the program is unset or has no logo.
+export function ProgramAvatar({ program, belt, size = 'md' }) {
+  const s = AVATAR[size] || AVATAR.md;
+  if (program === 'CREATE' && belt) {
+    return <BeltIcon belt={belt} size={s.px} className="flex-shrink-0" />;
+  }
   const logo = program ? PROGRAM_LOGOS[program] : null;
-  const dims = AVATAR[size] || AVATAR.md;
+  if (logo) {
+    return (
+      <img
+        src={logo}
+        alt={program}
+        title={program}
+        draggable={false}
+        className={`${s.cls} object-contain flex-shrink-0`}
+      />
+    );
+  }
   return (
-    <div
-      title={program || 'Class not set'}
-      className={`${dims} rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden ring-1 ring-ninja-border bg-white`}
-    >
-      {logo ? (
-        <img src={logo} alt={program} className="w-full h-full object-contain" />
-      ) : (
-        <svg className="w-1/2 h-1/2 text-ninja-muted" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l6.16-3.42A12 12 0 0112 21a12 12 0 01-6.16-10.42L12 14z" />
-        </svg>
-      )}
+    <div title="Class not set" className={`${s.cls} flex-shrink-0 flex items-center justify-center text-ninja-muted`}>
+      <svg className="w-2/3 h-2/3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l6.16-3.42A12 12 0 0112 21a12 12 0 01-6.16-10.42L12 14z" />
+      </svg>
     </div>
   );
 }

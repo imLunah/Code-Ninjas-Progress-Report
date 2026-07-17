@@ -237,6 +237,7 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
             const primaryProgram = realPrograms[0] || null;
             const extraPrograms = realPrograms.slice(1);
             const hasGeneric = uniquePrograms.some((p) => !p);
+            const beltFor = (p) => group.assignments.find((a) => a.program === p)?.belt_level || null;
             const removeId = group.assignments[0].id;
 
             return (
@@ -251,7 +252,7 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
               >
                 <div className="flex items-start justify-between gap-2 mb-2.5">
                   <div className="flex items-center gap-3 min-w-0">
-                    <ProgramAvatar program={primaryProgram} size="md" />
+                    <ProgramAvatar program={primaryProgram} belt={beltFor(primaryProgram)} size="md" />
                     <div className="flex items-center gap-2 flex-wrap min-w-0">
                     <span className="text-ninja-navy font-ninja font-bold text-lg leading-tight">
                       {group.student_name}{isBirthdayToday(group.birthday) && <span className="ml-1.5">🎂</span>}
@@ -308,7 +309,7 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                 </div>
                 {(extraPrograms.length > 0 || hasGeneric) && (
                   <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                    {extraPrograms.map((p) => <ProgramAvatar key={p} program={p} size="xs" />)}
+                    {extraPrograms.map((p) => <ProgramAvatar key={p} program={p} belt={beltFor(p)} size="xs" />)}
                     {hasGeneric && (
                       <span className="inline-flex items-center text-xs font-ninja font-bold px-2 py-0.5 rounded-md bg-ninja-border/20 text-ninja-muted border border-ninja-border">
                         Class TBD
@@ -350,6 +351,7 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
           const primaryProgram = realPrograms[0] || null;
           const extraPrograms = realPrograms.slice(1);
           const hasGeneric = uniquePrograms.some((p) => !p);
+          const beltFor = (p) => group.assignments.find((a) => a.program === p)?.belt_level || null;
           const removeId = group.assignments[0].id;
 
           return (
@@ -362,7 +364,7 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3 min-w-0">
-                  <ProgramAvatar program={primaryProgram} size="md" />
+                  <ProgramAvatar program={primaryProgram} belt={beltFor(primaryProgram)} size="md" />
                   <div className="flex items-center gap-2 flex-wrap min-w-0">
                   <button
                     onClick={() => navigate(`/manager/students/${group.student_id}`)}
@@ -411,7 +413,7 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
               </div>
               {(extraPrograms.length > 0 || hasGeneric) && (
                 <div className="flex flex-wrap items-center gap-1.5">
-                  {extraPrograms.map((p) => <ProgramAvatar key={p} program={p} size="xs" />)}
+                  {extraPrograms.map((p) => <ProgramAvatar key={p} program={p} belt={beltFor(p)} size="xs" />)}
                   {hasGeneric && (
                     <span className="inline-flex items-center text-sm font-ninja font-bold px-2.5 py-1 rounded-md bg-ninja-border/20 text-ninja-muted border border-ninja-border">
                       Class TBD
