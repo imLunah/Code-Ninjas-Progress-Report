@@ -6,7 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { today } from '../../utils/dateUtils';
-import ProgramBadge from '../ui/ProgramBadge';
+import { ProgramAvatar } from '../ui/ProgramBadge';
 import { isBirthdayToday } from '../shared/BirthdayConfetti';
 import { MARKDOWN_COMPONENTS } from '../shared/PinnedNote';
 
@@ -233,6 +233,10 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
             const dotClass = allDone ? 'bg-green-500' : isOverdue ? 'bg-red-400' : 'bg-yellow-400';
             const sessionCount = group.assignments.length;
             const uniquePrograms = [...new Set(group.assignments.map((a) => a.program))];
+            const realPrograms = uniquePrograms.filter(Boolean);
+            const primaryProgram = realPrograms[0] || null;
+            const extraPrograms = realPrograms.slice(1);
+            const hasGeneric = uniquePrograms.some((p) => !p);
             const removeId = group.assignments[0].id;
 
             return (
@@ -246,7 +250,9 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                 onClick={() => navigate(`/manager/students/${group.student_id}`)}
               >
                 <div className="flex items-start justify-between gap-2 mb-2.5">
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <ProgramAvatar program={primaryProgram} size="md" />
+                    <div className="flex items-center gap-2 flex-wrap min-w-0">
                     <span className="text-ninja-navy font-ninja font-bold text-lg leading-tight">
                       {group.student_name}{isBirthdayToday(group.birthday) && <span className="ml-1.5">🎂</span>}
                     </span>
@@ -268,6 +274,7 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                         Logged ✓
                       </span>
                     )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
                     <div className={`w-3 h-3 rounded-full flex-shrink-0 ${dotClass}`} />
@@ -299,14 +306,16 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                     )}
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  {uniquePrograms.filter(Boolean).map((p) => <ProgramBadge key={p} program={p} size="sm" />)}
-                {uniquePrograms.some((p) => !p) && (
-                  <span className="inline-flex items-center text-sm font-ninja font-bold px-2.5 py-1 rounded-md bg-ninja-border/20 text-ninja-muted border border-ninja-border">
-                    Class TBD
-                  </span>
+                {(extraPrograms.length > 0 || hasGeneric) && (
+                  <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                    {extraPrograms.map((p) => <ProgramAvatar key={p} program={p} size="xs" />)}
+                    {hasGeneric && (
+                      <span className="inline-flex items-center text-xs font-ninja font-bold px-2 py-0.5 rounded-md bg-ninja-border/20 text-ninja-muted border border-ninja-border">
+                        Class TBD
+                      </span>
+                    )}
+                  </div>
                 )}
-                </div>
                 {group.assignments[0].sensei_name && (
                   <p className="text-ninja-muted font-ninja text-xs mt-1">
                     Sensei: {group.assignments[0].sensei_name}
@@ -337,6 +346,10 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
           const dotClass = allDone ? 'bg-green-500' : isOverdue ? 'bg-red-400' : 'bg-yellow-400';
           const sessionCount = group.assignments.length;
           const uniquePrograms = [...new Set(group.assignments.map((a) => a.program))];
+          const realPrograms = uniquePrograms.filter(Boolean);
+          const primaryProgram = realPrograms[0] || null;
+          const extraPrograms = realPrograms.slice(1);
+          const hasGeneric = uniquePrograms.some((p) => !p);
           const removeId = group.assignments[0].id;
 
           return (
@@ -348,7 +361,9 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
               className={`bg-white border-2 ${borderClass} rounded-2xl p-4 shadow-sm flex flex-col gap-3`}
             >
               <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-3 min-w-0">
+                  <ProgramAvatar program={primaryProgram} size="md" />
+                  <div className="flex items-center gap-2 flex-wrap min-w-0">
                   <button
                     onClick={() => navigate(`/manager/students/${group.student_id}`)}
                     className="text-ninja-navy font-ninja font-bold text-lg leading-tight hover:text-ninja-blue transition-colors text-left"
@@ -363,6 +378,7 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                   {((group.pinned_note && group.pinned_note.trim()) || (group.special_instructions && group.special_instructions.trim())) && (
                     <PinnedNotePill note={group.pinned_note} parentNote={group.special_instructions} />
                   )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 mt-1">
                   <div className={`w-3 h-3 rounded-full ${dotClass}`} />
@@ -393,14 +409,16 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                   )}
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {uniquePrograms.filter(Boolean).map((p) => <ProgramBadge key={p} program={p} size="sm" />)}
-                {uniquePrograms.some((p) => !p) && (
-                  <span className="inline-flex items-center text-sm font-ninja font-bold px-2.5 py-1 rounded-md bg-ninja-border/20 text-ninja-muted border border-ninja-border">
-                    Class TBD
-                  </span>
-                )}
-              </div>
+              {(extraPrograms.length > 0 || hasGeneric) && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {extraPrograms.map((p) => <ProgramAvatar key={p} program={p} size="xs" />)}
+                  {hasGeneric && (
+                    <span className="inline-flex items-center text-sm font-ninja font-bold px-2.5 py-1 rounded-md bg-ninja-border/20 text-ninja-muted border border-ninja-border">
+                      Class TBD
+                    </span>
+                  )}
+                </div>
+              )}
               {allDone ? (
                 <p className="text-green-600 font-ninja font-semibold text-xs">Logged ✓</p>
               ) : isOverdue ? (
