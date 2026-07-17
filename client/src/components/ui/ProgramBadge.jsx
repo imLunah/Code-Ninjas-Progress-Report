@@ -25,21 +25,58 @@ const AVATAR = {
   md: { cls: 'w-14 h-14', px: 56 },
 };
 
-// Bare transparent program symbol (no circle/frame). CREATE shows the ninja's
-// belt icon instead of the program logo when a belt is known. Falls back to a
-// neutral "class" glyph when the program is unset or has no logo.
-export function ProgramAvatar({ program, belt, size = 'md' }) {
+// Resolve the symbol image for a class: CREATE uses the ninja's belt icon when
+// a belt is known; everything else uses the program logo.
+const symbolSrc = (program, belt) => {
+  if (program === 'CREATE' && belt) return `/belts/belt-${belt.toLowerCase()}.png`;
+  return (program && PROGRAM_LOGOS[program]) || null;
+};
+
+// Split layouts for multi-class avatars — one combined image, each class
+// clipped to its own segment (2 = halves, 3 = half + quadrants, 4 = quadrants).
+const SPLIT_CLIPS = {
+  2: ['inset(0 51% 0 0)', 'inset(0 0 0 51%)'],
+  3: ['inset(0 51% 0 0)', 'inset(0 0 51% 51%)', 'inset(51% 0 0 51%)'],
+  4: ['inset(0 51% 51% 0)', 'inset(0 0 51% 51%)', 'inset(51% 51% 0 0)', 'inset(51% 0 0 51%)'],
+};
+
+// Bare transparent class symbol (no circle/frame). Pass `items`
+// ([{ program, belt }]) for a ninja in multiple classes — the symbols are
+// split-combined into ONE avatar instead of a row of icons. Falls back to a
+// neutral "class" glyph when no program is set.
+export function ProgramAvatar({ program, belt, items, size = 'md' }) {
   const s = AVATAR[size] || AVATAR.md;
-  if (program === 'CREATE' && belt) {
-    return <BeltIcon belt={belt} size={s.px} className="flex-shrink-0" />;
+
+  const multi = (items || []).filter((it) => symbolSrc(it.program, it.belt));
+  if (multi.length > 1) {
+    const shown = multi.slice(0, 4);
+    return (
+      <div title={shown.map((it) => it.program).join(' · ')} className={`${s.cls} relative flex-shrink-0`}>
+        {shown.map((it, idx) => (
+          <img
+            key={it.program}
+            src={symbolSrc(it.program, it.belt)}
+            alt={it.program}
+            draggable={false}
+            className="absolute inset-0 w-full h-full object-contain"
+            style={{ clipPath: SPLIT_CLIPS[shown.length][idx] }}
+          />
+        ))}
+      </div>
+    );
   }
-  const logo = program ? PROGRAM_LOGOS[program] : null;
+
+  const single = multi[0] || { program, belt };
+  if (single.program === 'CREATE' && single.belt) {
+    return <BeltIcon belt={single.belt} size={s.px} className="flex-shrink-0" />;
+  }
+  const logo = single.program ? PROGRAM_LOGOS[single.program] : null;
   if (logo) {
     return (
       <img
         src={logo}
-        alt={program}
-        title={program}
+        alt={single.program}
+        title={single.program}
         draggable={false}
         className={`${s.cls} object-contain flex-shrink-0`}
       />
