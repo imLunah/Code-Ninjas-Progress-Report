@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+import { PRESET_AVATARS } from '../lib/avatars';
 
 // First-run onboarding for a brand-new account (must_reset_password = true).
-// Flow: Welcome → confirm name → set username + password → hand off to the tutorial.
+// Flow: Welcome → confirm name → pick avatar → set username + password → hand off.
 
-const STEPS = ['welcome', 'name', 'credentials'];
+const STEPS = ['welcome', 'name', 'avatar', 'credentials'];
 
 const slide = {
   enter: (dir) => ({ x: dir > 0 ? 64 : -64, opacity: 0 }),
@@ -49,6 +50,8 @@ export default function WelcomePage() {
   const [last, setLast] = useState(initial.last);
   const [confirmedName, setConfirmedName] = useState('');
 
+  const [avatar, setAvatar] = useState('');
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -87,10 +90,13 @@ export default function WelcomePage() {
       const payload = { username: username.trim(), new_password: password.trim() };
       if (confirmedName && confirmedName !== user?.displayName) payload.display_name = confirmedName;
       const res = await api.patch('/users/me', payload);
+      // Avatar is a nice-to-have — never fail setup over it.
+      if (avatar) await api.patch('/users/me/avatar', { profile_pic_url: avatar }).catch(() => {});
       setUser((prev) => ({
         ...prev,
         username: res.username || prev.username,
         displayName: payload.display_name || prev.displayName,
+        profilePicUrl: avatar || prev.profilePicUrl,
         mustResetPassword: false,
       }));
       const dashPath = user?.role === 'sensei' ? '/sensei/dashboard'
@@ -235,8 +241,45 @@ export default function WelcomePage() {
               </motion.div>
             )}
 
-            {/* ── Step 3: Credentials ───────────────────────── */}
+            {/* ── Step 3: Pick avatar ───────────────────────── */}
             {step === 2 && (
+              <motion.div
+                key="avatar" custom={dir} variants={slide}
+                initial="enter" animate="center" exit="exit" transition={transition}
+                className="absolute inset-0 flex flex-col justify-center"
+              >
+                <h2 className="text-2xl font-black font-ninja text-ninja-navy mb-1.5">Pick your avatar</h2>
+                <p className="text-ninja-muted font-ninja text-sm mb-7">Choose how you'll show up around the dojo. You can change it anytime from your account.</p>
+
+                <div className="grid grid-cols-5 gap-3 justify-items-center">
+                  {PRESET_AVATARS.map(({ src, label }) => {
+                    const isActive = avatar === src;
+                    return (
+                      <motion.button
+                        key={src}
+                        type="button"
+                        whileTap={{ scale: 0.92 }}
+                        onClick={() => setAvatar(isActive ? '' : src)}
+                        className={`relative w-14 h-14 rounded-full overflow-hidden border-2 transition-all hover:scale-105 ${
+                          isActive ? 'border-ninja-blue ring-2 ring-ninja-blue/30' : 'border-ninja-border hover:border-ninja-blue'
+                        }`}
+                        title={label}
+                      >
+                        <img src={src} alt={label} className="w-full h-full object-cover bg-ninja-bg" />
+                        {isActive && (
+                          <div className="absolute inset-0 bg-ninja-blue/20 flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">✓</span>
+                          </div>
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── Step 4: Credentials ───────────────────────── */}
+            {step === 3 && (
               <motion.div
                 key="credentials" custom={dir} variants={slide}
                 initial="enter" animate="center" exit="exit" transition={transition}
@@ -318,6 +361,14 @@ export default function WelcomePage() {
             </motion.button>
           )}
           {step === 2 && (
+            <motion.button
+              whileTap={{ scale: 0.97 }} onClick={() => go(1)}
+              className="flex-1 py-3.5 rounded-xl bg-ninja-blue text-white font-ninja font-bold text-sm hover:bg-ninja-blue/90 transition-colors"
+            >
+              {avatar ? 'Continue' : 'Skip for now'}
+            </motion.button>
+          )}
+          {step === 3 && (
             <motion.button
               whileTap={{ scale: 0.97 }} onClick={finish} disabled={saving || !pwValid || !username.trim()}
               className="flex-1 py-3.5 rounded-xl bg-ninja-blue text-white font-ninja font-bold text-sm hover:bg-ninja-blue/90 transition-colors disabled:opacity-50"
