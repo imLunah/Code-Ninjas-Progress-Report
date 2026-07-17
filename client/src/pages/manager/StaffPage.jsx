@@ -276,8 +276,6 @@ export default function StaffPage() {
     setManagingSensei(null);
   };
 
-  const totalLogs = senseis.reduce((sum, s) => sum + (s.progress_log_count || 0), 0);
-
   return (
     <Layout>
       <div className="space-y-6">
@@ -303,23 +301,15 @@ export default function StaffPage() {
 
         {/* Stats */}
         {!loading && !error && senseis.length > 0 && (
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { value: senseis.length, label: 'Staff Members', color: 'text-ninja-blue' },
-              { value: totalLogs, label: 'Total Progress Logs', color: 'text-ninja-navy' },
-            ].map((s, i) => (
-              <motion.div
-                key={s.label}
-                initial={{ opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.07, duration: 0.3, ease: 'easeOut' }}
-                className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm"
-              >
-                <p className={`text-3xl font-bold font-ninja ${s.color}`}>{s.value}</p>
-                <p className="text-ninja-muted font-ninja text-sm mt-1">{s.label}</p>
-              </motion.div>
-            ))}
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm"
+          >
+            <p className="text-3xl font-bold font-ninja text-ninja-blue">{senseis.length}</p>
+            <p className="text-ninja-muted font-ninja text-sm mt-1">Staff Members</p>
+          </motion.div>
         )}
 
         {/* Sensei list */}

@@ -28,6 +28,7 @@ router.get('/', requireSensei, async (req, res) => {
                COALESCE(array_agg(DISTINCT ul.location_id) FILTER (WHERE ul.location_id IS NOT NULL), '{}') AS location_ids
         FROM users u
         LEFT JOIN progress_logs pl ON pl.sensei_id = u.id
+          AND pl.student_id IN (SELECT id FROM students WHERE location_id = $1)
         LEFT JOIN user_locations ul ON ul.user_id = u.id
         WHERE ${roleFilter} AND u.active = $2
           AND u.id IN (SELECT user_id FROM user_locations WHERE location_id = $1)
