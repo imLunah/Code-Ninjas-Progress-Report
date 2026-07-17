@@ -8,6 +8,7 @@ const PROGRAM_COLORS = {
   'Robotics Academy': { bg: 'bg-blue-500/10',   text: 'text-blue-600 dark:text-blue-300',     border: 'border-blue-500/20' },
   'AI Academy':       { bg: 'bg-blue-500/10',   text: 'text-blue-600 dark:text-blue-300',     border: 'border-blue-500/20' },
   'JR':               { bg: 'bg-purple-500/12', text: 'text-purple-600 dark:text-purple-300', border: 'border-purple-500/20' },
+  'VR Coding':        { bg: 'bg-teal-500/12',   text: 'text-teal-600 dark:text-teal-300',     border: 'border-teal-500/25' },
   'Silver':           { bg: 'bg-slate-400/12',  text: 'text-slate-600 dark:text-slate-300',   border: 'border-slate-400/25' },
   'Gold Unity':       { bg: 'bg-amber-500/12',  text: 'text-amber-600 dark:text-amber-300',   border: 'border-amber-500/25' },
   'Gold Godot':       { bg: 'bg-amber-500/12',  text: 'text-amber-600 dark:text-amber-300',   border: 'border-amber-500/25' },

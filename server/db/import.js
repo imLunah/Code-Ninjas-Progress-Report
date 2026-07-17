@@ -22,6 +22,7 @@ function parseProgram(membership) {
   if (membership.includes('CODE NINJAS: JR')) return 'JR';
   if (membership.includes('Robotics')) return 'Robotics Academy';
   if (membership.includes('AI')) return 'AI Academy';
+  if (membership.includes('VR')) return 'VR Coding';
   return null;
 }
 

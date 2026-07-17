@@ -9,7 +9,7 @@ const BELT_COLOR = Object.fromEntries(BELTS.map(b => [b.name, b.color]));
 const BELT_TEXT = Object.fromEntries(BELTS.map(b => [b.name, b.textColor]));
 const BELT_ORDER = BELTS.map(b => b.name);
 
-const ENROLLMENT_COLORS = { CREATE: '#006ADD', 'Robotics Academy': '#7c3aed', 'AI Academy': '#0891b2', JR: '#16a34a' };
+const ENROLLMENT_COLORS = { CREATE: '#006ADD', 'Robotics Academy': '#7c3aed', 'AI Academy': '#0891b2', JR: '#16a34a', 'VR Coding': '#14b8a6' };
 
 function StatCard({ label, value, sub }) {
   return (

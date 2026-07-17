@@ -5,7 +5,7 @@ import { api } from '../../api/client';
 import { useCurriculum, invalidateCurriculumCache } from '../../context/CurriculumContext';
 import { BELT_LEVEL_PROJECTS as STATIC_BELT_PROJECTS, BELTS } from '../../utils/beltConfig';
 
-const PROGRAMS = ['AI Academy', 'Robotics Academy', 'JR', 'CREATE'];
+const PROGRAMS = ['AI Academy', 'Robotics Academy', 'JR', 'VR Coding', 'CREATE'];
 
 const BELT_COLORS = {
   White:  { bg: '#f8f8f8', border: '#d1d5db', text: '#111827' },

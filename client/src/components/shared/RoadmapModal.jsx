@@ -10,6 +10,7 @@ import { api } from '../../api/client';
 const PROGRAM_SUB_PROGRAMS = {
   JR: ['JR Coding', 'Snap Circuits'],
   'Robotics Academy': ['LEGO Spike Essentials', 'LEGO Spike Prime', 'Ozobot Evo', 'VEX GO'],
+  'VR Coding': ['VR CS Breakthroughs', 'VR CS Dimensions'],
 };
 
 export default function RoadmapModal({ open, onClose, student, enrollment, onUpdate }) {

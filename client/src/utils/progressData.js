@@ -5,6 +5,7 @@ export const SUB_PROGRAMS = {
   'AI Academy': null,
   'Robotics Academy': ['LEGO Spike Essentials', 'LEGO Spike Prime', 'VEX GO', 'Ozobot Evo'],
   'JR': ['JR Coding', 'Snap Circuits'],
+  'VR Coding': ['VR CS Breakthroughs', 'VR CS Dimensions'],
 };
 
 // Curriculum indexed by sub-program name (or program name for programs with no sub-programs).
@@ -69,5 +70,18 @@ export const CURRICULUM = {
 
   'Snap Circuits': [
     { module: 'Elenco', lessons: Array.from({ length: 24 }, (_, i) => `Project ${i + 1}`) },
+  ],
+
+  'VR CS Breakthroughs': [
+    { module: 'Level 1', lessons: ['1. VR Tutorial', '2. Our Class Pet', '3. Team Battle', '4. Future Me'] },
+    { module: 'Level 2', lessons: ['1. Hide and Seek', '2. Animal Whisperer', '3. Alien Invasion'] },
+    { module: 'Level 3', lessons: ['1. Obstacle Course', '2. Carnival Rides', '3. Escape the Maze'] },
+    { module: 'Level 4', lessons: ['1. Spy Mission', '2. Tiny Town', '3. Passion Project'] },
+  ],
+
+  'VR CS Dimensions': [
+    { module: 'Level 1', lessons: ['1. VR Tutorial', '2. Animal Trainer', '3. City Builder', '4. Island Survivors', '5. Scavenger Hunt', '6. Magic Show'] },
+    { module: 'Level 2', lessons: ['1. Time Traveler', '2. Physics Game', '3. Obstacle Course', '4. Crack the Case', '5. Complex Contraption'] },
+    { module: 'Level 3', lessons: ['1. Music Playlist', '2. Dunk Tank Challenge', '3. Tower Conquest'] },
   ],
 };

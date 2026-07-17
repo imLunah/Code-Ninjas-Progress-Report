@@ -9,12 +9,14 @@ const PROGRAM_GRADIENTS = {
   'Robotics Academy': 'linear-gradient(135deg, #060d1a 0%, #0a1e3d 55%, #0d3070 100%)',
   'AI Academy':       'linear-gradient(135deg, #060c1f 0%, #091840 55%, #0e2a7a 100%)',
   'JR':               'linear-gradient(135deg, #1a0533 0%, #2d1267 55%, #4c1d95 100%)',
+  'VR Coding':        'linear-gradient(135deg, #04181c 0%, #073a40 55%, #0b5e63 100%)',
 };
 
 const PROGRAM_BAR_COLORS = {
   'Robotics Academy': '#2563eb',
   'AI Academy':       '#1d4ed8',
   'JR':               '#7c3aed',
+  'VR Coding':        '#14b8a6',
 };
 
 const JR_CODING_MODULES = ['Module 1','Module 2','Module 3','Module 4','Module 5','Module 6','Module 7','Module 8','Module 9','Module 10'];

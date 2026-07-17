@@ -19,7 +19,7 @@ export const BELTS = [
 
 export const PROJECTS = ['Build 1', 'Build 2', 'Build 3', 'Build 4', 'Build 5', 'Solve 1', 'Solve 2', 'Solve 3', 'Solve 4', 'Solve 5', 'Adventure'];
 export const STATUSES = ['Started', 'Working On', 'Completed'];
-export const PROGRAMS = ['CREATE', 'Robotics Academy', 'AI Academy', 'JR', 'Silver', 'Gold Unity', 'Gold Godot'];
+export const PROGRAMS = ['CREATE', 'Robotics Academy', 'AI Academy', 'JR', 'VR Coding', 'Silver', 'Gold Unity', 'Gold Godot'];
 
 export const PROGRAM_LOGOS = {
   'CREATE':           '/programs/create_logo.png',

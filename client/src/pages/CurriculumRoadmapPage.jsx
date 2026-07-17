@@ -31,6 +31,12 @@ const PROGRAM_CONFIG = {
     border: 'rgba(56, 161, 255, 0.18)',
     label: 'Robotics Academy',
   },
+  'VR Coding': {
+    color: '#2dd4bf',
+    bg: 'rgba(45, 212, 191, 0.07)',
+    border: 'rgba(45, 212, 191, 0.18)',
+    label: 'VR Coding',
+  },
 };
 
 const defaultConfig = { color: '#38a1ff', bg: 'rgba(56, 161, 255, 0.07)', border: 'rgba(56, 161, 255, 0.18)', label: '' };
