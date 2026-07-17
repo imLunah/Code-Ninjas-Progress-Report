@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireSensei, requireOwnLocation } = require('../middleware/auth');
-const { STANDARD_BELTS, isValidBelt, validateSublevel } = require('../lib/belts');
+const { ALL_BELTS, isValidBelt, validateSublevel } = require('../lib/belts');
 
 // Free-text curriculum/progress fields are intentionally freeform (senseis log custom
 // lesson/module names not in the curriculum tables), so they're bounded by length
@@ -39,7 +39,7 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     : [{ sub_program: sub_program || null, module_name: module_name || null, lesson_name: lesson_name || null }];
 
   // belt_level_at must be a real belt label (or absent) — block junk stored verbatim
-  // in the log row. The narrower STANDARD_BELTS gate on the overwrite path is unchanged.
+  // in the log row. The overwrite path below applies the same ALL_BELTS whitelist.
   if (!isValidBelt(belt_level_at)) {
     return res.status(400).json({ error: 'Invalid belt level' });
   }
@@ -143,8 +143,10 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
               last_sub_program = $5, last_module_name = $6, last_lesson_name = $7, last_session_date = $8
           WHERE student_id = $9 AND program = $10
         `, [
-          // Custom belt labels are stored in the log but don't overwrite the student's tracked belt
-          (belt_level_at !== undefined && (belt_level_at === null || STANDARD_BELTS.has(belt_level_at))) ? belt_level_at : enrollment.belt_level,
+          // Any real belt (incl. Bronze/Silver/Platinum/Gold — they're full ladder
+          // belts since the restructure) may overwrite the tracked belt. isValidBelt
+          // already 400s anything else, so only real labels reach this point.
+          (belt_level_at !== undefined && (belt_level_at === null || ALL_BELTS.has(belt_level_at))) ? belt_level_at : enrollment.belt_level,
           belt_sublevel_at !== undefined ? belt_sublevel_at : enrollment.belt_sublevel,
           project_at !== undefined ? project_at : enrollment.current_project,
           status_at !== undefined ? status_at : enrollment.project_status,
