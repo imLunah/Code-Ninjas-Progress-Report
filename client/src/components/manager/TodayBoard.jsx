@@ -251,21 +251,26 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
               >
                 <div className="flex items-start justify-between gap-2 mb-2.5">
                   <div className="flex items-center gap-3 min-w-0">
-                    <ProgramAvatar
-                      program={primaryProgram}
-                      belt={beltFor(primaryProgram)}
-                      items={realPrograms.map((p) => ({ program: p, belt: beltFor(p) }))}
-                      size="md"
-                    />
+                    <div className="relative flex-shrink-0">
+                      <ProgramAvatar
+                        program={primaryProgram}
+                        belt={beltFor(primaryProgram)}
+                        items={realPrograms.map((p) => ({ program: p, belt: beltFor(p) }))}
+                        size="md"
+                      />
+                      {sessionCount > 1 && (
+                        <span
+                          title={`${sessionCount} sessions today`}
+                          className="absolute -bottom-1 -right-1 text-[10px] font-ninja font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200 leading-none"
+                        >
+                          ×{sessionCount}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2 flex-wrap min-w-0">
                     <span className="text-ninja-navy font-ninja font-bold text-lg leading-tight">
                       {group.student_name}{isBirthdayToday(group.birthday) && <span className="ml-1.5">🎂</span>}
                     </span>
-                    {sessionCount > 1 && (
-                      <span className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
-                        {sessionCount} sessions
-                      </span>
-                    )}
                     {((group.pinned_note && group.pinned_note.trim()) || (group.special_instructions && group.special_instructions.trim())) && (
                       <PinnedNotePill note={group.pinned_note} parentNote={group.special_instructions} />
                     )}
@@ -364,12 +369,22 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3 min-w-0">
-                  <ProgramAvatar
-                    program={primaryProgram}
-                    belt={beltFor(primaryProgram)}
-                    items={realPrograms.map((p) => ({ program: p, belt: beltFor(p) }))}
-                    size="md"
-                  />
+                  <div className="relative flex-shrink-0">
+                    <ProgramAvatar
+                      program={primaryProgram}
+                      belt={beltFor(primaryProgram)}
+                      items={realPrograms.map((p) => ({ program: p, belt: beltFor(p) }))}
+                      size="md"
+                    />
+                    {sessionCount > 1 && (
+                      <span
+                        title={`${sessionCount} sessions today`}
+                        className="absolute -bottom-1 -right-1 text-[10px] font-ninja font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200 leading-none"
+                      >
+                        ×{sessionCount}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 flex-wrap min-w-0">
                   <button
                     onClick={() => navigate(`/manager/students/${group.student_id}`)}
@@ -377,11 +392,6 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                   >
                     {group.student_name}{isBirthdayToday(group.birthday) && <span className="ml-1.5">🎂</span>}
                   </button>
-                  {sessionCount > 1 && (
-                    <span className="text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
-                      {sessionCount} sessions
-                    </span>
-                  )}
                   {((group.pinned_note && group.pinned_note.trim()) || (group.special_instructions && group.special_instructions.trim())) && (
                     <PinnedNotePill note={group.pinned_note} parentNote={group.special_instructions} />
                   )}
