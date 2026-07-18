@@ -26,6 +26,7 @@ export const PROGRAM_LOGOS = {
   'JR':               '/programs/jr_logo.png',
   'Robotics Academy': '/programs/robotics_logo.png',
   'AI Academy':       '/programs/robotics_logo.png',
+  'VR Coding':        '/programs/vr_coding_logo.png',
   'Silver':           '/programs/silver_logo.png',
   'Gold Unity':       '/programs/gold_unity_logo.png',
   'Gold Godot':       '/programs/gold_godot_logo.png',
