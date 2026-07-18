@@ -974,9 +974,6 @@ export default function StudentProfile() {
                       : ''}
                     Member since {student.created_at ? new Date(student.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—'}
                   </p>
-                  <div className="mt-2 flex flex-wrap gap-1 justify-center">
-                    {programs.map((p) => <ProgramBadge key={p.program} program={p.program} size="xs" />)}
-                  </div>
                 </div>
 
                 {/* Stats 2×2 */}
