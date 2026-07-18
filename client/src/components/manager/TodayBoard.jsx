@@ -277,7 +277,7 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                       {sessionCount > 1 && (
                         <span
                           title={`${sessionCount} sessions today`}
-                          className="absolute -bottom-1 -right-1 text-[10px] font-ninja font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200 leading-none"
+                          className="absolute -bottom-1 -right-1 text-[10px] font-ninja font-bold px-1.5 py-0.5 rounded-full bg-white text-ninja-navy border border-ninja-border leading-none"
                         >
                           ×{sessionCount}
                         </span>
@@ -395,7 +395,7 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                     {sessionCount > 1 && (
                       <span
                         title={`${sessionCount} sessions today`}
-                        className="absolute -bottom-1 -right-1 text-[10px] font-ninja font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200 leading-none"
+                        className="absolute -bottom-1 -right-1 text-[10px] font-ninja font-bold px-1.5 py-0.5 rounded-full bg-white text-ninja-navy border border-ninja-border leading-none"
                       >
                         ×{sessionCount}
                       </span>
