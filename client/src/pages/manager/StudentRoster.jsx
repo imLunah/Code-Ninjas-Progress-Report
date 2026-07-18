@@ -5,7 +5,7 @@ import Papa from 'papaparse';
 import Layout from '../../components/layout/Layout';
 import ModalPortal from '../../components/ui/ModalPortal';
 import BeltBadge from '../../components/ui/BeltBadge';
-import ProgramBadge from '../../components/ui/ProgramBadge';
+import ProgramBadge, { ProgramAvatar } from '../../components/ui/ProgramBadge';
 import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
 import { PROGRAMS, getBelt } from '../../utils/beltConfig';
@@ -461,9 +461,9 @@ export default function StudentRoster() {
                     <RosterAvatar student={s} className="w-10 h-10 text-sm" />
                     <div className="flex-1 min-w-0">
                       <p className="font-ninja font-bold text-ninja-navy truncate">{s.full_name}</p>
-                      <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                      <div className="flex items-center gap-1.5 mt-1">
                         {(s.programs || []).map((p) => (
-                          <ProgramBadge key={p.program} program={p.program} size="xs" />
+                          <ProgramAvatar key={p.program} program={p.program} size="xs" />
                         ))}
                       </div>
                     </div>
@@ -624,9 +624,9 @@ export default function StudentRoster() {
                       </div>
 
                       {/* Programs */}
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex items-center gap-1.5">
                         {(s.programs || []).map((p) => (
-                          <ProgramBadge key={p.program} program={p.program} size="xs" />
+                          <ProgramAvatar key={p.program} program={p.program} size="xs" />
                         ))}
                         {(s.programs || []).length === 0 && (
                           <span className="text-ninja-muted font-ninja text-sm italic">—</span>
