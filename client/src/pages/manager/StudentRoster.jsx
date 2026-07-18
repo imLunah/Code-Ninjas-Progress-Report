@@ -210,9 +210,21 @@ export default function StudentRoster() {
     });
   };
 
-  const toggleAll = () => {
-    if (selected.size === sorted.length) setSelected(new Set());
-    else setSelected(new Set(sorted.map((s) => s.id)));
+  // Select-all covers EVERY ninja matching the current filters, not just the
+  // loaded page (the roster is paginated 50 at a time).
+  const toggleAll = async () => {
+    if (selected.size >= totalCount && totalCount > 0) { setSelected(new Set()); return; }
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (programFilter) params.set('program', programFilter);
+    params.set('all', 'true');
+    if (showArchived && isManager) params.set('inactive', 'true');
+    try {
+      const { students: allMatching } = await api.get(`/students?${params.toString()}`);
+      setSelected(new Set((allMatching ?? []).map((s) => s.id)));
+    } catch {
+      setSelected(new Set(sorted.map((s) => s.id)));
+    }
   };
 
   const handleDeleteSelected = async () => {
@@ -562,7 +574,7 @@ export default function StudentRoster() {
                     <div>
                       <input
                         type="checkbox"
-                        checked={sorted.length > 0 && selected.size === sorted.length}
+                        checked={totalCount > 0 && selected.size >= totalCount}
                         onChange={toggleAll}
                         className="rounded border-ninja-border accent-ninja-blue cursor-pointer"
                       />
