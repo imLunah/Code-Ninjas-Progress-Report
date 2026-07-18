@@ -18,7 +18,7 @@ function PinGlyph({ className }) {
   );
 }
 
-// Amber "Note" pill that reveals the ninja's pinned note on hover or click.
+// Bare amber thumbtack that reveals the ninja's pinned note on hover or click.
 const POPOVER_WIDTH = 256; // matches w-64
 
 function PinnedNotePill({ note, parentNote }) {
@@ -50,11 +50,12 @@ function PinnedNotePill({ note, parentNote }) {
       <button
         ref={btnRef}
         type="button"
+        aria-label="Pinned note"
+        title="Pinned note"
         onClick={(e) => { e.stopPropagation(); open ? setOpen(false) : show(); }}
-        className="inline-flex items-center gap-1 text-xs font-ninja font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200 transition-colors"
+        className="inline-flex items-center justify-center p-1 -m-0.5 text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
       >
-        <PinGlyph className="w-3 h-3 -rotate-12" />
-        Note
+        <PinGlyph className="w-4 h-4 -rotate-12" />
       </button>
       {open && createPortal(
         <div
