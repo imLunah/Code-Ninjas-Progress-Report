@@ -18,7 +18,22 @@ function PinGlyph({ className }) {
   );
 }
 
-// Bare amber thumbtack that reveals the ninja's pinned note on hover or click.
+// Sticky-note marker that reveals the ninja's pinned note on hover or click.
+// Filled amber square with a folded corner + text lines — reads as "note" at a
+// glance without a pill around it.
+function StickyNoteIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <path
+        d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8.5L14.5 20H6a2 2 0 0 1-2-2V5z"
+        fill="currentColor"
+      />
+      <path d="M20 13.5L14.5 20v-4.5a2 2 0 0 1 2-2H20z" fill="#00000022" />
+      <path d="M8 8.5h8M8 12h5" stroke="#ffffff" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+    </svg>
+  );
+}
+
 const POPOVER_WIDTH = 256; // matches w-64
 
 function PinnedNotePill({ note, parentNote }) {
@@ -53,9 +68,9 @@ function PinnedNotePill({ note, parentNote }) {
         aria-label="Pinned note"
         title="Pinned note"
         onClick={(e) => { e.stopPropagation(); open ? setOpen(false) : show(); }}
-        className="inline-flex items-center justify-center p-1 -m-0.5 text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+        className="inline-flex items-center justify-center p-0.5 text-amber-400 hover:text-amber-500 dark:hover:text-amber-300 hover:scale-110 transition-all"
       >
-        <PinGlyph className="w-4 h-4 -rotate-12" />
+        <StickyNoteIcon className="w-5 h-5 -rotate-6 drop-shadow-sm" />
       </button>
       {open && createPortal(
         <div
