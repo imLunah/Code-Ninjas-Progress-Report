@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 
 const fadeUp = {
@@ -175,10 +176,95 @@ function PinnedNoteSection({ clubName, initialNote, initialAuthor, initialUpdate
   );
 }
 
+// Quick-look popup for a session — inspect notes/attendance without leaving the
+// page. Esc, backdrop click, or × to close; "Open full session" for editing.
+function SessionQuickView({ session, memberCount, onClose, onOpenFull }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
+  }, [onClose]);
+
+  const present = session.attendees?.length ?? 0;
+  const rel = relativeDate(session.session_date);
+
+  return createPortal(
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-[2px] p-0 sm:p-6"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 28 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 16 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+        className="w-full sm:max-w-2xl max-h-[88dvh] flex flex-col bg-white border border-ninja-border rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-ninja-border flex-shrink-0">
+          <div className="min-w-0">
+            <h3 className="font-ninja font-bold text-ninja-navy text-lg leading-tight">{formatDate(session.session_date)}</h3>
+            {rel && <p className="font-ninja text-xs text-ninja-muted mt-0.5">{rel}</p>}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="inline-flex items-center gap-1 rounded-full bg-ninja-bg border border-ninja-border px-2.5 py-1 font-ninja text-xs font-semibold text-ninja-navy">
+              <UsersIcon className="w-3.5 h-3.5 text-ninja-muted" />
+              {present}{memberCount > 0 ? `/${memberCount}` : ''}
+            </span>
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="text-ninja-muted hover:text-ninja-navy transition-colors text-2xl leading-none -mt-1"
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
+          {session.attendees?.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {session.attendees.map((a) => (
+                <span key={a.id} className="text-xs font-ninja bg-ninja-bg border border-ninja-border text-ninja-navy px-2 py-0.5 rounded-md">
+                  {a.full_name}
+                </span>
+              ))}
+            </div>
+          )}
+          {session.notes ? (
+            <div className="md-view font-ninja text-sm text-ninja-navy leading-relaxed">
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{session.notes}</ReactMarkdown>
+            </div>
+          ) : (
+            <p className="text-ninja-muted font-ninja text-sm italic">No notes logged yet.</p>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex-shrink-0 px-5 py-3.5 border-t border-ninja-border">
+          <button
+            onClick={onOpenFull}
+            className="w-full py-2.5 rounded-xl bg-ninja-blue text-white font-ninja font-bold text-sm hover:bg-ninja-blue/90 transition-colors"
+          >
+            {session.notes ? 'Open full session' : 'Log this session'}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>,
+    document.body
+  );
+}
+
 function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isReadOnly, onDeleted }) {
   const [expanded, setExpanded] = useState(false);
   const [confirmId, setConfirmId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [quickView, setQuickView] = useState(null);
   const todayStr = today();
   const shown = expanded ? sessions : sessions.slice(0, 4);
   const canDelete = isManager && !isReadOnly;
@@ -222,8 +308,8 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
                 key={s.id}
                 role="button"
                 tabIndex={0}
-                onClick={() => navigate(`/clubs/${slug}/sessions/${s.id}`)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/clubs/${slug}/sessions/${s.id}`); } }}
+                onClick={() => setQuickView(s)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setQuickView(s); } }}
                 className="group w-full text-left rounded-xl border border-ninja-border bg-ninja-bg p-3.5 hover:border-ninja-blue/40 hover:shadow-sm transition-all cursor-pointer"
               >
                 <div className="flex items-center justify-between gap-3">
@@ -288,6 +374,17 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
           })}
         </div>
       )}
+
+      <AnimatePresence>
+        {quickView && (
+          <SessionQuickView
+            session={quickView}
+            memberCount={memberCount}
+            onClose={() => setQuickView(null)}
+            onOpenFull={() => { setQuickView(null); navigate(`/clubs/${slug}/sessions/${quickView.id}`); }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
