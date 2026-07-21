@@ -126,9 +126,6 @@ function PinnedNoteSection({ clubName, initialNote, initialAuthor, initialUpdate
             </h3>
           </div>
           <div className="flex items-center gap-3">
-            {updatedAt && (
-              <span className="text-amber-500 font-ninja text-xs">{relativeDate(updatedAt)}</span>
-            )}
             {!isReadOnly && !editing && (
               <button
                 onClick={() => { setDraft(note); setEditing(true); }}
