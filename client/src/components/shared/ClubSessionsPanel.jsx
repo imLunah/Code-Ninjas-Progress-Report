@@ -6,16 +6,6 @@ import { api } from '../../api/client';
 import Button from '../ui/Button';
 import { CLUB_COLORS, COLOR_SETS, toSlug } from '../../utils/clubUtils';
 
-function initials(name = '') {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase();
-}
-
 function ClubBadge({ name }) {
   const c = CLUB_COLORS[name] || { bg: 'bg-ninja-bg', text: 'text-ninja-navy', border: 'border-ninja-border' };
   return (
@@ -167,14 +157,7 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
                     </>
                   )}
 
-                  {/* Monogram badge */}
-                  <div
-                    className="relative w-10 h-10 rounded-xl bg-white/90 flex items-center justify-center font-ninja font-extrabold text-sm shadow-sm flex-shrink-0"
-                    style={{ color: color.solid }}
-                  >
-                    {initials(s.club_name)}
-                  </div>
-                  <h3 className="relative ml-2.5 font-ninja font-bold text-white text-sm leading-snug drop-shadow-sm line-clamp-2">
+                  <h3 className="relative font-ninja font-bold text-white text-lg leading-tight drop-shadow-sm line-clamp-2">
                     {s.club_name}
                   </h3>
 
