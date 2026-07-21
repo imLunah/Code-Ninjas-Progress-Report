@@ -4,7 +4,17 @@ import { useAuth } from '../../context/AuthContext';
 import { formatDate, today } from '../../utils/dateUtils';
 import { api } from '../../api/client';
 import Button from '../ui/Button';
-import { CLUB_COLORS, toSlug } from '../../utils/clubUtils';
+import { CLUB_COLORS, COLOR_SETS, toSlug } from '../../utils/clubUtils';
+
+function initials(name = '') {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase();
+}
 
 function ClubBadge({ name }) {
   const c = CLUB_COLORS[name] || { bg: 'bg-ninja-bg', text: 'text-ninja-navy', border: 'border-ninja-border' };
@@ -124,49 +134,91 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
             const sessionDateStr = String(s.session_date).split('T')[0];
             const isPast = sessionDateStr < todayStr;
             const attendeeCount = s.attendees?.length ?? 0;
+            const color = COLOR_SETS[s.color_key] || COLOR_SETS.blue;
+            const hasCover = Boolean(s.cover_image_url);
 
             return (
-              <div key={s.id} className="relative bg-white border border-ninja-border rounded-xl shadow-sm p-4 flex flex-col gap-3 hover:border-ninja-blue/50 transition-colors">
-                {/* X delete button */}
-                {isManager && !isReadOnly && confirmId !== s.id && (
-                  <button
-                    onClick={() => setConfirmId(s.id)}
-                    className="absolute top-2 right-2 text-ninja-muted hover:text-red-400 transition-colors text-sm leading-none p-1"
+              <div
+                key={s.id}
+                className="group relative bg-white border border-ninja-border rounded-2xl shadow-sm overflow-hidden flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                style={{ borderColor: `${color.solid}33` }}
+              >
+                {/* Colored header band — cover image if set, else club-color gradient */}
+                <div
+                  className="relative h-24 flex items-end p-3"
+                  style={
+                    hasCover
+                      ? undefined
+                      : { background: `linear-gradient(135deg, ${color.solid}, ${color.solid}b3)` }
+                  }
+                >
+                  {hasCover && (
+                    <>
+                      <img
+                        src={s.cover_image_url}
+                        alt=""
+                        className="absolute inset-0 w-full h-full object-cover"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                      <div
+                        className="absolute inset-0"
+                        style={{ background: `linear-gradient(to top, ${color.solid}e6, ${color.solid}40)` }}
+                      />
+                    </>
+                  )}
+
+                  {/* Monogram badge */}
+                  <div
+                    className="relative w-10 h-10 rounded-xl bg-white/90 flex items-center justify-center font-ninja font-extrabold text-sm shadow-sm flex-shrink-0"
+                    style={{ color: color.solid }}
                   >
-                    ✕
-                  </button>
-                )}
-                {/* Header */}
-                <div className="pr-6">
-                  <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                    <h3 className="font-ninja font-bold text-ninja-navy text-sm leading-snug">{s.club_name}</h3>
-                    {isPast && (
-                      <span className="text-red-600 font-ninja font-semibold text-xs">
-                        Overdue
-                      </span>
-                    )}
+                    {initials(s.club_name)}
                   </div>
-                  <div className="flex items-center gap-3 text-ninja-muted font-ninja text-xs">
-                    <span className="inline-flex items-center gap-1">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <rect x="3" y="4" width="18" height="18" rx="2" /><path strokeLinecap="round" d="M16 2v4M8 2v4M3 10h18" />
-                      </svg>
-                      {formatDate(s.session_date)}
+                  <h3 className="relative ml-2.5 font-ninja font-bold text-white text-sm leading-snug drop-shadow-sm line-clamp-2">
+                    {s.club_name}
+                  </h3>
+
+                  {isPast && (
+                    <span className="absolute top-2.5 left-3 bg-white/90 text-red-600 font-ninja font-bold text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-md shadow-sm">
+                      Overdue
                     </span>
-                    <span className="inline-flex items-center gap-1">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87" />
-                      </svg>
-                      {attendeeCount} {attendeeCount === 1 ? 'ninja' : 'ninjas'}
-                    </span>
-                  </div>
+                  )}
+
+                  {/* X delete button */}
+                  {isManager && !isReadOnly && confirmId !== s.id && (
+                    <button
+                      onClick={() => setConfirmId(s.id)}
+                      aria-label="Remove club session"
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/20 text-white/90 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors text-xs leading-none"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Body */}
+                <div className="p-4 pt-3 flex flex-col gap-3 flex-1">
+                <div className="flex items-center gap-3 text-ninja-muted font-ninja text-xs">
+                  <span className="inline-flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <rect x="3" y="4" width="18" height="18" rx="2" /><path strokeLinecap="round" d="M16 2v4M8 2v4M3 10h18" />
+                    </svg>
+                    {formatDate(s.session_date)}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87" />
+                    </svg>
+                    {attendeeCount} {attendeeCount === 1 ? 'ninja' : 'ninjas'}
+                  </span>
                 </div>
 
                 {/* Attendees toggle */}
                 <button
                   type="button"
                   onClick={() => setExpanded(isOpen ? null : s.id)}
-                  className="text-ninja-blue font-ninja text-xs font-semibold text-left hover:underline"
+                  className="font-ninja text-xs font-semibold text-left hover:underline"
+                  style={{ color: color.solid }}
                 >
                   {isOpen ? 'Hide attendees ▲' : 'View attendees ▼'}
                 </button>
@@ -194,14 +246,15 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
                                   key={st.id}
                                   type="button"
                                   onClick={() => toggleAttendee(st.id)}
+                                  style={checked ? { backgroundColor: color.solid } : undefined}
                                   className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors ${
-                                    checked ? 'bg-ninja-blue text-white' : 'bg-ninja-bg text-ninja-navy hover:bg-blue-50'
+                                    checked ? 'text-white' : 'bg-ninja-bg text-ninja-navy hover:bg-blue-50'
                                   }`}
                                 >
                                   <div className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center ${
                                     checked ? 'bg-white border-white' : 'border-ninja-border bg-white'
                                   }`}>
-                                    {checked && <span className="text-ninja-blue text-xs font-bold leading-none">✓</span>}
+                                    {checked && <span className="text-xs font-bold leading-none" style={{ color: color.solid }}>✓</span>}
                                   </div>
                                   <span className="font-ninja text-xs">{st.full_name}</span>
                                 </button>
@@ -243,7 +296,8 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
                 {!isReadOnly && (
                   <button
                     onClick={() => navigate(`/clubs/${toSlug(s.club_name)}/sessions/${s.id}`)}
-                    className="mt-auto w-full text-sm font-ninja font-bold text-white bg-ninja-blue rounded-lg py-2 hover:bg-ninja-blue/90 transition-colors"
+                    style={{ backgroundColor: color.solid }}
+                    className="mt-auto w-full text-sm font-ninja font-bold text-white rounded-lg py-2 hover:brightness-110 transition-all"
                   >
                     Log Club
                   </button>
@@ -256,6 +310,7 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
                     <Button variant="secondary" size="sm" onClick={() => setConfirmId(null)}>Cancel</Button>
                   </div>
                 )}
+                </div>
               </div>
             );
           })}

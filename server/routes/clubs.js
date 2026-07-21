@@ -20,6 +20,7 @@ const SESSION_SELECT = `
     cs.id, cs.club_name, cs.session_date, cs.notes, cs.created_at,
     cs.sensei_id,
     u.display_name AS sensei_name,
+    cd.color_key, cd.cover_image_url,
     COALESCE(
       (SELECT json_agg(json_build_object('id', s.id, 'full_name', s.full_name) ORDER BY s.full_name)
        FROM club_attendees ca JOIN students s ON ca.student_id = s.id
@@ -33,6 +34,9 @@ const SESSION_SELECT = `
     ) AS comments
   FROM club_sessions cs
   LEFT JOIN users u ON cs.sensei_id = u.id
+  LEFT JOIN club_definitions cd
+    ON cd.name = cs.club_name
+   AND (cd.location_id = cs.location_id OR cd.location_id IS NULL)
 `;
 
 // ─── Club definitions ─────────────────────────────────────────────────────────
