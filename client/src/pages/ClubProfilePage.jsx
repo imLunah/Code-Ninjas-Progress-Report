@@ -26,12 +26,18 @@ import { uploadToSigned } from '../lib/supabase';
 
 const relativeDate = (ts) => {
   if (!ts) return '';
-  const d = new Date(ts);
+  // Compare by calendar day in LOCAL time. pg DATE columns serialize to a
+  // UTC-midnight ISO string (e.g. 2026-07-20T00:00:00.000Z); using the raw ms
+  // diff against a local `now` mis-rounds it to the previous day. Parse the
+  // YYYY-MM-DD part into a local date so "today" reads as Today.
+  const [y, m, day] = String(ts).split('T')[0].split('-').map(Number);
+  const d = new Date(y, m - 1, day);
   const now = new Date();
-  const diffDays = Math.floor((now - d) / 86400000);
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.round((startOfToday - d) / 86400000);
   if (diffDays === 0) return 'Today';
   if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays > 0 && diffDays < 7) return `${diffDays} days ago`;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
