@@ -46,33 +46,38 @@ function CountUp({ value = 0, className }) {
   return <span className={className}>{n}</span>;
 }
 
-// Inline SVG donut. Segments drawn with framer pathLength; program colors pinned.
+// Inline SVG donut. stroke-dasharray/offset computed manually per segment so
+// each program's slice sits in its own arc with its real color. Program colors
+// pinned (JR purple, coding academies in the blue family).
+const R = 52;
+const C = 2 * Math.PI * R;
+
 function EnrollmentDonut({ data, total }) {
-  const segments = [];
-  let acc = 0;
   const sum = data.reduce((s, d) => s + d.count, 0) || 1;
+  const segments = [];
+  let acc = 0; // fraction consumed so far
   for (const d of data) {
     const frac = d.count / sum;
-    segments.push({ ...d, frac, offset: acc });
+    segments.push({ ...d, len: frac * C, offset: acc * C });
     acc += frac;
   }
   return (
     <div className="flex flex-col sm:flex-row items-center gap-6">
       <div className="relative w-36 h-36 flex-shrink-0">
         <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-          <circle cx="60" cy="60" r="52" fill="none" stroke="currentColor" strokeWidth="13" className="text-ninja-bg" />
+          <circle cx="60" cy="60" r={R} fill="none" stroke="currentColor" strokeWidth="13" className="text-ninja-bg" />
           {segments.map((seg, i) => (
             <motion.circle
               key={seg.program}
-              cx="60" cy="60" r="52"
+              cx="60" cy="60" r={R}
               fill="none"
               stroke={hexFor(seg.program)}
               strokeWidth="13"
               strokeLinecap="butt"
-              style={{ pathOffset: seg.offset }}
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: seg.frac }}
-              transition={{ duration: 0.8, delay: 0.15 + i * 0.1, ease: 'easeOut' }}
+              strokeDashoffset={-seg.offset}
+              initial={{ strokeDasharray: `0 ${C}` }}
+              animate={{ strokeDasharray: `${seg.len} ${C}` }}
+              transition={{ duration: 0.7, delay: 0.15 + i * 0.08, ease: 'easeOut' }}
             />
           ))}
         </svg>
