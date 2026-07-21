@@ -66,6 +66,18 @@ function EnrollmentDonut({ data, total }) {
       <div className="relative w-36 h-36 flex-shrink-0">
         <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
           <circle cx="60" cy="60" r={R} fill="none" stroke="currentColor" strokeWidth="13" className="text-ninja-bg" />
+          {/* One line sweeps around the full ring once... */}
+          <motion.circle
+            cx="60" cy="60" r={R}
+            fill="none"
+            stroke="#3b82f6"
+            strokeWidth="13"
+            strokeLinecap="round"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 0.9, ease: 'easeInOut' }}
+          />
+          {/* ...then the program colors blend in on top. */}
           {segments.map((seg, i) => (
             <motion.circle
               key={seg.program}
@@ -74,10 +86,11 @@ function EnrollmentDonut({ data, total }) {
               stroke={hexFor(seg.program)}
               strokeWidth="13"
               strokeLinecap="butt"
+              strokeDasharray={`${seg.len} ${C}`}
               strokeDashoffset={-seg.offset}
-              initial={{ strokeDasharray: `0 ${C}` }}
-              animate={{ strokeDasharray: `${seg.len} ${C}` }}
-              transition={{ duration: 0.7, delay: 0.15 + i * 0.08, ease: 'easeOut' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.9 + i * 0.06, ease: 'easeOut' }}
             />
           ))}
         </svg>
