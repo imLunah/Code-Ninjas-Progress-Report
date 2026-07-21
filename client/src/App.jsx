@@ -20,6 +20,7 @@ import LandingPage from './pages/LandingPage';
 // (emoji picker on club pages, markdown, papaparse, crop) into per-route chunks that
 // only download when that route is actually visited.
 const ManagerDashboard = lazy(() => import('./pages/manager/ManagerDashboard'));
+const DirectorDashboard = lazy(() => import('./pages/manager/DirectorDashboard'));
 const StudentRoster = lazy(() => import('./pages/manager/StudentRoster'));
 const AddStudentPage = lazy(() => import('./pages/manager/AddStudentPage'));
 const StudentProfile = lazy(() => import('./pages/manager/StudentProfile'));
@@ -63,6 +64,7 @@ export default function App() {
 
             {/* Manager routes */}
             <Route path="/manager/dashboard" element={<ProtectedRoute role="manager"><ManagerDashboard /></ProtectedRoute>} />
+            <Route path="/manager/overview" element={<ProtectedRoute role="manager"><DirectorDashboard /></ProtectedRoute>} />
             <Route path="/manager/students"  element={<ProtectedRoute role="sensei"><StudentRoster /></ProtectedRoute>} />
             <Route path="/manager/staff"     element={<ProtectedRoute role="sensei"><StaffPage /></ProtectedRoute>} />
             <Route path="/manager/reports"  element={<ProtectedRoute role="sensei"><ReportsPage /></ProtectedRoute>} />
