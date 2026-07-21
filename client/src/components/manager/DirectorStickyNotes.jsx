@@ -1,7 +1,27 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import LazyMarkdownEditor from '../shared/LazyMarkdownEditor';
+
+// Markdown for note bodies. Inherits the note's own text color (currentColor)
+// so bold/lists/links match each sticky's palette. Images dropped (text-only).
+const STICKY_MD = {
+  p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
+  ul: ({ children }) => <ul className="list-disc marker:opacity-50 pl-4 mb-1.5 last:mb-0 space-y-0.5">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal marker:opacity-50 pl-4 mb-1.5 last:mb-0 space-y-0.5">{children}</ol>,
+  li: ({ children }) => <li className="leading-snug">{children}</li>,
+  strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+  em: ({ children }) => <em className="italic">{children}</em>,
+  a: ({ children, href }) => <a href={href} target="_blank" rel="noreferrer" className="underline underline-offset-2">{children}</a>,
+  img: () => null,
+  h1: ({ children }) => <p className="font-bold mb-1.5">{children}</p>,
+  h2: ({ children }) => <p className="font-bold mb-1.5">{children}</p>,
+  h3: ({ children }) => <p className="font-bold mb-1.5">{children}</p>,
+};
+
+const mdUrl = (url) => (/^(https?:|mailto:)/i.test(url) ? url : '');
 
 // Paper-sticky palette. Inline hex so notes read identically in light + dark
 // (avoids the .dark bg-* override turning pastel notes dark).
@@ -68,13 +88,10 @@ function NoteCard({ note, canManage, onSaved, onDeleted }) {
     >
       {editing ? (
         <>
-          <textarea
+          <LazyMarkdownEditor
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            rows={4}
-            maxLength={2000}
-            className="w-full bg-white/60 rounded-lg p-2 font-ninja text-sm resize-none focus:outline-none"
-            style={{ color: COLORS[color].text }}
+            onChange={setDraft}
+            placeholder="Jot something down… **bold**, or '- ' for a list"
           />
           <div className="flex items-center justify-between mt-2 gap-2">
             <ColorDots value={color} onChange={setColor} />
@@ -86,7 +103,9 @@ function NoteCard({ note, canManage, onSaved, onDeleted }) {
         </>
       ) : (
         <>
-          <p className="font-ninja text-sm whitespace-pre-wrap break-words flex-1">{note.body}</p>
+          <div className="font-ninja text-sm break-words flex-1">
+            <ReactMarkdown components={STICKY_MD} urlTransform={mdUrl}>{note.body}</ReactMarkdown>
+          </div>
           <div className="flex items-center justify-between mt-3 pt-2 border-t" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
             <span className="font-ninja text-[11px] font-semibold opacity-70 truncate">{note.created_by_name || 'Unknown'}</span>
             {canManage && (
@@ -159,15 +178,10 @@ export default function DirectorStickyNotes() {
             className="overflow-hidden mb-4"
           >
             <div className="rounded-xl p-3.5 shadow-sm" style={{ backgroundColor: COLORS[color].bg, color: COLORS[color].text }}>
-              <textarea
+              <LazyMarkdownEditor
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                rows={4}
-                maxLength={2000}
-                autoFocus
-                placeholder="Jot something down…"
-                className="w-full bg-white/60 rounded-lg p-2 font-ninja text-sm resize-none focus:outline-none placeholder:opacity-50"
-                style={{ color: COLORS[color].text }}
+                onChange={setDraft}
+                placeholder="Jot something down… **bold**, or '- ' for a list"
               />
               <div className="flex items-center justify-between mt-2 gap-2">
                 <ColorDots value={color} onChange={setColor} />

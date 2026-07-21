@@ -6,6 +6,7 @@ import MobileNav from './MobileNav';
 import MobileTopBar from './MobileTopBar';
 import BugReportButton from '../ui/BugReportButton';
 import { useAuth } from '../../context/AuthContext';
+import { api } from '../../api/client';
 import { getMobileNavTabs } from '../../lib/navTabs';
 import { ONBOARDING_ENABLED } from '../../lib/features';
 
@@ -36,8 +37,8 @@ const TAB_LAZY_MAP = {
   '/account': lazy(() => import('../../pages/AccountPage')),
 };
 
-function AnnouncementBanner({ text }) {
-  const storageKey = `ann_dismissed_${encodeURIComponent(text).slice(0, 32)}`;
+function AnnouncementBanner({ text, title, dismissId }) {
+  const storageKey = `ann_dismissed_${dismissId ?? encodeURIComponent(text).slice(0, 32)}`;
   const [dismissed, setDismissed] = useState(() => !!sessionStorage.getItem(storageKey));
   const dismiss = () => { sessionStorage.setItem(storageKey, '1'); setDismissed(true); };
   return (
@@ -51,7 +52,9 @@ function AnnouncementBanner({ text }) {
           <svg className="w-4 h-4 text-ninja-red flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="flex-1 text-ninja-navy font-ninja text-sm leading-snug">{text}</p>
+          <p className="flex-1 text-ninja-navy font-ninja text-sm leading-snug">
+            {title && <span className="font-bold">{title}. </span>}{text}
+          </p>
           <button onClick={dismiss} className="text-ninja-muted hover:text-ninja-navy transition-colors flex-shrink-0" aria-label="Dismiss announcement">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -61,6 +64,22 @@ function AnnouncementBanner({ text }) {
       )}
     </AnimatePresence>
   );
+}
+
+// Per-center announcements posted by Center Directors (announcements table).
+// Shown to every staff member at the active location, above the app content.
+function LocationAnnouncements() {
+  const { user } = useAuth();
+  const [items, setItems] = useState([]);
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    api.get('/announcements').then((d) => { if (alive) setItems(d || []); }).catch(() => {});
+    return () => { alive = false; };
+  }, [user?.activeLocation?.id]);
+  return items.map((a) => (
+    <AnnouncementBanner key={a.id} dismissId={`loc_${a.id}`} title={a.title} text={a.message} />
+  ));
 }
 
 function AdjacentPanel({ tab, panelRef, side }) {
@@ -326,6 +345,7 @@ export default function Layout({ children }) {
       <Sidebar onOpenBug={() => setBugOpen(true)} />
       <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
         {user?.announcement && <AnnouncementBanner text={user.announcement} />}
+        {!isPreview && <LocationAnnouncements />}
         <MobileTopBar compact={navCompact} />
         <main onScroll={handleMainScroll} className="flex-1 overflow-y-auto min-h-0 max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 pt-16 lg:pt-8 pb-28 lg:pb-8">
           <div className="relative overflow-x-hidden overflow-y-hidden lg:overflow-x-visible lg:overflow-y-visible">
