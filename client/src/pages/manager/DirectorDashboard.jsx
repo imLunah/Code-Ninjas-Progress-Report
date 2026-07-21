@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
+import StaffAnnouncements from '../../components/manager/StaffAnnouncements';
+import DirectorStickyNotes from '../../components/manager/DirectorStickyNotes';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
@@ -202,6 +204,12 @@ export default function DirectorDashboard() {
             <EnrollmentDonut data={enrollment} total={totalStudents} />
           )}
         </div>
+
+        {/* Announcements to staff */}
+        <StaffAnnouncements />
+
+        {/* CD sticky notes */}
+        <DirectorStickyNotes />
       </div>
     </Layout>
   );
