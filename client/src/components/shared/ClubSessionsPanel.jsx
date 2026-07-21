@@ -217,8 +217,7 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
                 <button
                   type="button"
                   onClick={() => setExpanded(isOpen ? null : s.id)}
-                  className="font-ninja text-xs font-semibold text-left hover:underline"
-                  style={{ color: color.solid }}
+                  className="text-ninja-blue font-ninja text-xs font-semibold text-left hover:underline"
                 >
                   {isOpen ? 'Hide attendees ▲' : 'View attendees ▼'}
                 </button>
@@ -246,15 +245,14 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
                                   key={st.id}
                                   type="button"
                                   onClick={() => toggleAttendee(st.id)}
-                                  style={checked ? { backgroundColor: color.solid } : undefined}
                                   className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors ${
-                                    checked ? 'text-white' : 'bg-ninja-bg text-ninja-navy hover:bg-blue-50'
+                                    checked ? 'bg-ninja-blue text-white' : 'bg-ninja-bg text-ninja-navy hover:bg-blue-50'
                                   }`}
                                 >
                                   <div className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center ${
                                     checked ? 'bg-white border-white' : 'border-ninja-border bg-white'
                                   }`}>
-                                    {checked && <span className="text-xs font-bold leading-none" style={{ color: color.solid }}>✓</span>}
+                                    {checked && <span className="text-ninja-blue text-xs font-bold leading-none">✓</span>}
                                   </div>
                                   <span className="font-ninja text-xs">{st.full_name}</span>
                                 </button>
@@ -296,8 +294,7 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
                 {!isReadOnly && (
                   <button
                     onClick={() => navigate(`/clubs/${toSlug(s.club_name)}/sessions/${s.id}`)}
-                    style={{ backgroundColor: color.solid }}
-                    className="mt-auto w-full text-sm font-ninja font-bold text-white rounded-lg py-2 hover:brightness-110 transition-all"
+                    className="mt-auto w-full text-sm font-ninja font-bold text-white bg-ninja-blue rounded-lg py-2 hover:bg-ninja-blue/90 transition-colors"
                   >
                     Log Club
                   </button>
