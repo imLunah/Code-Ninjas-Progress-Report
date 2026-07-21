@@ -507,11 +507,8 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
 
       <div className="p-4">
         <div className="flex items-start gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-ninja font-bold text-sm flex-shrink-0 ${colors.bg} ${colors.text}`}>
-            {initials}
-          </div>
           <div className="flex-1 min-w-0">
-            <p className="font-ninja font-bold text-ninja-navy text-base leading-tight">{clubDef.name}</p>
+            <p className="font-ninja font-bold text-ninja-navy text-lg leading-tight">{clubDef.name}</p>
             {(createdYear || clubDef.creator_name) && (
               <p className="text-ninja-muted font-ninja text-xs mt-0.5">
                 {createdYear && `Created ${createdYear}`}
