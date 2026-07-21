@@ -14,9 +14,14 @@ export function getMobileNavTabs(user, viewAs) {
 }
 
 // Top bar — occasional/reference destinations, in the screen corners (IG-style).
-export function getTopNavTabs() {
+export function getTopNavTabs(user, viewAs) {
+  const isSenseiView = user?.role === 'admin' && viewAs === 'sensei';
+  const isManager = ['manager', 'admin'].includes(user?.role) && !isSenseiView;
   return {
-    left: { to: '/manager/reports', label: 'Reports', iconId: 'report' },
+    // CDs get the Dashboard here; senseis (no dashboard) keep Reports.
+    left: isManager
+      ? { to: '/manager/overview', label: 'Dashboard', iconId: 'dashboard' }
+      : { to: '/manager/reports', label: 'Reports', iconId: 'report' },
     right: { to: '/curriculum-roadmap', label: 'Roadmap', iconId: 'roadmap' },
   };
 }
