@@ -5,6 +5,7 @@ import Layout from '../../components/layout/Layout';
 import StaffAnnouncements from '../../components/manager/StaffAnnouncements';
 import DirectorStickyNotes from '../../components/manager/DirectorStickyNotes';
 import Modal from '../../components/ui/Modal';
+import LazyLiquid from '../../components/ui/canvas/LazyLiquid';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
@@ -723,10 +724,25 @@ export default function DirectorDashboard() {
             transition={{ duration: 0.35 }}
             className="relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-[#2b2440] dark:via-[#221f33] dark:to-[#2a2036]"
           >
-            {/* Soft shapes standing in for the reference illustration. */}
+            {/* Soft shapes give the banner static depth before any cursor
+                movement — the fluid only paints trails while the pointer moves. */}
             <div className="pointer-events-none absolute -right-10 -top-12 w-48 h-48 rounded-full bg-amber-300/30 dark:bg-white/5" />
             <div className="pointer-events-none absolute right-16 top-16 w-28 h-28 rounded-full bg-orange-300/25 dark:bg-white/5" />
-            <div className="relative">
+
+            {/* Ambient WebGL fluid, confined to the banner. Sits behind the text
+                (z-0); the content block is z-10 so links stay clickable. Trails
+                follow the cursor across the open right side of the hero. */}
+            <LazyLiquid
+              className="absolute inset-0 z-0"
+              style={{ position: 'absolute' }}
+              color={[0.145, 0.239, 0.867]}
+              intensity={1.6}
+              blend={3.5}
+              curl={1.4}
+              force={0.9}
+            />
+
+            <div className="relative z-10">
               <h1 className="text-2xl sm:text-3xl font-black font-ninja text-ninja-navy tracking-wide">
                 Hello{firstName && ', '}<span className="text-ninja-blue">{firstName}</span>!
               </h1>
