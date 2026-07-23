@@ -365,26 +365,31 @@ function buildGrowth(rows) {
   return out;
 }
 
-function GrowthSection({ rows, loading }) {
-  const points = useMemo(() => buildGrowth(rows), [rows]);
+// Collapsed card: last 6 months. The expanded view offers longer ranges.
+const CARD_MONTHS = 6;
+
+function GrowthSection({ rows, loading, onExpand }) {
+  const all = useMemo(() => buildGrowth(rows), [rows]);
   if (loading) return <p className="text-ninja-muted font-ninja text-sm py-4">Loading…</p>;
-  if (points.length === 0) {
+  if (all.length === 0) {
     return <p className="text-ninja-muted font-ninja text-sm py-4">No roster history yet.</p>;
   }
-  const total = points[points.length - 1].count;
-  const addedThisMonth = points[points.length - 1].added;
-  const baseline = points[0];
+  const points = all.slice(-CARD_MONTHS);
+  const total = all[all.length - 1].count;
+  const addedThisMonth = all[all.length - 1].added;
+  const baseline = all[0];
   // Everything after the seed import is real signup activity.
   const sinceBaseline = total - baseline.count;
 
   return (
-    <div>
+    <button onClick={onExpand} className="block w-full text-left group">
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
         <span className="font-ninja text-sm text-ninja-navy font-semibold">
           <CountUp value={total} className="font-black" /> ninjas on the roster
         </span>
         <span className="font-ninja text-xs text-ninja-muted">
           +{addedThisMonth} this month · +{sinceBaseline} since launch
+          <span className="ml-2 group-hover:text-ninja-blue transition-colors">expand →</span>
         </span>
       </div>
       <AreaChart points={points} height={150} gradientId="growthFill" formatLabel={monthOf} />
@@ -393,9 +398,110 @@ function GrowthSection({ rows, loading }) {
         <span>{points.length > 2 ? monthShort(points[Math.floor(points.length / 2)].date) : ''}</span>
         <span>This month</span>
       </div>
-      <p className="font-ninja text-[11px] text-ninja-muted mt-2">
-        {monthOf(baseline.date)} is the starting roster from the first import, not signups. Ninjas are
-        counted from when they were added here, and archived ninjas are excluded throughout.
+      {points[0] === baseline && (
+        <p className="font-ninja text-[11px] text-ninja-muted mt-2">
+          {monthOf(baseline.date)} is the starting roster from the first import, not signups.
+        </p>
+      )}
+    </button>
+  );
+}
+
+const GROWTH_RANGES = [
+  { key: '3',   label: '3 months',  months: 3 },
+  { key: '6',   label: '6 months',  months: 6 },
+  { key: '12',  label: '12 months', months: 12 },
+  { key: 'all', label: 'All time',  months: null },
+];
+
+function GrowthDetail({ rows }) {
+  const all = useMemo(() => buildGrowth(rows), [rows]);
+  const [rangeKey, setRangeKey] = useState('6');
+  const range = GROWTH_RANGES.find((r) => r.key === rangeKey) || GROWTH_RANGES[1];
+  const series = range.months ? all.slice(-range.months) : all;
+
+  if (all.length === 0) {
+    return <p className="text-ninja-muted font-ninja text-sm py-4">No roster history yet.</p>;
+  }
+
+  const total = all[all.length - 1].count;
+  const addedInRange = series.reduce((s, p) => s + p.added, 0);
+  const perMonth = series.length ? addedInRange / series.length : 0;
+  const best = series.reduce((b, p) => (p.added > (b?.added ?? -1) ? p : b), null);
+  const includesBaseline = series[0] === all[0];
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap gap-2">
+        {GROWTH_RANGES.map((r) => (
+          <button
+            key={r.key}
+            onClick={() => setRangeKey(r.key)}
+            className={`font-ninja text-sm font-semibold px-3 py-1.5 rounded-full transition-colors ${
+              rangeKey === r.key
+                ? 'bg-ninja-blue text-white'
+                : 'bg-ninja-bg text-ninja-muted hover:text-ninja-navy'
+            }`}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+
+      <div>
+        <AreaChart key={rangeKey} points={series} height={170} gradientId="growthDetailFill" formatLabel={monthOf} />
+        <div className="flex justify-between font-ninja text-[11px] text-ninja-muted mt-1">
+          <span>{monthShort(series[0].date)}</span>
+          <span>{series.length > 2 ? monthShort(series[Math.floor(series.length / 2)].date) : ''}</span>
+          <span>This month</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-xl bg-ninja-bg p-3">
+          <span className="block text-xl font-black font-ninja text-ninja-navy leading-none">{total}</span>
+          <span className="font-ninja text-xs text-ninja-muted">on the roster</span>
+        </div>
+        <div className="rounded-xl bg-ninja-bg p-3">
+          <span className="block text-xl font-black font-ninja text-ninja-blue leading-none">+{addedInRange}</span>
+          <span className="font-ninja text-xs text-ninja-muted">added in range</span>
+        </div>
+        <div className="rounded-xl bg-ninja-bg p-3">
+          <span className="block text-xl font-black font-ninja text-ninja-navy leading-none">
+            {perMonth.toFixed(1)}
+          </span>
+          <span className="font-ninja text-xs text-ninja-muted">a month</span>
+        </div>
+      </div>
+
+      {/* Month-by-month, newest first */}
+      <div>
+        <h3 className="font-ninja font-bold text-ninja-navy mb-2">Month by month</h3>
+        <div className="space-y-1">
+          {[...series].reverse().map((p) => (
+            <div key={p.date.toISOString()} className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg odd:bg-ninja-bg">
+              <span className="font-ninja text-sm text-ninja-navy">
+                {monthOf(p.date)}
+                {p === all[0] && <span className="text-ninja-muted"> · starting roster</span>}
+                {p === best && p !== all[0] && p.added > 0 && (
+                  <span className="text-ninja-muted"> · best month</span>
+                )}
+              </span>
+              <span className="font-ninja text-sm flex-shrink-0">
+                <span className={p.added > 0 ? 'font-bold text-ninja-blue' : 'text-ninja-muted'}>
+                  {p.added > 0 ? `+${p.added}` : '—'}
+                </span>
+                <span className="text-ninja-muted"> · {p.count} total</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p className="font-ninja text-xs text-ninja-muted">
+        {includesBaseline && `${monthOf(all[0].date)} is the starting roster from the first import, not signups. `}
+        Ninjas count from when they were added to DojoLink, and archived ninjas are excluded from every
+        month, so the line never falls.
       </p>
     </div>
   );
@@ -731,6 +837,7 @@ export default function DirectorDashboard() {
   const [attendance, setAttendance] = useState(null);
   const [growth, setGrowth] = useState(null);
   const [trendOpen, setTrendOpen] = useState(false);
+  const [growthOpen, setGrowthOpen] = useState(false);
   const [birthdaysOpen, setBirthdaysOpen] = useState(false);
   const [birthdays, setBirthdays] = useState(null);
 
@@ -814,7 +921,7 @@ export default function DirectorDashboard() {
           {/* Roster growth + check-ins */}
           <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
             <h2 className="font-ninja font-bold text-ninja-navy text-lg mb-3">Roster growth</h2>
-            <GrowthSection rows={growth} loading={loading} />
+            <GrowthSection rows={growth} loading={loading} onExpand={() => setGrowthOpen(true)} />
 
             <div className="border-t border-ninja-border mt-5 pt-5">
               <h2 className="font-ninja font-bold text-ninja-navy text-lg mb-3">Check-ins</h2>
@@ -855,6 +962,15 @@ export default function DirectorDashboard() {
           </div>
         </div>
       </div>
+
+      <Modal
+        isOpen={growthOpen}
+        onClose={() => setGrowthOpen(false)}
+        title="Roster growth"
+        width="max-w-2xl"
+      >
+        <GrowthDetail rows={growth} />
+      </Modal>
 
       <Modal
         isOpen={trendOpen}
