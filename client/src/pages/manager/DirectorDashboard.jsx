@@ -230,36 +230,54 @@ function smoothPath(pts) {
   return d;
 }
 
-const CW = 320;
 const PAD_X = 10;  // keeps the end dot from clipping at the edge
 const PAD_T = 14;
 const PAD_B = 10;
+const TIP_W = 130; // approximate tooltip width, used to keep it inside the box
 
+// The viewBox is sized to the measured pixel width so one unit is one pixel.
+// A fixed viewBox would letterbox under the default xMidYMid meet — the chart
+// would sit centred at its own aspect ratio while pointer math assumed it
+// spanned the full box, so the readout tracked the wrong place entirely.
 function AreaChart({ points, height = 120, gradientId, className = '', formatLabel = shortDate }) {
   const [hoverIdx, setHoverIdx] = useState(null);
+  const [width, setWidth] = useState(0);
+  const wrapRef = useRef(null);
 
-  if (points.length === 0) return null;
-  const max = Math.max(1, ...points.map((p) => p.count));
-  const innerW = CW - PAD_X * 2;
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    setWidth(el.getBoundingClientRect().width);
+    const ro = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const ready = points.length > 0 && width > 0;
+  const max = ready ? Math.max(1, ...points.map((p) => p.count)) : 1;
+  const innerW = Math.max(1, width - PAD_X * 2);
   const base = height - PAD_B;
-  const coords = points.map((p, i) => ({
-    ...p,
-    x: PAD_X + (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW),
-    y: PAD_T + (1 - p.count / max) * (base - PAD_T),
-  }));
-  const line = smoothPath(coords);
-  const area = `${line} L ${coords[coords.length - 1].x} ${base} L ${coords[0].x} ${base} Z`;
+  const coords = ready
+    ? points.map((p, i) => ({
+        ...p,
+        x: PAD_X + (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW),
+        y: PAD_T + (1 - p.count / max) * (base - PAD_T),
+      }))
+    : [];
+  const line = ready ? smoothPath(coords) : '';
+  const area = ready
+    ? `${line} L ${coords[coords.length - 1].x} ${base} L ${coords[0].x} ${base} Z`
+    : '';
   const last = coords[coords.length - 1];
   const hover = hoverIdx === null ? null : coords[hoverIdx];
 
-  // Pointer x maps back through the viewBox to the nearest plotted point, so
-  // the readout snaps to real data instead of interpolating along the curve.
+  // Pointer x is now 1:1 with viewBox units. Snaps to the nearest plotted point
+  // so the readout is real data, never a value interpolated off the curve.
   // Mouse only — tracking touch here would fight page scrolling on phones.
   const handleMove = (e) => {
-    if (e.pointerType !== 'mouse') return;
+    if (e.pointerType !== 'mouse' || !ready) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    if (!rect.width) return;
-    const x = ((e.clientX - rect.left) / rect.width) * CW;
+    const x = e.clientX - rect.left;
     let best = 0;
     let bestDist = Infinity;
     for (let i = 0; i < coords.length; i++) {
@@ -270,10 +288,13 @@ function AreaChart({ points, height = 120, gradientId, className = '', formatLab
   };
 
   return (
-    <div className={`relative ${className}`}>
+    <div ref={wrapRef} className={`relative ${className}`} style={{ height }}>
+      {ready && (
       <svg
-        viewBox={`0 0 ${CW} ${height}`}
-        className="w-full h-full"
+        viewBox={`0 0 ${width} ${height}`}
+        width={width}
+        height={height}
+        className="block"
         onPointerMove={handleMove}
         onPointerLeave={() => setHoverIdx(null)}
       >
@@ -321,12 +342,13 @@ function AreaChart({ points, height = 120, gradientId, className = '', formatLab
           />
         )}
       </svg>
+      )}
       {hover && (
         <div
           className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-ninja-border bg-white px-2.5 py-1.5 shadow-lg"
           style={{
-            left: `${Math.min(88, Math.max(12, (hover.x / CW) * 100))}%`,
-            top: `${Math.max(0, (hover.y / height) * 100 - 4)}%`,
+            left: Math.min(width - TIP_W / 2, Math.max(TIP_W / 2, hover.x)),
+            top: Math.max(0, hover.y - 10),
           }}
         >
           <span className="block font-ninja text-[11px] text-ninja-muted leading-tight">
@@ -369,7 +391,7 @@ function CheckInTrend({ dayRows, onExpand }) {
           expand →
         </span>
       </div>
-      <AreaChart points={weeks} gradientId="checkInCardFill" className="h-28" formatLabel={weekOf} />
+      <AreaChart points={weeks} height={112} gradientId="checkInCardFill" formatLabel={weekOf} />
       <div className="flex justify-between font-ninja text-[10px] text-ninja-muted mt-1">
         <span>{shortDate(weeks[0].date)}</span>
         <span>{shortDate(weeks[Math.floor(weeks.length / 2)].date)}</span>
@@ -442,9 +464,8 @@ function CheckInDetail({ dayRows }) {
         <AreaChart
           key={rangeKey}
           points={series}
-          height={150}
+          height={170}
           gradientId="checkInDetailFill"
-          className="h-40"
           formatLabel={TOOLTIP_LABEL[range.bucket]}
         />
         <div className="flex justify-between font-ninja text-[11px] text-ninja-muted mt-1">
