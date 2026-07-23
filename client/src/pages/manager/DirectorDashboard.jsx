@@ -75,68 +75,6 @@ const CurriculumIcon = (p) => (
   </svg>
 );
 
-/* ------------------------------------------------------------ dial card -- */
-
-// Gauge dial for today's logging progress. 270° sweep, tick ring outside it —
-// the arc animates from empty so the number and the ring settle together.
-const DIAL_R = 58;
-const DIAL_C = 2 * Math.PI * DIAL_R;
-const SWEEP = 0.75; // 270 of 360 degrees
-const TICKS = 44;
-
-function ProgressDial({ pct, logged, total, loading }) {
-  const ticks = [];
-  for (let i = 0; i < TICKS; i++) {
-    const a = (135 + (i * 270) / (TICKS - 1)) * (Math.PI / 180);
-    const on = i / (TICKS - 1) <= pct / 100;
-    ticks.push({
-      x1: 80 + Math.cos(a) * 68, y1: 80 + Math.sin(a) * 68,
-      x2: 80 + Math.cos(a) * 75, y2: 80 + Math.sin(a) * 75,
-      on,
-    });
-  }
-  return (
-    <div className="relative w-44 h-44 flex-shrink-0">
-      <svg viewBox="0 0 160 160" className="w-full h-full">
-        <g transform="rotate(135 80 80)">
-          <circle
-            cx="80" cy="80" r={DIAL_R}
-            fill="none" stroke="currentColor" strokeWidth="13" strokeLinecap="round"
-            className="text-ninja-bg"
-            strokeDasharray={`${DIAL_C * SWEEP} ${DIAL_C}`}
-          />
-          <motion.circle
-            cx="80" cy="80" r={DIAL_R}
-            fill="none" stroke="currentColor" strokeWidth="13" strokeLinecap="round"
-            className="text-ninja-blue"
-            strokeDasharray={`${DIAL_C * SWEEP} ${DIAL_C}`}
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: loading ? 0 : (pct / 100) * SWEEP }}
-            transition={{ duration: 0.9, ease: 'easeOut', delay: 0.15 }}
-          />
-        </g>
-        {ticks.map((t, i) => (
-          <line
-            key={i}
-            x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
-            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
-            className={t.on && !loading ? 'text-ninja-blue' : 'text-ninja-border'}
-          />
-        ))}
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        <div className="flex items-start">
-          <CountUp value={loading ? 0 : pct} className="text-4xl font-black font-ninja text-ninja-navy leading-none" />
-          <span className="text-lg font-black font-ninja text-ninja-navy leading-none mt-0.5">%</span>
-        </div>
-        <span className="text-ninja-muted font-ninja text-[11px] font-semibold mt-1">
-          {total === 0 ? 'nobody in yet' : `${logged} of ${total} logged`}
-        </span>
-      </div>
-    </div>
-  );
-}
-
 /* ------------------------------------------------------------ check-ins -- */
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -367,6 +305,7 @@ const shortDate = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'n
 const fullDate = (d) => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 const weekOf = (d) => `Week of ${shortDate(d)}`;
 const monthOf = (d) => d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+const monthShort = (d) => d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
 
 const TOOLTIP_LABEL = { day: fullDate, week: weekOf, month: monthOf };
 
@@ -401,14 +340,73 @@ function CheckInTrend({ dayRows, onExpand }) {
   );
 }
 
+/* --------------------------------------------------------------- growth -- */
+
+// Running roster total by month. The API returns how many of today's active
+// ninjas were added in each month; cumulating that gives the roster as it
+// stands, built up over time. Months with no additions still get a point so the
+// x axis stays even.
+function buildGrowth(rows) {
+  if (!rows || rows.length === 0) return [];
+  const parse = (s) => { const [y, m] = s.split('-').map(Number); return new Date(y, m - 1, 1); };
+  const map = new Map(rows.map((r) => [r.month.slice(0, 7), r.added]));
+  const cursor = parse(rows[0].month);
+  const now = new Date();
+  const end = new Date(now.getFullYear(), now.getMonth(), 1);
+  const out = [];
+  let running = 0;
+  while (cursor <= end) {
+    const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
+    const added = map.get(key) || 0;
+    running += added;
+    out.push({ date: new Date(cursor), added, count: running });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return out;
+}
+
+function GrowthSection({ rows, loading }) {
+  const points = useMemo(() => buildGrowth(rows), [rows]);
+  if (loading) return <p className="text-ninja-muted font-ninja text-sm py-4">Loading…</p>;
+  if (points.length === 0) {
+    return <p className="text-ninja-muted font-ninja text-sm py-4">No roster history yet.</p>;
+  }
+  const total = points[points.length - 1].count;
+  const addedThisMonth = points[points.length - 1].added;
+  const baseline = points[0];
+  // Everything after the seed import is real signup activity.
+  const sinceBaseline = total - baseline.count;
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+        <span className="font-ninja text-sm text-ninja-navy font-semibold">
+          <CountUp value={total} className="font-black" /> ninjas on the roster
+        </span>
+        <span className="font-ninja text-xs text-ninja-muted">
+          +{addedThisMonth} this month · +{sinceBaseline} since launch
+        </span>
+      </div>
+      <AreaChart points={points} height={150} gradientId="growthFill" formatLabel={monthOf} />
+      <div className="flex justify-between font-ninja text-[11px] text-ninja-muted mt-1">
+        <span>{monthShort(points[0].date)}</span>
+        <span>{points.length > 2 ? monthShort(points[Math.floor(points.length / 2)].date) : ''}</span>
+        <span>This month</span>
+      </div>
+      <p className="font-ninja text-[11px] text-ninja-muted mt-2">
+        {monthOf(baseline.date)} is the starting roster from the first import, not signups. Ninjas are
+        counted from when they were added here, and archived ninjas are excluded throughout.
+      </p>
+    </div>
+  );
+}
+
 const RANGES = [
   { key: 'week',  label: 'Week',     days: 7,    bucket: 'day',   tail: 'Today' },
   { key: 'month', label: 'Month',    days: 30,   bucket: 'day',   tail: 'Today' },
   { key: 'six',   label: '6 months', days: 182,  bucket: 'week',  tail: 'This week' },
   { key: 'all',   label: 'All time', days: null, bucket: 'month', tail: 'This month' },
 ];
-
-const monthLabel = (d) => d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
 
 function CheckInDetail({ dayRows }) {
   const [rangeKey, setRangeKey] = useState('month');
@@ -438,7 +436,7 @@ function CheckInDetail({ dayRows }) {
   const hasPrior = prior.length === inRange.length && priorTotal > 0;
   const delta = hasPrior ? Math.round(((totalVisits - priorTotal) / priorTotal) * 100) : null;
 
-  const axisLabel = (d) => (range.bucket === 'month' ? monthLabel(d) : shortDate(d));
+  const axisLabel = (d) => (range.bucket === 'month' ? monthShort(d) : shortDate(d));
 
   return (
     <div className="space-y-5">
@@ -731,6 +729,7 @@ export default function DirectorDashboard() {
   const [assignments, setAssignments] = useState([]);
   const [overview, setOverview] = useState(null);
   const [attendance, setAttendance] = useState(null);
+  const [growth, setGrowth] = useState(null);
   const [trendOpen, setTrendOpen] = useState(false);
   const [birthdaysOpen, setBirthdaysOpen] = useState(false);
   const [birthdays, setBirthdays] = useState(null);
@@ -741,11 +740,13 @@ export default function DirectorDashboard() {
       api.get(`/daily?date=${todayStr}`).catch(() => []),
       api.get('/reports/overview').catch(() => null),
       api.get('/reports/attendance?range=all').catch(() => null),
-    ]).then(([daily, ov, att]) => {
+      api.get('/reports/growth').catch(() => null),
+    ]).then(([daily, ov, att, grw]) => {
       if (!alive) return;
       setAssignments(daily || []);
       setOverview(ov);
       setAttendance(att);
+      setGrowth(grw);
       setLoading(false);
     });
     return () => { alive = false; };
@@ -768,7 +769,6 @@ export default function DirectorDashboard() {
 
   const logged = assignments.filter((a) => a.completed).length;
   const total = assignments.length;
-  const pct = total ? Math.round((logged / total) * 100) : 0;
 
   const enrollment = overview?.enrollment ?? [];
   const totalStudents = overview?.totalStudents ?? 0;
@@ -811,28 +811,18 @@ export default function DirectorDashboard() {
             </div>
           </motion.div>
 
-          {/* Today's logging dial */}
+          {/* Roster growth + check-ins */}
           <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="font-ninja font-bold text-ninja-navy text-lg">Today's progress</h2>
-              <span className="font-ninja text-xs text-ninja-muted">{formatDate(todayStr)}</span>
-            </div>
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              <ProgressDial pct={pct} logged={logged} total={total} loading={loading} />
-              <div className="flex-1 w-full grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-ninja-bg p-3.5">
-                  <CountUp value={loading ? 0 : total} className="block text-2xl font-black font-ninja text-ninja-navy leading-none" />
-                  <span className="font-ninja text-xs text-ninja-muted">checked in</span>
-                </div>
-                <div className="rounded-xl bg-ninja-bg p-3.5">
-                  <CountUp value={loading ? 0 : logged} className="block text-2xl font-black font-ninja text-ninja-blue leading-none" />
-                  <span className="font-ninja text-xs text-ninja-muted">logged</span>
-                </div>
-                <div className="col-span-2 rounded-xl bg-ninja-bg p-3.5">
-                  <CountUp value={loading ? 0 : total - logged} className="block text-2xl font-black font-ninja text-ninja-navy leading-none" />
-                  <span className="font-ninja text-xs text-ninja-muted">still to log</span>
-                </div>
-              </div>
+            <h2 className="font-ninja font-bold text-ninja-navy text-lg mb-3">Roster growth</h2>
+            <GrowthSection rows={growth} loading={loading} />
+
+            <div className="border-t border-ninja-border mt-5 pt-5">
+              <h2 className="font-ninja font-bold text-ninja-navy text-lg mb-3">Check-ins</h2>
+              {loading ? (
+                <p className="text-ninja-muted font-ninja text-sm py-4">Loading…</p>
+              ) : (
+                <CheckInTrend dayRows={dayRows} onExpand={() => setTrendOpen(true)} />
+              )}
             </div>
           </div>
 
@@ -861,16 +851,6 @@ export default function DirectorDashboard() {
               <p className="text-ninja-muted font-ninja text-sm py-4">No enrollment data.</p>
             ) : (
               <EnrollmentDonut data={enrollment} total={totalStudents} />
-            )}
-          </div>
-
-          {/* Check-ins over time */}
-          <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
-            <h2 className="font-ninja font-bold text-ninja-navy text-lg mb-3">Check-ins</h2>
-            {loading ? (
-              <p className="text-ninja-muted font-ninja text-sm py-4">Loading…</p>
-            ) : (
-              <CheckInTrend dayRows={dayRows} onExpand={() => setTrendOpen(true)} />
             )}
           </div>
         </div>

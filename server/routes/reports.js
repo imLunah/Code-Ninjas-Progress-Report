@@ -106,4 +106,30 @@ router.get('/attendance', requireSensei, async (req, res) => {
   }
 });
 
+// GET /api/reports/growth — how the current active roster was built up over
+// time, bucketed by the month each ninja was added.
+//
+// CAVEAT: students has no enrollment date, only created_at, which is when the
+// row entered DojoLink. The first month at each location is therefore the seed
+// CSV import, not real signups — the client labels it as a baseline. There is
+// also no archived_at, so departures cannot be dated and this only counts
+// ninjas who are still active; the cumulative line can never fall.
+router.get('/growth', requireSensei, async (req, res) => {
+  const pool = req.app.get('db');
+  try {
+    const { rows } = await pool.query(`
+      SELECT to_char(date_trunc('month', s.created_at), 'YYYY-MM-DD') AS month,
+             COUNT(*)::int AS added
+      FROM students s
+      WHERE s.location_id = $1 AND s.active = true
+      GROUP BY date_trunc('month', s.created_at)
+      ORDER BY date_trunc('month', s.created_at) ASC
+    `, [req.session.activeLocationId]);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching growth:', err);
+    res.status(500).json({ error: 'Failed to fetch growth' });
+  }
+});
+
 module.exports = router;
