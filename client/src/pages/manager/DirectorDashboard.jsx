@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import StaffAnnouncements from '../../components/manager/StaffAnnouncements';
 import DirectorStickyNotes from '../../components/manager/DirectorStickyNotes';
+import Modal from '../../components/ui/Modal';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
@@ -133,31 +134,62 @@ function ProgressDial({ pct, logged, total, loading }) {
   );
 }
 
-/* ----------------------------------------------------------- belt trend -- */
+/* ------------------------------------------------------------ check-ins -- */
 
-// Belt advancements over the last 32 days, bucketed into 4-day windows.
-// Source is /reports/overview's beltLog (already fetched) — no extra request.
-const BUCKETS = 8;
-const BUCKET_DAYS = 4;
+// One fetch covers every range the expanded view offers (6 months = 26 weeks).
+const ATTENDANCE_DAYS = 182;
 
-function buildTrend(beltLog) {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - (BUCKETS * BUCKET_DAYS - 1));
-  const points = Array.from({ length: BUCKETS }, (_, i) => {
-    const d = new Date(start);
-    d.setDate(d.getDate() + i * BUCKET_DAYS);
-    return { date: d, count: 0 };
-  });
-  for (const row of beltLog || []) {
-    if (!row.session_date) continue;
-    // pg DATE serializes as UTC midnight — read the calendar day off the string.
-    const [y, m, day] = String(row.session_date).split('T')[0].split('-').map(Number);
-    const local = new Date(y, m - 1, day);
-    const idx = Math.floor((local - start) / (BUCKET_DAYS * 86400000));
-    if (idx >= 0 && idx < BUCKETS) points[idx].count += 1;
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+const dayKey = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// The API only returns days that had a check-in. Expand to every day in range
+// so the chart has an even x axis and quiet days read as real zeroes.
+function buildDays(attendance, days) {
+  const map = new Map((attendance || []).map((r) => [r.day, r.count]));
+  const end = new Date();
+  end.setHours(0, 0, 0, 0);
+  const out = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(end);
+    d.setDate(d.getDate() - i);
+    out.push({ date: d, count: map.get(dayKey(d)) || 0 });
   }
-  return points;
+  return out;
+}
+
+// Calendar weeks starting Sunday, most recent `weeks` of them.
+function toWeeks(dayRows, weeks) {
+  const buckets = new Map();
+  for (const row of dayRows) {
+    const start = new Date(row.date);
+    start.setDate(start.getDate() - start.getDay());
+    const k = dayKey(start);
+    const b = buckets.get(k) || { date: start, count: 0 };
+    b.count += row.count;
+    buckets.set(k, b);
+  }
+  return [...buckets.values()].sort((a, b) => a.date - b.date).slice(-weeks);
+}
+
+// Average ninjas per occurrence of each weekday — a Tuesday-only center
+// shouldn't look "busiest" purely because there are more Tuesdays in range.
+function byWeekday(dayRows) {
+  const acc = Array.from({ length: 7 }, () => ({ total: 0, n: 0 }));
+  for (const row of dayRows) {
+    const w = row.date.getDay();
+    acc[w].total += row.count;
+    acc[w].n += 1;
+  }
+  return acc.map((a, i) => ({
+    index: i,
+    name: WEEKDAYS[i],
+    short: WEEKDAYS_SHORT[i],
+    avg: a.n ? a.total / a.n : 0,
+    total: a.total,
+  }));
 }
 
 // Catmull-Rom through the points, emitted as cubic beziers, so the line curves
@@ -177,72 +209,195 @@ function smoothPath(pts) {
   return d;
 }
 
-const W = 320;
-const H = 120;
-const PAD_T = 12;
-const PAD_B = 20;
+const CW = 320;
+const PAD_X = 10;  // keeps the end dot from clipping at the edge
+const PAD_T = 14;
+const PAD_B = 10;
 
-function BeltTrend({ beltLog }) {
-  const points = useMemo(() => buildTrend(beltLog), [beltLog]);
+function AreaChart({ points, height = 120, gradientId, className = '' }) {
+  if (points.length === 0) return null;
   const max = Math.max(1, ...points.map((p) => p.count));
+  const innerW = CW - PAD_X * 2;
+  const base = height - PAD_B;
   const coords = points.map((p, i) => ({
-    x: (i / (BUCKETS - 1)) * W,
-    y: PAD_T + (1 - p.count / max) * (H - PAD_T - PAD_B),
     ...p,
+    x: PAD_X + (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW),
+    y: PAD_T + (1 - p.count / max) * (base - PAD_T),
   }));
   const line = smoothPath(coords);
-  const area = `${line} L ${W} ${H - PAD_B} L 0 ${H - PAD_B} Z`;
-  const totalUps = points.reduce((s, p) => s + p.count, 0);
+  const area = `${line} L ${coords[coords.length - 1].x} ${base} L ${coords[0].x} ${base} Z`;
   const last = coords[coords.length - 1];
-  const label = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   return (
-    <div>
+    <svg viewBox={`0 0 ${CW} ${height}`} className={`w-full ${className}`}>
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.32" />
+          <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <motion.path
+        d={area}
+        fill={`url(#${gradientId})`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+      />
+      <motion.path
+        d={line}
+        fill="none"
+        stroke="#3b82f6"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        initial={{ pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 0.9, ease: 'easeInOut' }}
+      />
+      <motion.circle
+        cx={last.x} cy={last.y} r="5"
+        fill="#3b82f6" stroke="#fff" strokeWidth="2.5"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3, delay: 0.9 }}
+      />
+    </svg>
+  );
+}
+
+const shortDate = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+// Collapsed card: ninjas per week for the last 8 weeks. Whole card opens the
+// expanded view.
+const CARD_WEEKS = 8;
+
+function CheckInTrend({ dayRows, onExpand }) {
+  const weeks = useMemo(() => toWeeks(dayRows, CARD_WEEKS), [dayRows]);
+  if (weeks.length === 0) {
+    return <p className="text-ninja-muted font-ninja text-sm py-4">No check-ins yet.</p>;
+  }
+  const thisWeek = weeks[weeks.length - 1].count;
+
+  return (
+    <button onClick={onExpand} className="block w-full text-left group">
       <div className="flex items-baseline justify-between mb-2">
         <span className="font-ninja text-sm text-ninja-navy font-semibold">
-          <CountUp value={totalUps} className="font-black" /> belt-up{totalUps === 1 ? '' : 's'}
+          <CountUp value={thisWeek} className="font-black" /> ninja{thisWeek === 1 ? '' : 's'} this week
         </span>
-        <span className="font-ninja text-xs text-ninja-muted">last 32 days</span>
+        <span className="font-ninja text-xs text-ninja-muted group-hover:text-ninja-blue transition-colors">
+          expand →
+        </span>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-28" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="beltTrendFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <motion.path
-          d={area}
-          fill="url(#beltTrendFill)"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-        />
-        <motion.path
-          d={line}
-          fill="none"
-          stroke="#f59e0b"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 0.9, ease: 'easeInOut' }}
-        />
-        <motion.circle
-          cx={last.x} cy={last.y} r="7"
-          fill="#f59e0b" stroke="#fff" strokeWidth="2.5"
-          vectorEffect="non-scaling-stroke"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.9 }}
-        />
-      </svg>
+      <AreaChart points={weeks} gradientId="checkInCardFill" className="h-28" />
       <div className="flex justify-between font-ninja text-[10px] text-ninja-muted mt-1">
-        <span>{label(coords[0].date)}</span>
-        <span>{label(coords[Math.floor(BUCKETS / 2)].date)}</span>
-        <span>Today</span>
+        <span>{shortDate(weeks[0].date)}</span>
+        <span>{shortDate(weeks[Math.floor(weeks.length / 2)].date)}</span>
+        <span>This week</span>
       </div>
+    </button>
+  );
+}
+
+const RANGES = [
+  { label: '4 weeks', weeks: 4 },
+  { label: '12 weeks', weeks: 12 },
+  { label: '6 months', weeks: 26 },
+];
+
+function CheckInDetail({ dayRows }) {
+  const [weeks, setWeeks] = useState(12);
+  const series = useMemo(() => toWeeks(dayRows, weeks), [dayRows, weeks]);
+  const inRange = useMemo(() => dayRows.slice(-(weeks * 7)), [dayRows, weeks]);
+  const weekdays = useMemo(() => byWeekday(inRange), [inRange]);
+
+  const maxAvg = Math.max(0.001, ...weekdays.map((w) => w.avg));
+  const ranked = [...weekdays].filter((w) => w.total > 0).sort((a, b) => b.avg - a.avg);
+  const busiest = ranked[0];
+  const quietest = ranked[ranked.length - 1];
+  const totalVisits = inRange.reduce((s, d) => s + d.count, 0);
+  const openDays = inRange.filter((d) => d.count > 0).length;
+
+  return (
+    <div className="space-y-5">
+      {/* Range chips */}
+      <div className="flex gap-2">
+        {RANGES.map((r) => (
+          <button
+            key={r.weeks}
+            onClick={() => setWeeks(r.weeks)}
+            className={`font-ninja text-sm font-semibold px-3 py-1.5 rounded-full transition-colors ${
+              weeks === r.weeks
+                ? 'bg-ninja-blue text-white'
+                : 'bg-ninja-bg text-ninja-muted hover:text-ninja-navy'
+            }`}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Weekly trend */}
+      <div>
+        <AreaChart key={weeks} points={series} height={150} gradientId="checkInDetailFill" className="h-40" />
+        <div className="flex justify-between font-ninja text-[11px] text-ninja-muted mt-1">
+          <span>{series.length ? shortDate(series[0].date) : ''}</span>
+          <span>{series.length ? shortDate(series[Math.floor(series.length / 2)].date) : ''}</span>
+          <span>This week</span>
+        </div>
+      </div>
+
+      {/* Totals */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-xl bg-ninja-bg p-3">
+          <span className="block text-xl font-black font-ninja text-ninja-navy leading-none">{totalVisits}</span>
+          <span className="font-ninja text-xs text-ninja-muted">check-ins</span>
+        </div>
+        <div className="rounded-xl bg-ninja-bg p-3">
+          <span className="block text-xl font-black font-ninja text-ninja-navy leading-none">{openDays}</span>
+          <span className="font-ninja text-xs text-ninja-muted">days open</span>
+        </div>
+        <div className="rounded-xl bg-ninja-bg p-3">
+          <span className="block text-xl font-black font-ninja text-ninja-navy leading-none">
+            {openDays ? Math.round(totalVisits / openDays) : 0}
+          </span>
+          <span className="font-ninja text-xs text-ninja-muted">per open day</span>
+        </div>
+      </div>
+
+      {/* Busy days */}
+      <div>
+        <h3 className="font-ninja font-bold text-ninja-navy mb-2">Busiest days</h3>
+        <div className="space-y-1.5">
+          {weekdays.map((w) => (
+            <div key={w.index} className="flex items-center gap-3">
+              <span className="font-ninja text-xs text-ninja-muted w-9 flex-shrink-0">{w.short}</span>
+              <div className="flex-1 h-5 rounded-md bg-ninja-bg overflow-hidden">
+                <motion.div
+                  className={`h-full rounded-md ${w.index === busiest?.index ? 'bg-ninja-blue' : 'bg-ninja-blue/40'}`}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(w.avg / maxAvg) * 100}%` }}
+                  transition={{ duration: 0.5, ease: 'easeOut', delay: 0.04 * w.index }}
+                />
+              </div>
+              <span className="font-ninja text-xs font-bold text-ninja-navy w-10 text-right flex-shrink-0">
+                {w.avg ? w.avg.toFixed(1) : '—'}
+              </span>
+            </div>
+          ))}
+        </div>
+        <p className="font-ninja text-xs text-ninja-muted mt-2">Average ninjas per weekday.</p>
+      </div>
+
+      {busiest && (
+        <p className="font-ninja text-sm text-ninja-navy">
+          <span className="font-bold">{busiest.name}</span> is your busiest day at{' '}
+          {busiest.avg.toFixed(1)} ninjas on average
+          {quietest && quietest.index !== busiest.index && (
+            <>, <span className="font-bold">{quietest.name}</span> the quietest at {quietest.avg.toFixed(1)}</>
+          )}
+          .
+        </p>
+      )}
     </div>
   );
 }
@@ -358,20 +513,29 @@ export default function DirectorDashboard() {
   const [loading, setLoading] = useState(true);
   const [assignments, setAssignments] = useState([]);
   const [overview, setOverview] = useState(null);
+  const [attendance, setAttendance] = useState(null);
+  const [trendOpen, setTrendOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
     Promise.all([
       api.get(`/daily?date=${todayStr}`).catch(() => []),
       api.get('/reports/overview').catch(() => null),
-    ]).then(([daily, ov]) => {
+      api.get(`/reports/attendance?days=${ATTENDANCE_DAYS}`).catch(() => null),
+    ]).then(([daily, ov, att]) => {
       if (!alive) return;
       setAssignments(daily || []);
       setOverview(ov);
+      setAttendance(att);
       setLoading(false);
     });
     return () => { alive = false; };
   }, [todayStr, user?.activeLocation?.id]);
+
+  const dayRows = useMemo(
+    () => buildDays(attendance?.attendance, ATTENDANCE_DAYS),
+    [attendance],
+  );
 
   const logged = assignments.filter((a) => a.completed).length;
   const total = assignments.length;
@@ -379,7 +543,6 @@ export default function DirectorDashboard() {
 
   const enrollment = overview?.enrollment ?? [];
   const totalStudents = overview?.totalStudents ?? 0;
-  const beltLog = overview?.beltLog ?? [];
 
   const firstName = user?.displayName?.split(' ')[0] ?? '';
 
@@ -472,17 +635,26 @@ export default function DirectorDashboard() {
             )}
           </div>
 
-          {/* Belt advancements */}
+          {/* Check-ins over time */}
           <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
-            <h2 className="font-ninja font-bold text-ninja-navy text-lg mb-3">Belt-ups</h2>
+            <h2 className="font-ninja font-bold text-ninja-navy text-lg mb-3">Check-ins</h2>
             {loading ? (
               <p className="text-ninja-muted font-ninja text-sm py-4">Loading…</p>
             ) : (
-              <BeltTrend beltLog={beltLog} />
+              <CheckInTrend dayRows={dayRows} onExpand={() => setTrendOpen(true)} />
             )}
           </div>
         </div>
       </div>
+
+      <Modal
+        isOpen={trendOpen}
+        onClose={() => setTrendOpen(false)}
+        title="Check-ins"
+        width="max-w-2xl"
+      >
+        <CheckInDetail dayRows={dayRows} />
+      </Modal>
     </Layout>
   );
 }

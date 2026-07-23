@@ -76,5 +76,30 @@ router.get('/overview', requireSensei, async (req, res) => {
   }
 });
 
+// GET /api/reports/attendance?days=N — ninjas checked in per day at this location.
+// One row per day that had any check-in; the client fills the gaps. `to_char`
+// keeps the DATE a plain YYYY-MM-DD string instead of a UTC-midnight timestamp.
+router.get('/attendance', requireSensei, async (req, res) => {
+  const pool = req.app.get('db');
+  const locationId = req.session.activeLocationId;
+  const days = Math.min(365, Math.max(7, parseInt(req.query.days, 10) || 120));
+  try {
+    const { rows } = await pool.query(`
+      SELECT to_char(da.session_date, 'YYYY-MM-DD') AS day,
+             COUNT(DISTINCT da.student_id)::int AS count
+      FROM daily_assignments da
+      JOIN students s ON da.student_id = s.id
+      WHERE s.location_id = $1
+        AND da.session_date >= CURRENT_DATE - ($2::int - 1)
+        AND da.session_date <= CURRENT_DATE
+      GROUP BY da.session_date
+      ORDER BY da.session_date ASC
+    `, [locationId, days]);
+    res.json({ days, attendance: rows });
+  } catch (err) {
+    console.error('Error fetching attendance:', err);
+    res.status(500).json({ error: 'Failed to fetch attendance' });
+  }
+});
 
 module.exports = router;
