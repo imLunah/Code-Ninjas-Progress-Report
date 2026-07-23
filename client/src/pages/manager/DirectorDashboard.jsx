@@ -340,173 +340,6 @@ function CheckInTrend({ dayRows, onExpand }) {
   );
 }
 
-/* --------------------------------------------------------------- growth -- */
-
-// Running roster total by month. The API returns how many of today's active
-// ninjas were added in each month; cumulating that gives the roster as it
-// stands, built up over time. Months with no additions still get a point so the
-// x axis stays even.
-function buildGrowth(rows) {
-  if (!rows || rows.length === 0) return [];
-  const parse = (s) => { const [y, m] = s.split('-').map(Number); return new Date(y, m - 1, 1); };
-  const map = new Map(rows.map((r) => [r.month.slice(0, 7), r.added]));
-  const cursor = parse(rows[0].month);
-  const now = new Date();
-  const end = new Date(now.getFullYear(), now.getMonth(), 1);
-  const out = [];
-  let running = 0;
-  while (cursor <= end) {
-    const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
-    const added = map.get(key) || 0;
-    running += added;
-    out.push({ date: new Date(cursor), added, count: running });
-    cursor.setMonth(cursor.getMonth() + 1);
-  }
-  return out;
-}
-
-// Collapsed card: last 6 months. The expanded view offers longer ranges.
-const CARD_MONTHS = 6;
-
-function GrowthSection({ rows, loading, onExpand }) {
-  const all = useMemo(() => buildGrowth(rows), [rows]);
-  if (loading) return <p className="text-ninja-muted font-ninja text-sm py-4">Loading…</p>;
-  if (all.length === 0) {
-    return <p className="text-ninja-muted font-ninja text-sm py-4">No roster history yet.</p>;
-  }
-  const points = all.slice(-CARD_MONTHS);
-  const total = all[all.length - 1].count;
-  const addedThisMonth = all[all.length - 1].added;
-  const baseline = all[0];
-  // Everything after the seed import is real signup activity.
-  const sinceBaseline = total - baseline.count;
-
-  return (
-    <button onClick={onExpand} className="block w-full text-left group">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
-        <span className="font-ninja text-sm text-ninja-navy font-semibold">
-          <CountUp value={total} className="font-black" /> ninjas on the roster
-        </span>
-        <span className="font-ninja text-xs text-ninja-muted">
-          +{addedThisMonth} this month · +{sinceBaseline} since launch
-          <span className="ml-2 group-hover:text-ninja-blue transition-colors">expand →</span>
-        </span>
-      </div>
-      <AreaChart points={points} height={150} gradientId="growthFill" formatLabel={monthOf} />
-      <div className="flex justify-between font-ninja text-[11px] text-ninja-muted mt-1">
-        <span>{monthShort(points[0].date)}</span>
-        <span>{points.length > 2 ? monthShort(points[Math.floor(points.length / 2)].date) : ''}</span>
-        <span>This month</span>
-      </div>
-      {points[0] === baseline && (
-        <p className="font-ninja text-[11px] text-ninja-muted mt-2">
-          {monthOf(baseline.date)} is the starting roster from the first import, not signups.
-        </p>
-      )}
-    </button>
-  );
-}
-
-const GROWTH_RANGES = [
-  { key: '3',   label: '3 months',  months: 3 },
-  { key: '6',   label: '6 months',  months: 6 },
-  { key: '12',  label: '12 months', months: 12 },
-  { key: 'all', label: 'All time',  months: null },
-];
-
-function GrowthDetail({ rows }) {
-  const all = useMemo(() => buildGrowth(rows), [rows]);
-  const [rangeKey, setRangeKey] = useState('6');
-  const range = GROWTH_RANGES.find((r) => r.key === rangeKey) || GROWTH_RANGES[1];
-  const series = range.months ? all.slice(-range.months) : all;
-
-  if (all.length === 0) {
-    return <p className="text-ninja-muted font-ninja text-sm py-4">No roster history yet.</p>;
-  }
-
-  const total = all[all.length - 1].count;
-  const addedInRange = series.reduce((s, p) => s + p.added, 0);
-  const perMonth = series.length ? addedInRange / series.length : 0;
-  const best = series.reduce((b, p) => (p.added > (b?.added ?? -1) ? p : b), null);
-  const includesBaseline = series[0] === all[0];
-
-  return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap gap-2">
-        {GROWTH_RANGES.map((r) => (
-          <button
-            key={r.key}
-            onClick={() => setRangeKey(r.key)}
-            className={`font-ninja text-sm font-semibold px-3 py-1.5 rounded-full transition-colors ${
-              rangeKey === r.key
-                ? 'bg-ninja-blue text-white'
-                : 'bg-ninja-bg text-ninja-muted hover:text-ninja-navy'
-            }`}
-          >
-            {r.label}
-          </button>
-        ))}
-      </div>
-
-      <div>
-        <AreaChart key={rangeKey} points={series} height={170} gradientId="growthDetailFill" formatLabel={monthOf} />
-        <div className="flex justify-between font-ninja text-[11px] text-ninja-muted mt-1">
-          <span>{monthShort(series[0].date)}</span>
-          <span>{series.length > 2 ? monthShort(series[Math.floor(series.length / 2)].date) : ''}</span>
-          <span>This month</span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-xl bg-ninja-bg p-3">
-          <span className="block text-xl font-black font-ninja text-ninja-navy leading-none">{total}</span>
-          <span className="font-ninja text-xs text-ninja-muted">on the roster</span>
-        </div>
-        <div className="rounded-xl bg-ninja-bg p-3">
-          <span className="block text-xl font-black font-ninja text-ninja-blue leading-none">+{addedInRange}</span>
-          <span className="font-ninja text-xs text-ninja-muted">added in range</span>
-        </div>
-        <div className="rounded-xl bg-ninja-bg p-3">
-          <span className="block text-xl font-black font-ninja text-ninja-navy leading-none">
-            {perMonth.toFixed(1)}
-          </span>
-          <span className="font-ninja text-xs text-ninja-muted">a month</span>
-        </div>
-      </div>
-
-      {/* Month-by-month, newest first */}
-      <div>
-        <h3 className="font-ninja font-bold text-ninja-navy mb-2">Month by month</h3>
-        <div className="space-y-1">
-          {[...series].reverse().map((p) => (
-            <div key={p.date.toISOString()} className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg odd:bg-ninja-bg">
-              <span className="font-ninja text-sm text-ninja-navy">
-                {monthOf(p.date)}
-                {p === all[0] && <span className="text-ninja-muted"> · starting roster</span>}
-                {p === best && p !== all[0] && p.added > 0 && (
-                  <span className="text-ninja-muted"> · best month</span>
-                )}
-              </span>
-              <span className="font-ninja text-sm flex-shrink-0">
-                <span className={p.added > 0 ? 'font-bold text-ninja-blue' : 'text-ninja-muted'}>
-                  {p.added > 0 ? `+${p.added}` : '—'}
-                </span>
-                <span className="text-ninja-muted"> · {p.count} total</span>
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <p className="font-ninja text-xs text-ninja-muted">
-        {includesBaseline && `${monthOf(all[0].date)} is the starting roster from the first import, not signups. `}
-        Ninjas count from when they were added to DojoLink, and archived ninjas are excluded from every
-        month, so the line never falls.
-      </p>
-    </div>
-  );
-}
-
 const RANGES = [
   { key: 'week',  label: 'Week',     days: 7,    bucket: 'day',   tail: 'Today' },
   { key: 'month', label: 'Month',    days: 30,   bucket: 'day',   tail: 'Today' },
@@ -835,9 +668,7 @@ export default function DirectorDashboard() {
   const [assignments, setAssignments] = useState([]);
   const [overview, setOverview] = useState(null);
   const [attendance, setAttendance] = useState(null);
-  const [growth, setGrowth] = useState(null);
   const [trendOpen, setTrendOpen] = useState(false);
-  const [growthOpen, setGrowthOpen] = useState(false);
   const [birthdaysOpen, setBirthdaysOpen] = useState(false);
   const [birthdays, setBirthdays] = useState(null);
 
@@ -847,13 +678,11 @@ export default function DirectorDashboard() {
       api.get(`/daily?date=${todayStr}`).catch(() => []),
       api.get('/reports/overview').catch(() => null),
       api.get('/reports/attendance?range=all').catch(() => null),
-      api.get('/reports/growth').catch(() => null),
-    ]).then(([daily, ov, att, grw]) => {
+    ]).then(([daily, ov, att]) => {
       if (!alive) return;
       setAssignments(daily || []);
       setOverview(ov);
       setAttendance(att);
-      setGrowth(grw);
       setLoading(false);
     });
     return () => { alive = false; };
@@ -918,19 +747,14 @@ export default function DirectorDashboard() {
             </div>
           </motion.div>
 
-          {/* Roster growth + check-ins */}
+          {/* Check-ins over time */}
           <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
-            <h2 className="font-ninja font-bold text-ninja-navy text-lg mb-3">Roster growth</h2>
-            <GrowthSection rows={growth} loading={loading} onExpand={() => setGrowthOpen(true)} />
-
-            <div className="border-t border-ninja-border mt-5 pt-5">
-              <h2 className="font-ninja font-bold text-ninja-navy text-lg mb-3">Check-ins</h2>
-              {loading ? (
-                <p className="text-ninja-muted font-ninja text-sm py-4">Loading…</p>
-              ) : (
-                <CheckInTrend dayRows={dayRows} onExpand={() => setTrendOpen(true)} />
-              )}
-            </div>
+            <h2 className="font-ninja font-bold text-ninja-navy text-lg mb-3">Check-ins</h2>
+            {loading ? (
+              <p className="text-ninja-muted font-ninja text-sm py-4">Loading…</p>
+            ) : (
+              <CheckInTrend dayRows={dayRows} onExpand={() => setTrendOpen(true)} />
+            )}
           </div>
 
           {/* Announcements to staff */}
@@ -962,15 +786,6 @@ export default function DirectorDashboard() {
           </div>
         </div>
       </div>
-
-      <Modal
-        isOpen={growthOpen}
-        onClose={() => setGrowthOpen(false)}
-        title="Roster growth"
-        width="max-w-2xl"
-      >
-        <GrowthDetail rows={growth} />
-      </Modal>
 
       <Modal
         isOpen={trendOpen}
