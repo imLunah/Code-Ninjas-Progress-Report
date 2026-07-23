@@ -75,6 +75,29 @@ const CurriculumIcon = (p) => (
     <path d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
   </svg>
 );
+const UsersIcon = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+  </svg>
+);
+const PulseIcon = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="M3 12h4l2.5-7 5 14L17 12h4" />
+  </svg>
+);
+const TrendIcon = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="M2.25 18 9 11.25l4.306 4.307a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.28m5.94 2.28-2.28 5.941" />
+  </svg>
+);
+
+// Shared card surface. The subtle ring + shadow give cards enough lift off the
+// deep-slate page that they stop reading as flat panels — the depth that was
+// missing before. Explicit dark shadow because the light one is invisible on
+// the dark bg.
+const CARD =
+  'rounded-2xl bg-white border border-ninja-border shadow-sm ' +
+  'dark:shadow-[0_10px_34px_rgb(0_0_0/0.32)] ring-1 ring-transparent dark:ring-white/[0.05]';
 
 /* ------------------------------------------------------------ check-ins -- */
 
@@ -562,38 +585,54 @@ function EnrollmentDonut({ data, total }) {
 // tiles read identically in light and dark — the global `.dark .bg-*` overrides
 // would wash them out otherwise.
 const QUICK_TILES = [
-  { label: 'Reports',    to: '/manager/reports',    bg: '#2563eb', Icon: ReportsIcon },
-  { label: 'Curriculum', to: '/curriculum-roadmap', bg: '#35c6e0', Icon: CurriculumIcon },
-  { label: 'Birthdays',  action: 'birthdays',       bg: '#f4795b', Icon: CakeIcon },
-  { label: "What's New", to: '/changelog',          bg: '#f5a623', Icon: SparkleIcon },
+  { label: 'Reports',    to: '/manager/reports',    c1: '#2f6bff', c2: '#1d4ed8', Icon: ReportsIcon },
+  { label: 'Curriculum', to: '/curriculum-roadmap', c1: '#2ec8e6', c2: '#0e9dc4', Icon: CurriculumIcon },
+  { label: 'Birthdays',  action: 'birthdays',       c1: '#fb8467', c2: '#e85d3d', Icon: CakeIcon },
+  { label: "What's New", to: '/changelog',          c1: '#f9b13a', c2: '#e8890f', Icon: SparkleIcon },
 ];
 
+// -0.5 lift on hover reads as tactile. It's on the Link/button, not the wrapping
+// motion.div, so it doesn't fight Framer for the transform property.
 const TILE_CLASS =
-  'flex flex-col justify-between w-full h-24 rounded-2xl p-3.5 text-left text-white shadow-sm hover:brightness-110 transition';
+  'group relative flex flex-col justify-between w-full h-28 rounded-2xl p-4 text-left text-white ' +
+  'shadow-md overflow-hidden transition-transform duration-200 hover:-translate-y-0.5';
+
+function TileInner({ Icon, label }) {
+  return (
+    <>
+      <span className="pointer-events-none absolute -right-6 -bottom-7 w-24 h-24 rounded-full bg-white/10" />
+      <span className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+        <Icon className="w-5 h-5" />
+      </span>
+      <span className="font-ninja font-bold text-[15px] relative">{label}</span>
+    </>
+  );
+}
 
 function QuickTiles({ onBirthdays }) {
   return (
     <div className="grid grid-cols-2 gap-3">
-      {QUICK_TILES.map((t, i) => (
-        <motion.div
-          key={t.label}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.05 * i }}
-        >
-          {t.action === 'birthdays' ? (
-            <button onClick={onBirthdays} style={{ backgroundColor: t.bg }} className={TILE_CLASS}>
-              <t.Icon className="w-6 h-6" />
-              <span className="font-ninja font-bold text-sm">{t.label}</span>
-            </button>
-          ) : (
-            <Link to={t.to} style={{ backgroundColor: t.bg }} className={TILE_CLASS}>
-              <t.Icon className="w-6 h-6" />
-              <span className="font-ninja font-bold text-sm">{t.label}</span>
-            </Link>
-          )}
-        </motion.div>
-      ))}
+      {QUICK_TILES.map((t, i) => {
+        const bg = { backgroundImage: `linear-gradient(150deg, ${t.c1}, ${t.c2})` };
+        return (
+          <motion.div
+            key={t.label}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.05 * i }}
+          >
+            {t.action === 'birthdays' ? (
+              <button onClick={onBirthdays} style={bg} className={TILE_CLASS}>
+                <TileInner Icon={t.Icon} label={t.label} />
+              </button>
+            ) : (
+              <Link to={t.to} style={bg} className={TILE_CLASS}>
+                <TileInner Icon={t.Icon} label={t.label} />
+              </Link>
+            )}
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
@@ -660,6 +699,61 @@ function BirthdayList({ rows, loading }) {
   );
 }
 
+/* -------------------------------------------------------------- kpi/ring -- */
+
+// Small tinted-icon stat. The accent is a solid hex; the chip uses it at ~12%
+// so it reads in both themes without touching the .dark overrides.
+function StatCard({ label, value, accent, Icon, delay = 0 }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay }}
+      className={`${CARD} p-4 flex items-center gap-3`}
+    >
+      <span
+        className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ backgroundColor: `${accent}22`, color: accent }}
+      >
+        <Icon className="w-5 h-5" />
+      </span>
+      <div className="min-w-0">
+        <CountUp value={value} className="block text-2xl font-black font-ninja text-ninja-navy leading-none" />
+        <span className="font-ninja text-xs text-ninja-muted">{label}</span>
+      </div>
+    </motion.div>
+  );
+}
+
+// Today's logged-vs-on-board ring, sits in the hero on white so it works on the
+// brand gradient. Fills the space the greeting used to waste.
+function TodayRing({ logged, total }) {
+  const pct = total ? logged / total : 0;
+  const r = 34;
+  const c = 2 * Math.PI * r;
+  return (
+    <div className="relative w-28 h-28">
+      <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
+        <circle cx="40" cy="40" r={r} fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="7" />
+        <motion.circle
+          cx="40" cy="40" r={r}
+          fill="none" stroke="#fff" strokeWidth="7" strokeLinecap="round"
+          strokeDasharray={c}
+          initial={{ strokeDashoffset: c }}
+          animate={{ strokeDashoffset: c * (1 - pct) }}
+          transition={{ duration: 0.9, ease: 'easeInOut' }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+        <span className="text-2xl font-black font-ninja leading-none">
+          {logged}<span className="text-white/60 text-lg">/{total}</span>
+        </span>
+        <span className="text-[10px] font-semibold text-white/70 mt-0.5 tracking-wide">logged</span>
+      </div>
+    </div>
+  );
+}
+
 /* ----------------------------------------------------------------- page -- */
 
 export default function DirectorDashboard() {
@@ -710,6 +804,11 @@ export default function DirectorDashboard() {
   const enrollment = overview?.enrollment ?? [];
   const totalStudents = overview?.totalStudents ?? 0;
 
+  const weeks = useMemo(() => toWeeks(dayRows), [dayRows]);
+  const weekCheckins = weeks.length ? weeks[weeks.length - 1].count : 0;
+  const totalVisits = dayRows.reduce((s, d) => s + d.count, 0);
+  const avgWeek = dayRows.length ? Math.round((totalVisits / dayRows.length) * 7) : 0;
+
   const firstName = user?.displayName?.split(' ')[0] ?? '';
 
   return (
@@ -722,49 +821,63 @@ export default function DirectorDashboard() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
-            className="relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-[#2b2440] dark:via-[#221f33] dark:to-[#2a2036]"
+            className="relative overflow-hidden rounded-2xl p-6 sm:p-7 shadow-lg"
+            style={{ backgroundImage: 'linear-gradient(140deg, #1e50e6 0%, #3a45d6 52%, #6a34c4 100%)' }}
           >
-            {/* Soft shapes give the banner static depth before any cursor
-                movement — the fluid only paints trails while the pointer moves. */}
-            <div className="pointer-events-none absolute -right-10 -top-12 w-48 h-48 rounded-full bg-amber-300/30 dark:bg-white/5" />
-            <div className="pointer-events-none absolute right-16 top-16 w-28 h-28 rounded-full bg-orange-300/25 dark:bg-white/5" />
+            {/* Depth blob for the at-rest banner — the fluid only paints trails
+                while the pointer moves, so the banner needs static interest too. */}
+            <div className="pointer-events-none absolute -right-10 -top-16 w-64 h-64 rounded-full bg-white/10" />
 
-            {/* Ambient WebGL fluid, confined to the banner. Sits behind the text
-                (z-0); the content block is z-10 so links stay clickable. Trails
-                follow the cursor across the open right side of the hero. */}
+            {/* Ambient WebGL fluid, confined to the banner. Behind the text (z-0);
+                content is z-10 so links stay clickable. White trails read clearly
+                over the brand gradient. */}
             <LazyLiquid
               className="absolute inset-0 z-0"
               style={{ position: 'absolute' }}
-              color={[0.145, 0.239, 0.867]}
-              intensity={1.6}
-              blend={3.5}
+              color={[1, 1, 1]}
+              intensity={1.4}
+              blend={3}
               curl={1.4}
               force={0.9}
             />
 
-            <div className="relative z-10">
-              <h1 className="text-2xl sm:text-3xl font-black font-ninja text-ninja-navy tracking-wide">
-                Hello{firstName && ', '}<span className="text-ninja-blue">{firstName}</span>!
-              </h1>
-              <p className="text-ninja-muted font-ninja mt-1 max-w-md">
-                {loading
-                  ? 'Pulling up today…'
-                  : total === 0
-                    ? 'Nobody is checked in yet. The board is clear.'
-                    : `${total} ninja${total === 1 ? '' : 's'} on the board today, ${total - logged} still waiting on a log.`}
-              </p>
-              <p className="text-ninja-muted font-ninja text-sm mt-3">{formatDate(todayStr)}</p>
-              <Link
-                to="/manager/dashboard"
-                className="inline-block mt-4 font-ninja text-sm font-bold text-ninja-blue hover:underline"
-              >
-                Go to Today's Board →
-              </Link>
+            <div className="relative z-10 flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-black font-ninja text-white tracking-wide">
+                  Hello{firstName && ', '}<span className="text-white/70">{firstName}</span>!
+                </h1>
+                <p className="text-white/80 font-ninja mt-1.5 max-w-md">
+                  {loading
+                    ? 'Pulling up today…'
+                    : total === 0
+                      ? 'Nobody is checked in yet. The board is clear.'
+                      : `${total} ninja${total === 1 ? '' : 's'} on the board today, ${total - logged} still waiting on a log.`}
+                </p>
+                <p className="text-white/60 font-ninja text-sm mt-3">{formatDate(todayStr)}</p>
+                <Link
+                  to="/manager/dashboard"
+                  className="inline-flex items-center gap-1 mt-4 font-ninja text-sm font-bold text-white bg-white/15 hover:bg-white/25 rounded-full px-4 py-2 transition-colors"
+                >
+                  Go to Today's Board →
+                </Link>
+              </div>
+              {!loading && total > 0 && (
+                <div className="hidden sm:block flex-shrink-0">
+                  <TodayRing logged={logged} total={total} />
+                </div>
+              )}
             </div>
           </motion.div>
 
+          {/* KPI strip */}
+          <div className="grid grid-cols-3 gap-4">
+            <StatCard label="check-ins this week" value={weekCheckins} accent="#3b82f6" Icon={PulseIcon} delay={0.05} />
+            <StatCard label="ninjas enrolled"     value={totalStudents} accent="#a855f7" Icon={UsersIcon} delay={0.1} />
+            <StatCard label="avg ninjas / week"   value={avgWeek}       accent="#14b8a6" Icon={TrendIcon} delay={0.15} />
+          </div>
+
           {/* Check-ins over time */}
-          <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
+          <div className={`${CARD} p-5`}>
             <h2 className="font-ninja font-bold text-ninja-navy text-lg mb-3">Check-ins</h2>
             {loading ? (
               <p className="text-ninja-muted font-ninja text-sm py-4">Loading…</p>
@@ -785,7 +898,7 @@ export default function DirectorDashboard() {
           <QuickTiles onBirthdays={() => setBirthdaysOpen(true)} />
 
           {/* Enrollment */}
-          <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
+          <div className={`${CARD} p-5`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-ninja font-bold text-ninja-navy text-lg">Enrollment</h2>
               <Link to="/manager/reports" className="font-ninja text-sm font-bold text-ninja-blue hover:underline">
