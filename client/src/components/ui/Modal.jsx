@@ -12,13 +12,13 @@ export default function Modal({ isOpen, onClose, title, children, subheader, wid
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex flex-col bg-ninja-bg sm:bg-black/50 sm:items-center sm:justify-center sm:p-6"
+      className="modal-backdrop fixed inset-0 z-[100] flex flex-col bg-ninja-bg sm:bg-black/50 sm:items-center sm:justify-center sm:p-6"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       onTouchStart={(e) => e.stopPropagation()}
       onTouchEnd={(e) => e.stopPropagation()}
     >
       <div
-        className={`w-full flex-1 flex flex-col overflow-hidden sm:flex-none sm:max-h-[90dvh] sm:rounded-2xl sm:bg-ninja-bg sm:shadow-xl sm:border sm:border-ninja-border ${width}`}
+        className={`modal-panel w-full flex-1 flex flex-col overflow-hidden sm:flex-none sm:max-h-[90dvh] sm:rounded-2xl sm:bg-ninja-bg sm:shadow-xl sm:border sm:border-ninja-border ${width}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Desktop header with × */}

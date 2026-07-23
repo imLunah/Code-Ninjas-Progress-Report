@@ -25,6 +25,10 @@ const PROGRAM_HEX = {
 };
 const hexFor = (p) => PROGRAM_HEX[p] || '#cbd5e1';
 
+// Strong ease-out (Emil's design-eng default). The built-in easeOut is too
+// weak to read as intentional; this matches the CSS --ease-out token.
+const EASE = [0.23, 1, 0.32, 1];
+
 // Count-up number. rAF-driven; eases out so it settles rather than snaps.
 function CountUp({ value = 0, className }) {
   const [n, setN] = useState(0);
@@ -345,7 +349,10 @@ function CheckInTrend({ dayRows, onExpand }) {
   const thisWeek = weeks[weeks.length - 1].count;
 
   return (
-    <button onClick={onExpand} className="block w-full text-left group">
+    <button
+      onClick={onExpand}
+      className="block w-full text-left group origin-center transition-transform duration-150 ease-[var(--ease-out)] active:scale-[0.99]"
+    >
       <div className="flex items-baseline justify-between mb-2">
         <span className="font-ninja text-sm text-ninja-navy font-semibold">
           <CountUp value={thisWeek} className="font-black" /> ninja{thisWeek === 1 ? '' : 's'} this week
@@ -409,7 +416,7 @@ function CheckInDetail({ dayRows }) {
           <button
             key={r.key}
             onClick={() => setRangeKey(r.key)}
-            className={`font-ninja text-sm font-semibold px-3 py-1.5 rounded-full transition-colors ${
+            className={`font-ninja text-sm font-semibold px-3 py-1.5 rounded-full transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-95 ${
               rangeKey === r.key
                 ? 'bg-ninja-blue text-white'
                 : 'bg-ninja-bg text-ninja-muted hover:text-ninja-navy'
@@ -594,8 +601,8 @@ const QUICK_TILES = [
 // -0.5 lift on hover reads as tactile. It's on the Link/button, not the wrapping
 // motion.div, so it doesn't fight Framer for the transform property.
 const TILE_CLASS =
-  'group relative flex flex-col justify-between w-full h-28 rounded-2xl p-4 text-left text-white ' +
-  'shadow-md overflow-hidden transition-transform duration-200 hover:-translate-y-0.5';
+  'lift group relative flex flex-col justify-between w-full h-28 rounded-2xl p-4 text-left text-white ' +
+  'shadow-md overflow-hidden';
 
 function TileInner({ Icon, label }) {
   return (
@@ -619,7 +626,7 @@ function QuickTiles({ onBirthdays }) {
             key={t.label}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.05 * i }}
+            transition={{ duration: 0.35, ease: EASE, delay: 0.05 * i }}
           >
             {t.action === 'birthdays' ? (
               <button onClick={onBirthdays} style={bg} className={TILE_CLASS}>
@@ -708,7 +715,7 @@ function StatCard({ label, value, accent, Icon, delay = 0 }) {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay }}
+      transition={{ duration: 0.35, ease: EASE, delay }}
       className={`${CARD} p-4 flex items-center gap-3`}
     >
       <span
@@ -820,7 +827,7 @@ export default function DirectorDashboard() {
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35 }}
+            transition={{ duration: 0.45, ease: EASE }}
             className="relative overflow-hidden rounded-2xl p-6 sm:p-7 shadow-lg"
             style={{ backgroundImage: 'linear-gradient(140deg, #1e50e6 0%, #3a45d6 52%, #6a34c4 100%)' }}
           >
@@ -856,7 +863,7 @@ export default function DirectorDashboard() {
                 <p className="text-white/60 font-ninja text-sm mt-3">{formatDate(todayStr)}</p>
                 <Link
                   to="/manager/dashboard"
-                  className="inline-flex items-center gap-1 mt-4 font-ninja text-sm font-bold text-white bg-white/15 hover:bg-white/25 rounded-full px-4 py-2 transition-colors"
+                  className="inline-flex items-center gap-1 mt-4 font-ninja text-sm font-bold text-white bg-white/15 hover:bg-white/25 rounded-full px-4 py-2 transition-[transform,background-color] duration-150 ease-[var(--ease-out)] active:scale-[0.97]"
                 >
                   Go to Today's Board →
                 </Link>
