@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
-import MobileTopBar from './MobileTopBar';
 import BugReportButton from '../ui/BugReportButton';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
@@ -346,8 +345,7 @@ export default function Layout({ children }) {
       <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
         {user?.announcement && <AnnouncementBanner text={user.announcement} />}
         {!isPreview && <LocationAnnouncements />}
-        <MobileTopBar compact={navCompact} />
-        <main onScroll={handleMainScroll} className="flex-1 overflow-y-auto min-h-0 max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 pt-16 lg:pt-8 pb-28 lg:pb-8">
+        <main onScroll={handleMainScroll} className="flex-1 overflow-y-auto min-h-0 max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 pt-[max(env(safe-area-inset-top),1.25rem)] lg:pt-8 pb-28 lg:pb-8">
           <div className="relative overflow-x-hidden overflow-y-hidden lg:overflow-x-visible lg:overflow-y-visible">
             {prevTab && (
               <AdjacentPanel key={prevTab.to} tab={prevTab} panelRef={prevPanelRef} side="left" />
