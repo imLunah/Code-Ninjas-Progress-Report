@@ -235,7 +235,9 @@ const PAD_X = 10;  // keeps the end dot from clipping at the edge
 const PAD_T = 14;
 const PAD_B = 10;
 
-function AreaChart({ points, height = 120, gradientId, className = '' }) {
+function AreaChart({ points, height = 120, gradientId, className = '', formatLabel = shortDate }) {
+  const [hoverIdx, setHoverIdx] = useState(null);
+
   if (points.length === 0) return null;
   const max = Math.max(1, ...points.map((p) => p.count));
   const innerW = CW - PAD_X * 2;
@@ -248,45 +250,103 @@ function AreaChart({ points, height = 120, gradientId, className = '' }) {
   const line = smoothPath(coords);
   const area = `${line} L ${coords[coords.length - 1].x} ${base} L ${coords[0].x} ${base} Z`;
   const last = coords[coords.length - 1];
+  const hover = hoverIdx === null ? null : coords[hoverIdx];
+
+  // Pointer x maps back through the viewBox to the nearest plotted point, so
+  // the readout snaps to real data instead of interpolating along the curve.
+  // Mouse only — tracking touch here would fight page scrolling on phones.
+  const handleMove = (e) => {
+    if (e.pointerType !== 'mouse') return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (!rect.width) return;
+    const x = ((e.clientX - rect.left) / rect.width) * CW;
+    let best = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < coords.length; i++) {
+      const dist = Math.abs(coords[i].x - x);
+      if (dist < bestDist) { bestDist = dist; best = i; }
+    }
+    setHoverIdx(best);
+  };
 
   return (
-    <svg viewBox={`0 0 ${CW} ${height}`} className={`w-full ${className}`}>
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.32" />
-          <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <motion.path
-        d={area}
-        fill={`url(#${gradientId})`}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.5 }}
-      />
-      <motion.path
-        d={line}
-        fill="none"
-        stroke="#3b82f6"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 0.9, ease: 'easeInOut' }}
-      />
-      <motion.circle
-        cx={last.x} cy={last.y} r="5"
-        fill="#3b82f6" stroke="#fff" strokeWidth="2.5"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3, delay: 0.9 }}
-      />
-    </svg>
+    <div className={`relative ${className}`}>
+      <svg
+        viewBox={`0 0 ${CW} ${height}`}
+        className="w-full h-full"
+        onPointerMove={handleMove}
+        onPointerLeave={() => setHoverIdx(null)}
+      >
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.32" />
+            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <motion.path
+          d={area}
+          fill={`url(#${gradientId})`}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+        />
+        <motion.path
+          d={line}
+          fill="none"
+          stroke="#3b82f6"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.9, ease: 'easeInOut' }}
+        />
+        {hover && (
+          <>
+            <line
+              x1={hover.x} y1={PAD_T - 8} x2={hover.x} y2={base}
+              stroke="currentColor" strokeWidth="1" strokeDasharray="3 3"
+              className="text-ninja-muted"
+            />
+            <circle cx={hover.x} cy={hover.y} r="5" fill="#3b82f6" stroke="#fff" strokeWidth="2.5" />
+          </>
+        )}
+        {!hover && (
+          <motion.circle
+            cx={last.x} cy={last.y} r="5"
+            fill="#3b82f6" stroke="#fff" strokeWidth="2.5"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, delay: 0.9 }}
+          />
+        )}
+      </svg>
+      {hover && (
+        <div
+          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-ninja-border bg-white px-2.5 py-1.5 shadow-lg"
+          style={{
+            left: `${Math.min(88, Math.max(12, (hover.x / CW) * 100))}%`,
+            top: `${Math.max(0, (hover.y / height) * 100 - 4)}%`,
+          }}
+        >
+          <span className="block font-ninja text-[11px] text-ninja-muted leading-tight">
+            {formatLabel(hover.date)}
+          </span>
+          <span className="block font-ninja text-sm font-bold text-ninja-navy leading-tight">
+            {hover.count} ninja{hover.count === 1 ? '' : 's'}
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 
 const shortDate = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const fullDate = (d) => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+const weekOf = (d) => `Week of ${shortDate(d)}`;
+const monthOf = (d) => d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+const TOOLTIP_LABEL = { day: fullDate, week: weekOf, month: monthOf };
 
 // Collapsed card: ninjas per week for the last 8 weeks. Whole card opens the
 // expanded view.
@@ -309,7 +369,7 @@ function CheckInTrend({ dayRows, onExpand }) {
           expand →
         </span>
       </div>
-      <AreaChart points={weeks} gradientId="checkInCardFill" className="h-28" />
+      <AreaChart points={weeks} gradientId="checkInCardFill" className="h-28" formatLabel={weekOf} />
       <div className="flex justify-between font-ninja text-[10px] text-ninja-muted mt-1">
         <span>{shortDate(weeks[0].date)}</span>
         <span>{shortDate(weeks[Math.floor(weeks.length / 2)].date)}</span>
@@ -379,7 +439,14 @@ function CheckInDetail({ dayRows }) {
 
       {/* Trend */}
       <div>
-        <AreaChart key={rangeKey} points={series} height={150} gradientId="checkInDetailFill" className="h-40" />
+        <AreaChart
+          key={rangeKey}
+          points={series}
+          height={150}
+          gradientId="checkInDetailFill"
+          className="h-40"
+          formatLabel={TOOLTIP_LABEL[range.bucket]}
+        />
         <div className="flex justify-between font-ninja text-[11px] text-ninja-muted mt-1">
           <span>{series.length ? axisLabel(series[0].date) : ''}</span>
           <span>{series.length > 2 ? axisLabel(series[Math.floor(series.length / 2)].date) : ''}</span>
