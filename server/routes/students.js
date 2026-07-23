@@ -102,6 +102,29 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/students/birthdays — active ninjas at this location who have a
+// birthday on file. Must stay above /:id or Express matches this as an id.
+// Month/day are sent separately so the client can rank upcoming birthdays
+// without re-parsing a date in the browser's timezone.
+router.get('/birthdays', requireAuth, async (req, res) => {
+  const pool = req.app.get('db');
+  try {
+    const { rows } = await pool.query(`
+      SELECT s.id, s.full_name,
+             to_char(s.birthday, 'YYYY-MM-DD') AS birthday,
+             EXTRACT(MONTH FROM s.birthday)::int AS month,
+             EXTRACT(DAY   FROM s.birthday)::int AS day
+      FROM students s
+      WHERE s.location_id = $1 AND s.active = true AND s.birthday IS NOT NULL
+      ORDER BY s.full_name ASC
+    `, [req.session.activeLocationId]);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching birthdays:', err);
+    res.status(500).json({ error: 'Failed to fetch birthdays' });
+  }
+});
+
 // GET /api/students/:id
 router.get('/:id', requireAuth, async (req, res) => {
   const pool = req.app.get('db');

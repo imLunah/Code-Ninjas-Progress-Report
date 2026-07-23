@@ -51,19 +51,22 @@ function CountUp({ value = 0, className }) {
 
 /* ---------------------------------------------------------------- icons -- */
 
-const RosterIcon = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+const ReportsIcon = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="M4 4v15a1 1 0 0 0 1 1h15" />
+    <path d="M8 16v-4" />
+    <path d="M13 16V8" />
+    <path d="M18 16v-6" />
   </svg>
 );
-const ClubIcon = (p) => (
+const SparkleIcon = (p) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.63 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+    <path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" />
   </svg>
 );
-const StaffIcon = (p) => (
+const CakeIcon = (p) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+    <path d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75-1.5.75a3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0L3 16.5m15-3.379a48.474 48.474 0 0 0-6-.371c-2.032 0-4.034.126-6 .371m12 0c.39.049.777.102 1.163.16 1.07.16 1.837 1.094 1.837 2.175v5.169c0 .621-.504 1.125-1.125 1.125H4.125A1.125 1.125 0 0 1 3 20.625v-5.17c0-1.08.768-2.014 1.837-2.174A47.78 47.78 0 0 1 6 13.12M12.265 3.11a.375.375 0 1 1-.53 0L12 2.845l.265.265Z" />
   </svg>
 );
 const CurriculumIcon = (p) => (
@@ -136,32 +139,34 @@ function ProgressDial({ pct, logged, total, loading }) {
 
 /* ------------------------------------------------------------ check-ins -- */
 
-// One fetch covers every range the expanded view offers (6 months = 26 weeks).
-const ATTENDANCE_DAYS = 182;
-
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const dayKey = (d) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-// The API only returns days that had a check-in. Expand to every day in range
-// so the chart has an even x axis and quiet days read as real zeroes.
-function buildDays(attendance, days) {
-  const map = new Map((attendance || []).map((r) => [r.day, r.count]));
+// The API only returns days that had a check-in. Expand to every day from the
+// first one on record through today, so the chart has an even x axis and quiet
+// days read as real zeroes. Ranges are then sliced off the tail of this.
+function buildDays(attendance) {
+  const rows = attendance || [];
+  if (rows.length === 0) return [];
   const end = new Date();
   end.setHours(0, 0, 0, 0);
+  const [y, m, d] = rows[0].day.split('-').map(Number);
+  const cursor = new Date(y, m - 1, d);
+  const map = new Map(rows.map((r) => [r.day, r.count]));
   const out = [];
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(end);
-    d.setDate(d.getDate() - i);
-    out.push({ date: d, count: map.get(dayKey(d)) || 0 });
+  while (cursor <= end) {
+    const date = new Date(cursor);
+    out.push({ date, count: map.get(dayKey(date)) || 0 });
+    cursor.setDate(cursor.getDate() + 1);
   }
   return out;
 }
 
 // Calendar weeks starting Sunday, most recent `weeks` of them.
-function toWeeks(dayRows, weeks) {
+function toWeeks(dayRows, weeks = Infinity) {
   const buckets = new Map();
   for (const row of dayRows) {
     const start = new Date(row.date);
@@ -171,8 +176,24 @@ function toWeeks(dayRows, weeks) {
     b.count += row.count;
     buckets.set(k, b);
   }
-  return [...buckets.values()].sort((a, b) => a.date - b.date).slice(-weeks);
+  const all = [...buckets.values()].sort((a, b) => a.date - b.date);
+  return weeks === Infinity ? all : all.slice(-weeks);
 }
+
+function toMonths(dayRows) {
+  const buckets = new Map();
+  for (const row of dayRows) {
+    const start = new Date(row.date.getFullYear(), row.date.getMonth(), 1);
+    const k = dayKey(start);
+    const b = buckets.get(k) || { date: start, count: 0 };
+    b.count += row.count;
+    buckets.set(k, b);
+  }
+  return [...buckets.values()].sort((a, b) => a.date - b.date);
+}
+
+const bucketBy = (dayRows, bucket) =>
+  bucket === 'day' ? dayRows : bucket === 'month' ? toMonths(dayRows) : toWeeks(dayRows);
 
 // Average ninjas per occurrence of each weekday — a Tuesday-only center
 // shouldn't look "busiest" purely because there are more Tuesdays in range.
@@ -299,34 +320,54 @@ function CheckInTrend({ dayRows, onExpand }) {
 }
 
 const RANGES = [
-  { label: '4 weeks', weeks: 4 },
-  { label: '12 weeks', weeks: 12 },
-  { label: '6 months', weeks: 26 },
+  { key: 'week',  label: 'Week',     days: 7,    bucket: 'day',   tail: 'Today' },
+  { key: 'month', label: 'Month',    days: 30,   bucket: 'day',   tail: 'Today' },
+  { key: 'six',   label: '6 months', days: 182,  bucket: 'week',  tail: 'This week' },
+  { key: 'all',   label: 'All time', days: null, bucket: 'month', tail: 'This month' },
 ];
 
+const monthLabel = (d) => d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+
 function CheckInDetail({ dayRows }) {
-  const [weeks, setWeeks] = useState(12);
-  const series = useMemo(() => toWeeks(dayRows, weeks), [dayRows, weeks]);
-  const inRange = useMemo(() => dayRows.slice(-(weeks * 7)), [dayRows, weeks]);
+  const [rangeKey, setRangeKey] = useState('month');
+  const range = RANGES.find((r) => r.key === rangeKey) || RANGES[1];
+
+  const inRange = useMemo(
+    () => (range.days ? dayRows.slice(-range.days) : dayRows),
+    [dayRows, range.days],
+  );
+  const series = useMemo(() => bucketBy(inRange, range.bucket), [inRange, range.bucket]);
   const weekdays = useMemo(() => byWeekday(inRange), [inRange]);
 
   const maxAvg = Math.max(0.001, ...weekdays.map((w) => w.avg));
   const ranked = [...weekdays].filter((w) => w.total > 0).sort((a, b) => b.avg - a.avg);
   const busiest = ranked[0];
   const quietest = ranked[ranked.length - 1];
+
+  // Peak single day in range, weekly pace, and how the range compares to the
+  // equally-long window before it — the raw totals said nothing actionable.
+  const peak = inRange.reduce((best, d) => (d.count > (best?.count ?? -1) ? d : best), null);
   const totalVisits = inRange.reduce((s, d) => s + d.count, 0);
-  const openDays = inRange.filter((d) => d.count > 0).length;
+  const perWeek = inRange.length ? (totalVisits / inRange.length) * 7 : 0;
+
+  const prior = range.days ? dayRows.slice(-(range.days * 2), -range.days) : [];
+  const priorTotal = prior.reduce((s, d) => s + d.count, 0);
+  // Needs a full prior window, else a half-empty one reads as a fake collapse.
+  const hasPrior = prior.length === inRange.length && priorTotal > 0;
+  const delta = hasPrior ? Math.round(((totalVisits - priorTotal) / priorTotal) * 100) : null;
+
+  const axisLabel = (d) => (range.bucket === 'month' ? monthLabel(d) : shortDate(d));
 
   return (
     <div className="space-y-5">
       {/* Range chips */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {RANGES.map((r) => (
           <button
-            key={r.weeks}
-            onClick={() => setWeeks(r.weeks)}
+            key={r.key}
+            onClick={() => setRangeKey(r.key)}
             className={`font-ninja text-sm font-semibold px-3 py-1.5 rounded-full transition-colors ${
-              weeks === r.weeks
+              rangeKey === r.key
                 ? 'bg-ninja-blue text-white'
                 : 'bg-ninja-bg text-ninja-muted hover:text-ninja-navy'
             }`}
@@ -336,31 +377,50 @@ function CheckInDetail({ dayRows }) {
         ))}
       </div>
 
-      {/* Weekly trend */}
+      {/* Trend */}
       <div>
-        <AreaChart key={weeks} points={series} height={150} gradientId="checkInDetailFill" className="h-40" />
+        <AreaChart key={rangeKey} points={series} height={150} gradientId="checkInDetailFill" className="h-40" />
         <div className="flex justify-between font-ninja text-[11px] text-ninja-muted mt-1">
-          <span>{series.length ? shortDate(series[0].date) : ''}</span>
-          <span>{series.length ? shortDate(series[Math.floor(series.length / 2)].date) : ''}</span>
-          <span>This week</span>
+          <span>{series.length ? axisLabel(series[0].date) : ''}</span>
+          <span>{series.length > 2 ? axisLabel(series[Math.floor(series.length / 2)].date) : ''}</span>
+          <span>{range.tail}</span>
         </div>
       </div>
 
-      {/* Totals */}
+      {/* Headline stats */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl bg-ninja-bg p-3">
-          <span className="block text-xl font-black font-ninja text-ninja-navy leading-none">{totalVisits}</span>
-          <span className="font-ninja text-xs text-ninja-muted">check-ins</span>
-        </div>
-        <div className="rounded-xl bg-ninja-bg p-3">
-          <span className="block text-xl font-black font-ninja text-ninja-navy leading-none">{openDays}</span>
-          <span className="font-ninja text-xs text-ninja-muted">days open</span>
+          <span className="block text-xl font-black font-ninja text-ninja-navy leading-none">
+            {peak?.count ?? 0}
+          </span>
+          <span className="font-ninja text-xs text-ninja-muted">
+            busiest day{peak?.count ? ` · ${shortDate(peak.date)}` : ''}
+          </span>
         </div>
         <div className="rounded-xl bg-ninja-bg p-3">
           <span className="block text-xl font-black font-ninja text-ninja-navy leading-none">
-            {openDays ? Math.round(totalVisits / openDays) : 0}
+            {Math.round(perWeek)}
           </span>
-          <span className="font-ninja text-xs text-ninja-muted">per open day</span>
+          <span className="font-ninja text-xs text-ninja-muted">ninjas a week</span>
+        </div>
+        <div className="rounded-xl bg-ninja-bg p-3">
+          {delta === null ? (
+            <>
+              <span className="block text-xl font-black font-ninja text-ninja-muted leading-none">—</span>
+              <span className="font-ninja text-xs text-ninja-muted">no earlier data</span>
+            </>
+          ) : (
+            <>
+              <span
+                className={`block text-xl font-black font-ninja leading-none ${
+                  delta > 0 ? 'text-emerald-500' : delta < 0 ? 'text-ninja-red' : 'text-ninja-navy'
+                }`}
+              >
+                {delta > 0 ? '+' : ''}{delta}%
+              </span>
+              <span className="font-ninja text-xs text-ninja-muted">vs previous {range.label.toLowerCase()}</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -472,16 +532,20 @@ function EnrollmentDonut({ data, total }) {
 
 /* ---------------------------------------------------------- quick tiles -- */
 
-// Solid inline hex so the tiles read identically in light and dark — the
-// global `.dark .bg-*` overrides would wash them out otherwise.
+// Deliberately none of these duplicate a sidebar entry. Solid inline hex so the
+// tiles read identically in light and dark — the global `.dark .bg-*` overrides
+// would wash them out otherwise.
 const QUICK_TILES = [
-  { label: 'Roster',     to: '/manager/students',   bg: '#2563eb', Icon: RosterIcon },
-  { label: 'Clubs',      to: '/clubs',              bg: '#f5a623', Icon: ClubIcon },
-  { label: 'Staff',      to: '/manager/staff',      bg: '#f4795b', Icon: StaffIcon },
+  { label: 'Reports',    to: '/manager/reports',    bg: '#2563eb', Icon: ReportsIcon },
   { label: 'Curriculum', to: '/curriculum-roadmap', bg: '#35c6e0', Icon: CurriculumIcon },
+  { label: 'Birthdays',  action: 'birthdays',       bg: '#f4795b', Icon: CakeIcon },
+  { label: "What's New", to: '/changelog',          bg: '#f5a623', Icon: SparkleIcon },
 ];
 
-function QuickTiles() {
+const TILE_CLASS =
+  'flex flex-col justify-between w-full h-24 rounded-2xl p-3.5 text-left text-white shadow-sm hover:brightness-110 transition';
+
+function QuickTiles({ onBirthdays }) {
   return (
     <div className="grid grid-cols-2 gap-3">
       {QUICK_TILES.map((t, i) => (
@@ -491,15 +555,80 @@ function QuickTiles() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.05 * i }}
         >
-          <Link
-            to={t.to}
-            style={{ backgroundColor: t.bg }}
-            className="flex flex-col justify-between h-24 rounded-2xl p-3.5 text-white shadow-sm hover:brightness-110 transition"
-          >
-            <t.Icon className="w-6 h-6" />
-            <span className="font-ninja font-bold text-sm">{t.label}</span>
-          </Link>
+          {t.action === 'birthdays' ? (
+            <button onClick={onBirthdays} style={{ backgroundColor: t.bg }} className={TILE_CLASS}>
+              <t.Icon className="w-6 h-6" />
+              <span className="font-ninja font-bold text-sm">{t.label}</span>
+            </button>
+          ) : (
+            <Link to={t.to} style={{ backgroundColor: t.bg }} className={TILE_CLASS}>
+              <t.Icon className="w-6 h-6" />
+              <span className="font-ninja font-bold text-sm">{t.label}</span>
+            </Link>
+          )}
         </motion.div>
+      ))}
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------- birthdays -- */
+
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'];
+
+// Groups by calendar month starting with the current one, wrapping into next
+// year so December doesn't strand January at the bottom of the list.
+function groupBirthdays(rows) {
+  const now = new Date();
+  const curMonth = now.getMonth() + 1;
+  const curDay = now.getDate();
+  const groups = [];
+  for (let i = 0; i < 12; i++) {
+    const month = ((curMonth - 1 + i) % 12) + 1;
+    const kids = rows
+      .filter((r) => r.month === month)
+      .sort((a, b) => a.day - b.day)
+      .map((r) => ({
+        ...r,
+        isToday: month === curMonth && r.day === curDay,
+        passed: i === 0 && r.day < curDay,
+      }));
+    if (kids.length) groups.push({ month, name: MONTH_NAMES[month - 1], kids, isCurrent: i === 0 });
+  }
+  return groups;
+}
+
+function BirthdayList({ rows, loading }) {
+  const groups = useMemo(() => groupBirthdays(rows || []), [rows]);
+  if (loading) return <p className="text-ninja-muted font-ninja text-sm py-4">Loading…</p>;
+  if (groups.length === 0) {
+    return <p className="text-ninja-muted font-ninja text-sm py-4">No birthdays on file yet.</p>;
+  }
+  return (
+    <div className="space-y-5">
+      {groups.map((g) => (
+        <div key={g.month}>
+          <h3 className="font-ninja font-bold text-ninja-navy mb-2">
+            {g.name}{g.isCurrent && <span className="text-ninja-muted font-semibold text-sm"> · this month</span>}
+          </h3>
+          <div className="space-y-1">
+            {g.kids.map((k) => (
+              <Link
+                key={`${k.id}-${k.month}`}
+                to={`/manager/students/${k.id}`}
+                className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 hover:bg-ninja-bg transition-colors ${
+                  k.passed ? 'opacity-50' : ''
+                }`}
+              >
+                <span className="font-ninja text-sm text-ninja-navy truncate">{k.full_name}</span>
+                <span className="font-ninja text-sm font-bold text-ninja-muted flex-shrink-0">
+                  {k.isToday ? 'Today' : `${g.name.slice(0, 3)} ${k.day}`}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -515,13 +644,15 @@ export default function DirectorDashboard() {
   const [overview, setOverview] = useState(null);
   const [attendance, setAttendance] = useState(null);
   const [trendOpen, setTrendOpen] = useState(false);
+  const [birthdaysOpen, setBirthdaysOpen] = useState(false);
+  const [birthdays, setBirthdays] = useState(null);
 
   useEffect(() => {
     let alive = true;
     Promise.all([
       api.get(`/daily?date=${todayStr}`).catch(() => []),
       api.get('/reports/overview').catch(() => null),
-      api.get(`/reports/attendance?days=${ATTENDANCE_DAYS}`).catch(() => null),
+      api.get('/reports/attendance?range=all').catch(() => null),
     ]).then(([daily, ov, att]) => {
       if (!alive) return;
       setAssignments(daily || []);
@@ -532,10 +663,20 @@ export default function DirectorDashboard() {
     return () => { alive = false; };
   }, [todayStr, user?.activeLocation?.id]);
 
-  const dayRows = useMemo(
-    () => buildDays(attendance?.attendance, ATTENDANCE_DAYS),
-    [attendance],
-  );
+  // Only the birthday modal needs this, so it waits until the tile is tapped.
+  useEffect(() => {
+    if (!birthdaysOpen || birthdays) return;
+    let alive = true;
+    api.get('/students/birthdays')
+      .then((rows) => { if (alive) setBirthdays(rows || []); })
+      .catch(() => { if (alive) setBirthdays([]); });
+    return () => { alive = false; };
+  }, [birthdaysOpen, birthdays]);
+
+  // Refetch birthdays if the director switches centers.
+  useEffect(() => { setBirthdays(null); }, [user?.activeLocation?.id]);
+
+  const dayRows = useMemo(() => buildDays(attendance?.attendance), [attendance]);
 
   const logged = assignments.filter((a) => a.completed).length;
   const total = assignments.length;
@@ -616,7 +757,7 @@ export default function DirectorDashboard() {
 
         {/* ------------------------------------------------------ rail -- */}
         <div className="space-y-6">
-          <QuickTiles />
+          <QuickTiles onBirthdays={() => setBirthdaysOpen(true)} />
 
           {/* Enrollment */}
           <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
@@ -654,6 +795,15 @@ export default function DirectorDashboard() {
         width="max-w-2xl"
       >
         <CheckInDetail dayRows={dayRows} />
+      </Modal>
+
+      <Modal
+        isOpen={birthdaysOpen}
+        onClose={() => setBirthdaysOpen(false)}
+        title="Birthdays"
+        width="max-w-md"
+      >
+        <BirthdayList rows={birthdays} loading={birthdays === null} />
       </Modal>
     </Layout>
   );
