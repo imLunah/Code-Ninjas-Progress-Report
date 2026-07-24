@@ -5,7 +5,6 @@ import Layout from '../../components/layout/Layout';
 import StaffAnnouncements from '../../components/manager/StaffAnnouncements';
 import DirectorStickyNotes from '../../components/manager/DirectorStickyNotes';
 import Modal from '../../components/ui/Modal';
-import LazyLiquid from '../../components/ui/canvas/LazyLiquid';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
@@ -92,6 +91,11 @@ const PulseIcon = (p) => (
 const TrendIcon = (p) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
     <path d="M2.25 18 9 11.25l4.306 4.307a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.28m5.94 2.28-2.28 5.941" />
+  </svg>
+);
+const ChevronRight = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="m9 18 6-6-6-6" />
   </svg>
 );
 
@@ -588,30 +592,33 @@ function EnrollmentDonut({ data, total }) {
 
 /* ---------------------------------------------------------- quick tiles -- */
 
-// Deliberately none of these duplicate a sidebar entry. Solid inline hex so the
-// tiles read identically in light and dark — the global `.dark .bg-*` overrides
-// would wash them out otherwise.
+// Deliberately none of these duplicate a sidebar entry.
+// Restrained quick-links: neutral card surface, small tinted icon chip for a
+// hint of identity, chevron nudges on hover. The full-bleed candy gradient grid
+// was the most template-looking thing on the page — gone.
 const QUICK_TILES = [
-  { label: 'Reports',    to: '/manager/reports',    c1: '#2f6bff', c2: '#1d4ed8', Icon: ReportsIcon },
-  { label: 'Curriculum', to: '/curriculum-roadmap', c1: '#2ec8e6', c2: '#0e9dc4', Icon: CurriculumIcon },
-  { label: 'Birthdays',  action: 'birthdays',       c1: '#fb8467', c2: '#e85d3d', Icon: CakeIcon },
-  { label: "What's New", to: '/changelog',          c1: '#f9b13a', c2: '#e8890f', Icon: SparkleIcon },
+  { label: 'Reports',    to: '/manager/reports',    accent: '#2563eb', Icon: ReportsIcon },
+  { label: 'Curriculum', to: '/curriculum-roadmap', accent: '#0e9dc4', Icon: CurriculumIcon },
+  { label: 'Birthdays',  action: 'birthdays',       accent: '#e85d3d', Icon: CakeIcon },
+  { label: "What's New", to: '/changelog',          accent: '#e8890f', Icon: SparkleIcon },
 ];
 
-// -0.5 lift on hover reads as tactile. It's on the Link/button, not the wrapping
-// motion.div, so it doesn't fight Framer for the transform property.
 const TILE_CLASS =
-  'lift group relative flex flex-col justify-between w-full h-28 rounded-2xl p-4 text-left text-white ' +
-  'shadow-md overflow-hidden';
+  `${CARD} group flex items-center gap-3 p-3.5 w-full text-left ` +
+  'transition-[transform,border-color] duration-150 ease-[var(--ease-out)] ' +
+  'hover:border-ninja-blue/50 active:scale-[0.98]';
 
-function TileInner({ Icon, label }) {
+function TileInner({ Icon, label, accent }) {
   return (
     <>
-      <span className="pointer-events-none absolute -right-6 -bottom-7 w-24 h-24 rounded-full bg-white/10" />
-      <span className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
-        <Icon className="w-5 h-5" />
+      <span
+        className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ backgroundColor: `${accent}1f`, color: accent }}
+      >
+        <Icon className="w-[18px] h-[18px]" />
       </span>
-      <span className="font-ninja font-bold text-[15px] relative">{label}</span>
+      <span className="font-ninja font-bold text-sm text-ninja-navy truncate">{label}</span>
+      <ChevronRight className="w-4 h-4 text-ninja-muted ml-auto flex-shrink-0 transition-transform duration-150 ease-[var(--ease-out)] group-hover:translate-x-0.5" />
     </>
   );
 }
@@ -619,27 +626,24 @@ function TileInner({ Icon, label }) {
 function QuickTiles({ onBirthdays }) {
   return (
     <div className="grid grid-cols-2 gap-3">
-      {QUICK_TILES.map((t, i) => {
-        const bg = { backgroundImage: `linear-gradient(150deg, ${t.c1}, ${t.c2})` };
-        return (
-          <motion.div
-            key={t.label}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: EASE, delay: 0.05 * i }}
-          >
-            {t.action === 'birthdays' ? (
-              <button onClick={onBirthdays} style={bg} className={TILE_CLASS}>
-                <TileInner Icon={t.Icon} label={t.label} />
-              </button>
-            ) : (
-              <Link to={t.to} style={bg} className={TILE_CLASS}>
-                <TileInner Icon={t.Icon} label={t.label} />
-              </Link>
-            )}
-          </motion.div>
-        );
-      })}
+      {QUICK_TILES.map((t, i) => (
+        <motion.div
+          key={t.label}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: EASE, delay: 0.05 * i }}
+        >
+          {t.action === 'birthdays' ? (
+            <button onClick={onBirthdays} className={TILE_CLASS}>
+              <TileInner Icon={t.Icon} label={t.label} accent={t.accent} />
+            </button>
+          ) : (
+            <Link to={t.to} className={TILE_CLASS}>
+              <TileInner Icon={t.Icon} label={t.label} accent={t.accent} />
+            </Link>
+          )}
+        </motion.div>
+      ))}
     </div>
   );
 }
@@ -732,30 +736,31 @@ function StatCard({ label, value, accent, Icon, delay = 0 }) {
   );
 }
 
-// Today's logged-vs-on-board ring, sits in the hero on white so it works on the
-// brand gradient. Fills the space the greeting used to waste.
+// Today's logged-vs-on-board ring. Accent stroke on a hairline track — a single
+// quiet data point in the header, not a decorative centrepiece.
 function TodayRing({ logged, total }) {
   const pct = total ? logged / total : 0;
   const r = 34;
   const c = 2 * Math.PI * r;
   return (
-    <div className="relative w-28 h-28">
+    <div className="relative w-24 h-24">
       <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
-        <circle cx="40" cy="40" r={r} fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="7" />
+        <circle cx="40" cy="40" r={r} fill="none" stroke="currentColor" strokeWidth="6" className="text-ninja-border" />
         <motion.circle
           cx="40" cy="40" r={r}
-          fill="none" stroke="#fff" strokeWidth="7" strokeLinecap="round"
+          fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round"
+          className="text-ninja-blue"
           strokeDasharray={c}
           initial={{ strokeDashoffset: c }}
           animate={{ strokeDashoffset: c * (1 - pct) }}
-          transition={{ duration: 0.9, ease: 'easeInOut' }}
+          transition={{ duration: 0.9, ease: EASE }}
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-        <span className="text-2xl font-black font-ninja leading-none">
-          {logged}<span className="text-white/60 text-lg">/{total}</span>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-xl font-black font-ninja text-ninja-navy leading-none">
+          {logged}<span className="text-ninja-muted text-sm">/{total}</span>
         </span>
-        <span className="text-[10px] font-semibold text-white/70 mt-0.5 tracking-wide">logged</span>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-ninja-muted mt-1">logged</span>
       </div>
     </div>
   );
@@ -817,53 +822,39 @@ export default function DirectorDashboard() {
   const avgWeek = dayRows.length ? Math.round((totalVisits / dayRows.length) * 7) : 0;
 
   const firstName = user?.displayName?.split(' ')[0] ?? '';
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
   return (
     <Layout>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* ------------------------------------------------------ main -- */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Greeting banner */}
+          {/* Header — clean, type-led. No gradient banner, no decorative fluff. */}
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: EASE }}
-            className="relative overflow-hidden rounded-2xl p-6 sm:p-7 shadow-lg"
-            style={{ backgroundImage: 'linear-gradient(140deg, #1e50e6 0%, #3a45d6 52%, #6a34c4 100%)' }}
+            className={`${CARD} p-6 sm:p-7`}
           >
-            {/* Depth blob for the at-rest banner — the fluid only paints trails
-                while the pointer moves, so the banner needs static interest too. */}
-            <div className="pointer-events-none absolute -right-10 -top-16 w-64 h-64 rounded-full bg-white/10" />
-
-            {/* Ambient WebGL fluid, confined to the banner. Behind the text (z-0);
-                content is z-10 so links stay clickable. White trails read clearly
-                over the brand gradient. */}
-            <LazyLiquid
-              className="absolute inset-0 z-0"
-              style={{ position: 'absolute' }}
-              color={[1, 1, 1]}
-              intensity={1.4}
-              blend={3}
-              curl={1.4}
-              force={0.9}
-            />
-
-            <div className="relative z-10 flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-black font-ninja text-white tracking-wide">
-                  Hello{firstName && ', '}<span className="text-white/70">{firstName}</span>!
+                <p className="font-ninja text-xs font-bold uppercase tracking-wider text-ninja-muted">
+                  {formatDate(todayStr)}
+                </p>
+                <h1 className="mt-1.5 text-2xl sm:text-3xl font-black font-ninja text-ninja-navy tracking-tight">
+                  {greeting}{firstName && ', '}<span className="text-ninja-blue">{firstName}</span>
                 </h1>
-                <p className="text-white/80 font-ninja mt-1.5 max-w-md">
+                <p className="mt-2 font-ninja text-ninja-muted max-w-md">
                   {loading
                     ? 'Pulling up today…'
                     : total === 0
                       ? 'Nobody is checked in yet. The board is clear.'
                       : `${total} ninja${total === 1 ? '' : 's'} on the board today, ${total - logged} still waiting on a log.`}
                 </p>
-                <p className="text-white/60 font-ninja text-sm mt-3">{formatDate(todayStr)}</p>
                 <Link
                   to="/manager/dashboard"
-                  className="inline-flex items-center gap-1 mt-4 font-ninja text-sm font-bold text-white bg-white/15 hover:bg-white/25 rounded-full px-4 py-2 transition-[transform,background-color] duration-150 ease-[var(--ease-out)] active:scale-[0.97]"
+                  className="mt-4 inline-flex items-center gap-1.5 font-ninja text-sm font-bold text-ninja-blue border border-ninja-border hover:border-ninja-blue rounded-full px-4 py-2 transition-[transform,border-color] duration-150 ease-[var(--ease-out)] active:scale-[0.97]"
                 >
                   Go to Today's Board →
                 </Link>
@@ -879,8 +870,8 @@ export default function DirectorDashboard() {
           {/* KPI strip */}
           <div className="grid grid-cols-3 gap-4">
             <StatCard label="check-ins this week" value={weekCheckins} accent="#3b82f6" Icon={PulseIcon} delay={0.05} />
-            <StatCard label="ninjas enrolled"     value={totalStudents} accent="#a855f7" Icon={UsersIcon} delay={0.1} />
-            <StatCard label="avg ninjas / week"   value={avgWeek}       accent="#14b8a6" Icon={TrendIcon} delay={0.15} />
+            <StatCard label="ninjas enrolled"     value={totalStudents} accent="#3b82f6" Icon={UsersIcon} delay={0.1} />
+            <StatCard label="avg ninjas / week"   value={avgWeek}       accent="#3b82f6" Icon={TrendIcon} delay={0.15} />
           </div>
 
           {/* Check-ins over time */}
