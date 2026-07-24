@@ -78,21 +78,6 @@ const CurriculumIcon = (p) => (
     <path d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
   </svg>
 );
-const UsersIcon = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
-  </svg>
-);
-const PulseIcon = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M3 12h4l2.5-7 5 14L17 12h4" />
-  </svg>
-);
-const TrendIcon = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M2.25 18 9 11.25l4.306 4.307a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.28m5.94 2.28-2.28 5.941" />
-  </svg>
-);
 const ChevronRight = (p) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
     <path d="m9 18 6-6-6-6" />
@@ -712,30 +697,6 @@ function BirthdayList({ rows, loading }) {
 
 /* -------------------------------------------------------------- kpi/ring -- */
 
-// Small tinted-icon stat. The accent is a solid hex; the chip uses it at ~12%
-// so it reads in both themes without touching the .dark overrides.
-function StatCard({ label, value, accent, Icon, delay = 0 }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: EASE, delay }}
-      className={`${CARD} p-4 flex items-center gap-3`}
-    >
-      <span
-        className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ backgroundColor: `${accent}22`, color: accent }}
-      >
-        <Icon className="w-5 h-5" />
-      </span>
-      <div className="min-w-0">
-        <CountUp value={value} className="block text-2xl font-black font-ninja text-ninja-navy leading-none" />
-        <span className="font-ninja text-xs text-ninja-muted">{label}</span>
-      </div>
-    </motion.div>
-  );
-}
-
 // Today's logged-vs-on-board ring. Accent stroke on a hairline track — a single
 // quiet data point in the header, not a decorative centrepiece.
 function TodayRing({ logged, total }) {
@@ -816,11 +777,6 @@ export default function DirectorDashboard() {
   const enrollment = overview?.enrollment ?? [];
   const totalStudents = overview?.totalStudents ?? 0;
 
-  const weeks = useMemo(() => toWeeks(dayRows), [dayRows]);
-  const weekCheckins = weeks.length ? weeks[weeks.length - 1].count : 0;
-  const totalVisits = dayRows.reduce((s, d) => s + d.count, 0);
-  const avgWeek = dayRows.length ? Math.round((totalVisits / dayRows.length) * 7) : 0;
-
   const firstName = user?.displayName?.split(' ')[0] ?? '';
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
@@ -867,12 +823,8 @@ export default function DirectorDashboard() {
             </div>
           </motion.div>
 
-          {/* KPI strip */}
-          <div className="grid grid-cols-3 gap-4">
-            <StatCard label="check-ins this week" value={weekCheckins} accent="#3b82f6" Icon={PulseIcon} delay={0.05} />
-            <StatCard label="ninjas enrolled"     value={totalStudents} accent="#3b82f6" Icon={UsersIcon} delay={0.1} />
-            <StatCard label="avg ninjas / week"   value={avgWeek}       accent="#3b82f6" Icon={TrendIcon} delay={0.15} />
-          </div>
+          {/* CD sticky notes */}
+          <DirectorStickyNotes />
 
           {/* Center calendar */}
           <EventCalendar />
@@ -886,9 +838,6 @@ export default function DirectorDashboard() {
               <CheckInTrend dayRows={dayRows} onExpand={() => setTrendOpen(true)} />
             )}
           </div>
-
-          {/* CD sticky notes */}
-          <DirectorStickyNotes />
         </div>
 
         {/* ------------------------------------------------------ rail -- */}
