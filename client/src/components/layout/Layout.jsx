@@ -377,7 +377,7 @@ export default function Layout({ children }) {
         </filter>
       </svg>
       <Sidebar onOpenBug={() => setBugOpen(true)} />
-      <PeelWrap on={peelOn} under={<div className="h-full w-full bg-ninja-bg flex"><Sidebar onOpenBug={() => setBugOpen(true)} /></div>}>
+      <PeelWrap on={peelOn}>
       <div className={`flex-1 flex flex-col min-w-0 min-h-0 relative ${peelOn ? 'h-full' : ''}`}>
         {user?.announcement && <AnnouncementBanner text={user.announcement} />}
         {!isPreview && <LocationAnnouncements />}
