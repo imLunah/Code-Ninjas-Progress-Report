@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -10,17 +10,7 @@ import { PRESET_AVATARS } from '../lib/avatars';
 
 export default function AccountPage() {
   const { user, setUser, logout, switchLocation } = useAuth();
-  const { dark, toggle } = useTheme();
-
-  // Secret: tap the appearance icon 5× quickly to open the theme customizer.
-  const themeTaps = useRef(0);
-  const themeTapTimer = useRef(null);
-  const handleThemeSecret = () => {
-    themeTaps.current += 1;
-    clearTimeout(themeTapTimer.current);
-    if (themeTaps.current >= 5) { themeTaps.current = 0; navigate('/appearance'); return; }
-    themeTapTimer.current = setTimeout(() => { themeTaps.current = 0; }, 1200);
-  };
+  const { dark, toggle, experimental, setExperimental } = useTheme();
   const navigate = useNavigate();
 
   const [username, setUsername] = useState(user?.username || '');
@@ -199,18 +189,16 @@ export default function AccountPage() {
           <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">Appearance</p>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleThemeSecret}
-                aria-label="Appearance"
-                className={`w-9 h-9 rounded-xl flex items-center justify-center outline-none ${dark ? 'text-yellow-300 bg-yellow-400/10' : 'text-ninja-muted bg-ninja-bg'}`}
+              <span
+                aria-hidden
+                className={`w-9 h-9 rounded-xl flex items-center justify-center ${dark ? 'text-yellow-300 bg-yellow-400/10' : 'text-ninja-muted bg-ninja-bg'}`}
               >
                 {dark ? (
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
                 ) : (
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>
                 )}
-              </button>
+              </span>
               <div>
                 <p className="text-ninja-navy font-ninja font-semibold text-sm">Dark mode</p>
                 <p className="text-ninja-muted font-ninja text-xs">{dark ? 'On' : 'Off'}</p>
@@ -232,6 +220,71 @@ export default function AccountPage() {
             </button>
           </div>
         </motion.div>
+
+        {/* Experimental */}
+        {!isForced && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.09, duration: 0.3 }}
+          className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className={`w-9 h-9 rounded-xl flex items-center justify-center ${experimental ? 'text-ninja-blue bg-ninja-blue/10' : 'text-ninja-muted bg-ninja-bg'}`}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3h6M10 3v6.5L5 18a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-8.5V3" /><path d="M7.5 14h9" /></svg>
+              </span>
+              <div>
+                <p className="text-ninja-navy font-ninja font-semibold text-sm">Experimental features</p>
+                <p className="text-ninja-muted font-ninja text-xs">Unlock in-progress extras. May change or break.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={experimental}
+              aria-label="Toggle experimental features"
+              onClick={() => setExperimental(!experimental)}
+              className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${experimental ? 'bg-ninja-blue' : 'bg-ninja-border'}`}
+            >
+              <motion.span
+                layout
+                transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+                className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${experimental ? 'right-1' : 'left-1'}`}
+              />
+            </button>
+          </div>
+
+          <AnimatePresence initial={false}>
+            {experimental && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                className="overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={() => navigate('/appearance')}
+                  className="mt-4 w-full flex items-center justify-between rounded-xl border border-ninja-border p-3 text-left transition-[transform,border-color] duration-150 ease-[var(--ease-out)] hover:border-ninja-blue/50 active:scale-[0.98]"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-9 h-9 rounded-xl flex items-center justify-center text-ninja-blue bg-ninja-blue/10">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r="1" /><circle cx="17.5" cy="10.5" r="1" /><circle cx="8.5" cy="7.5" r="1" /><circle cx="6.5" cy="12.5" r="1" /><path d="M12 2C6.5 2 2 6 2 11a5 5 0 0 0 5 5h1.5a2 2 0 0 1 2 2 2 2 0 0 0 2 2c5.5 0 10-4.5 10-10S17.5 2 12 2z" /></svg>
+                    </span>
+                    <div>
+                      <p className="text-ninja-navy font-ninja font-semibold text-sm">Theme &amp; color</p>
+                      <p className="text-ninja-muted font-ninja text-xs">Accent color picker &amp; more</p>
+                    </div>
+                  </div>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-ninja-muted"><polyline points="9 18 15 12 9 6" /></svg>
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+        )}
 
         {/* What's New */}
         <motion.a

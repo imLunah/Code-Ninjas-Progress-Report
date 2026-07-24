@@ -34,6 +34,17 @@ export function ThemeProvider({ children }) {
     try { return localStorage.getItem('dj-accent') || 'default'; } catch { return 'default'; }
   });
 
+  // Per-device opt-in for in-progress / power-user features (theme customizer,
+  // etc). Off by default. Read synchronously so gated routes never flash.
+  const [experimental, setExperimentalState] = useState(() => {
+    try { return localStorage.getItem('dj-experimental') === '1'; } catch { return false; }
+  });
+  const setExperimental = useCallback((v) => {
+    const on = !!v;
+    setExperimentalState(on);
+    try { localStorage.setItem('dj-experimental', on ? '1' : '0'); } catch { /* ignore */ }
+  }, []);
+
   // ── Mode (light/dark) ──────────────────────────────────────────────
   useEffect(() => {
     const root = document.documentElement;
@@ -88,8 +99,8 @@ export function ThemeProvider({ children }) {
   );
 
   const value = useMemo(
-    () => ({ dark, toggle, setMode, accent, setAccent, previewAccent, settings, rev, hydrate }),
-    [dark, accent, settings, previewAccent, rev, hydrate]
+    () => ({ dark, toggle, setMode, accent, setAccent, previewAccent, settings, rev, hydrate, experimental, setExperimental }),
+    [dark, accent, settings, previewAccent, rev, hydrate, experimental, setExperimental]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

@@ -1,9 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import ThemeToggle from '../ui/ThemeToggle';
-import ThemeCustomizerModal from '../theme/ThemeCustomizerModal';
 
 const EXPANDED_W = 224; // matches w-56
 const COLLAPSED_W = 76; // icon rail
@@ -65,7 +64,6 @@ export default function Sidebar({ onOpenBug }) {
   const { user, logout, switchLocation, viewAs } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [themeOpen, setThemeOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebar-collapsed') === '1');
 
   const toggleCollapsed = () => {
@@ -73,20 +71,6 @@ export default function Sidebar({ onOpenBug }) {
       localStorage.setItem('sidebar-collapsed', c ? '0' : '1');
       return !c;
     });
-  };
-
-  // Secret: tap the logo 5× quickly to open the theme customizer.
-  const tapCount = useRef(0);
-  const tapTimer = useRef(null);
-  const handleLogoTap = () => {
-    tapCount.current += 1;
-    clearTimeout(tapTimer.current);
-    if (tapCount.current >= 5) {
-      tapCount.current = 0;
-      setThemeOpen(true);
-      return;
-    }
-    tapTimer.current = setTimeout(() => { tapCount.current = 0; }, 1200);
   };
 
   const isSenseiView = user?.role === 'admin' && viewAs === 'sensei';
@@ -123,15 +107,15 @@ export default function Sidebar({ onOpenBug }) {
         </motion.svg>
       </button>
 
-      {/* Logo (secret: 5 taps opens the theme customizer) */}
+      {/* Logo */}
       <div className={`py-5 border-b border-ninja-border overflow-hidden ${collapsed ? 'px-2 flex justify-center' : 'px-5'}`}>
-        <button type="button" onClick={handleLogoTap} className="block outline-none" aria-label="DojoLink">
+        <Link to="/" className="block outline-none" aria-label="DojoLink">
           {collapsed ? (
             <img src="/favicon.png" alt="DojoLink" className="h-9 w-9 select-none" draggable={false} />
           ) : (
             <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-14 w-auto max-w-none select-none" draggable={false} />
           )}
-        </button>
+        </Link>
       </div>
 
       {/* Center switcher (hidden on the icon rail) */}
@@ -188,8 +172,6 @@ export default function Sidebar({ onOpenBug }) {
         {!collapsed && <span className="text-ninja-muted font-ninja text-xs font-semibold">Appearance</span>}
         <ThemeToggle />
       </div>
-
-      <ThemeCustomizerModal open={themeOpen} onClose={() => setThemeOpen(false)} />
 
       {/* User card */}
       <div className="p-3 border-t border-ninja-border">

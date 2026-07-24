@@ -1,10 +1,20 @@
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import ThemeCustomizer from '../components/theme/ThemeCustomizer';
+import { useTheme } from '../context/ThemeContext';
 
 export default function AppearancePage() {
   const navigate = useNavigate();
+  const { experimental } = useTheme();
+
+  // Lives under the Experimental toggle now — no direct access when it's off.
+  useEffect(() => {
+    if (!experimental) navigate('/account', { replace: true });
+  }, [experimental, navigate]);
+
+  if (!experimental) return null;
 
   return (
     <Layout>
