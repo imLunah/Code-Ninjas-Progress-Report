@@ -10,7 +10,7 @@ import { PRESET_AVATARS } from '../lib/avatars';
 
 export default function AccountPage() {
   const { user, setUser, logout, switchLocation } = useAuth();
-  const { dark, toggle, experimental, setExperimental, peelNav, setPeelNav } = useTheme();
+  const { dark, toggle, experimental, setExperimental } = useTheme();
   const navigate = useNavigate();
 
   const [username, setUsername] = useState(user?.username || '');
@@ -285,33 +285,6 @@ export default function AccountPage() {
                   </div>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-ninja-muted"><polyline points="9 18 15 12 9 6" /></svg>
                 </button>
-
-                {/* Peel navigation */}
-                <div className="mt-3 flex items-center justify-between rounded-xl border border-ninja-border p-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${peelNav ? 'text-ninja-blue bg-ninja-blue/10' : 'text-ninja-muted bg-ninja-bg'}`}>
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h18v18H3z" opacity="0" /><path d="M4 4h16v16H4z" /><path d="M14 4l6 6M14 4v6h6" /></svg>
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-ninja-navy font-ninja font-semibold text-sm">Peel navigation</p>
-                      <p className="text-ninja-muted font-ninja text-xs">Desktop only. Push the cursor to the left edge to peel the page back to a nav menu. Needs a supporting browser.</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={peelNav}
-                    aria-label="Toggle peel navigation"
-                    onClick={() => setPeelNav(!peelNav)}
-                    className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${peelNav ? 'bg-ninja-blue' : 'bg-ninja-border'}`}
-                  >
-                    <motion.span
-                      layout
-                      transition={{ type: 'spring', stiffness: 500, damping: 32 }}
-                      className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${peelNav ? 'right-1' : 'left-1'}`}
-                    />
-                  </button>
-                </div>
               </motion.div>
             )}
           </AnimatePresence>

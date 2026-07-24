@@ -45,18 +45,6 @@ export function ThemeProvider({ children }) {
     try { localStorage.setItem('dj-experimental', on ? '1' : '0'); } catch { /* ignore */ }
   }, []);
 
-  // Experimental: peel-away nav. Only takes effect while `experimental` is on
-  // and on a browser that supports HTML-in-canvas (else the wrapper renders the
-  // app plain). Persisted per-device.
-  const [peelNav, setPeelNavState] = useState(() => {
-    try { return localStorage.getItem('dj-peel') === '1'; } catch { return false; }
-  });
-  const setPeelNav = useCallback((v) => {
-    const on = !!v;
-    setPeelNavState(on);
-    try { localStorage.setItem('dj-peel', on ? '1' : '0'); } catch { /* ignore */ }
-  }, []);
-
   // ── Mode (light/dark) ──────────────────────────────────────────────
   useEffect(() => {
     const root = document.documentElement;
@@ -111,8 +99,8 @@ export function ThemeProvider({ children }) {
   );
 
   const value = useMemo(
-    () => ({ dark, toggle, setMode, accent, setAccent, previewAccent, settings, rev, hydrate, experimental, setExperimental, peelNav, setPeelNav }),
-    [dark, accent, settings, previewAccent, rev, hydrate, experimental, setExperimental, peelNav, setPeelNav]
+    () => ({ dark, toggle, setMode, accent, setAccent, previewAccent, settings, rev, hydrate, experimental, setExperimental }),
+    [dark, accent, settings, previewAccent, rev, hydrate, experimental, setExperimental]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
