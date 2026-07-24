@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
-import PeelNav from './PeelNav';
 import LazyPeel from '../ui/canvas/LazyPeel';
 import BugReportButton from '../ui/BugReportButton';
 import { useAuth } from '../../context/AuthContext';
@@ -378,7 +377,7 @@ export default function Layout({ children }) {
         </filter>
       </svg>
       <Sidebar onOpenBug={() => setBugOpen(true)} />
-      <PeelWrap on={peelOn} under={<PeelNav user={user} viewAs={viewAs} />}>
+      <PeelWrap on={peelOn} under={<div className="h-full w-full bg-ninja-bg flex"><Sidebar onOpenBug={() => setBugOpen(true)} /></div>}>
       <div className={`flex-1 flex flex-col min-w-0 min-h-0 relative ${peelOn ? 'h-full' : ''}`}>
         {user?.announcement && <AnnouncementBanner text={user.announcement} />}
         {!isPreview && <LocationAnnouncements />}
