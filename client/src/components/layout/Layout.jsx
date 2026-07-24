@@ -3,8 +3,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
+import PeelNav from './PeelNav';
+import LazyPeel from '../ui/canvas/LazyPeel';
 import BugReportButton from '../ui/BugReportButton';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { api } from '../../api/client';
 import { getMobileNavTabs } from '../../lib/navTabs';
 import { ONBOARDING_ENABLED } from '../../lib/features';
@@ -101,12 +104,45 @@ function AdjacentPanel({ tab, panelRef, side }) {
   );
 }
 
+// Wraps the content column in the peel effect when enabled; a pass-through
+// otherwise. On unsupported browsers Peel itself renders children plain.
+function PeelWrap({ on, under, children }) {
+  if (!on) return children;
+  return (
+    <LazyPeel
+      className="flex-1 flex min-w-0 relative"
+      side="left"
+      mode="cursor"
+      reveal={280}
+      curl={260}
+      under={under}
+    >
+      {children}
+    </LazyPeel>
+  );
+}
+
 export default function Layout({ children }) {
   const isPreview = useContext(LayoutPreviewContext);
   const { user, viewAs } = useAuth();
+  const { experimental, peelNav } = useTheme();
   const [bugOpen, setBugOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Peel is desktop-only: it's cursor-driven, and the mobile shell owns the
+  // swipe/scroll machinery the peel would fight. Off unless the experimental
+  // flag + the peel toggle are both on.
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const onChange = () => setIsDesktop(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  const peelOn = experimental && peelNav && isDesktop && !isPreview;
 
   const dragRef = useRef(null);
   const prevPanelRef = useRef(null);
@@ -342,7 +378,8 @@ export default function Layout({ children }) {
         </filter>
       </svg>
       <Sidebar onOpenBug={() => setBugOpen(true)} />
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
+      <PeelWrap on={peelOn} under={<PeelNav user={user} viewAs={viewAs} />}>
+      <div className={`flex-1 flex flex-col min-w-0 min-h-0 relative ${peelOn ? 'h-full' : ''}`}>
         {user?.announcement && <AnnouncementBanner text={user.announcement} />}
         {!isPreview && <LocationAnnouncements />}
         <main onScroll={handleMainScroll} className="flex-1 overflow-y-auto min-h-0 max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 pt-[max(env(safe-area-inset-top),1.25rem)] lg:pt-8 pb-28 lg:pb-8">
@@ -371,6 +408,7 @@ export default function Layout({ children }) {
         </main>
         <MobileNav compact={navCompact} onBeforeNavigate={cancelPendingSwipe} />
       </div>
+      </PeelWrap>
       <BugReportButton
         open={bugOpen}
         onClose={() => setBugOpen(false)}
