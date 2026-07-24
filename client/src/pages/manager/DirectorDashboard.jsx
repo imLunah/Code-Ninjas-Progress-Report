@@ -874,6 +874,9 @@ export default function DirectorDashboard() {
             <StatCard label="avg ninjas / week"   value={avgWeek}       accent="#3b82f6" Icon={TrendIcon} delay={0.15} />
           </div>
 
+          {/* Center calendar */}
+          <EventCalendar />
+
           {/* Check-ins over time */}
           <div className={`${CARD} p-5`}>
             <h2 className="font-ninja font-bold text-ninja-navy text-lg mb-3">Check-ins</h2>
@@ -883,9 +886,6 @@ export default function DirectorDashboard() {
               <CheckInTrend dayRows={dayRows} onExpand={() => setTrendOpen(true)} />
             )}
           </div>
-
-          {/* Center calendar */}
-          <EventCalendar />
 
           {/* CD sticky notes */}
           <DirectorStickyNotes />

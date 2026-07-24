@@ -6,10 +6,10 @@ const { requireSensei, requireManager, requireOwnLocation } = require('../middle
 // (center-wide operational data, like announcements — not author-gated); every
 // staff member at the center can read them so instructors see what's coming.
 
-const TYPES = ['Game Building', 'Tournament', 'Parents Night', 'Field Trip', 'Holiday', 'Other'];
 const MAX_TITLE = 200;
 const MAX_DESC = 2000;
 const MAX_TIME = 40;
+const MAX_TYPE = 40;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const isValidDate = (s) => DATE_RE.test(s) && !Number.isNaN(new Date(`${s}T00:00:00`).getTime());
@@ -37,14 +37,16 @@ function parseBody(body) {
   if (event_time != null && (typeof event_time !== 'string' || event_time.length > MAX_TIME)) {
     return { error: `Time max ${MAX_TIME} characters` };
   }
-  const safeType = TYPES.includes(type) ? type : 'Other';
+  if (type != null && (typeof type !== 'string' || type.length > MAX_TYPE)) {
+    return { error: `Type max ${MAX_TYPE} characters` };
+  }
   return {
     data: {
       title: title.trim(),
       description: description && description.trim() ? description.trim() : null,
       event_date,
       event_time: event_time && event_time.trim() ? event_time.trim() : null,
-      type: safeType,
+      type: type && type.trim() ? type.trim() : 'Other',
     },
   };
 }

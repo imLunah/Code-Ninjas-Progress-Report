@@ -8,17 +8,18 @@ const CARD =
   'rounded-2xl bg-white border border-ninja-border shadow-sm ' +
   'dark:shadow-[0_10px_34px_rgb(0_0_0/0.32)] ring-1 ring-transparent dark:ring-white/[0.05]';
 
-// Event types + their calendar colors. Deliberately avoids the pinned program
-// hues (JR purple, VR teal) so calendar chips never read as a program.
-export const TYPES = ['Game Building', 'Tournament', 'Parents Night', 'Field Trip', 'Holiday', 'Other'];
-export const TYPE_COLOR = {
-  'Game Building': '#2563eb',
-  'Tournament':    '#f59e0b',
-  'Parents Night': '#ec4899',
-  'Field Trip':    '#10b981',
-  'Holiday':       '#ef4444',
-  'Other':         '#64748b',
+// Type is free text. These are just suggestions + known colors; anything else
+// falls back to a neutral chip. Avoids the pinned program hues (JR purple, VR
+// teal) so calendar chips never read as a program.
+export const TYPE_SUGGESTIONS = ['Game Building', 'Tournament', 'Parents Night', 'Field Trip', 'Holiday'];
+const TYPE_COLOR = {
+  'game building': '#2563eb',
+  'tournament':    '#f59e0b',
+  'parents night': '#ec4899',
+  'field trip':    '#10b981',
+  'holiday':       '#ef4444',
 };
+export const colorFor = (type) => TYPE_COLOR[(type || '').trim().toLowerCase()] || '#64748b';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'];
@@ -37,7 +38,7 @@ function EventForm({ initial, canDelete, onSave, onDelete, onCancel, busy }) {
   const [title, setTitle] = useState(initial.title || '');
   const [date, setDate] = useState(initial.event_date || todayIso());
   const [time, setTime] = useState(initial.event_time || '');
-  const [type, setType] = useState(initial.type || 'Game Building');
+  const [type, setType] = useState(initial.type || '');
   const [description, setDescription] = useState(initial.description || '');
   const [confirmDel, setConfirmDel] = useState(false);
 
@@ -65,21 +66,12 @@ function EventForm({ initial, canDelete, onSave, onDelete, onCancel, busy }) {
       </div>
 
       <div>
-        <label className="block font-ninja text-xs font-bold uppercase tracking-wide text-ninja-muted mb-1.5">Type</label>
-        <div className="flex flex-wrap gap-2">
-          {TYPES.map((t) => {
-            const active = type === t;
-            return (
-              <button key={t} type="button" onClick={() => setType(t)}
-                className="font-ninja text-xs font-bold px-3 py-1.5 rounded-full border transition-[transform,background-color,border-color,color] duration-150 ease-[var(--ease-out)] active:scale-95"
-                style={active
-                  ? { backgroundColor: TYPE_COLOR[t], borderColor: TYPE_COLOR[t], color: '#fff' }
-                  : { borderColor: 'rgb(var(--ninja-border))', color: 'rgb(var(--ninja-muted))' }}>
-                {t}
-              </button>
-            );
-          })}
-        </div>
+        <label className="block font-ninja text-xs font-bold uppercase tracking-wide text-ninja-muted mb-1.5">Type <span className="opacity-60 normal-case font-semibold">(optional)</span></label>
+        <input value={type} onChange={(e) => setType(e.target.value)} maxLength={40}
+          list="event-type-suggestions" placeholder="e.g. Game Building" className={field} />
+        <datalist id="event-type-suggestions">
+          {TYPE_SUGGESTIONS.map((t) => <option key={t} value={t} />)}
+        </datalist>
       </div>
 
       <div>
@@ -244,7 +236,7 @@ export default function EventCalendar({ canManage = true }) {
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); openEdit(ev); } }}
                     title={ev.title}
                     className="block truncate rounded px-1 py-0.5 font-ninja text-[10px] font-semibold text-white leading-tight cursor-pointer"
-                    style={{ backgroundColor: TYPE_COLOR[ev.type] || TYPE_COLOR.Other }}
+                    style={{ backgroundColor: colorFor(ev.type) }}
                   >
                     {ev.title}
                   </span>

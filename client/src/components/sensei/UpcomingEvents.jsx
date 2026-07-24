@@ -3,15 +3,16 @@ import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
 // Local copy of the type palette (kept in sync with EventCalendar) so the sensei
-// bundle doesn't pull in the calendar + Modal just for six colors.
+// bundle doesn't pull in the calendar + Modal just for a few colors. Type is
+// free text, so unknown values fall back to neutral.
 const TYPE_COLOR = {
-  'Game Building': '#2563eb',
-  'Tournament':    '#f59e0b',
-  'Parents Night': '#ec4899',
-  'Field Trip':    '#10b981',
-  'Holiday':       '#ef4444',
-  'Other':         '#64748b',
+  'game building': '#2563eb',
+  'tournament':    '#f59e0b',
+  'parents night': '#ec4899',
+  'field trip':    '#10b981',
+  'holiday':       '#ef4444',
 };
+const colorFor = (type) => TYPE_COLOR[(type || '').trim().toLowerCase()] || '#64748b';
 
 const CARD =
   'rounded-2xl bg-white border border-ninja-border shadow-sm ' +
@@ -62,7 +63,7 @@ export default function UpcomingEvents() {
         <ul className="space-y-3">
           {upcoming.map((e) => (
             <li key={e.id} className="flex items-start gap-3">
-              <span className="mt-1.5 w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: TYPE_COLOR[e.type] || TYPE_COLOR.Other }} />
+              <span className="mt-1.5 w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: colorFor(e.type) }} />
               <div className="min-w-0 flex-1">
                 <p className="font-ninja text-sm font-bold text-ninja-navy truncate">{e.title}</p>
                 <p className="font-ninja text-xs text-ninja-muted">
