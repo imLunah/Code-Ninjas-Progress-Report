@@ -14,6 +14,7 @@ export default function AccountPage() {
   const navigate = useNavigate();
 
   const [username, setUsername] = useState(user?.username || '');
+  const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -52,11 +53,13 @@ export default function AccountPage() {
 
     const trimmedUsername = username.trim();
     const trimmedPassword = newPassword.trim();
+    const trimmedDisplay = displayName.trim();
 
     if (isForced) {
       if (!trimmedPassword) return setError('You must set a new password to continue.');
     } else {
-      if (!trimmedUsername && !trimmedPassword) return setError('Enter a new username or password.');
+      if (!trimmedUsername && !trimmedPassword && !trimmedDisplay) return setError('Enter a new display name, username, or password.');
+      if (!trimmedDisplay) return setError('Display name cannot be empty.');
     }
     if (trimmedPassword && trimmedPassword !== confirmPassword.trim()) return setError('Passwords do not match.');
     if (trimmedPassword && (trimmedPassword.length < 6 || !/[A-Z]/.test(trimmedPassword) || !/[^A-Za-z0-9]/.test(trimmedPassword))) {
@@ -65,6 +68,7 @@ export default function AccountPage() {
 
     const payload = {};
     if (!isForced && trimmedUsername && trimmedUsername !== user?.username) payload.username = trimmedUsername;
+    if (!isForced && trimmedDisplay && trimmedDisplay !== user?.displayName) payload.display_name = trimmedDisplay;
     if (trimmedPassword) {
       payload.new_password = trimmedPassword;
       if (!isForced) payload.current_password = currentPassword.trim();
@@ -75,6 +79,7 @@ export default function AccountPage() {
     try {
       await api.patch('/users/me', payload);
       if (payload.username) setUser((prev) => ({ ...prev, username: payload.username }));
+      if (payload.display_name) setUser((prev) => ({ ...prev, displayName: payload.display_name }));
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -397,6 +402,21 @@ export default function AccountPage() {
           transition={{ delay: 0.1, duration: 0.3 }}
           className="bg-white border border-ninja-border rounded-2xl p-6 shadow-sm space-y-5"
         >
+          {!isForced && (
+            <div>
+              <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1.5">Display Name</label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                maxLength={80}
+                autoComplete="name"
+                className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
+              />
+              <p className="text-ninja-muted font-ninja text-xs mt-1.5">Shown across the app and to parents.</p>
+            </div>
+          )}
+
           {!isForced && (
             <div>
               <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1.5">Username</label>
