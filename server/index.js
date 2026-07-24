@@ -105,6 +105,7 @@ app.use('/api/curriculum', require('./routes/curriculum'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/announcements', require('./routes/announcements'));
 app.use('/api/director-notes', require('./routes/directorNotes'));
+app.use('/api/events', require('./routes/events'));
 app.use('/api/releases', require('./routes/releases'));
 app.use('/api/storage', require('./routes/storage'));
 app.use('/api/onboarding', require('./routes/onboarding'));

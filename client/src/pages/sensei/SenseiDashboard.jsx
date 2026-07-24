@@ -6,6 +6,7 @@ import StudentCard from '../../components/shared/StudentCard';
 import DashboardFilters from '../../components/shared/DashboardFilters';
 import BoardStats from '../../components/shared/BoardStats';
 import ClubSessionsPanel from '../../components/shared/ClubSessionsPanel';
+import UpcomingEvents from '../../components/sensei/UpcomingEvents';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
@@ -111,6 +112,8 @@ export default function SenseiDashboard() {
             </p>
           )}
         </motion.div>
+
+        <UpcomingEvents />
 
         {!loading && !error && assignments.length > 0 && (
           <motion.div variants={fadeUp}>

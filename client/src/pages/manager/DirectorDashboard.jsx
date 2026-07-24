@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
-import StaffAnnouncements from '../../components/manager/StaffAnnouncements';
+import EventCalendar from '../../components/manager/EventCalendar';
 import DirectorStickyNotes from '../../components/manager/DirectorStickyNotes';
 import Modal from '../../components/ui/Modal';
 import { api } from '../../api/client';
@@ -884,8 +884,8 @@ export default function DirectorDashboard() {
             )}
           </div>
 
-          {/* Announcements to staff */}
-          <StaffAnnouncements />
+          {/* Center calendar */}
+          <EventCalendar />
 
           {/* CD sticky notes */}
           <DirectorStickyNotes />
