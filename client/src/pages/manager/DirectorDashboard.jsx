@@ -63,9 +63,9 @@ const ReportsIcon = (p) => (
     <path d="M18 16v-6" />
   </svg>
 );
-const SparkleIcon = (p) => (
+const GiftIcon = (p) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" />
+    <path d="M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
   </svg>
 );
 const CakeIcon = (p) => (
@@ -578,32 +578,27 @@ function EnrollmentDonut({ data, total }) {
 /* ---------------------------------------------------------- quick tiles -- */
 
 // Deliberately none of these duplicate a sidebar entry.
-// Restrained quick-links: neutral card surface, small tinted icon chip for a
-// hint of identity, chevron nudges on hover. The full-bleed candy gradient grid
-// was the most template-looking thing on the page — gone.
+// Restrained quick-links: neutral card, a plain monochrome icon that picks up
+// the accent on hover, chevron nudges. No tinted icon-chip squares — those
+// colored rounded tiles are the template/AI-dashboard tell.
 const QUICK_TILES = [
-  { label: 'Reports',    to: '/manager/reports',    accent: '#2563eb', Icon: ReportsIcon },
-  { label: 'Curriculum', to: '/curriculum-roadmap', accent: '#0e9dc4', Icon: CurriculumIcon },
-  { label: 'Birthdays',  action: 'birthdays',       accent: '#e85d3d', Icon: CakeIcon },
-  { label: "What's New", to: '/changelog',          accent: '#e8890f', Icon: SparkleIcon },
+  { label: 'Reports',    to: '/manager/reports',    Icon: ReportsIcon },
+  { label: 'Curriculum', to: '/curriculum-roadmap', Icon: CurriculumIcon },
+  { label: 'Birthdays',  action: 'birthdays',       Icon: CakeIcon },
+  { label: "What's New", to: '/changelog',          Icon: GiftIcon },
 ];
 
 const TILE_CLASS =
-  `${CARD} group flex items-center gap-3 p-3.5 w-full text-left ` +
+  `${CARD} group flex items-center gap-2.5 px-3.5 py-3.5 w-full text-left ` +
   'transition-[transform,border-color] duration-150 ease-[var(--ease-out)] ' +
   'hover:border-ninja-blue/50 active:scale-[0.98]';
 
-function TileInner({ Icon, label, accent }) {
+function TileInner({ Icon, label }) {
   return (
     <>
-      <span
-        className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ backgroundColor: `${accent}1f`, color: accent }}
-      >
-        <Icon className="w-[18px] h-[18px]" />
-      </span>
+      <Icon className="w-[18px] h-[18px] flex-shrink-0 text-ninja-muted group-hover:text-ninja-blue transition-colors" />
       <span className="font-ninja font-bold text-sm text-ninja-navy truncate">{label}</span>
-      <ChevronRight className="w-4 h-4 text-ninja-muted ml-auto flex-shrink-0 transition-transform duration-150 ease-[var(--ease-out)] group-hover:translate-x-0.5" />
+      <ChevronRight className="w-4 h-4 text-ninja-muted/50 ml-auto flex-shrink-0 transition-transform duration-150 ease-[var(--ease-out)] group-hover:translate-x-0.5" />
     </>
   );
 }
@@ -620,11 +615,11 @@ function QuickTiles({ onBirthdays }) {
         >
           {t.action === 'birthdays' ? (
             <button onClick={onBirthdays} className={TILE_CLASS}>
-              <TileInner Icon={t.Icon} label={t.label} accent={t.accent} />
+              <TileInner Icon={t.Icon} label={t.label} />
             </button>
           ) : (
             <Link to={t.to} className={TILE_CLASS}>
-              <TileInner Icon={t.Icon} label={t.label} accent={t.accent} />
+              <TileInner Icon={t.Icon} label={t.label} />
             </Link>
           )}
         </motion.div>
