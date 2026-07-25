@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import { api } from '../../api/client';
-import { BELTS } from '../../utils/beltConfig';
+import { BELTS, PROGRAM_LOGOS } from '../../utils/beltConfig';
 import { formatDate } from '../../utils/dateUtils';
 import BeltIcon from '../../components/ui/BeltIcon';
 
@@ -12,42 +12,71 @@ const BELT_ORDER = BELTS.map(b => b.name);
 
 const ENROLLMENT_COLORS = { CREATE: '#006ADD', 'Robotics Academy': '#7c3aed', 'AI Academy': '#0891b2', JR: '#16a34a', 'VR Coding': '#14b8a6' };
 
-function StatCard({ label, value, sub }) {
+const STAT_ICONS = {
+  users: <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />,
+  grid: <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />,
+  moon: <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />,
+};
+
+function StatCard({ label, value, sub, icon = 'grid', accent = '#006ADD' }) {
   return (
     <div className="bg-white border border-ninja-border rounded-2xl p-4 shadow-sm">
-      <p className="text-ninja-muted font-ninja text-xs uppercase tracking-wide mb-1">{label}</p>
-      <p className="text-ninja-navy font-ninja font-bold text-2xl">{value}</p>
-      {sub && <p className="text-ninja-muted font-ninja text-xs mt-0.5">{sub}</p>}
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-ninja-muted font-ninja text-xs uppercase tracking-wide mb-1">{label}</p>
+          <p className="text-ninja-navy font-ninja font-bold text-2xl">{value}</p>
+          {sub && <p className="text-ninja-muted font-ninja text-xs mt-0.5">{sub}</p>}
+        </div>
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${accent}1a`, color: accent }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} className="w-5 h-5">{STAT_ICONS[icon]}</svg>
+        </div>
+      </div>
     </div>
   );
 }
 
 function EnrollmentChart({ data }) {
   const total = data.reduce((s, r) => s + r.count, 0);
+  const max = Math.max(...data.map(r => r.count), 1);
+  const top = data.reduce((m, r) => (r.count > m.count ? r : m), { count: -1 });
   const colors = ENROLLMENT_COLORS;
   return (
     <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
-      <h3 className="text-ninja-navy font-ninja font-bold text-base mb-4">Enrollment by Program</h3>
+      <div className="flex items-baseline justify-between mb-4">
+        <h3 className="text-ninja-navy font-ninja font-bold text-base">Enrollment by Program</h3>
+        <span className="font-ninja text-xs text-ninja-muted">{total} enrolled</span>
+      </div>
       <div className="space-y-3">
-        {data.map(row => {
+        {data.map((row, i) => {
           const pct = total > 0 ? Math.round((row.count / total) * 100) : 0;
+          const widthPct = Math.round((row.count / max) * 100);
           const color = colors[row.program] || '#6b7280';
+          const logo = PROGRAM_LOGOS[row.program];
+          const isTop = row.program === top.program;
           return (
-            <div key={row.program}>
+            <motion.div
+              key={row.program}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: Math.min(i * 0.05, 0.3), ease: 'easeOut' }}
+            >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-ninja text-sm text-ninja-navy">{row.program}</span>
-                <span className="font-ninja text-sm font-semibold text-ninja-navy">{row.count} <span className="text-ninja-muted font-normal">({pct}%)</span></span>
+                <span className="flex items-center gap-2 min-w-0">
+                  {logo && <img src={logo} alt="" draggable={false} className="w-5 h-5 object-contain shrink-0" />}
+                  <span className="font-ninja text-sm text-ninja-navy truncate">{row.program}</span>
+                </span>
+                <span className="font-ninja text-sm font-semibold text-ninja-navy shrink-0">{row.count} <span className="text-ninja-muted font-normal">({pct}%)</span></span>
               </div>
-              <div className="h-2 bg-ninja-bg rounded-full overflow-hidden">
+              <div className="h-2.5 bg-ninja-bg rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
+                  animate={{ width: `${widthPct}%` }}
                   transition={{ duration: 0.6, ease: 'easeOut' }}
-                  className="h-full rounded-full"
-                  style={{ background: color }}
+                  className="h-full rounded-full min-w-[6px]"
+                  style={{ background: color, boxShadow: isTop ? `0 0 0 2px ${color}33` : 'none' }}
                 />
               </div>
-            </div>
+            </motion.div>
           );
         })}
         {data.length === 0 && <p className="text-ninja-muted font-ninja text-sm">No enrollments yet.</p>}
@@ -71,12 +100,18 @@ function BeltChart({ data }) {
         <p className="text-ninja-muted font-ninja text-sm">No CREATE students yet.</p>
       ) : (
         <div className="space-y-2">
-          {sorted.map(row => {
+          {sorted.map((row, i) => {
             const widthPct = Math.round((row.count / max) * 100);
             const bg = BELT_COLOR[row.belt_level] || '#e5e7eb';
             const isTop = row.belt_level === top.belt_level;
             return (
-              <div key={row.belt_level} className="flex items-center gap-2.5">
+              <motion.div
+                key={row.belt_level}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: Math.min(i * 0.04, 0.4), ease: 'easeOut' }}
+                className="flex items-center gap-2.5"
+              >
                 <BeltIcon belt={row.belt_level} size={26} className="shrink-0" />
                 <span className="font-ninja text-xs text-ninja-navy w-16 shrink-0">{row.belt_level}</span>
                 <div className="flex-1 h-5 bg-ninja-bg rounded-full overflow-hidden">
@@ -89,7 +124,7 @@ function BeltChart({ data }) {
                   />
                 </div>
                 <span className={`font-ninja text-sm w-7 text-right shrink-0 ${isTop ? 'font-bold text-ninja-blue' : 'font-semibold text-ninja-navy'}`}>{row.count}</span>
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -127,22 +162,29 @@ function InactiveTable({ data }) {
 function BeltLog({ data }) {
   return (
     <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
-      <h3 className="text-ninja-navy font-ninja font-bold text-base mb-4">Belt Advancements (Last 30 Days)</h3>
+      <div className="flex items-baseline justify-between mb-4">
+        <h3 className="text-ninja-navy font-ninja font-bold text-base">Belt Advancements</h3>
+        <span className="font-ninja text-xs text-ninja-muted">Last 30 days</span>
+      </div>
       {data.length === 0 ? (
         <p className="text-ninja-muted font-ninja text-sm">No belt advancements recorded yet.</p>
       ) : (
-        <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-          {data.map((row) => (
-            <div key={`${row.full_name}-${row.session_date}-${row.belt_level_at}`} className="flex items-center gap-3 py-1.5 border-b border-ninja-border last:border-0">
-              <span
-                className="px-2 py-0.5 rounded-full font-ninja text-xs font-semibold"
-                style={{ background: BELT_COLOR[row.belt_level_at] || '#e5e7eb', color: BELT_TEXT[row.belt_level_at] || '#000', border: row.belt_level_at === 'White' ? '1px solid #d1d5db' : 'none' }}
-              >
-                {row.belt_level_at}
-              </span>
-              <span className="font-ninja text-sm text-ninja-navy flex-1">{row.full_name}</span>
-              <span className="font-ninja text-xs text-ninja-muted">{formatDate(row.session_date)} · {row.sensei_name}</span>
-            </div>
+        <div className="space-y-1 max-h-96 overflow-y-auto pr-1">
+          {data.map((row, i) => (
+            <motion.div
+              key={`${row.full_name}-${row.session_date}-${row.belt_level_at}`}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: Math.min(i * 0.03, 0.3), ease: 'easeOut' }}
+              className="flex items-center gap-3 py-2 border-b border-ninja-border last:border-0"
+            >
+              <BeltIcon belt={row.belt_level_at} size={30} className="shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="font-ninja text-sm text-ninja-navy truncate">{row.full_name}</p>
+                <p className="font-ninja text-xs text-ninja-muted truncate">Earned {row.belt_level_at}{row.belt_sublevel_at ? ` · Lv ${row.belt_sublevel_at}` : ''}</p>
+              </div>
+              <span className="font-ninja text-xs text-ninja-muted text-right shrink-0">{formatDate(row.session_date)}<br />{row.sensei_name}</span>
+            </motion.div>
           ))}
         </div>
       )}
@@ -178,9 +220,9 @@ export default function ReportsPage() {
           <div className="space-y-5">
             {/* Summary stats */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <StatCard label="Total Students" value={totalStudents} />
-              <StatCard label="Programs" value={data.enrollment.length} />
-              <StatCard label="Inactive 30d" value={data.inactive.length} sub="no check-in" />
+              <StatCard label="Total Students" value={totalStudents} icon="users" accent="#006ADD" />
+              <StatCard label="Programs" value={data.enrollment.length} icon="grid" accent="#16a34a" />
+              <StatCard label="Inactive 30d" value={data.inactive.length} sub="no check-in" icon="moon" accent="#f4795b" />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
