@@ -12,11 +12,11 @@ const BELT_ORDER = BELTS.map(b => b.name);
 
 const ENROLLMENT_COLORS = { CREATE: '#006ADD', 'Robotics Academy': '#7c3aed', 'AI Academy': '#0891b2', JR: '#16a34a', 'VR Coding': '#14b8a6' };
 
-function StatCard({ label, value, sub, accent = '#006ADD' }) {
+function StatCard({ label, value, sub }) {
   return (
     <div className="bg-white border border-ninja-border rounded-2xl p-4 shadow-sm">
       <p className="text-ninja-muted font-ninja text-xs uppercase tracking-wide mb-1">{label}</p>
-      <p className="font-ninja font-black text-3xl leading-none" style={{ color: accent }}>{value}</p>
+      <p className="font-ninja font-black text-3xl leading-none text-ninja-navy">{value}</p>
       {sub && <p className="text-ninja-muted font-ninja text-xs mt-1">{sub}</p>}
     </div>
   );
@@ -207,10 +207,10 @@ export default function ReportsPage() {
           <div className="space-y-5">
             {/* Summary stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard label="Total Students" value={totalStudents} accent="#006ADD" />
-              <StatCard label="Programs" value={data.enrollment.length} accent="#16a34a" />
-              <StatCard label="Belt-Ups 30d" value={data.beltLog.length} sub="recent advancements" accent="#d4af37" />
-              <StatCard label="Inactive 30d" value={data.inactive.length} sub="no check-in" accent="#f4795b" />
+              <StatCard label="Total Students" value={totalStudents} />
+              <StatCard label="Programs" value={data.enrollment.length} />
+              <StatCard label="Belt-Ups 30d" value={data.beltLog.length} sub="recent advancements" />
+              <StatCard label="Inactive 30d" value={data.inactive.length} sub="no check-in" />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
