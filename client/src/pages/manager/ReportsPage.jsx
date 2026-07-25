@@ -4,6 +4,7 @@ import Layout from '../../components/layout/Layout';
 import { api } from '../../api/client';
 import { BELTS } from '../../utils/beltConfig';
 import { formatDate } from '../../utils/dateUtils';
+import BeltIcon from '../../components/ui/BeltIcon';
 
 const BELT_COLOR = Object.fromEntries(BELTS.map(b => [b.name, b.color]));
 const BELT_TEXT = Object.fromEntries(BELTS.map(b => [b.name, b.textColor]));
@@ -58,28 +59,36 @@ function EnrollmentChart({ data }) {
 function BeltChart({ data }) {
   const sorted = [...data].sort((a, b) => BELT_ORDER.indexOf(a.belt_level) - BELT_ORDER.indexOf(b.belt_level));
   const max = Math.max(...sorted.map(r => r.count), 1);
+  const total = sorted.reduce((s, r) => s + r.count, 0);
+  const top = sorted.reduce((m, r) => (r.count > m.count ? r : m), { count: -1 });
   return (
     <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
-      <h3 className="text-ninja-navy font-ninja font-bold text-base mb-4">Belt Distribution (CREATE)</h3>
+      <div className="flex items-baseline justify-between mb-4">
+        <h3 className="text-ninja-navy font-ninja font-bold text-base">Belt Distribution (CREATE)</h3>
+        <span className="font-ninja text-xs text-ninja-muted">{total} ninja{total === 1 ? '' : 's'}</span>
+      </div>
       {sorted.length === 0 ? (
         <p className="text-ninja-muted font-ninja text-sm">No CREATE students yet.</p>
       ) : (
-        <div className="flex items-end gap-2 h-28">
+        <div className="space-y-2">
           {sorted.map(row => {
-            const heightPct = Math.round((row.count / max) * 100);
+            const widthPct = Math.round((row.count / max) * 100);
             const bg = BELT_COLOR[row.belt_level] || '#e5e7eb';
-            const text = BELT_TEXT[row.belt_level] || '#000';
+            const isTop = row.belt_level === top.belt_level;
             return (
-              <div key={row.belt_level} className="flex-1 flex flex-col items-center gap-1">
-                <span className="font-ninja text-xs font-semibold text-ninja-navy">{row.count}</span>
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: `${heightPct}%` }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                  className="w-full rounded-t-lg min-h-[4px]"
-                  style={{ background: bg, border: row.belt_level === 'White' ? '1px solid #d1d5db' : 'none' }}
-                />
-                <span className="font-ninja text-[10px] text-ninja-muted truncate w-full text-center">{row.belt_level}</span>
+              <div key={row.belt_level} className="flex items-center gap-2.5">
+                <BeltIcon belt={row.belt_level} size={26} className="shrink-0" />
+                <span className="font-ninja text-xs text-ninja-navy w-16 shrink-0">{row.belt_level}</span>
+                <div className="flex-1 h-5 bg-ninja-bg rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${widthPct}%` }}
+                    transition={{ duration: 0.6, ease: 'easeOut' }}
+                    className="h-full rounded-full min-w-[6px]"
+                    style={{ background: bg, border: row.belt_level === 'White' ? '1px solid #d1d5db' : 'none' }}
+                  />
+                </div>
+                <span className={`font-ninja text-sm w-7 text-right shrink-0 ${isTop ? 'font-bold text-ninja-blue' : 'font-semibold text-ninja-navy'}`}>{row.count}</span>
               </div>
             );
           })}
