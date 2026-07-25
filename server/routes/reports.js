@@ -35,15 +35,26 @@ router.get('/overview', requireSensei, async (req, res) => {
         ORDER BY sp.belt_level ASC
       `, [locationId]),
 
-      // Students with no activity in the last 30 days
+      // Students with no activity in the last 30 days.
+      // Activity = a progress log OR being marked present in a club session.
       pool.query(`
         SELECT s.id, s.full_name,
-               (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id) AS last_session
+               GREATEST(
+                 (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id),
+                 (SELECT MAX(cs.session_date) FROM club_attendees ca
+                    JOIN club_sessions cs ON ca.club_session_id = cs.id
+                    WHERE ca.student_id = s.id)
+               ) AS last_session
         FROM students s
         WHERE s.location_id = $1 AND s.active = true
           AND NOT EXISTS (
             SELECT 1 FROM progress_logs pl
             WHERE pl.student_id = s.id AND pl.session_date >= CURRENT_DATE - INTERVAL '30 days'
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM club_attendees ca
+            JOIN club_sessions cs ON ca.club_session_id = cs.id
+            WHERE ca.student_id = s.id AND cs.session_date >= CURRENT_DATE - INTERVAL '30 days'
           )
         ORDER BY last_session ASC NULLS FIRST
       `, [locationId]),
