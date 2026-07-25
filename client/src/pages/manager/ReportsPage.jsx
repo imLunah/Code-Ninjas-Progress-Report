@@ -12,25 +12,12 @@ const BELT_ORDER = BELTS.map(b => b.name);
 
 const ENROLLMENT_COLORS = { CREATE: '#006ADD', 'Robotics Academy': '#7c3aed', 'AI Academy': '#0891b2', JR: '#16a34a', 'VR Coding': '#14b8a6' };
 
-const STAT_ICONS = {
-  users: <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />,
-  grid: <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />,
-  moon: <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />,
-};
-
-function StatCard({ label, value, sub, icon = 'grid', accent = '#006ADD' }) {
+function StatCard({ label, value, sub, accent = '#006ADD' }) {
   return (
     <div className="bg-white border border-ninja-border rounded-2xl p-4 shadow-sm">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-ninja-muted font-ninja text-xs uppercase tracking-wide mb-1">{label}</p>
-          <p className="text-ninja-navy font-ninja font-bold text-2xl">{value}</p>
-          {sub && <p className="text-ninja-muted font-ninja text-xs mt-0.5">{sub}</p>}
-        </div>
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${accent}1a`, color: accent }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} className="w-5 h-5">{STAT_ICONS[icon]}</svg>
-        </div>
-      </div>
+      <p className="text-ninja-muted font-ninja text-xs uppercase tracking-wide mb-1">{label}</p>
+      <p className="font-ninja font-black text-3xl leading-none" style={{ color: accent }}>{value}</p>
+      {sub && <p className="text-ninja-muted font-ninja text-xs mt-1">{sub}</p>}
     </div>
   );
 }
@@ -219,10 +206,11 @@ export default function ReportsPage() {
         {data && (
           <div className="space-y-5">
             {/* Summary stats */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <StatCard label="Total Students" value={totalStudents} icon="users" accent="#006ADD" />
-              <StatCard label="Programs" value={data.enrollment.length} icon="grid" accent="#16a34a" />
-              <StatCard label="Inactive 30d" value={data.inactive.length} sub="no check-in" icon="moon" accent="#f4795b" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <StatCard label="Total Students" value={totalStudents} accent="#006ADD" />
+              <StatCard label="Programs" value={data.enrollment.length} accent="#16a34a" />
+              <StatCard label="Belt-Ups 30d" value={data.beltLog.length} sub="recent advancements" accent="#d4af37" />
+              <StatCard label="Inactive 30d" value={data.inactive.length} sub="no check-in" accent="#f4795b" />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
