@@ -34,11 +34,10 @@ const COLORS = {
 };
 const ORDER = ['yellow', 'blue', 'green', 'pink', 'purple'];
 
-// Matches the surface the dashboard's other cards use — this one was missing the
-// dark ring and shadow, so it sat visibly flatter than its neighbours in dark mode.
-const CARD =
-  'rounded-2xl bg-white border border-ninja-border shadow-sm ' +
-  'dark:shadow-[0_10px_34px_rgb(0_0_0/0.32)] ring-1 ring-transparent dark:ring-white/[0.05]';
+// The notes used to live inside a white panel, so the page showed paper resting
+// on a card resting on the page. The paper is the surface; the section is just a
+// heading and a grid.
+const GRID = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 items-start';
 
 const FOCUS_RING =
   'focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue';
@@ -167,14 +166,14 @@ export default function DirectorStickyNotes() {
   };
 
   return (
-    <section className={`${CARD} p-5`} aria-labelledby="sticky-heading">
-      <div className="flex items-center justify-between mb-4">
+    <section aria-labelledby="sticky-heading">
+      <div className="flex items-end justify-between gap-4 mb-4">
         <div>
-          <h2 id="sticky-heading" className="font-ninja font-bold text-ninja-navy text-lg">Sticky notes</h2>
-          <p className="font-ninja text-xs text-ninja-muted">Shared with Center Directors at this center</p>
+          <h2 id="sticky-heading" className="font-ninja font-bold text-ninja-navy text-lg">Notes</h2>
+          <p className="font-ninja text-xs text-ninja-muted">Shared with the directors at this center</p>
         </div>
         {!adding && (
-          <button type="button" onClick={() => setAdding(true)} className={`font-ninja text-sm font-bold text-ninja-blue hover:underline rounded ${FOCUS_RING}`}>+ Add note</button>
+          <button type="button" onClick={() => setAdding(true)} className={`font-ninja text-sm font-bold text-ninja-blue hover:underline underline-offset-4 rounded ${FOCUS_RING}`}>Add note</button>
         )}
       </div>
 
@@ -184,9 +183,9 @@ export default function DirectorStickyNotes() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden mb-4"
+            className="overflow-hidden mb-3"
           >
-            <div className="rounded-xl p-3.5 shadow-sm" style={{ backgroundColor: COLORS[color].bg, color: COLORS[color].text }}>
+            <div className="rounded-xl p-3.5 shadow-sm sm:max-w-md" style={{ backgroundColor: COLORS[color].bg, color: COLORS[color].text }}>
               <LazyMarkdownEditor
                 value={draft}
                 onChange={setDraft}
@@ -205,24 +204,24 @@ export default function DirectorStickyNotes() {
       </AnimatePresence>
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-busy="true" aria-label="Loading notes">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="animate-pulse rounded-xl bg-ninja-bg h-24" />
+        <div className={GRID} aria-busy="true" aria-label="Loading notes">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="animate-pulse rounded-xl bg-ninja-bg h-28" />
           ))}
         </div>
       ) : notes.length === 0 && !adding ? (
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className={`w-full rounded-xl border-2 border-dashed border-ninja-border py-8 px-4 text-center transition-colors hover:border-ninja-blue/50 ${FOCUS_RING}`}
+          className={`w-full sm:max-w-xs rounded-xl border border-dashed border-ninja-border py-8 px-4 text-left transition-colors hover:border-ninja-blue/60 ${FOCUS_RING}`}
         >
-          <span className="block font-ninja text-sm font-bold text-ninja-navy">Pin your first note</span>
+          <span className="block font-ninja text-sm font-bold text-ninja-navy">Pin the first note</span>
           <span className="block font-ninja text-xs text-ninja-muted mt-1 text-pretty">
-            Anything the other directors at this center should see when they open the dashboard.
+            Anything the other directors should see when they open this page.
           </span>
         </button>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className={GRID}>
           <AnimatePresence>
             {notes.map((note) => (
               <NoteCard

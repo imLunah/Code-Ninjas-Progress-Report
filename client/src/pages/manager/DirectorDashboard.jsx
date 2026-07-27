@@ -60,11 +60,6 @@ const CurriculumIcon = (p) => (
     <path d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
   </svg>
 );
-const ChevronRight = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="m9 18 6-6-6-6" />
-  </svg>
-);
 
 // Shared card surface. The subtle ring + shadow give cards enough lift off the
 // deep-slate page that they stop reading as flat panels — the depth that was
@@ -534,39 +529,29 @@ const QUICK_TILES = [
   { label: "What's New", to: '/changelog',          Icon: GiftIcon },
 ];
 
-const TILE_CLASS =
-  `${CARD} group flex items-center gap-2.5 px-3.5 py-3.5 w-full text-left ` +
-  'transition-[transform,border-color] duration-150 ease-[var(--ease-out)] ' +
-  `hover:border-ninja-blue/50 active:scale-[0.98] ${FOCUS_RING}`;
-
-function TileInner({ Icon, label }) {
+// These were three equal icon-and-chevron cards in the rail, which is the most
+// recognisable generated-dashboard shape there is. They are links, so they read
+// as links now: one inline row under the masthead, no surface of their own.
+function QuickLinks() {
   return (
-    <>
-      <Icon className="w-[18px] h-[18px] flex-shrink-0 text-ninja-muted group-hover:text-ninja-blue transition-colors" />
-      <span className="font-ninja font-bold text-sm text-ninja-navy truncate">{label}</span>
-      <ChevronRight className="w-4 h-4 text-ninja-muted/50 ml-auto flex-shrink-0 transition-transform duration-150 ease-[var(--ease-out)] group-hover:translate-x-0.5" />
-    </>
-  );
-}
-
-function QuickTiles() {
-  return (
-    <div className="grid grid-cols-2 gap-3">
+    <nav aria-label="Quick links" className="flex flex-wrap items-center gap-x-6 gap-y-3">
       {QUICK_TILES.map((t, i) => (
-        <motion.div
+        <motion.span
           key={t.label}
-          // An odd tile count would strand the last one in a half row.
-          className={i === QUICK_TILES.length - 1 && QUICK_TILES.length % 2 ? 'col-span-2' : ''}
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: EASE, delay: 0.05 * i }}
+          transition={{ duration: 0.35, ease: EASE, delay: 0.1 + 0.05 * i }}
         >
-          <Link to={t.to} className={TILE_CLASS}>
-            <TileInner Icon={t.Icon} label={t.label} />
+          <Link
+            to={t.to}
+            className={`group inline-flex items-center gap-2 font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-navy underline-offset-[6px] hover:underline decoration-ninja-blue/40 transition-colors rounded ${FOCUS_RING}`}
+          >
+            <t.Icon className="w-4 h-4 flex-shrink-0 text-ninja-muted group-hover:text-ninja-blue transition-colors" />
+            {t.label}
           </Link>
-        </motion.div>
+        </motion.span>
       ))}
-    </div>
+    </nav>
   );
 }
 
@@ -599,39 +584,39 @@ export default function DirectorDashboard() {
 
   return (
     <Layout>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* ------------------------------------------------------ main -- */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Header — clean, type-led. No gradient banner, no decorative fluff. */}
-          <motion.header
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, ease: EASE }}
-            className={`${CARD} p-6 sm:p-7`}
-          >
-            <p className="font-ninja text-xs font-bold uppercase tracking-wider text-ninja-muted">
-              {formatDate(todayStr)}
-            </p>
-            <h1 className="mt-1.5 text-2xl sm:text-3xl font-black font-ninja text-ninja-navy tracking-tight text-balance">
-              {greeting}{firstName && ', '}<span className="text-ninja-blue">{firstName}</span>
-            </h1>
-          </motion.header>
+      <div className="space-y-8">
+        {/* Masthead. Deliberately NOT a card: it carries no data, and wrapping a
+            page title in its own elevated surface was what turned this page into
+            a stack of five identical boxes. A page title is allowed to sit on
+            the page. */}
+        <motion.header
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: EASE }}
+        >
+          <p className="font-ninja text-sm text-ninja-muted">{formatDate(todayStr)}</p>
+          <h1 className="mt-1 text-3xl sm:text-4xl font-black font-ninja text-ninja-navy tracking-tight text-balance">
+            {greeting}{firstName && ', '}<span className="text-ninja-blue">{firstName}</span>
+          </h1>
+          <div className="mt-5">
+            <QuickLinks />
+          </div>
+          <div className="mt-6 border-t border-ninja-border" />
+        </motion.header>
 
-          {/* CD sticky notes */}
-          <DirectorStickyNotes />
+        {/* Notes run the full width. Squeezed into two thirds they were three
+            cramped columns; this is a board, so give it the wall. */}
+        <DirectorStickyNotes />
 
-          {/* Center calendar */}
-          <EventCalendar />
-        </div>
+        {/* Calendar earns its surface (it IS an object), check-ins rides the
+            rail beside it. Asymmetric on purpose. */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div className="lg:col-span-2">
+            <EventCalendar />
+          </div>
 
-        {/* ------------------------------------------------------ rail -- */}
-        <aside className="space-y-6">
-          <nav aria-label="Quick links">
-            <QuickTiles />
-          </nav>
-
-          {/* Check-ins over time. Enrollment used to sit here; that breakdown
-              lives on Reports, so it isn't duplicated on the dashboard. */}
+          {/* Enrollment used to sit here; that breakdown lives on Reports, so
+              it isn't duplicated on the dashboard. */}
           <section className={`${CARD} p-5`} aria-labelledby="checkins-heading">
             <div className="flex items-center justify-between mb-3">
               <h2 id="checkins-heading" className="font-ninja font-bold text-ninja-navy text-lg">Check-ins</h2>
@@ -656,7 +641,7 @@ export default function DirectorDashboard() {
               <CheckInTrend dayRows={dayRows} onExpand={() => setTrendOpen(true)} />
             )}
           </section>
-        </aside>
+        </div>
       </div>
 
       <Modal
