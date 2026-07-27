@@ -9,21 +9,6 @@ import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 
-// Donut segment colors. Program identity stays pinned (JR purple, the coding
-// academies in the blue family) but each gets a distinct shade so adjacent
-// segments are readable — an all-blue donut would be unreadable.
-const PROGRAM_HEX = {
-  'CREATE':           '#3b82f6', // blue-500
-  'Robotics Academy': '#0ea5e9', // sky-500
-  'AI Academy':       '#6366f1', // indigo-500
-  'JR':               '#a855f7', // purple-500 (pinned)
-  'VR Coding':        '#14b8a6', // teal-500
-  'Silver':           '#94a3b8', // slate-400
-  'Gold Unity':       '#f59e0b', // amber-500
-  'Gold Godot':       '#d97706', // amber-600
-};
-const hexFor = (p) => PROGRAM_HEX[p] || '#cbd5e1';
-
 // Strong ease-out (Emil's design-eng default). The built-in easeOut is too
 // weak to read as intentional; this matches the CSS --ease-out token.
 const EASE = [0.23, 1, 0.32, 1];
@@ -502,74 +487,6 @@ function CheckInDetail({ dayRows }) {
   );
 }
 
-/* --------------------------------------------------------------- donut --- */
-
-// Inline SVG donut. stroke-dasharray/offset computed manually per segment so
-// each program's slice sits in its own arc with its real color. Program colors
-// pinned (JR purple, coding academies in the blue family).
-const R = 52;
-const C = 2 * Math.PI * R;
-
-function EnrollmentDonut({ data, total }) {
-  const sum = data.reduce((s, d) => s + d.count, 0) || 1;
-  const segments = [];
-  let acc = 0; // fraction consumed so far
-  for (const d of data) {
-    const frac = d.count / sum;
-    segments.push({ ...d, len: frac * C, offset: acc * C });
-    acc += frac;
-  }
-  return (
-    <div className="flex flex-col items-center gap-5">
-      <div className="relative w-36 h-36 flex-shrink-0">
-        <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-          <circle cx="60" cy="60" r={R} fill="none" stroke="currentColor" strokeWidth="13" className="text-ninja-bg" />
-          {/* One line sweeps around the full ring once... */}
-          <motion.circle
-            cx="60" cy="60" r={R}
-            fill="none"
-            stroke="#3b82f6"
-            strokeWidth="13"
-            strokeLinecap="round"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 0.9, ease: 'easeInOut' }}
-          />
-          {/* ...then the program colors blend in on top. */}
-          {segments.map((seg, i) => (
-            <motion.circle
-              key={seg.program}
-              cx="60" cy="60" r={R}
-              fill="none"
-              stroke={hexFor(seg.program)}
-              strokeWidth="13"
-              strokeLinecap="butt"
-              strokeDasharray={`${seg.len} ${C}`}
-              strokeDashoffset={-seg.offset}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.9 + i * 0.06, ease: 'easeOut' }}
-            />
-          ))}
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <CountUp value={total} className="text-3xl font-black font-ninja text-ninja-navy leading-none" />
-          <span className="text-ninja-muted font-ninja text-[11px] font-semibold mt-0.5">ninjas</span>
-        </div>
-      </div>
-      <div className="w-full space-y-2">
-        {data.map((d) => (
-          <div key={d.program} className="flex items-center gap-2.5">
-            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: hexFor(d.program) }} />
-            <span className="font-ninja text-sm text-ninja-navy truncate flex-1">{d.program}</span>
-            <span className="font-ninja text-sm font-bold text-ninja-navy">{d.count}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /* ---------------------------------------------------------- quick tiles -- */
 
 // Deliberately none of these duplicate a sidebar entry.
@@ -658,7 +575,6 @@ export default function DirectorDashboard() {
   const todayStr = today();
   const [loading, setLoading] = useState(true);
   const [assignments, setAssignments] = useState([]);
-  const [overview, setOverview] = useState(null);
   const [attendance, setAttendance] = useState(null);
   const [trendOpen, setTrendOpen] = useState(false);
 
@@ -666,12 +582,10 @@ export default function DirectorDashboard() {
     let alive = true;
     Promise.all([
       api.get(`/daily?date=${todayStr}`).catch(() => []),
-      api.get('/reports/overview').catch(() => null),
       api.get('/reports/attendance?range=all').catch(() => null),
-    ]).then(([daily, ov, att]) => {
+    ]).then(([daily, att]) => {
       if (!alive) return;
       setAssignments(daily || []);
-      setOverview(ov);
       setAttendance(att);
       setLoading(false);
     });
@@ -682,9 +596,6 @@ export default function DirectorDashboard() {
 
   const logged = assignments.filter((a) => a.completed).length;
   const total = assignments.length;
-
-  const enrollment = overview?.enrollment ?? [];
-  const totalStudents = overview?.totalStudents ?? 0;
 
   const firstName = user?.displayName?.split(' ')[0] ?? '';
   const hour = new Date().getHours();
@@ -737,36 +648,25 @@ export default function DirectorDashboard() {
 
           {/* Center calendar */}
           <EventCalendar />
-
-          {/* Check-ins over time */}
-          <div className={`${CARD} p-5`}>
-            <h2 className="font-ninja font-bold text-ninja-navy text-lg mb-3">Check-ins</h2>
-            {loading ? (
-              <p className="text-ninja-muted font-ninja text-sm py-4">Loading…</p>
-            ) : (
-              <CheckInTrend dayRows={dayRows} onExpand={() => setTrendOpen(true)} />
-            )}
-          </div>
         </div>
 
         {/* ------------------------------------------------------ rail -- */}
         <div className="space-y-6">
           <QuickTiles />
 
-          {/* Enrollment */}
+          {/* Check-ins over time. Enrollment used to sit here; that breakdown
+              lives on Reports, so it isn't duplicated on the dashboard. */}
           <div className={`${CARD} p-5`}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-ninja font-bold text-ninja-navy text-lg">Enrollment</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-ninja font-bold text-ninja-navy text-lg">Check-ins</h2>
               <Link to="/manager/reports" className="font-ninja text-sm font-bold text-ninja-blue hover:underline">
                 Reports →
               </Link>
             </div>
             {loading ? (
               <p className="text-ninja-muted font-ninja text-sm py-4">Loading…</p>
-            ) : enrollment.length === 0 ? (
-              <p className="text-ninja-muted font-ninja text-sm py-4">No enrollment data.</p>
             ) : (
-              <EnrollmentDonut data={enrollment} total={totalStudents} />
+              <CheckInTrend dayRows={dayRows} onExpand={() => setTrendOpen(true)} />
             )}
           </div>
         </div>
