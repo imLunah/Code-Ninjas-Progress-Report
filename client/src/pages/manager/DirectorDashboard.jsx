@@ -35,7 +35,9 @@ function CountUp({ value = 0, className }) {
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
   }, [value]);
-  return <span className={className}>{n}</span>;
+  // Tabular figures: proportional digits change width as the count ticks up, so
+  // the text beside it visibly shuffles for the whole animation.
+  return <span className={`tabular-nums ${className}`}>{n}</span>;
 }
 
 /* ---------------------------------------------------------------- icons -- */
@@ -71,6 +73,17 @@ const ChevronRight = (p) => (
 const CARD =
   'rounded-2xl bg-white border border-ninja-border shadow-sm ' +
   'dark:shadow-[0_10px_34px_rgb(0_0_0/0.32)] ring-1 ring-transparent dark:ring-white/[0.05]';
+
+// Keyboard focus had no visible marker anywhere on this page. Ring only on
+// focus-visible so it never fires on a mouse click.
+const FOCUS_RING =
+  'focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue';
+
+// Loading placeholders shaped like the thing that's coming, instead of the word
+// "Loading…" — the card keeps its height so nothing jumps when data lands.
+function Skeleton({ className = '' }) {
+  return <div className={`animate-pulse rounded-md bg-ninja-bg ${className}`} />;
+}
 
 /* ------------------------------------------------------------ check-ins -- */
 
@@ -170,6 +183,11 @@ const PAD_T = 14;
 const PAD_B = 10;
 const TIP_W = 130; // approximate tooltip width, used to keep it inside the box
 
+// The chart drew itself in a hardcoded blue, so it was the one surface that
+// ignored the accent a user picked in Appearance. Reading the token keeps it in
+// step with every other blue on the page.
+const ACCENT = 'rgb(var(--ninja-blue))';
+
 // The viewBox is sized to the measured pixel width so one unit is one pixel.
 // A fixed viewBox would letterbox under the default xMidYMid meet — the chart
 // would sit centred at its own aspect ratio while pointer math assumed it
@@ -235,8 +253,8 @@ function AreaChart({ points, height = 120, gradientId, className = '', formatLab
       >
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.32" />
-            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+            <stop offset="0%" stopColor={ACCENT} stopOpacity="0.32" />
+            <stop offset="100%" stopColor={ACCENT} stopOpacity="0" />
           </linearGradient>
         </defs>
         <motion.path
@@ -249,7 +267,7 @@ function AreaChart({ points, height = 120, gradientId, className = '', formatLab
         <motion.path
           d={line}
           fill="none"
-          stroke="#3b82f6"
+          stroke={ACCENT}
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -264,13 +282,15 @@ function AreaChart({ points, height = 120, gradientId, className = '', formatLab
               stroke="currentColor" strokeWidth="1" strokeDasharray="3 3"
               className="text-ninja-muted"
             />
-            <circle cx={hover.x} cy={hover.y} r="5" fill="#3b82f6" stroke="#fff" strokeWidth="2.5" />
+            {/* Halo takes the card surface, not flat white — a white ring on the
+                dark card read as a bright speck rather than a cut-out. */}
+            <circle cx={hover.x} cy={hover.y} r="5" fill={ACCENT} strokeWidth="2.5" className="stroke-white dark:stroke-[#252c3e]" />
           </>
         )}
         {!hover && (
           <motion.circle
             cx={last.x} cy={last.y} r="5"
-            fill="#3b82f6" stroke="#fff" strokeWidth="2.5"
+            fill={ACCENT} strokeWidth="2.5" className="stroke-white dark:stroke-[#252c3e]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3, delay: 0.9 }}
@@ -289,7 +309,7 @@ function AreaChart({ points, height = 120, gradientId, className = '', formatLab
           <span className="block font-ninja text-[11px] text-ninja-muted leading-tight">
             {formatLabel(hover.date)}
           </span>
-          <span className="block font-ninja text-sm font-bold text-ninja-navy leading-tight">
+          <span className="block font-ninja text-sm font-bold text-ninja-navy leading-tight tabular-nums">
             {hover.count} ninja{hover.count === 1 ? '' : 's'}
           </span>
         </div>
@@ -313,14 +333,27 @@ const CARD_WEEKS = 8;
 function CheckInTrend({ dayRows, onExpand }) {
   const weeks = useMemo(() => toWeeks(dayRows, CARD_WEEKS), [dayRows]);
   if (weeks.length === 0) {
-    return <p className="text-ninja-muted font-ninja text-sm py-4">No check-ins yet.</p>;
+    // Composed empty state rather than a bare line of grey text: a flat baseline
+    // where the curve will be, so the card reads as "nothing yet", not "broken".
+    return (
+      <div className="py-2">
+        <div className="h-[112px] flex items-end">
+          <div className="w-full border-b-2 border-dashed border-ninja-border" />
+        </div>
+        <p className="text-ninja-muted font-ninja text-sm mt-3 text-pretty">
+          No check-ins on record yet. Once ninjas start checking in, their weekly
+          count shows up here.
+        </p>
+      </div>
+    );
   }
   const thisWeek = weeks[weeks.length - 1].count;
 
   return (
     <button
       onClick={onExpand}
-      className="block w-full text-left group origin-center transition-transform duration-150 ease-[var(--ease-out)] active:scale-[0.99]"
+      aria-label="Expand check-ins"
+      className={`block w-full text-left group origin-center rounded-lg transition-transform duration-150 ease-[var(--ease-out)] active:scale-[0.99] ${FOCUS_RING}`}
     >
       <div className="flex items-baseline justify-between mb-2">
         <span className="font-ninja text-sm text-ninja-navy font-semibold">
@@ -385,7 +418,8 @@ function CheckInDetail({ dayRows }) {
           <button
             key={r.key}
             onClick={() => setRangeKey(r.key)}
-            className={`font-ninja text-sm font-semibold px-3 py-1.5 rounded-full transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-95 ${
+            aria-pressed={rangeKey === r.key}
+            className={`font-ninja text-sm font-semibold px-3 py-1.5 rounded-full transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-95 ${FOCUS_RING} ${
               rangeKey === r.key
                 ? 'bg-ninja-blue text-white'
                 : 'bg-ninja-bg text-ninja-muted hover:text-ninja-navy'
@@ -415,7 +449,7 @@ function CheckInDetail({ dayRows }) {
       {/* Headline stats */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl bg-ninja-bg p-3">
-          <span className="block text-xl font-black font-ninja text-ninja-navy leading-none">
+          <span className="block text-xl font-black font-ninja text-ninja-navy leading-none tabular-nums">
             {peak?.count ?? 0}
           </span>
           <span className="font-ninja text-xs text-ninja-muted">
@@ -423,7 +457,7 @@ function CheckInDetail({ dayRows }) {
           </span>
         </div>
         <div className="rounded-xl bg-ninja-bg p-3">
-          <span className="block text-xl font-black font-ninja text-ninja-navy leading-none">
+          <span className="block text-xl font-black font-ninja text-ninja-navy leading-none tabular-nums">
             {Math.round(perWeek)}
           </span>
           <span className="font-ninja text-xs text-ninja-muted">ninjas a week</span>
@@ -437,7 +471,7 @@ function CheckInDetail({ dayRows }) {
           ) : (
             <>
               <span
-                className={`block text-xl font-black font-ninja leading-none ${
+                className={`block text-xl font-black font-ninja leading-none tabular-nums ${
                   delta > 0 ? 'text-emerald-500' : delta < 0 ? 'text-ninja-red' : 'text-ninja-navy'
                 }`}
               >
@@ -464,7 +498,7 @@ function CheckInDetail({ dayRows }) {
                   transition={{ duration: 0.5, ease: 'easeOut', delay: 0.04 * w.index }}
                 />
               </div>
-              <span className="font-ninja text-xs font-bold text-ninja-navy w-10 text-right flex-shrink-0">
+              <span className="font-ninja text-xs font-bold text-ninja-navy w-10 text-right flex-shrink-0 tabular-nums">
                 {w.avg ? w.avg.toFixed(1) : '—'}
               </span>
             </div>
@@ -503,7 +537,7 @@ const QUICK_TILES = [
 const TILE_CLASS =
   `${CARD} group flex items-center gap-2.5 px-3.5 py-3.5 w-full text-left ` +
   'transition-[transform,border-color] duration-150 ease-[var(--ease-out)] ' +
-  'hover:border-ninja-blue/50 active:scale-[0.98]';
+  `hover:border-ninja-blue/50 active:scale-[0.98] ${FOCUS_RING}`;
 
 function TileInner({ Icon, label }) {
   return (
@@ -569,7 +603,7 @@ export default function DirectorDashboard() {
         {/* ------------------------------------------------------ main -- */}
         <div className="lg:col-span-2 space-y-6">
           {/* Header — clean, type-led. No gradient banner, no decorative fluff. */}
-          <motion.div
+          <motion.header
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: EASE }}
@@ -578,10 +612,10 @@ export default function DirectorDashboard() {
             <p className="font-ninja text-xs font-bold uppercase tracking-wider text-ninja-muted">
               {formatDate(todayStr)}
             </p>
-            <h1 className="mt-1.5 text-2xl sm:text-3xl font-black font-ninja text-ninja-navy tracking-tight">
+            <h1 className="mt-1.5 text-2xl sm:text-3xl font-black font-ninja text-ninja-navy tracking-tight text-balance">
               {greeting}{firstName && ', '}<span className="text-ninja-blue">{firstName}</span>
             </h1>
-          </motion.div>
+          </motion.header>
 
           {/* CD sticky notes */}
           <DirectorStickyNotes />
@@ -591,25 +625,38 @@ export default function DirectorDashboard() {
         </div>
 
         {/* ------------------------------------------------------ rail -- */}
-        <div className="space-y-6">
-          <QuickTiles />
+        <aside className="space-y-6">
+          <nav aria-label="Quick links">
+            <QuickTiles />
+          </nav>
 
           {/* Check-ins over time. Enrollment used to sit here; that breakdown
               lives on Reports, so it isn't duplicated on the dashboard. */}
-          <div className={`${CARD} p-5`}>
+          <section className={`${CARD} p-5`} aria-labelledby="checkins-heading">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-ninja font-bold text-ninja-navy text-lg">Check-ins</h2>
-              <Link to="/manager/reports" className="font-ninja text-sm font-bold text-ninja-blue hover:underline">
+              <h2 id="checkins-heading" className="font-ninja font-bold text-ninja-navy text-lg">Check-ins</h2>
+              <Link to="/manager/reports" className={`font-ninja text-sm font-bold text-ninja-blue hover:underline rounded ${FOCUS_RING}`}>
                 Reports →
               </Link>
             </div>
             {loading ? (
-              <p className="text-ninja-muted font-ninja text-sm py-4">Loading…</p>
+              <div aria-busy="true" aria-label="Loading check-ins">
+                <div className="flex items-baseline justify-between mb-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-12" />
+                </div>
+                <Skeleton className="h-[112px] w-full rounded-lg" />
+                <div className="flex justify-between mt-2">
+                  <Skeleton className="h-2.5 w-10" />
+                  <Skeleton className="h-2.5 w-10" />
+                  <Skeleton className="h-2.5 w-14" />
+                </div>
+              </div>
             ) : (
               <CheckInTrend dayRows={dayRows} onExpand={() => setTrendOpen(true)} />
             )}
-          </div>
-        </div>
+          </section>
+        </aside>
       </div>
 
       <Modal

@@ -34,6 +34,15 @@ const COLORS = {
 };
 const ORDER = ['yellow', 'blue', 'green', 'pink', 'purple'];
 
+// Matches the surface the dashboard's other cards use — this one was missing the
+// dark ring and shadow, so it sat visibly flatter than its neighbours in dark mode.
+const CARD =
+  'rounded-2xl bg-white border border-ninja-border shadow-sm ' +
+  'dark:shadow-[0_10px_34px_rgb(0_0_0/0.32)] ring-1 ring-transparent dark:ring-white/[0.05]';
+
+const FOCUS_RING =
+  'focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue';
+
 function ColorDots({ value, onChange }) {
   return (
     <div className="flex items-center gap-1.5">
@@ -43,7 +52,7 @@ function ColorDots({ value, onChange }) {
           type="button"
           onClick={() => onChange(c)}
           aria-label={c}
-          className="w-5 h-5 rounded-full transition-transform hover:scale-110"
+          className={`w-5 h-5 rounded-full transition-transform hover:scale-110 ${FOCUS_RING}`}
           style={{ backgroundColor: COLORS[c].bg, boxShadow: value === c ? `0 0 0 2px ${COLORS[c].ring}` : 'none' }}
         />
       ))}
@@ -116,8 +125,8 @@ function NoteCard({ note, canManage, onSaved, onDeleted }) {
                 </div>
               ) : (
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <button onClick={() => setEditing(true)} className="font-ninja text-[11px] font-bold opacity-70 hover:opacity-100">Edit</button>
-                  <button onClick={() => setConfirmDel(true)} className="font-ninja text-[11px] font-bold opacity-70 hover:opacity-100">Delete</button>
+                  <button onClick={() => setEditing(true)} className={`font-ninja text-[11px] font-bold opacity-70 hover:opacity-100 rounded ${FOCUS_RING}`}>Edit</button>
+                  <button onClick={() => setConfirmDel(true)} className={`font-ninja text-[11px] font-bold opacity-70 hover:opacity-100 rounded ${FOCUS_RING}`}>Delete</button>
                 </div>
               )
             )}
@@ -158,14 +167,14 @@ export default function DirectorStickyNotes() {
   };
 
   return (
-    <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
+    <section className={`${CARD} p-5`} aria-labelledby="sticky-heading">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="font-ninja font-bold text-ninja-navy text-lg">Sticky notes</h2>
+          <h2 id="sticky-heading" className="font-ninja font-bold text-ninja-navy text-lg">Sticky notes</h2>
           <p className="font-ninja text-xs text-ninja-muted">Shared with Center Directors at this center</p>
         </div>
         {!adding && (
-          <button onClick={() => setAdding(true)} className="font-ninja text-sm font-bold text-ninja-blue hover:underline">+ Add note</button>
+          <button type="button" onClick={() => setAdding(true)} className={`font-ninja text-sm font-bold text-ninja-blue hover:underline rounded ${FOCUS_RING}`}>+ Add note</button>
         )}
       </div>
 
@@ -196,9 +205,22 @@ export default function DirectorStickyNotes() {
       </AnimatePresence>
 
       {loading ? (
-        <p className="text-ninja-muted font-ninja text-sm py-4">Loading…</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-busy="true" aria-label="Loading notes">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="animate-pulse rounded-xl bg-ninja-bg h-24" />
+          ))}
+        </div>
       ) : notes.length === 0 && !adding ? (
-        <p className="text-ninja-muted font-ninja text-sm py-6 text-center">No notes yet. Add one for you and your fellow directors.</p>
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className={`w-full rounded-xl border-2 border-dashed border-ninja-border py-8 px-4 text-center transition-colors hover:border-ninja-blue/50 ${FOCUS_RING}`}
+        >
+          <span className="block font-ninja text-sm font-bold text-ninja-navy">Pin your first note</span>
+          <span className="block font-ninja text-xs text-ninja-muted mt-1 text-pretty">
+            Anything the other directors at this center should see when they open the dashboard.
+          </span>
+        </button>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <AnimatePresence>
@@ -214,6 +236,6 @@ export default function DirectorStickyNotes() {
           </AnimatePresence>
         </div>
       )}
-    </div>
+    </section>
   );
 }
