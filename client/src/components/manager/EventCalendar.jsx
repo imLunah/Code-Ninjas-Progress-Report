@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import Modal from '../ui/Modal';
@@ -21,13 +22,34 @@ const TYPE_COLOR = {
 };
 export const colorFor = (type) => TYPE_COLOR[(type || '').trim().toLowerCase()] || '#64748b';
 
+// Birthdays sit on the same grid as events but must not read as one, so they get
+// a tinted chip + cake glyph instead of a solid bar. Inline colors so the chip
+// looks the same in light and dark (a `.dark .bg-*` override can't reach these).
+const BIRTHDAY_COLOR = '#db2777';
+const BIRTHDAY_TINT = 'rgba(219, 39, 119, 0.14)';
+
+const Cake = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="M12 3.5v2M8.5 5v.5M15.5 5v.5M4 13.5c1.2 0 1.2 1 2.4 1s1.2-1 2.4-1 1.2 1 2.4 1 1.2-1 2.4-1 1.2 1 2.4 1 1.2-1 2.4-1M5 20V12a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8M3.5 20h17" />
+  </svg>
+);
+
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'];
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+const MAX_CHIPS = 3;
+
 const pad = (n) => String(n).padStart(2, '0');
+const firstName = (name) => (name || '').trim().split(/\s+/)[0] || name;
 const iso = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
 const todayIso = () => { const n = new Date(); return iso(n.getFullYear(), n.getMonth(), n.getDate()); };
+// Built from the string parts — parsing the ISO date would shift it a day in
+// timezones behind UTC.
+const longDate = (dIso) => {
+  const [y, m, d] = (dIso || '').split('-').map(Number);
+  return `${MONTHS[m - 1]} ${d}, ${y}`;
+};
 
 const ChevL = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m15 18-6-6 6-6" /></svg>);
 const ChevR = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m9 18 6-6-6-6" /></svg>);
@@ -111,17 +133,26 @@ function EventForm({ initial, canDelete, onSave, onDelete, onCancel, busy }) {
 
 export default function EventCalendar({ canManage = true }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [events, setEvents] = useState([]);
+  const [birthdays, setBirthdays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cursor, setCursor] = useState(() => { const n = new Date(); return { y: n.getFullYear(), m: n.getMonth() }; });
   const [modal, setModal] = useState(null); // { event } — add uses a bare {event_date}
+  const [dayView, setDayView] = useState(null); // ISO date whose full list is open
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    api.get('/events')
-      .then((data) => { if (alive) { setEvents(data || []); setLoading(false); } })
-      .catch(() => { if (alive) setLoading(false); });
+    Promise.all([
+      api.get('/events').catch(() => []),
+      api.get('/students/birthdays').catch(() => []),
+    ]).then(([evs, bdays]) => {
+      if (!alive) return;
+      setEvents(evs || []);
+      setBirthdays(bdays || []);
+      setLoading(false);
+    });
     return () => { alive = false; };
   }, [user?.activeLocation?.id]);
 
@@ -134,6 +165,19 @@ export default function EventCalendar({ canManage = true }) {
     }
     return map;
   }, [events]);
+
+  // Keyed month-day (not a full date) so a birthday repeats every year.
+  const birthdaysByDay = useMemo(() => {
+    const map = new Map();
+    for (const b of birthdays) {
+      if (!b.month || !b.day) continue;
+      const key = `${pad(b.month)}-${pad(b.day)}`;
+      const arr = map.get(key) || [];
+      arr.push(b);
+      map.set(key, arr);
+    }
+    return map;
+  }, [birthdays]);
 
   const { y, m } = cursor;
   const firstWeekday = new Date(y, m, 1).getDay();
@@ -184,7 +228,7 @@ export default function EventCalendar({ canManage = true }) {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="font-ninja font-bold text-ninja-navy text-lg">Calendar</h2>
-          <p className="font-ninja text-xs text-ninja-muted">Events for staff at this center</p>
+          <p className="font-ninja text-xs text-ninja-muted">Events and ninja birthdays at this center</p>
         </div>
         {canManage && (
           <button onClick={() => openAdd(tIso)}
@@ -215,19 +259,25 @@ export default function EventCalendar({ canManage = true }) {
           if (day === null) return <div key={`b${i}`} />;
           const dIso = iso(y, m, day);
           const dayEvents = byDay.get(dIso) || [];
+          const dayBirthdays = birthdaysByDay.get(`${pad(m + 1)}-${pad(day)}`) || [];
           const isToday = dIso === tIso;
+          // Events come first; both kinds share one 3-slot budget so a busy day
+          // never blows the row height out.
+          const shownEvents = dayEvents.slice(0, MAX_CHIPS);
+          const shownBirthdays = dayBirthdays.slice(0, Math.max(0, MAX_CHIPS - shownEvents.length));
+          const hidden = (dayEvents.length - shownEvents.length) + (dayBirthdays.length - shownBirthdays.length);
           return (
             <button
               key={dIso}
+              type="button"
               onClick={() => openAdd(dIso)}
-              disabled={!canManage}
               className={`group relative min-h-[68px] rounded-lg border p-1.5 text-left align-top transition-colors ${
                 isToday ? 'border-ninja-blue bg-ninja-blue/5' : 'border-transparent hover:border-ninja-border'
               } ${canManage ? 'hover:bg-ninja-bg cursor-pointer' : 'cursor-default'}`}
             >
               <span className={`font-ninja text-xs font-bold ${isToday ? 'text-ninja-blue' : 'text-ninja-navy'}`}>{day}</span>
               <div className="mt-1 space-y-0.5">
-                {dayEvents.slice(0, 2).map((ev) => (
+                {shownEvents.map((ev) => (
                   <span
                     key={ev.id}
                     role="button"
@@ -241,8 +291,31 @@ export default function EventCalendar({ canManage = true }) {
                     {ev.title}
                   </span>
                 ))}
-                {dayEvents.length > 2 && (
-                  <span className="block font-ninja text-[10px] font-bold text-ninja-muted px-1">+{dayEvents.length - 2} more</span>
+                {shownBirthdays.map((b) => (
+                  <span
+                    key={`b${b.id}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); navigate(`/manager/students/${b.id}`); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); navigate(`/manager/students/${b.id}`); } }}
+                    title={`${b.full_name}'s birthday`}
+                    className="flex items-center gap-1 rounded px-1 py-0.5 font-ninja text-[10px] font-semibold leading-tight cursor-pointer"
+                    style={{ backgroundColor: BIRTHDAY_TINT, color: BIRTHDAY_COLOR }}
+                  >
+                    <Cake className="w-2.5 h-2.5 flex-shrink-0" />
+                    <span className="truncate">{firstName(b.full_name)}</span>
+                  </span>
+                ))}
+                {hidden > 0 && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); setDayView(dIso); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setDayView(dIso); } }}
+                    className="block font-ninja text-[10px] font-bold text-ninja-muted hover:text-ninja-navy px-1 cursor-pointer"
+                  >
+                    +{hidden} more
+                  </span>
                 )}
               </div>
             </button>
@@ -251,6 +324,35 @@ export default function EventCalendar({ canManage = true }) {
       </div>
 
       {loading && <p className="text-ninja-muted font-ninja text-sm py-3 text-center">Loading…</p>}
+
+      <Modal isOpen={!!dayView} onClose={() => setDayView(null)} title={dayView ? longDate(dayView) : ''} width="max-w-sm">
+        <div className="space-y-1.5">
+          {(byDay.get(dayView) || []).map((ev) => (
+            <button
+              key={ev.id}
+              type="button"
+              onClick={() => { setDayView(null); openEdit(ev); }}
+              className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left hover:bg-ninja-bg transition-colors"
+            >
+              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: colorFor(ev.type) }} />
+              <span className="font-ninja text-sm text-ninja-navy truncate flex-1">{ev.title}</span>
+              {ev.event_time && <span className="font-ninja text-xs font-bold text-ninja-muted flex-shrink-0">{ev.event_time}</span>}
+            </button>
+          ))}
+          {(dayView ? birthdaysByDay.get(dayView.slice(5)) || [] : []).map((b) => (
+            <button
+              key={`b${b.id}`}
+              type="button"
+              onClick={() => { setDayView(null); navigate(`/manager/students/${b.id}`); }}
+              className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left hover:bg-ninja-bg transition-colors"
+            >
+              <Cake className="w-3.5 h-3.5 flex-shrink-0" style={{ color: BIRTHDAY_COLOR }} />
+              <span className="font-ninja text-sm text-ninja-navy truncate flex-1">{b.full_name}</span>
+              <span className="font-ninja text-xs font-bold text-ninja-muted flex-shrink-0">Birthday</span>
+            </button>
+          ))}
+        </div>
+      </Modal>
 
       <Modal isOpen={!!modal} onClose={() => setModal(null)} title={modal?.event?.id ? 'Edit event' : 'New event'} width="max-w-md">
         {modal && (

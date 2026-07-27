@@ -68,11 +68,6 @@ const GiftIcon = (p) => (
     <path d="M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
   </svg>
 );
-const CakeIcon = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75-1.5.75a3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0L3 16.5m15-3.379a48.474 48.474 0 0 0-6-.371c-2.032 0-4.034.126-6 .371m12 0c.39.049.777.102 1.163.16 1.07.16 1.837 1.094 1.837 2.175v5.169c0 .621-.504 1.125-1.125 1.125H4.125A1.125 1.125 0 0 1 3 20.625v-5.17c0-1.08.768-2.014 1.837-2.174A47.78 47.78 0 0 1 6 13.12M12.265 3.11a.375.375 0 1 1-.53 0L12 2.845l.265.265Z" />
-  </svg>
-);
 const CurriculumIcon = (p) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
     <path d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
@@ -581,10 +576,10 @@ function EnrollmentDonut({ data, total }) {
 // Restrained quick-links: neutral card, a plain monochrome icon that picks up
 // the accent on hover, chevron nudges. No tinted icon-chip squares — those
 // colored rounded tiles are the template/AI-dashboard tell.
+// Birthdays used to live here; they now show up on the calendar itself.
 const QUICK_TILES = [
   { label: 'Reports',    to: '/manager/reports',    Icon: ReportsIcon },
   { label: 'Curriculum', to: '/curriculum-roadmap', Icon: CurriculumIcon },
-  { label: 'Birthdays',  action: 'birthdays',       Icon: CakeIcon },
   { label: "What's New", to: '/changelog',          Icon: GiftIcon },
 ];
 
@@ -603,88 +598,22 @@ function TileInner({ Icon, label }) {
   );
 }
 
-function QuickTiles({ onBirthdays }) {
+function QuickTiles() {
   return (
     <div className="grid grid-cols-2 gap-3">
       {QUICK_TILES.map((t, i) => (
         <motion.div
           key={t.label}
+          // An odd tile count would strand the last one in a half row.
+          className={i === QUICK_TILES.length - 1 && QUICK_TILES.length % 2 ? 'col-span-2' : ''}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: EASE, delay: 0.05 * i }}
         >
-          {t.action === 'birthdays' ? (
-            <button onClick={onBirthdays} className={TILE_CLASS}>
-              <TileInner Icon={t.Icon} label={t.label} />
-            </button>
-          ) : (
-            <Link to={t.to} className={TILE_CLASS}>
-              <TileInner Icon={t.Icon} label={t.label} />
-            </Link>
-          )}
+          <Link to={t.to} className={TILE_CLASS}>
+            <TileInner Icon={t.Icon} label={t.label} />
+          </Link>
         </motion.div>
-      ))}
-    </div>
-  );
-}
-
-/* ----------------------------------------------------------- birthdays -- */
-
-const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'];
-
-// Groups by calendar month starting with the current one, wrapping into next
-// year so December doesn't strand January at the bottom of the list.
-function groupBirthdays(rows) {
-  const now = new Date();
-  const curMonth = now.getMonth() + 1;
-  const curDay = now.getDate();
-  const groups = [];
-  for (let i = 0; i < 12; i++) {
-    const month = ((curMonth - 1 + i) % 12) + 1;
-    const kids = rows
-      .filter((r) => r.month === month)
-      .sort((a, b) => a.day - b.day)
-      .map((r) => ({
-        ...r,
-        isToday: month === curMonth && r.day === curDay,
-        passed: i === 0 && r.day < curDay,
-      }));
-    if (kids.length) groups.push({ month, name: MONTH_NAMES[month - 1], kids, isCurrent: i === 0 });
-  }
-  return groups;
-}
-
-function BirthdayList({ rows, loading }) {
-  const groups = useMemo(() => groupBirthdays(rows || []), [rows]);
-  if (loading) return <p className="text-ninja-muted font-ninja text-sm py-4">Loading…</p>;
-  if (groups.length === 0) {
-    return <p className="text-ninja-muted font-ninja text-sm py-4">No birthdays on file yet.</p>;
-  }
-  return (
-    <div className="space-y-5">
-      {groups.map((g) => (
-        <div key={g.month}>
-          <h3 className="font-ninja font-bold text-ninja-navy mb-2">
-            {g.name}{g.isCurrent && <span className="text-ninja-muted font-semibold text-sm"> · this month</span>}
-          </h3>
-          <div className="space-y-1">
-            {g.kids.map((k) => (
-              <Link
-                key={`${k.id}-${k.month}`}
-                to={`/manager/students/${k.id}`}
-                className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 hover:bg-ninja-bg transition-colors ${
-                  k.passed ? 'opacity-50' : ''
-                }`}
-              >
-                <span className="font-ninja text-sm text-ninja-navy truncate">{k.full_name}</span>
-                <span className="font-ninja text-sm font-bold text-ninja-muted flex-shrink-0">
-                  {k.isToday ? 'Today' : `${g.name.slice(0, 3)} ${k.day}`}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </div>
       ))}
     </div>
   );
@@ -732,8 +661,6 @@ export default function DirectorDashboard() {
   const [overview, setOverview] = useState(null);
   const [attendance, setAttendance] = useState(null);
   const [trendOpen, setTrendOpen] = useState(false);
-  const [birthdaysOpen, setBirthdaysOpen] = useState(false);
-  const [birthdays, setBirthdays] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -750,19 +677,6 @@ export default function DirectorDashboard() {
     });
     return () => { alive = false; };
   }, [todayStr, user?.activeLocation?.id]);
-
-  // Only the birthday modal needs this, so it waits until the tile is tapped.
-  useEffect(() => {
-    if (!birthdaysOpen || birthdays) return;
-    let alive = true;
-    api.get('/students/birthdays')
-      .then((rows) => { if (alive) setBirthdays(rows || []); })
-      .catch(() => { if (alive) setBirthdays([]); });
-    return () => { alive = false; };
-  }, [birthdaysOpen, birthdays]);
-
-  // Refetch birthdays if the director switches centers.
-  useEffect(() => { setBirthdays(null); }, [user?.activeLocation?.id]);
 
   const dayRows = useMemo(() => buildDays(attendance?.attendance), [attendance]);
 
@@ -837,7 +751,7 @@ export default function DirectorDashboard() {
 
         {/* ------------------------------------------------------ rail -- */}
         <div className="space-y-6">
-          <QuickTiles onBirthdays={() => setBirthdaysOpen(true)} />
+          <QuickTiles />
 
           {/* Enrollment */}
           <div className={`${CARD} p-5`}>
@@ -867,14 +781,6 @@ export default function DirectorDashboard() {
         <CheckInDetail dayRows={dayRows} />
       </Modal>
 
-      <Modal
-        isOpen={birthdaysOpen}
-        onClose={() => setBirthdaysOpen(false)}
-        title="Birthdays"
-        width="max-w-md"
-      >
-        <BirthdayList rows={birthdays} loading={birthdays === null} />
-      </Modal>
     </Layout>
   );
 }
