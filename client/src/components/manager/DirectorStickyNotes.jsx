@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -44,22 +44,31 @@ const NOTE_W = 248;
 const NOTE_H = 200;
 const GAP = 16;
 
-// Below lg the notes flow in a plain grid and dragging is off. Free positioning
-// needs a stable canvas width, and a drag surface on a phone fights the page
-// scroll and the app's own swipe navigation.
+// Below lg the notes flow in a plain grid and dragging is off. Slot maths needs
+// a stable canvas width, and a drag surface on a phone fights both page scroll
+// and the app's own swipe navigation.
 const GRID = 'grid grid-cols-1 sm:grid-cols-2 gap-4 items-start';
 
-// Where a note sits before anyone has moved it: reading order, wrapped to the
-// board width. Also the fallback for notes created before the board existed.
-function defaultSlot(index, cols) {
-  const c = Math.max(1, cols);
-  return {
-    x: (index % c) * (NOTE_W + GAP),
-    y: Math.floor(index / c) * (NOTE_H + GAP),
-  };
-}
+const SPRING = { type: 'spring', stiffness: 520, damping: 42, mass: 0.7 };
 
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+
+// Notes occupy slots, never free coordinates: a note is always in exactly one
+// cell of the grid, so two can't end up stacked on each other and the board is
+// never taller than the rows it holds.
+const slotFor = (index, cols) => ({
+  x: (index % cols) * (NOTE_W + GAP),
+  y: Math.floor(index / cols) * (NOTE_H + GAP),
+});
+
+// Which slot is the dragged note sitting over. Pure maths against the grid, not
+// a hit-test against sibling rects, which would read positions mid-animation
+// and make the order flicker while the others are still sliding.
+function slotAt(x, y, cols, count) {
+  const col = clamp(Math.round(x / (NOTE_W + GAP)), 0, cols - 1);
+  const row = Math.max(0, Math.round(y / (NOTE_H + GAP)));
+  return clamp(row * cols + col, 0, count - 1);
+}
 
 const FOCUS_RING =
   'focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue';
@@ -81,7 +90,7 @@ function ColorDots({ value, onChange }) {
   );
 }
 
-function NoteCard({ note, canManage, onSaved, onDeleted, board, onMoved }) {
+function NoteCard({ note, canManage, onSaved, onDeleted, board, onDragToSlot, onDropped }) {
   const c = COLORS[note.color] || COLORS.yellow;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note.body);
@@ -90,49 +99,30 @@ function NoteCard({ note, canManage, onSaved, onDeleted, board, onMoved }) {
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
 
-  // Motion values, not state: dragging writes to them every frame and state
-  // would re-render the whole board on each one.
+  // Motion values, not state: a drag writes to them every frame and state would
+  // re-render the whole board on each one.
   const x = useMotionValue(board ? board.x : 0);
   const y = useMotionValue(board ? board.y : 0);
+  const settled = useRef(false);
 
-  // A note another director moved, or the board reflowing at a new width.
+  // Slide to the slot this note now owns: when the order changes around it,
+  // when the board reflows to a new column count, and when a drag is released.
   useEffect(() => {
     if (!board || dragging) return;
-    x.set(board.x);
-    y.set(board.y);
+    if (!settled.current) {
+      // First paint should not animate in from the top-left corner.
+      x.set(board.x);
+      y.set(board.y);
+      settled.current = true;
+      return;
+    }
+    const a = animate(x, board.x, SPRING);
+    const b = animate(y, board.y, SPRING);
+    return () => { a.stop(); b.stop(); };
   }, [board?.x, board?.y, dragging]);
 
-  const endDrag = () => {
-    setDragging(false);
-    if (!board) return;
-    const nx = Math.round(clamp(x.get(), 0, board.maxX));
-    const ny = Math.round(clamp(y.get(), 0, board.maxY));
-    x.set(nx);
-    y.set(ny);
-    if (nx === board.x && ny === board.y) return;
-    onMoved(note.id, nx, ny);
-  };
-
-  const save = async () => {
-    if (!draft.trim()) return;
-    setBusy(true);
-    try {
-      const updated = await api.patch(`/director-notes/${note.id}`, { body: draft, color });
-      onSaved(updated);
-      setEditing(false);
-    } catch { /* ignore */ } finally { setBusy(false); }
-  };
-
-  const del = async () => {
-    setBusy(true);
-    try {
-      await api.delete(`/director-notes/${note.id}`);
-      onDeleted(note.id);
-    } catch { setBusy(false); setConfirmDel(false); }
-  };
-
-  // Dragging is disabled while editing so a text selection inside the note
-  // doesn't drag the whole thing out from under the cursor.
+  // Dragging is off while editing so selecting text inside a note doesn't drag
+  // the paper out from under the cursor.
   const canDrag = !!board && !editing;
 
   return (
@@ -142,11 +132,12 @@ function NoteCard({ note, canManage, onSaved, onDeleted, board, onMoved }) {
       exit={{ opacity: 0, scale: 0.9 }}
       drag={canDrag}
       dragMomentum={false}
-      dragElastic={0.04}
+      dragElastic={0}
       dragConstraints={board ? { left: 0, top: 0, right: board.maxX, bottom: board.maxY } : undefined}
       onDragStart={() => setDragging(true)}
-      onDragEnd={endDrag}
-      whileDrag={{ scale: 1.03 }}
+      onDrag={() => board && onDragToSlot(note.id, x.get(), y.get())}
+      onDragEnd={() => { setDragging(false); onDropped(); }}
+      whileDrag={{ scale: 1.04 }}
       className={`rounded-xl p-3.5 flex flex-col overflow-hidden ${
         board ? 'absolute left-0 top-0' : 'relative w-full'
       } ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
@@ -179,7 +170,21 @@ function NoteCard({ note, canManage, onSaved, onDeleted, board, onMoved }) {
             <ColorDots value={color} onChange={setColor} />
             <div className="flex items-center gap-1.5">
               <button onClick={() => { setEditing(false); setDraft(note.body); setColor(note.color); }} className="font-ninja text-xs font-bold opacity-70 hover:opacity-100 px-2 py-1">Cancel</button>
-              <button onClick={save} disabled={busy || !draft.trim()} className="font-ninja text-xs font-bold px-2.5 py-1 rounded-md bg-black/10 hover:bg-black/20 disabled:opacity-50">Save</button>
+              <button
+                onClick={async () => {
+                  if (!draft.trim()) return;
+                  setBusy(true);
+                  try {
+                    const updated = await api.patch(`/director-notes/${note.id}`, { body: draft, color });
+                    onSaved(updated);
+                    setEditing(false);
+                  } catch { /* ignore */ } finally { setBusy(false); }
+                }}
+                disabled={busy || !draft.trim()}
+                className="font-ninja text-xs font-bold px-2.5 py-1 rounded-md bg-black/10 hover:bg-black/20 disabled:opacity-50"
+              >
+                Save
+              </button>
             </div>
           </div>
         </>
@@ -193,7 +198,19 @@ function NoteCard({ note, canManage, onSaved, onDeleted, board, onMoved }) {
             {canManage && (
               confirmDel ? (
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <button onClick={del} disabled={busy} className="font-ninja text-[11px] font-bold px-1.5 py-0.5 rounded bg-red-500 text-white">Delete</button>
+                  <button
+                    onClick={async () => {
+                      setBusy(true);
+                      try {
+                        await api.delete(`/director-notes/${note.id}`);
+                        onDeleted(note.id);
+                      } catch { setBusy(false); setConfirmDel(false); }
+                    }}
+                    disabled={busy}
+                    className="font-ninja text-[11px] font-bold px-1.5 py-0.5 rounded bg-red-500 text-white"
+                  >
+                    Delete
+                  </button>
                   <button onClick={() => setConfirmDel(false)} className="font-ninja text-[11px] font-bold opacity-70">Keep</button>
                 </div>
               ) : (
@@ -221,8 +238,8 @@ export default function DirectorStickyNotes() {
   const [boardW, setBoardW] = useState(0);
   const boardRef = useRef(null);
 
-  // Free positioning needs a measured canvas: the column count, the drag limits
-  // and the board height all come off the real pixel width.
+  // Slot maths needs a measured canvas: the column count, the drag limits and
+  // the board height all come off the real pixel width.
   useEffect(() => {
     const el = boardRef.current;
     if (!el) return;
@@ -244,37 +261,46 @@ export default function DirectorStickyNotes() {
 
   const canManage = (note) => note.created_by === user?.id || user?.role === 'admin';
 
-  // Dragging needs room for a full note plus somewhere to drop it.
+  // Two notes side by side is the least that can be rearranged.
   const boardOn = boardW >= NOTE_W * 2 + GAP;
 
   const layout = useMemo(() => {
-    if (!boardOn) return null;
+    if (!boardOn || notes.length === 0) return null;
     const cols = Math.max(1, Math.floor((boardW + GAP) / (NOTE_W + GAP)));
-    const maxX = Math.max(0, boardW - NOTE_W);
-    const placed = notes.map((n, i) => {
-      const slot = defaultSlot(i, cols);
-      // A note only has coordinates once somebody has moved it; until then it
-      // sits in its reading-order slot.
-      const x = clamp(Number.isInteger(n.position_x) ? n.position_x : slot.x, 0, maxX);
-      const y = Math.max(0, Number.isInteger(n.position_y) ? n.position_y : slot.y);
-      return { id: n.id, x, y };
-    });
-    const rowsHeight = Math.ceil(notes.length / cols) * (NOTE_H + GAP) - GAP;
-    const lowest = placed.reduce((m, p) => Math.max(m, p.y + NOTE_H), 0);
-    // Spare row at the bottom so there is always somewhere to drag a note to.
-    const height = Math.max(rowsHeight, lowest, NOTE_H) + NOTE_H / 2;
-    const byId = new Map(placed.map((p) => [p.id, p]));
-    return { byId, height, maxX, maxY: Math.max(0, height - NOTE_H) };
-  }, [notes, boardW, boardOn]);
+    const rows = Math.ceil(notes.length / cols);
+    return {
+      cols,
+      // Exactly the rows in use. No spare space at the bottom: there is nowhere
+      // to drop a note that isn't already a slot.
+      height: rows * (NOTE_H + GAP) - GAP,
+      maxX: Math.max(0, boardW - NOTE_W),
+      maxY: Math.max(0, (rows - 1) * (NOTE_H + GAP)),
+    };
+  }, [notes.length, boardW, boardOn]);
 
-  const move = async (id, x, y) => {
-    // Optimistic: the note already sits where it was dropped, so only the stored
-    // coordinates need catching up. A failed save is corrected on next load.
-    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, position_x: x, position_y: y } : n)));
-    try {
-      await api.patch(`/director-notes/${id}/position`, { position_x: x, position_y: y });
-    } catch { /* keep the note where it was dropped */ }
-  };
+  // Live reorder while a note is held: the others slide out of the way so the
+  // gap under the cursor is always the slot it will land in.
+  const dragToSlot = useCallback((id, x, y) => {
+    setNotes((prev) => {
+      const cols = Math.max(1, Math.floor((boardW + GAP) / (NOTE_W + GAP)));
+      const from = prev.findIndex((n) => n.id === id);
+      const to = slotAt(x, y, cols, prev.length);
+      if (from === -1 || from === to) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }, [boardW]);
+
+  // Persist on release, not on every slot change during the drag.
+  const persistOrder = useCallback(() => {
+    setNotes((current) => {
+      api.patch('/director-notes/reorder', { ids: current.map((n) => n.id) })
+        .catch(() => { /* arrangement is corrected on next load */ });
+      return current;
+    });
+  }, []);
 
   const add = async () => {
     if (!draft.trim()) return;
@@ -294,7 +320,7 @@ export default function DirectorStickyNotes() {
           <p className="font-ninja text-xs text-ninja-muted">Shared with the directors at this center</p>
         </div>
         <div className="flex items-center gap-4 flex-shrink-0">
-          {boardOn && notes.length > 1 && (
+          {layout && notes.length > 1 && (
             <span className="hidden lg:inline font-ninja text-xs text-ninja-muted">Drag to rearrange</span>
           )}
           {!adding && (
@@ -331,7 +357,7 @@ export default function DirectorStickyNotes() {
 
       {loading ? (
         <div className={GRID} aria-busy="true" aria-label="Loading notes">
-          {[0, 1, 2, 3].map((i) => (
+          {[0, 1].map((i) => (
             <div key={i} className="animate-pulse rounded-xl bg-ninja-bg" style={{ height: NOTE_H }} />
           ))}
         </div>
@@ -353,13 +379,14 @@ export default function DirectorStickyNotes() {
           style={layout ? { height: layout.height } : undefined}
         >
           <AnimatePresence>
-            {notes.map((note) => (
+            {notes.map((note, i) => (
               <NoteCard
                 key={note.id}
                 note={note}
                 canManage={canManage(note)}
-                board={layout ? layout.byId.get(note.id) && { ...layout.byId.get(note.id), maxX: layout.maxX, maxY: layout.maxY } : null}
-                onMoved={move}
+                board={layout ? { ...slotFor(i, layout.cols), maxX: layout.maxX, maxY: layout.maxY } : null}
+                onDragToSlot={dragToSlot}
+                onDropped={persistOrder}
                 onSaved={(u) => setNotes((prev) => prev.map((n) => (n.id === u.id ? { ...n, ...u } : n)))}
                 onDeleted={(id) => setNotes((prev) => prev.filter((n) => n.id !== id))}
               />
