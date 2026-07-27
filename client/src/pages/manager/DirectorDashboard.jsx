@@ -536,66 +536,28 @@ function QuickTiles() {
   );
 }
 
-/* -------------------------------------------------------------- kpi/ring -- */
-
-// Today's logged-vs-on-board ring. Accent stroke on a hairline track — a single
-// quiet data point in the header, not a decorative centrepiece.
-function TodayRing({ logged, total }) {
-  const pct = total ? logged / total : 0;
-  const r = 34;
-  const c = 2 * Math.PI * r;
-  return (
-    <div className="relative w-24 h-24">
-      <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
-        <circle cx="40" cy="40" r={r} fill="none" stroke="currentColor" strokeWidth="6" className="text-ninja-border" />
-        <motion.circle
-          cx="40" cy="40" r={r}
-          fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round"
-          className="text-ninja-blue"
-          strokeDasharray={c}
-          initial={{ strokeDashoffset: c }}
-          animate={{ strokeDashoffset: c * (1 - pct) }}
-          transition={{ duration: 0.9, ease: EASE }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-xl font-black font-ninja text-ninja-navy leading-none">
-          {logged}<span className="text-ninja-muted text-sm">/{total}</span>
-        </span>
-        <span className="text-[10px] font-bold uppercase tracking-wider text-ninja-muted mt-1">logged</span>
-      </div>
-    </div>
-  );
-}
-
 /* ----------------------------------------------------------------- page -- */
 
 export default function DirectorDashboard() {
   const { user } = useAuth();
   const todayStr = today();
   const [loading, setLoading] = useState(true);
-  const [assignments, setAssignments] = useState([]);
   const [attendance, setAttendance] = useState(null);
   const [trendOpen, setTrendOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    Promise.all([
-      api.get(`/daily?date=${todayStr}`).catch(() => []),
-      api.get('/reports/attendance?range=all').catch(() => null),
-    ]).then(([daily, att]) => {
-      if (!alive) return;
-      setAssignments(daily || []);
-      setAttendance(att);
-      setLoading(false);
-    });
+    api.get('/reports/attendance?range=all')
+      .catch(() => null)
+      .then((att) => {
+        if (!alive) return;
+        setAttendance(att);
+        setLoading(false);
+      });
     return () => { alive = false; };
-  }, [todayStr, user?.activeLocation?.id]);
+  }, [user?.activeLocation?.id]);
 
   const dayRows = useMemo(() => buildDays(attendance?.attendance), [attendance]);
-
-  const logged = assignments.filter((a) => a.completed).length;
-  const total = assignments.length;
 
   const firstName = user?.displayName?.split(' ')[0] ?? '';
   const hour = new Date().getHours();
@@ -613,34 +575,12 @@ export default function DirectorDashboard() {
             transition={{ duration: 0.45, ease: EASE }}
             className={`${CARD} p-6 sm:p-7`}
           >
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <p className="font-ninja text-xs font-bold uppercase tracking-wider text-ninja-muted">
-                  {formatDate(todayStr)}
-                </p>
-                <h1 className="mt-1.5 text-2xl sm:text-3xl font-black font-ninja text-ninja-navy tracking-tight">
-                  {greeting}{firstName && ', '}<span className="text-ninja-blue">{firstName}</span>
-                </h1>
-                <p className="mt-2 font-ninja text-ninja-muted max-w-md">
-                  {loading
-                    ? 'Pulling up today…'
-                    : total === 0
-                      ? 'Nobody is checked in yet. The board is clear.'
-                      : `${total} ninja${total === 1 ? '' : 's'} on the board today, ${total - logged} still waiting on a log.`}
-                </p>
-                <Link
-                  to="/manager/dashboard"
-                  className="mt-4 inline-flex items-center gap-1.5 font-ninja text-sm font-bold text-ninja-blue border border-ninja-border hover:border-ninja-blue rounded-full px-4 py-2 transition-[transform,border-color] duration-150 ease-[var(--ease-out)] active:scale-[0.97]"
-                >
-                  Go to Today's Board →
-                </Link>
-              </div>
-              {!loading && total > 0 && (
-                <div className="hidden sm:block flex-shrink-0">
-                  <TodayRing logged={logged} total={total} />
-                </div>
-              )}
-            </div>
+            <p className="font-ninja text-xs font-bold uppercase tracking-wider text-ninja-muted">
+              {formatDate(todayStr)}
+            </p>
+            <h1 className="mt-1.5 text-2xl sm:text-3xl font-black font-ninja text-ninja-navy tracking-tight">
+              {greeting}{firstName && ', '}<span className="text-ninja-blue">{firstName}</span>
+            </h1>
           </motion.div>
 
           {/* CD sticky notes */}
