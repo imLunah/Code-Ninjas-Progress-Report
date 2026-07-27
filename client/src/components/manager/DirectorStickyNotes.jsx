@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -36,8 +36,30 @@ const ORDER = ['yellow', 'blue', 'green', 'pink', 'purple'];
 
 // The notes used to live inside a white panel, so the page showed paper resting
 // on a card resting on the page. The paper is the surface; the section is just a
-// heading and a grid.
-const GRID = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 items-start';
+// heading and a board.
+
+// Every note is the same piece of paper. Long text scrolls inside it rather than
+// stretching the note, so the board stays an even wall instead of a ragged one.
+const NOTE_W = 248;
+const NOTE_H = 200;
+const GAP = 16;
+
+// Below lg the notes flow in a plain grid and dragging is off. Free positioning
+// needs a stable canvas width, and a drag surface on a phone fights the page
+// scroll and the app's own swipe navigation.
+const GRID = 'grid grid-cols-1 sm:grid-cols-2 gap-4 items-start';
+
+// Where a note sits before anyone has moved it: reading order, wrapped to the
+// board width. Also the fallback for notes created before the board existed.
+function defaultSlot(index, cols) {
+  const c = Math.max(1, cols);
+  return {
+    x: (index % c) * (NOTE_W + GAP),
+    y: Math.floor(index / c) * (NOTE_H + GAP),
+  };
+}
+
+const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 
 const FOCUS_RING =
   'focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue';
@@ -59,13 +81,37 @@ function ColorDots({ value, onChange }) {
   );
 }
 
-function NoteCard({ note, canManage, onSaved, onDeleted }) {
+function NoteCard({ note, canManage, onSaved, onDeleted, board, onMoved }) {
   const c = COLORS[note.color] || COLORS.yellow;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note.body);
   const [color, setColor] = useState(note.color);
   const [confirmDel, setConfirmDel] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [dragging, setDragging] = useState(false);
+
+  // Motion values, not state: dragging writes to them every frame and state
+  // would re-render the whole board on each one.
+  const x = useMotionValue(board ? board.x : 0);
+  const y = useMotionValue(board ? board.y : 0);
+
+  // A note another director moved, or the board reflowing at a new width.
+  useEffect(() => {
+    if (!board || dragging) return;
+    x.set(board.x);
+    y.set(board.y);
+  }, [board?.x, board?.y, dragging]);
+
+  const endDrag = () => {
+    setDragging(false);
+    if (!board) return;
+    const nx = Math.round(clamp(x.get(), 0, board.maxX));
+    const ny = Math.round(clamp(y.get(), 0, board.maxY));
+    x.set(nx);
+    y.set(ny);
+    if (nx === board.x && ny === board.y) return;
+    onMoved(note.id, nx, ny);
+  };
 
   const save = async () => {
     if (!draft.trim()) return;
@@ -85,23 +131,51 @@ function NoteCard({ note, canManage, onSaved, onDeleted }) {
     } catch { setBusy(false); setConfirmDel(false); }
   };
 
+  // Dragging is disabled while editing so a text selection inside the note
+  // doesn't drag the whole thing out from under the cursor.
+  const canDrag = !!board && !editing;
+
   return (
     <motion.div
-      layout
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      className="rounded-xl p-3.5 shadow-sm flex flex-col"
-      style={{ backgroundColor: editing ? COLORS[color].bg : c.bg, color: c.text }}
+      drag={canDrag}
+      dragMomentum={false}
+      dragElastic={0.04}
+      dragConstraints={board ? { left: 0, top: 0, right: board.maxX, bottom: board.maxY } : undefined}
+      onDragStart={() => setDragging(true)}
+      onDragEnd={endDrag}
+      whileDrag={{ scale: 1.03 }}
+      className={`rounded-xl p-3.5 flex flex-col overflow-hidden ${
+        board ? 'absolute left-0 top-0' : 'relative w-full'
+      } ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      style={{
+        backgroundColor: editing ? COLORS[color].bg : c.bg,
+        color: c.text,
+        width: board ? NOTE_W : undefined,
+        height: NOTE_H,
+        x: board ? x : undefined,
+        y: board ? y : undefined,
+        zIndex: dragging ? 30 : 1,
+        // Tinted rather than black so the shadow belongs to the paper. It lifts
+        // while the note is in hand.
+        boxShadow: dragging
+          ? '0 18px 38px rgba(15, 20, 40, 0.28)'
+          : '0 2px 6px rgba(15, 20, 40, 0.12)',
+        touchAction: canDrag ? 'none' : undefined,
+      }}
     >
       {editing ? (
         <>
-          <LazyMarkdownEditor
-            value={draft}
-            onChange={setDraft}
-            placeholder="Jot something down… **bold**, or '- ' for a list"
-          />
-          <div className="flex items-center justify-between mt-2 gap-2">
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <LazyMarkdownEditor
+              value={draft}
+              onChange={setDraft}
+              placeholder="Jot something down… **bold**, or '- ' for a list"
+            />
+          </div>
+          <div className="flex items-center justify-between mt-2 gap-2 flex-shrink-0">
             <ColorDots value={color} onChange={setColor} />
             <div className="flex items-center gap-1.5">
               <button onClick={() => { setEditing(false); setDraft(note.body); setColor(note.color); }} className="font-ninja text-xs font-bold opacity-70 hover:opacity-100 px-2 py-1">Cancel</button>
@@ -111,10 +185,10 @@ function NoteCard({ note, canManage, onSaved, onDeleted }) {
         </>
       ) : (
         <>
-          <div className="font-ninja text-sm break-words flex-1">
+          <div className="font-ninja text-sm break-words flex-1 min-h-0 overflow-y-auto pr-0.5">
             <ReactMarkdown components={STICKY_MD} urlTransform={mdUrl}>{note.body}</ReactMarkdown>
           </div>
-          <div className="flex items-center justify-between mt-3 pt-2 border-t" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
+          <div className="flex items-center justify-between mt-3 pt-2 border-t flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
             <span className="font-ninja text-[11px] font-semibold opacity-70 truncate">{note.created_by_name || 'Unknown'}</span>
             {canManage && (
               confirmDel ? (
@@ -144,6 +218,21 @@ export default function DirectorStickyNotes() {
   const [draft, setDraft] = useState('');
   const [color, setColor] = useState('yellow');
   const [busy, setBusy] = useState(false);
+  const [boardW, setBoardW] = useState(0);
+  const boardRef = useRef(null);
+
+  // Free positioning needs a measured canvas: the column count, the drag limits
+  // and the board height all come off the real pixel width.
+  useEffect(() => {
+    const el = boardRef.current;
+    if (!el) return;
+    setBoardW(el.getBoundingClientRect().width);
+    const ro = new ResizeObserver(([entry]) => setBoardW(entry.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+    // The container only exists once there is at least one note, so re-run when
+    // the board appears — otherwise pinning the first note leaves it unmeasured.
+  }, [loading, notes.length === 0]);
 
   useEffect(() => {
     let alive = true;
@@ -154,6 +243,38 @@ export default function DirectorStickyNotes() {
   }, [user?.activeLocation?.id]);
 
   const canManage = (note) => note.created_by === user?.id || user?.role === 'admin';
+
+  // Dragging needs room for a full note plus somewhere to drop it.
+  const boardOn = boardW >= NOTE_W * 2 + GAP;
+
+  const layout = useMemo(() => {
+    if (!boardOn) return null;
+    const cols = Math.max(1, Math.floor((boardW + GAP) / (NOTE_W + GAP)));
+    const maxX = Math.max(0, boardW - NOTE_W);
+    const placed = notes.map((n, i) => {
+      const slot = defaultSlot(i, cols);
+      // A note only has coordinates once somebody has moved it; until then it
+      // sits in its reading-order slot.
+      const x = clamp(Number.isInteger(n.position_x) ? n.position_x : slot.x, 0, maxX);
+      const y = Math.max(0, Number.isInteger(n.position_y) ? n.position_y : slot.y);
+      return { id: n.id, x, y };
+    });
+    const rowsHeight = Math.ceil(notes.length / cols) * (NOTE_H + GAP) - GAP;
+    const lowest = placed.reduce((m, p) => Math.max(m, p.y + NOTE_H), 0);
+    // Spare row at the bottom so there is always somewhere to drag a note to.
+    const height = Math.max(rowsHeight, lowest, NOTE_H) + NOTE_H / 2;
+    const byId = new Map(placed.map((p) => [p.id, p]));
+    return { byId, height, maxX, maxY: Math.max(0, height - NOTE_H) };
+  }, [notes, boardW, boardOn]);
+
+  const move = async (id, x, y) => {
+    // Optimistic: the note already sits where it was dropped, so only the stored
+    // coordinates need catching up. A failed save is corrected on next load.
+    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, position_x: x, position_y: y } : n)));
+    try {
+      await api.patch(`/director-notes/${id}/position`, { position_x: x, position_y: y });
+    } catch { /* keep the note where it was dropped */ }
+  };
 
   const add = async () => {
     if (!draft.trim()) return;
@@ -172,9 +293,14 @@ export default function DirectorStickyNotes() {
           <h2 id="sticky-heading" className="font-ninja font-bold text-ninja-navy text-lg">Notes</h2>
           <p className="font-ninja text-xs text-ninja-muted">Shared with the directors at this center</p>
         </div>
-        {!adding && (
-          <button type="button" onClick={() => setAdding(true)} className={`font-ninja text-sm font-bold text-ninja-blue hover:underline underline-offset-4 rounded ${FOCUS_RING}`}>Add note</button>
-        )}
+        <div className="flex items-center gap-4 flex-shrink-0">
+          {boardOn && notes.length > 1 && (
+            <span className="hidden lg:inline font-ninja text-xs text-ninja-muted">Drag to rearrange</span>
+          )}
+          {!adding && (
+            <button type="button" onClick={() => setAdding(true)} className={`font-ninja text-sm font-bold text-ninja-blue hover:underline underline-offset-4 rounded ${FOCUS_RING}`}>Add note</button>
+          )}
+        </div>
       </div>
 
       <AnimatePresence>
@@ -206,7 +332,7 @@ export default function DirectorStickyNotes() {
       {loading ? (
         <div className={GRID} aria-busy="true" aria-label="Loading notes">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="animate-pulse rounded-xl bg-ninja-bg h-28" />
+            <div key={i} className="animate-pulse rounded-xl bg-ninja-bg" style={{ height: NOTE_H }} />
           ))}
         </div>
       ) : notes.length === 0 && !adding ? (
@@ -221,14 +347,20 @@ export default function DirectorStickyNotes() {
           </span>
         </button>
       ) : (
-        <div className={GRID}>
+        <div
+          ref={boardRef}
+          className={layout ? 'relative' : GRID}
+          style={layout ? { height: layout.height } : undefined}
+        >
           <AnimatePresence>
             {notes.map((note) => (
               <NoteCard
                 key={note.id}
                 note={note}
                 canManage={canManage(note)}
-                onSaved={(u) => setNotes((prev) => prev.map((n) => (n.id === u.id ? u : n)))}
+                board={layout ? layout.byId.get(note.id) && { ...layout.byId.get(note.id), maxX: layout.maxX, maxY: layout.maxY } : null}
+                onMoved={move}
+                onSaved={(u) => setNotes((prev) => prev.map((n) => (n.id === u.id ? { ...n, ...u } : n)))}
                 onDeleted={(id) => setNotes((prev) => prev.filter((n) => n.id !== id))}
               />
             ))}
