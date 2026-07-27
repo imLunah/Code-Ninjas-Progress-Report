@@ -319,14 +319,9 @@ export default function DirectorStickyNotes() {
           <h2 id="sticky-heading" className="font-ninja font-bold text-ninja-navy text-lg">Notes</h2>
           <p className="font-ninja text-xs text-ninja-muted">Shared with the directors at this center</p>
         </div>
-        <div className="flex items-center gap-4 flex-shrink-0">
-          {layout && notes.length > 1 && (
-            <span className="hidden lg:inline font-ninja text-xs text-ninja-muted">Drag to rearrange</span>
-          )}
-          {!adding && (
-            <button type="button" onClick={() => setAdding(true)} className={`font-ninja text-sm font-bold text-ninja-blue hover:underline underline-offset-4 rounded ${FOCUS_RING}`}>Add note</button>
-          )}
-        </div>
+        {!adding && (
+          <button type="button" onClick={() => setAdding(true)} className={`flex-shrink-0 font-ninja text-sm font-bold text-ninja-blue hover:underline underline-offset-4 rounded ${FOCUS_RING}`}>Add note</button>
+        )}
       </div>
 
       <AnimatePresence>
