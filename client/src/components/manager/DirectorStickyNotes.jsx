@@ -73,6 +73,12 @@ function slotAt(x, y, cols, count) {
 const FOCUS_RING =
   'focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue';
 
+const PlusIcon = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+
 function ColorDots({ value, onChange }) {
   return (
     <div className="flex items-center gap-1.5">
@@ -357,14 +363,20 @@ export default function DirectorStickyNotes() {
           ))}
         </div>
       ) : notes.length === 0 && !adding ? (
+        // Shaped like the note it will become, so the empty board already shows
+        // you the size of the thing you are about to pin.
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className={`w-full sm:max-w-xs rounded-xl border border-dashed border-ninja-border py-8 px-4 text-left transition-colors hover:border-ninja-blue/60 ${FOCUS_RING}`}
+          style={{ height: NOTE_H }}
+          className={`group w-full sm:w-[248px] rounded-xl border border-dashed border-ninja-border p-3.5 flex flex-col items-start justify-center text-left transition-colors hover:border-ninja-blue/60 ${FOCUS_RING}`}
         >
-          <span className="block font-ninja text-sm font-bold text-ninja-navy">Pin the first note</span>
+          <span className="w-9 h-9 rounded-full border border-dashed border-ninja-border group-hover:border-ninja-blue/60 flex items-center justify-center text-ninja-muted group-hover:text-ninja-blue transition-colors">
+            <PlusIcon className="w-4 h-4" />
+          </span>
+          <span className="block font-ninja text-sm font-bold text-ninja-navy mt-3">Pin the first note</span>
           <span className="block font-ninja text-xs text-ninja-muted mt-1 text-pretty">
-            Anything the other directors should see when they open this page.
+            For yourself, or for the other directors here. Everyone at this center sees the same board.
           </span>
         </button>
       ) : (
