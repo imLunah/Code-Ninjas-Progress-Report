@@ -38,20 +38,55 @@ function StatCard({ label, value, sub }) {
 // That is the whole reason these are custom ticks: a plain Recharts category
 // axis can only draw text.
 const ROW_H = 34;
-const AXIS_W = 96;
+const TICK_FONT = '12px Nunito, sans-serif';
+const ICON_W = 22;      // artwork box
+const ICON_GAP = 6;
+const LABEL_GAP = 10;   // breathing room between the label and the bar
+const AXIS_MIN = 96;
+const AXIS_MAX = 190;
 
-function ImageTick({ x, y, payload, src, label }) {
+// The axis band was a fixed 96px, so "Robotics Academy" overflowed it and ran
+// underneath its own bar. Measure the labels instead: the band is only ever as
+// wide as the longest one actually needs.
+let measureCtx = null;
+function textWidth(text) {
+  if (typeof document === 'undefined') return String(text).length * 6.6;
+  measureCtx ||= document.createElement('canvas').getContext('2d');
+  measureCtx.font = TICK_FONT;
+  return measureCtx.measureText(String(text)).width;
+}
+
+function axisWidthFor(rows, tickLabel, hasIcons) {
+  const widest = rows.reduce((w, r) => Math.max(w, textWidth(tickLabel(r.name))), 0);
+  const lead = hasIcons ? ICON_W + ICON_GAP : 0;
+  return Math.min(AXIS_MAX, Math.max(AXIS_MIN, Math.ceil(lead + widest + LABEL_GAP)));
+}
+
+// Trims to fit rather than letting the label run over the bars. Only bites for
+// a name longer than AXIS_MAX allows; the full text stays in the tooltip.
+function ellipsize(text, room) {
+  if (textWidth(text) <= room) return text;
+  let out = text;
+  while (out.length > 1 && textWidth(`${out}…`) > room) out = out.slice(0, -1);
+  return `${out}…`;
+}
+
+function ImageTick({ x, y, payload, src, label, axisW }) {
+  const full = label(payload.value);
+  const lead = src ? ICON_W + ICON_GAP : 0;
+  const room = axisW - lead - LABEL_GAP;
   return (
     <g transform={`translate(${x},${y})`}>
-      {src && <image href={src} x={-AXIS_W} y={-11} width={22} height={22} preserveAspectRatio="xMidYMid meet" />}
+      {src && <image href={src} x={-axisW} y={-11} width={ICON_W} height={ICON_W} preserveAspectRatio="xMidYMid meet" />}
       <text
-        x={src ? -AXIS_W + 28 : -AXIS_W}
+        x={-axisW + lead}
         y={0}
         dy="0.32em"
         className="fill-ninja-navy font-ninja"
         fontSize={12}
       >
-        {label(payload.value)}
+        {ellipsize(full, room)}
+        <title>{full}</title>
       </text>
     </g>
   );
@@ -76,9 +111,12 @@ function CountTooltip({ active, payload, unit }) {
 // colour.
 function DistributionBars({ rows, unit, tickSrc, tickLabel = (v) => v }) {
   const height = Math.max(ROW_H * rows.length, ROW_H);
-  // Left margin stays 0: the YAxis already reserves AXIS_W and the tick draws
-  // itself back into that reserved band, so adding it here as well would indent
-  // the plot by twice the label width.
+  // Measured every render on purpose: it is a handful of canvas measureText
+  // calls, and memoising it would key off callers' inline arrows and never hit.
+  const axisW = axisWidthFor(rows, tickLabel, rows.some((r) => tickSrc(r.name)));
+  // Left margin stays 0: the YAxis already reserves the band and the tick draws
+  // itself back into it, so adding it here as well would indent the plot by
+  // twice the label width.
   return (
     <ChartContainer config={{ count: { label: unit } }} className="w-full" style={{ height }}>
       <BarChart
@@ -91,10 +129,12 @@ function DistributionBars({ rows, unit, tickSrc, tickLabel = (v) => v }) {
         <YAxis
           type="category"
           dataKey="name"
-          width={AXIS_W}
+          width={axisW}
           axisLine={false}
           tickLine={false}
-          tick={(props) => <ImageTick {...props} src={tickSrc(props.payload.value)} label={tickLabel} />}
+          tick={(props) => (
+            <ImageTick {...props} axisW={axisW} src={tickSrc(props.payload.value)} label={tickLabel} />
+          )}
         />
         <ChartTooltip
           cursor={{ fill: 'rgb(var(--ninja-muted) / 0.08)' }}
