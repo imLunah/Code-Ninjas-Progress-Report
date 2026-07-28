@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../components/layout/Layout';
@@ -8,10 +8,67 @@ import { useTheme } from '../context/ThemeContext';
 import { ONBOARDING_ENABLED } from '../lib/features';
 import { PRESET_AVATARS } from '../lib/avatars';
 
+// Desktop gets a settings rail + pane; the phone keeps the single scroll.
+// Matched in JS rather than with `lg:hidden` on both layouts, so only one of
+// them is ever in the DOM — two copies would mean two sets of form inputs.
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const onChange = (e) => setIsDesktop(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return isDesktop;
+}
+
+// Surface only, no padding: callers set their own so two padding utilities
+// never land in the same class string and race on stylesheet order.
+const CARD = 'bg-white border border-ninja-border rounded-2xl shadow-sm';
+const FIELD =
+  'w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue';
+const LABEL = 'block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1.5';
+const FOCUS_RING =
+  'focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue';
+
+const UserIcon = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
+  </svg>
+);
+const LockIcon = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" />
+  </svg>
+);
+const FlaskIcon = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="M9 3h6M10 3v6.5L5 18a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-8.5V3" /><path d="M7.5 14h9" />
+  </svg>
+);
+const HelpIcon = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />
+  </svg>
+);
+const PaletteIcon = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <circle cx="13.5" cy="6.5" r="1" /><circle cx="17.5" cy="10.5" r="1" /><circle cx="8.5" cy="7.5" r="1" /><circle cx="6.5" cy="12.5" r="1" />
+    <path d="M12 2C6.5 2 2 6 2 11a5 5 0 0 0 5 5h1.5a2 2 0 0 1 2 2 2 2 0 0 0 2 2c5.5 0 10-4.5 10-10S17.5 2 12 2z" />
+  </svg>
+);
+const Chevron = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+
 export default function AccountPage() {
   const { user, setUser, logout, switchLocation } = useAuth();
   const { dark, toggle, experimental, setExperimental } = useTheme();
   const navigate = useNavigate();
+  const isDesktop = useIsDesktop();
 
   const [username, setUsername] = useState(user?.username || '');
   const [displayName, setDisplayName] = useState(user?.displayName || '');
@@ -24,6 +81,8 @@ export default function AccountPage() {
 
   const [savingAvatar, setSavingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState('');
+
+  const [section, setSection] = useState('profile');
 
   const handlePresetSelect = async (src) => {
     setSavingAvatar(true);
@@ -41,6 +100,8 @@ export default function AccountPage() {
   const initials = user?.displayName?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || '?';
 
   const isForced = !!user?.mustResetPassword;
+
+  const roleLabel = user?.role === 'manager' ? 'Center Director' : user?.role === 'admin' ? 'Admin' : 'Sensei';
 
   const dashPath = user?.role === 'sensei' ? '/sensei/dashboard'
     : user?.role === 'admin' ? '/admin/locations'
@@ -96,375 +157,412 @@ export default function AccountPage() {
     }
   };
 
-  return (
-    <Layout>
-      {/* This was one narrow max-w-md column, so on a desktop it read as eight
-          cards stacked down the middle of an otherwise empty screen. The
-          identity header spans the top and the rest splits in two beneath it.
-          A forced reset keeps the single narrow column: that flow has only the
-          banner and the password form, and a second column would sit empty. */}
-      <div className={`mx-auto w-full ${isForced ? 'max-w-md' : 'max-w-md lg:max-w-4xl'} space-y-6`}>
+  /* ------------------------------------------------------------- pieces -- */
+  // Each block is built once and placed by whichever layout is active.
 
-        {/* Hero profile banner */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-          className="relative bg-[#dbe4f2] dark:bg-ninja-hero rounded-2xl overflow-hidden px-6 pt-7 pb-6 shadow-lg"
-        >
-          <img src="/CodeNinjasIcon.svg" alt="" className="absolute right-4 top-4 w-20 opacity-[0.08] pointer-events-none" />
-          <div className="flex items-center gap-4 relative z-10">
-            <div className="relative flex-shrink-0">
-              {user?.profilePicUrl ? (
-                <img src={user.profilePicUrl} alt={user.displayName} className="w-16 h-16 rounded-full object-cover border-3 border-ninja-navy/15 dark:border-white/30 shadow-lg" />
-              ) : (
-                <div className="w-16 h-16 rounded-full bg-ninja-blue border-2 border-ninja-navy/15 dark:border-white/20 flex items-center justify-center text-white font-ninja font-bold text-xl shadow-lg">
-                  {initials}
-                </div>
-              )}
-              {savingAvatar && (
-                <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                </div>
-              )}
+  const identity = (
+    <div className="relative bg-[#dbe4f2] dark:bg-ninja-hero rounded-2xl overflow-hidden px-6 pt-7 pb-6 shadow-lg">
+      <img src="/CodeNinjasIcon.svg" alt="" className="absolute right-4 top-4 w-20 opacity-[0.08] pointer-events-none" />
+      <div className="flex items-center gap-4 relative z-10">
+        <div className="relative flex-shrink-0">
+          {user?.profilePicUrl ? (
+            <img src={user.profilePicUrl} alt={user.displayName} className="w-16 h-16 rounded-full object-cover border-3 border-ninja-navy/15 dark:border-white/30 shadow-lg" />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-ninja-blue border-2 border-ninja-navy/15 dark:border-white/20 flex items-center justify-center text-white font-ninja font-bold text-xl shadow-lg">
+              {initials}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-ninja-navy font-ninja font-bold text-lg leading-tight truncate">{user?.displayName}</p>
-              <p className="text-ninja-muted font-ninja text-xs mt-0.5 capitalize">{user?.role === 'manager' ? 'Center Director' : user?.role === 'admin' ? 'Admin' : 'Sensei'}</p>
-              <p className="text-ninja-muted/70 font-ninja text-xs">@{user?.username}</p>
-            </div>
-          </div>
-          {avatarError && <p className="text-ninja-red dark:text-red-300 font-ninja text-xs mt-2 relative z-10">{avatarError}</p>}
-        </motion.div>
-
-        {/* Forced reset banner */}
-        {isForced && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25 }}
-            className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3"
-          >
-            <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            <div>
-              <p className="text-amber-800 font-ninja font-semibold text-sm">Password reset required</p>
-              <p className="text-amber-700 font-ninja text-xs mt-0.5">Your password was reset by an admin. Set a new password to continue.</p>
-            </div>
-          </motion.div>
-        )}
-
-        <div className={isForced ? 'space-y-6' : 'grid grid-cols-1 lg:grid-cols-2 gap-6 items-start'}>
-          {/* Editing your own details is the reason to be on this page, so it
-              leads. Rendered once: the forced-reset flow shows the same form,
-              just without a column beside it. */}
-          <div className="space-y-6">
-          {/* Username + Password */}
-          <motion.form
-            onSubmit={handleSave}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.3 }}
-            className="bg-white border border-ninja-border rounded-2xl p-6 shadow-sm space-y-5"
-          >
-            {!isForced && (
-              <div>
-                <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1.5">Display Name</label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  maxLength={80}
-                  autoComplete="name"
-                  className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
-                />
-                <p className="text-ninja-muted font-ninja text-xs mt-1.5">Shown across the app and to parents.</p>
-              </div>
-            )}
-
-            {!isForced && (
-              <div>
-                <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1.5">Username</label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  autoComplete="username"
-                  className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
-                />
-              </div>
-            )}
-
-            <div className={`${isForced ? '' : 'border-t border-ninja-border pt-5 '}space-y-4`}>
-              <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide">Change Password</p>
-              <div>
-                <label className="block text-ninja-muted text-xs font-ninja mb-1.5">New Password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Leave blank to keep current"
-                  autoComplete="new-password"
-                  className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
-                />
-              </div>
-              {newPassword && !isForced && (
-                <div>
-                  <label className="block text-ninja-muted text-xs font-ninja mb-1.5">Current Password</label>
-                  <input
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="Confirm your current password"
-                    autoComplete="current-password"
-                    className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
-                  />
-                </div>
-              )}
-              <div>
-                <label className="block text-ninja-muted text-xs font-ninja mb-1.5">Confirm New Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  autoComplete="new-password"
-                  className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
-                />
-              </div>
-            </div>
-
-            {error && <p className="text-ninja-red font-ninja text-sm">{error}</p>}
-            {success && <p className="text-green-600 font-ninja text-sm">{success}</p>}
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="w-full bg-ninja-blue text-white font-ninja font-bold text-sm py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </motion.form>
-
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.3 }}
-          >
-            <button
-              onClick={async () => { try { await logout(); } catch {} navigate('/login'); }}
-              className="w-full border border-ninja-red text-ninja-red font-ninja font-semibold text-sm py-2.5 rounded-xl hover:bg-red-50 transition-colors"
-            >
-              Sign Out
-            </button>
-          </motion.div>
-          </div>
-
-          {/* Toggles and pickers. Secondary to the form, and all hidden during
-              a forced reset. */}
-          {!isForced && (
-            <div className="space-y-6">
-            {/* Preset avatars */}
-            {!isForced && <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.08, duration: 0.3 }}
-              className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm"
-            >
-              <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">Choose Avatar</p>
-              <div className="grid grid-cols-5 gap-3">
-                {PRESET_AVATARS.map(({ src, label }) => {
-                  const isActive = user?.profilePicUrl === src;
-                  return (
-                    <button
-                      key={src}
-                      type="button"
-                      onClick={() => handlePresetSelect(src)}
-                      disabled={savingAvatar}
-                      className={`relative w-14 h-14 rounded-full overflow-hidden border-2 transition-all hover:scale-105 disabled:opacity-50 ${
-                        isActive ? 'border-ninja-blue ring-2 ring-ninja-blue/30' : 'border-ninja-border hover:border-ninja-blue'
-                      }`}
-                      title={label}
-                    >
-                      <img src={src} alt={label} className="w-full h-full object-cover bg-ninja-bg" />
-                      {isActive && (
-                        <div className="absolute inset-0 bg-ninja-blue/20 flex items-center justify-center">
-                          <span className="text-white text-xs font-bold">✓</span>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </motion.div>}
-
-            {/* Appearance. Mobile only: the desktop sidebar already carries an
-                Appearance row with the same toggle, so on a wide screen this is
-                the same switch twice on one page. */}
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.08, duration: 0.3 }}
-              className="lg:hidden bg-white border border-ninja-border rounded-2xl p-5 shadow-sm"
-            >
-              <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">Appearance</p>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span
-                    aria-hidden
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center ${dark ? 'text-yellow-300 bg-yellow-400/10' : 'text-ninja-muted bg-ninja-bg'}`}
-                  >
-                    {dark ? (
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
-                    ) : (
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>
-                    )}
-                  </span>
-                  <div>
-                    <p className="text-ninja-navy font-ninja font-semibold text-sm">Dark mode</p>
-                    <p className="text-ninja-muted font-ninja text-xs">{dark ? 'On' : 'Off'}</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={dark}
-                  aria-label="Toggle dark mode"
-                  onClick={toggle}
-                  className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${dark ? 'bg-ninja-blue' : 'bg-ninja-border'}`}
-                >
-                  <motion.span
-                    layout
-                    transition={{ type: 'spring', stiffness: 500, damping: 32 }}
-                    className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${dark ? 'right-1' : 'left-1'}`}
-                  />
-                </button>
-              </div>
-            </motion.div>
-
-            {/* Experimental */}
-            {!isForced && (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.09, duration: 0.3 }}
-              className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className={`w-9 h-9 rounded-xl flex items-center justify-center ${experimental ? 'text-ninja-blue bg-ninja-blue/10' : 'text-ninja-muted bg-ninja-bg'}`}>
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3h6M10 3v6.5L5 18a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-8.5V3" /><path d="M7.5 14h9" /></svg>
-                  </span>
-                  <div>
-                    <p className="text-ninja-navy font-ninja font-semibold text-sm">Experimental features</p>
-                    <p className="text-ninja-muted font-ninja text-xs">Unlock in-progress extras. May change or break.</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={experimental}
-                  aria-label="Toggle experimental features"
-                  onClick={() => setExperimental(!experimental)}
-                  className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${experimental ? 'bg-ninja-blue' : 'bg-ninja-border'}`}
-                >
-                  <motion.span
-                    layout
-                    transition={{ type: 'spring', stiffness: 500, damping: 32 }}
-                    className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${experimental ? 'right-1' : 'left-1'}`}
-                  />
-                </button>
-              </div>
-
-              <AnimatePresence initial={false}>
-                {experimental && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-                    className="overflow-hidden"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => navigate('/appearance')}
-                      className="mt-4 w-full flex items-center justify-between rounded-xl border border-ninja-border p-3 text-left transition-[transform,border-color] duration-150 ease-[var(--ease-out)] hover:border-ninja-blue/50 active:scale-[0.98]"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="w-9 h-9 rounded-xl flex items-center justify-center text-ninja-blue bg-ninja-blue/10">
-                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r="1" /><circle cx="17.5" cy="10.5" r="1" /><circle cx="8.5" cy="7.5" r="1" /><circle cx="6.5" cy="12.5" r="1" /><path d="M12 2C6.5 2 2 6 2 11a5 5 0 0 0 5 5h1.5a2 2 0 0 1 2 2 2 2 0 0 0 2 2c5.5 0 10-4.5 10-10S17.5 2 12 2z" /></svg>
-                        </span>
-                        <div>
-                          <p className="text-ninja-navy font-ninja font-semibold text-sm">Theme &amp; color</p>
-                          <p className="text-ninja-muted font-ninja text-xs">Accent color picker &amp; more</p>
-                        </div>
-                      </div>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-ninja-muted"><polyline points="9 18 15 12 9 6" /></svg>
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-            )}
-
-            {/* Location. Mobile only, same reason as Appearance: the desktop
-                sidebar carries the centre switcher (and the plain centre name
-                for anyone who can't switch) right under the logo. */}
-            {!isForced && (
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.09, duration: 0.3 }}
-                className="lg:hidden bg-white border border-ninja-border rounded-2xl p-5 shadow-sm"
-              >
-                <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">Location</p>
-                {(['manager', 'admin'].includes(user?.role) || (user?.availableLocations?.length > 1)) ? (
-                  <select
-                    value={user?.activeLocation?.id ?? ''}
-                    onChange={(e) => switchLocation(Number(e.target.value))}
-                    className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2.5 font-ninja text-sm font-semibold focus:outline-none focus:border-ninja-blue"
-                  >
-                    {user?.availableLocations?.map((loc) => (
-                      <option key={loc.id} value={loc.id}>{loc.name}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <span className="w-9 h-9 rounded-xl bg-ninja-bg text-ninja-blue flex items-center justify-center flex-shrink-0">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
-                    </span>
-                    <p className="text-ninja-navy font-ninja font-semibold text-sm truncate">{user?.activeLocation?.name ?? '—'}</p>
-                  </div>
-                )}
-              </motion.div>
-            )}
-
-            {/* Getting Started */}
-            {ONBOARDING_ENABLED && (
-            <motion.a
-              href="/getting-started"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.11, duration: 0.3 }}
-              className="block bg-white border border-ninja-border rounded-2xl p-5 shadow-sm hover:border-ninja-blue/50 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="w-9 h-9 rounded-xl flex items-center justify-center text-ninja-blue bg-ninja-blue/10">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" /></svg>
-                  </span>
-                  <div>
-                    <p className="text-ninja-navy font-ninja font-semibold text-sm">Getting Started</p>
-                    <p className="text-ninja-muted font-ninja text-xs">How to use DojoLink</p>
-                  </div>
-                </div>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-ninja-muted"><polyline points="9 18 15 12 9 6" /></svg>
-              </div>
-            </motion.a>
-            )}
+          )}
+          {savingAvatar && (
+            <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             </div>
           )}
         </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-ninja-navy font-ninja font-bold text-lg leading-tight truncate">{user?.displayName}</p>
+          <p className="text-ninja-muted font-ninja text-xs mt-0.5 capitalize">{roleLabel}</p>
+          <p className="text-ninja-muted/70 font-ninja text-xs">@{user?.username}</p>
+        </div>
+      </div>
+      {avatarError && <p className="text-ninja-red dark:text-red-300 font-ninja text-xs mt-2 relative z-10">{avatarError}</p>}
+    </div>
+  );
+
+  const forcedBanner = isForced && (
+    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3">
+      <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+      <div>
+        <p className="text-amber-800 font-ninja font-semibold text-sm">Password reset required</p>
+        <p className="text-amber-700 font-ninja text-xs mt-0.5">Your password was reset by an admin. Set a new password to continue.</p>
+      </div>
+    </div>
+  );
+
+  const avatarPicker = (
+    <div className={`${CARD} p-5`}>
+      <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">Choose Avatar</p>
+      <div className="grid grid-cols-5 gap-3">
+        {PRESET_AVATARS.map(({ src, label }) => {
+          const isActive = user?.profilePicUrl === src;
+          return (
+            <button
+              key={src}
+              type="button"
+              onClick={() => handlePresetSelect(src)}
+              disabled={savingAvatar}
+              className={`relative w-14 h-14 rounded-full overflow-hidden border-2 transition-all hover:scale-105 disabled:opacity-50 ${FOCUS_RING} ${
+                isActive ? 'border-ninja-blue ring-2 ring-ninja-blue/30' : 'border-ninja-border hover:border-ninja-blue'
+              }`}
+              title={label}
+            >
+              <img src={src} alt={label} className="w-full h-full object-cover bg-ninja-bg" />
+              {isActive && (
+                <div className="absolute inset-0 bg-ninja-blue/20 flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">✓</span>
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  // Mobile only: the desktop sidebar already carries the same toggle.
+  const appearanceCard = (
+    <div className={`${CARD} p-5`}>
+      <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">Appearance</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span aria-hidden className={`w-9 h-9 rounded-xl flex items-center justify-center ${dark ? 'text-yellow-300 bg-yellow-400/10' : 'text-ninja-muted bg-ninja-bg'}`}>
+            {dark ? (
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
+            ) : (
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>
+            )}
+          </span>
+          <div>
+            <p className="text-ninja-navy font-ninja font-semibold text-sm">Dark mode</p>
+            <p className="text-ninja-muted font-ninja text-xs">{dark ? 'On' : 'Off'}</p>
+          </div>
+        </div>
+        <button
+          type="button" role="switch" aria-checked={dark} aria-label="Toggle dark mode" onClick={toggle}
+          className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${FOCUS_RING} ${dark ? 'bg-ninja-blue' : 'bg-ninja-border'}`}
+        >
+          <motion.span layout transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+            className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${dark ? 'right-1' : 'left-1'}`} />
+        </button>
+      </div>
+    </div>
+  );
+
+  const experimentalCard = (
+    <div className={`${CARD} p-5`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className={`w-9 h-9 rounded-xl flex items-center justify-center ${experimental ? 'text-ninja-blue bg-ninja-blue/10' : 'text-ninja-muted bg-ninja-bg'}`}>
+            <FlaskIcon width="17" height="17" />
+          </span>
+          <div>
+            <p className="text-ninja-navy font-ninja font-semibold text-sm">Experimental features</p>
+            <p className="text-ninja-muted font-ninja text-xs">Unlock in-progress extras. May change or break.</p>
+          </div>
+        </div>
+        <button
+          type="button" role="switch" aria-checked={experimental} aria-label="Toggle experimental features"
+          onClick={() => setExperimental(!experimental)}
+          className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${FOCUS_RING} ${experimental ? 'bg-ninja-blue' : 'bg-ninja-border'}`}
+        >
+          <motion.span layout transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+            className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${experimental ? 'right-1' : 'left-1'}`} />
+        </button>
+      </div>
+
+      <AnimatePresence initial={false}>
+        {experimental && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+            className="overflow-hidden"
+          >
+            <button
+              type="button"
+              onClick={() => navigate('/appearance')}
+              className={`mt-4 w-full flex items-center justify-between rounded-xl border border-ninja-border p-3 text-left transition-[transform,border-color] duration-150 ease-[var(--ease-out)] hover:border-ninja-blue/50 active:scale-[0.98] ${FOCUS_RING}`}
+            >
+              <div className="flex items-center gap-3">
+                <span className="w-9 h-9 rounded-xl flex items-center justify-center text-ninja-blue bg-ninja-blue/10">
+                  <PaletteIcon width="17" height="17" />
+                </span>
+                <div>
+                  <p className="text-ninja-navy font-ninja font-semibold text-sm">Theme &amp; color</p>
+                  <p className="text-ninja-muted font-ninja text-xs">Accent color picker &amp; more</p>
+                </div>
+              </div>
+              <Chevron width="18" height="18" className="text-ninja-muted" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+
+  // Mobile only: the desktop sidebar carries the centre switcher.
+  const locationCard = (
+    <div className={`${CARD} p-5`}>
+      <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">Location</p>
+      {(['manager', 'admin'].includes(user?.role) || (user?.availableLocations?.length > 1)) ? (
+        <select
+          value={user?.activeLocation?.id ?? ''}
+          onChange={(e) => switchLocation(Number(e.target.value))}
+          className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2.5 font-ninja text-sm font-semibold focus:outline-none focus:border-ninja-blue"
+        >
+          {user?.availableLocations?.map((loc) => (
+            <option key={loc.id} value={loc.id}>{loc.name}</option>
+          ))}
+        </select>
+      ) : (
+        <div className="flex items-center gap-3">
+          <span className="w-9 h-9 rounded-xl bg-ninja-bg text-ninja-blue flex items-center justify-center flex-shrink-0">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+          </span>
+          <p className="text-ninja-navy font-ninja font-semibold text-sm truncate">{user?.activeLocation?.name ?? '—'}</p>
+        </div>
+      )}
+    </div>
+  );
+
+  const gettingStarted = ONBOARDING_ENABLED && (
+    <a href="/getting-started" className={`block ${CARD} p-5 hover:border-ninja-blue/50 transition-colors`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="w-9 h-9 rounded-xl flex items-center justify-center text-ninja-blue bg-ninja-blue/10">
+            <HelpIcon width="17" height="17" />
+          </span>
+          <div>
+            <p className="text-ninja-navy font-ninja font-semibold text-sm">Getting Started</p>
+            <p className="text-ninja-muted font-ninja text-xs">How to use DojoLink</p>
+          </div>
+        </div>
+        <Chevron width="18" height="18" className="text-ninja-muted" />
+      </div>
+    </a>
+  );
+
+  const messages = (
+    <>
+      {error && <p className="text-ninja-red font-ninja text-sm">{error}</p>}
+      {success && <p className="text-green-600 font-ninja text-sm">{success}</p>}
+    </>
+  );
+
+  const saveButton = (
+    <button
+      type="submit"
+      disabled={saving}
+      className={`w-full bg-ninja-blue text-white font-ninja font-bold text-sm py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 ${FOCUS_RING}`}
+    >
+      {saving ? 'Saving...' : 'Save Changes'}
+    </button>
+  );
+
+  const nameFields = (
+    <>
+      <div>
+        <label className={LABEL}>Display Name</label>
+        <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={80} autoComplete="name" className={FIELD} />
+        <p className="text-ninja-muted font-ninja text-xs mt-1.5">Shown across the app and to parents.</p>
+      </div>
+      <div>
+        <label className={LABEL}>Username</label>
+        <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" className={FIELD} />
+      </div>
+    </>
+  );
+
+  const passwordFields = (
+    <>
+      <div>
+        <label className="block text-ninja-muted text-xs font-ninja mb-1.5">New Password</label>
+        <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Leave blank to keep current" autoComplete="new-password" className={FIELD} />
+      </div>
+      {newPassword && !isForced && (
+        <div>
+          <label className="block text-ninja-muted text-xs font-ninja mb-1.5">Current Password</label>
+          <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Confirm your current password" autoComplete="current-password" className={FIELD} />
+        </div>
+      )}
+      <div>
+        <label className="block text-ninja-muted text-xs font-ninja mb-1.5">Confirm New Password</label>
+        <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" className={FIELD} />
+      </div>
+    </>
+  );
+
+  const signOut = (
+    <button
+      onClick={async () => { try { await logout(); } catch { /* sign out locally anyway */ } navigate('/login'); }}
+      className={`w-full border border-ninja-red text-ninja-red font-ninja font-semibold text-sm py-2.5 rounded-xl hover:bg-red-50 transition-colors ${FOCUS_RING}`}
+    >
+      Sign Out
+    </button>
+  );
+
+  /* ------------------------------------------------- forced reset layout -- */
+  // One narrow column: this flow is the banner and the password form, nothing
+  // else, and a rail with a single reachable item would be noise.
+  if (isForced) {
+    return (
+      <Layout>
+        <div className="mx-auto w-full max-w-md space-y-6">
+          {identity}
+          {forcedBanner}
+          <form onSubmit={handleSave} className={`${CARD} p-6 space-y-5`}>
+            <div className="space-y-4">
+              <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide">Change Password</p>
+              {passwordFields}
+            </div>
+            {messages}
+            {saveButton}
+          </form>
+          {signOut}
+        </div>
+      </Layout>
+    );
+  }
+
+  /* ------------------------------------------------------ desktop layout -- */
+  if (isDesktop) {
+    const GROUPS = [
+      { title: 'Your account', items: [
+        { key: 'profile', label: 'Edit profile', Icon: UserIcon },
+        { key: 'password', label: 'Password', Icon: LockIcon },
+      ] },
+      { title: 'Preferences', items: [
+        { key: 'preferences', label: 'Experimental', Icon: FlaskIcon },
+        ...(ONBOARDING_ENABLED ? [{ key: 'help', label: 'Getting started', Icon: HelpIcon }] : []),
+      ] },
+    ];
+
+    const HEADINGS = {
+      profile: 'Edit profile',
+      password: 'Password',
+      preferences: 'Preferences',
+      help: 'Getting started',
+    };
+
+    return (
+      <Layout>
+        <div className="mx-auto w-full max-w-5xl">
+          <h1 className="font-ninja font-black text-2xl text-ninja-navy tracking-tight mb-6">Settings</h1>
+
+          <div className="grid grid-cols-[240px_1fr] gap-10 items-start">
+            {/* Rail. Active state is a background tint and text colour only —
+                no left-edge marker. */}
+            <div className="space-y-6">
+            <nav aria-label="Settings sections" className="space-y-6">
+              {GROUPS.map((group) => (
+                <div key={group.title}>
+                  <p className="px-3 mb-1.5 font-ninja text-xs font-bold uppercase tracking-wide text-ninja-muted">
+                    {group.title}
+                  </p>
+                  <div className="space-y-0.5">
+                    {group.items.map(({ key, label, Icon }) => {
+                      const active = section === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setSection(key)}
+                          aria-current={active ? 'page' : undefined}
+                          className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left font-ninja text-sm font-semibold transition-colors ${FOCUS_RING} ${
+                            active
+                              ? 'bg-ninja-bg text-ninja-navy'
+                              : 'text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg/60'
+                          }`}
+                        >
+                          <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+            </nav>
+              <div className="pt-4 border-t border-ninja-border">{signOut}</div>
+            </div>
+
+            {/* Pane */}
+            <motion.section
+              key={section}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+              aria-labelledby="section-heading"
+              className="space-y-6 min-w-0"
+            >
+              <h2 id="section-heading" className="font-ninja font-bold text-lg text-ninja-navy">
+                {HEADINGS[section]}
+              </h2>
+
+              {section === 'profile' && (
+                <>
+                  {identity}
+                  {avatarPicker}
+                  <form onSubmit={handleSave} className={`${CARD} p-6 space-y-5`}>
+                    {nameFields}
+                    {messages}
+                    {saveButton}
+                  </form>
+                </>
+              )}
+
+              {section === 'password' && (
+                <form onSubmit={handleSave} className={`${CARD} p-6 space-y-4`}>
+                  {passwordFields}
+                  {messages}
+                  {saveButton}
+                </form>
+              )}
+
+              {section === 'preferences' && experimentalCard}
+              {section === 'help' && gettingStarted}
+            </motion.section>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  /* ------------------------------------------------------- mobile layout -- */
+  return (
+    <Layout>
+      <div className="mx-auto w-full max-w-md space-y-6">
+        {identity}
+        {avatarPicker}
+        {appearanceCard}
+        {experimentalCard}
+        {locationCard}
+        {gettingStarted}
+
+        <form onSubmit={handleSave} className={`${CARD} p-6 space-y-5`}>
+          {nameFields}
+          <div className="border-t border-ninja-border pt-5 space-y-4">
+            <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide">Change Password</p>
+            {passwordFields}
+          </div>
+          {messages}
+          {saveButton}
+        </form>
+
+        {signOut}
       </div>
     </Layout>
   );
