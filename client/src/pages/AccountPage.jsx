@@ -298,12 +298,14 @@ export default function AccountPage() {
               </div>
             </motion.div>}
 
-            {/* Appearance */}
+            {/* Appearance. Mobile only: the desktop sidebar already carries an
+                Appearance row with the same toggle, so on a wide screen this is
+                the same switch twice on one page. */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.08, duration: 0.3 }}
-              className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm"
+              className="lg:hidden bg-white border border-ninja-border rounded-2xl p-5 shadow-sm"
             >
               <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">Appearance</p>
               <div className="flex items-center justify-between">
