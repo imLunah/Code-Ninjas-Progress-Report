@@ -7,6 +7,7 @@ import BeltBadge from '../../components/ui/BeltBadge';
 import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
 import { formatDate } from '../../utils/dateUtils';
+import { CARD } from '../../lib/surfaces';
 
 export default function ParentDashboard() {
   const { parent } = useParentAuth();
@@ -44,7 +45,7 @@ export default function ParentDashboard() {
         )}
 
         {!loading && !error && students.length === 0 && (
-          <div className="bg-white border border-ninja-border rounded-2xl p-8 text-center shadow-sm">
+          <div className={`${CARD} p-8 text-center`}>
             <p className="text-ninja-muted font-ninja">No students found linked to your email.</p>
           </div>
         )}
@@ -54,7 +55,7 @@ export default function ParentDashboard() {
           return (
             <div
               key={s.id}
-              className="bg-white border border-ninja-border rounded-2xl shadow-sm overflow-hidden cursor-pointer hover:border-ninja-blue transition-colors"
+              className={`${CARD} overflow-hidden cursor-pointer hover:border-ninja-blue transition-colors`}
               onClick={() => navigate(`/parent/students/${s.id}`)}
             >
               {/* Thin colored top bar for CREATE students */}

@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ONBOARDING_ENABLED } from '../lib/features';
 import { PRESET_AVATARS } from '../lib/avatars';
+import { CARD } from '../lib/surfaces';
 
 // Desktop gets a settings rail + pane; the phone keeps the single scroll.
 // Matched in JS rather than with `lg:hidden` on both layouts, so only one of
@@ -23,9 +24,6 @@ function useIsDesktop() {
   return isDesktop;
 }
 
-// Surface only, no padding: callers set their own so two padding utilities
-// never land in the same class string and race on stylesheet order.
-const CARD = 'bg-white border border-ninja-border rounded-2xl shadow-sm';
 const FIELD =
   'w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue';
 const LABEL = 'block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1.5';

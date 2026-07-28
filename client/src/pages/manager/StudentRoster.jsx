@@ -12,6 +12,7 @@ import { PROGRAMS, getBelt } from '../../utils/beltConfig';
 import { formatDate } from '../../utils/dateUtils';
 import { stickerUrl } from '../../utils/stickers';
 import { useAuth } from '../../context/AuthContext';
+import { CARD } from '../../lib/surfaces';
 
 
 function parseProgram(membership) {
@@ -563,7 +564,7 @@ export default function StudentRoster() {
           </div>
 
           {/* Table card */}
-          <div className="bg-white border border-ninja-border rounded-2xl overflow-hidden shadow-sm flex flex-col flex-1 min-h-0">
+          <div className={`${CARD} overflow-hidden flex flex-col flex-1 min-h-0`}>
             {error && <p className="text-ninja-red font-ninja text-center py-8">{error}</p>}
             {loading && <p className="text-ninja-muted font-ninja text-center py-8">Loading ninjas...</p>}
             {!loading && !error && (

@@ -11,6 +11,7 @@ const stagger = {
   show: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
 };
 import { api } from '../../api/client';
+import { CARD } from '../../lib/surfaces';
 
 const ADMIN_NAV_LINKS = [
   { to: '/admin/locations', label: 'Locations' },
@@ -106,7 +107,7 @@ export default function SettingsPage() {
           <p className="text-ninja-muted font-ninja text-center py-12">Loading…</p>
         ) : (
           <motion.div variants={fadeUp} className="space-y-6">
-            <div className="bg-white border border-ninja-border rounded-2xl p-6 shadow-sm">
+            <div className={`${CARD} p-6`}>
               <div className="mb-4">
                 <h2 className="text-ninja-navy font-ninja font-bold text-base">Announcement Banner</h2>
                 <p className="text-ninja-muted font-ninja text-xs mt-0.5">

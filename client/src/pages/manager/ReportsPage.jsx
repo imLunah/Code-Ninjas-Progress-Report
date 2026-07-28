@@ -5,6 +5,7 @@ import { api } from '../../api/client';
 import { BELTS, PROGRAM_LOGOS } from '../../utils/beltConfig';
 import { formatDate } from '../../utils/dateUtils';
 import BeltIcon from '../../components/ui/BeltIcon';
+import { CARD } from '../../lib/surfaces';
 
 const BELT_COLOR = Object.fromEntries(BELTS.map(b => [b.name, b.color]));
 const BELT_TEXT = Object.fromEntries(BELTS.map(b => [b.name, b.textColor]));
@@ -14,7 +15,7 @@ const ENROLLMENT_COLORS = { CREATE: '#006ADD', 'Robotics Academy': '#7c3aed', 'A
 
 function StatCard({ label, value, sub }) {
   return (
-    <div className="bg-white border border-ninja-border rounded-2xl p-4 shadow-sm">
+    <div className={`${CARD} p-4`}>
       <p className="text-ninja-muted font-ninja text-xs uppercase tracking-wide mb-1">{label}</p>
       <p className="font-ninja font-black text-3xl leading-none text-ninja-navy">{value}</p>
       {sub && <p className="text-ninja-muted font-ninja text-xs mt-1">{sub}</p>}
@@ -28,7 +29,7 @@ function EnrollmentChart({ data }) {
   const top = data.reduce((m, r) => (r.count > m.count ? r : m), { count: -1 });
   const colors = ENROLLMENT_COLORS;
   return (
-    <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
+    <div className={`${CARD} p-5`}>
       <div className="flex items-baseline justify-between mb-4">
         <h3 className="text-ninja-navy font-ninja font-bold text-base">Enrollment by Program</h3>
         <span className="font-ninja text-xs text-ninja-muted">{total} enrolled</span>
@@ -78,7 +79,7 @@ function BeltChart({ data }) {
   const total = sorted.reduce((s, r) => s + r.count, 0);
   const top = sorted.reduce((m, r) => (r.count > m.count ? r : m), { count: -1 });
   return (
-    <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
+    <div className={`${CARD} p-5`}>
       <div className="flex items-baseline justify-between mb-4">
         <h3 className="text-ninja-navy font-ninja font-bold text-base">Belt Distribution (CREATE)</h3>
         <span className="font-ninja text-xs text-ninja-muted">{total} ninja{total === 1 ? '' : 's'}</span>
@@ -123,7 +124,7 @@ function BeltChart({ data }) {
 
 function InactiveTable({ data }) {
   return (
-    <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
+    <div className={`${CARD} p-5`}>
       <h3 className="text-ninja-navy font-ninja font-bold text-base mb-1">No Check-Ins (Last 30 Days)</h3>
       <p className="text-ninja-muted font-ninja text-xs mb-4">{data.length} student{data.length !== 1 ? 's' : ''}</p>
       {data.length === 0 ? (
@@ -148,7 +149,7 @@ function InactiveTable({ data }) {
 
 function BeltLog({ data }) {
   return (
-    <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
+    <div className={`${CARD} p-5`}>
       <div className="flex items-baseline justify-between mb-4">
         <h3 className="text-ninja-navy font-ninja font-bold text-base">Belt Advancements</h3>
         <span className="font-ninja text-xs text-ninja-muted">Last 30 days</span>

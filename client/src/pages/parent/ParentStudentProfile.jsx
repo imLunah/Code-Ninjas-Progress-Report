@@ -11,6 +11,7 @@ import ProgressVisuals from '../../components/parent/ProgressVisuals';
 import { ClubBadge } from '../../components/shared/ClubSessionsPanel';
 import { Pin, MARKDOWN_COMPONENTS } from '../../components/shared/PinnedNote';
 import LazyMarkdownEditor from '../../components/shared/LazyMarkdownEditor';
+import { CARD } from '../../lib/surfaces';
 
 function calcAge(birthday) {
   if (!birthday || typeof birthday !== 'string' || !birthday.trim()) return null;
@@ -89,7 +90,7 @@ export default function ParentStudentProfile() {
         </button>
 
         {/* Profile header */}
-        <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
+        <div className={`${CARD} p-5`}>
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <h1 className="text-2xl font-bold font-ninja text-ninja-navy">{student.full_name}</h1>
             {programs.map((p) => (
@@ -177,7 +178,7 @@ export default function ParentStudentProfile() {
         </div>
 
         {/* Session history */}
-        <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
+        <div className={`${CARD} p-5`}>
           <div className="mb-4">
             <h2 className="text-ninja-navy font-ninja font-bold text-lg">Session History</h2>
           </div>

@@ -5,6 +5,7 @@ import { formatDate, today } from '../../utils/dateUtils';
 import { api } from '../../api/client';
 import Button from '../ui/Button';
 import { CLUB_COLORS, COLOR_SETS, toSlug } from '../../utils/clubUtils';
+import { CARD } from '../../lib/surfaces';
 
 function ClubBadge({ name }) {
   const c = CLUB_COLORS[name] || { bg: 'bg-ninja-bg', text: 'text-ninja-navy', border: 'border-ninja-border' };
@@ -135,7 +136,7 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
             return (
               <div
                 key={s.id}
-                className="group relative bg-white border border-ninja-border rounded-2xl shadow-sm overflow-hidden flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                className={`group relative ${CARD} overflow-hidden flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all duration-200`}
                 style={{ borderColor: `${color.solid}33` }}
               >
                 {/* Colored header band — cover image if set, else club-color gradient */}

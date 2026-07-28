@@ -4,10 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import Modal from '../ui/Modal';
+import { CARD } from '../../lib/surfaces';
 
-const CARD =
-  'rounded-2xl bg-white border border-ninja-border shadow-sm ' +
-  'dark:shadow-[0_10px_34px_rgb(0_0_0/0.32)] ring-1 ring-transparent dark:ring-white/[0.05]';
 
 
 // Type is free text. These are just suggestions + known colors; anything else

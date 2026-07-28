@@ -23,6 +23,7 @@ import { useAuth } from '../context/AuthContext';
 import { formatDate, today } from '../utils/dateUtils';
 import { COLOR_SETS, getClubColors } from '../utils/clubUtils';
 import { uploadToSigned } from '../lib/supabase';
+import { CARD } from '../lib/surfaces';
 
 const relativeDate = (ts) => {
   if (!ts) return '';
@@ -286,7 +287,7 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
   };
 
   return (
-    <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
+    <div className={`${CARD} p-5`}>
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-ninja font-bold text-ninja-navy text-base">Sessions</h2>
         {sessions.length > 4 && (
@@ -455,7 +456,7 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
   };
 
   return (
-    <div className="bg-white border border-ninja-border rounded-2xl shadow-sm overflow-hidden">
+    <div className={`${CARD} overflow-hidden`}>
       {/* Cover image / color banner */}
       <div className="relative h-40 w-full overflow-hidden">
         {clubDef.cover_image_url && !coverError ? (
@@ -581,7 +582,7 @@ function ResourcesSection({ clubName, clubSlug, locationId, resources: initial, 
   };
 
   return (
-    <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
+    <div className={`${CARD} p-5`}>
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-ninja font-bold text-ninja-navy text-base">Resources</h2>
         {!isReadOnly && !adding && (

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { formatDate } from '../../utils/dateUtils';
+import { CARD } from '../../lib/surfaces';
 
 // CD-authored announcements to staff. Center-scoped; shown to all staff at the
 // location via the app-wide banner (Layout). This panel is the authoring surface.
@@ -46,7 +47,7 @@ export default function StaffAnnouncements() {
   };
 
   return (
-    <div className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm">
+    <div className={`${CARD} p-5`}>
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="font-ninja font-bold text-ninja-navy text-lg">Announcements</h2>

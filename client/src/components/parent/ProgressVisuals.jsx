@@ -4,6 +4,7 @@ import { BELTS, PROGRAM_LOGOS, getLevels, getBelt } from '../../utils/beltConfig
 import BeltIcon from '../ui/BeltIcon';
 import { useCurriculum } from '../../context/CurriculumContext';
 import { formatDate } from '../../utils/dateUtils';
+import { CARD } from '../../lib/surfaces';
 
 const PROGRAM_GRADIENTS = {
   'Robotics Academy': 'linear-gradient(135deg, #060d1a 0%, #0a1e3d 55%, #0d3070 100%)',
@@ -190,7 +191,7 @@ function ActivityChart({ logs }) {
   const BAR_H = 56;
 
   return (
-    <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
+    <div className={`${CARD} p-5`}>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-ninja-navy font-ninja font-bold text-lg">Activity</h2>
         <span className="text-ninja-blue font-ninja font-bold text-sm">{sessions.length} total sessions</span>
@@ -234,7 +235,7 @@ function BeltJourney({ enrollment }) {
 
   if (!belt_level) {
     return (
-      <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
+      <div className={`${CARD} p-5`}>
         <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-1">CREATE</h2>
         <p className="text-ninja-muted font-ninja text-sm italic text-center py-4">
           Belt journey starting soon!
@@ -701,7 +702,7 @@ function ModuleProgress({ program, enrollment, logs }) {
   const visited = new Set(logs.map((l) => l.module_name).filter(Boolean));
 
   return (
-    <div className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5">
+    <div className={`${CARD} p-5`}>
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-ninja-navy font-ninja font-bold text-lg">{program}</h2>
         <span className="text-ninja-muted font-ninja text-sm">{totalSessions} sessions</span>

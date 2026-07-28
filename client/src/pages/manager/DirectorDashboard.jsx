@@ -8,6 +8,7 @@ import Modal from '../../components/ui/Modal';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
+import { CARD } from '../../lib/surfaces';
 
 // Strong ease-out (Emil's design-eng default). The built-in easeOut is too
 // weak to read as intentional; this matches the CSS --ease-out token.
@@ -61,13 +62,6 @@ const CurriculumIcon = (p) => (
   </svg>
 );
 
-// Shared card surface. The subtle ring + shadow give cards enough lift off the
-// deep-slate page that they stop reading as flat panels — the depth that was
-// missing before. Explicit dark shadow because the light one is invisible on
-// the dark bg.
-const CARD =
-  'rounded-2xl bg-white border border-ninja-border shadow-sm ' +
-  'dark:shadow-[0_10px_34px_rgb(0_0_0/0.32)] ring-1 ring-transparent dark:ring-white/[0.05]';
 
 
 // Loading placeholders shaped like the thing that's coming, instead of the word

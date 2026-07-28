@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import { api } from '../../api/client';
+import { CARD } from '../../lib/surfaces';
 
 const ADMIN_NAV_LINKS = [
   { to: '/admin/locations', label: 'Locations' },
@@ -383,7 +384,7 @@ export default function UsersPage() {
         {loading ? (
           <p className="text-ninja-muted font-ninja text-center py-12">Loading…</p>
         ) : (
-          <div className="bg-white border border-ninja-border rounded-2xl shadow-sm overflow-hidden">
+          <div className={`${CARD} overflow-hidden`}>
             {users.length === 0 ? (
               <p className="text-ninja-muted font-ninja text-center py-12">
                 {showInactive ? 'No archived users.' : 'No users found.'}

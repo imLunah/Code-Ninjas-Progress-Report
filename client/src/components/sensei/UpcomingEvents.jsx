@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { CARD } from '../../lib/surfaces';
 
 // Local copy of the type palette (kept in sync with EventCalendar) so the sensei
 // bundle doesn't pull in the calendar + Modal just for a few colors. Type is
@@ -14,9 +15,6 @@ const TYPE_COLOR = {
 };
 const colorFor = (type) => TYPE_COLOR[(type || '').trim().toLowerCase()] || '#64748b';
 
-const CARD =
-  'rounded-2xl bg-white border border-ninja-border shadow-sm ' +
-  'dark:shadow-[0_10px_34px_rgb(0_0_0/0.32)] ring-1 ring-transparent dark:ring-white/[0.05]';
 
 const pad = (n) => String(n).padStart(2, '0');
 const todayIso = () => { const n = new Date(); return `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())}`; };

@@ -9,6 +9,7 @@ import { COLOR_SETS, toSlug } from '../utils/clubUtils';
 import ModalPortal from '../components/ui/ModalPortal';
 import CropModal from '../components/ui/CropModal';
 import { uploadToSigned } from '../lib/supabase';
+import { CARD } from '../lib/surfaces';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -32,7 +33,7 @@ function ClubCard({ club, onClick, onDelete, onEdit, canManage }) {
   };
 
   return (
-    <div className="relative h-full flex flex-col bg-white border border-ninja-border rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group overflow-hidden">
+    <div className={`relative h-full flex flex-col ${CARD} hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group overflow-hidden`}>
       <button onClick={onClick} className="flex-1 flex flex-col text-left">
         {/* Identity header — cover image or a color wash with a faded monogram */}
         <div

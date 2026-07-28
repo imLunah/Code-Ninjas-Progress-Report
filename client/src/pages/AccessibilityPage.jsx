@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { CARD } from '../lib/surfaces';
 
 export default function AccessibilityPage() {
   return (
@@ -10,7 +11,7 @@ export default function AccessibilityPage() {
           <p className="text-ninja-muted font-ninja text-sm mt-1">Last Updated: May 28, 2026</p>
         </div>
 
-        <div className="bg-white border border-ninja-border rounded-2xl p-8 shadow-sm space-y-6 font-ninja text-ninja-navy">
+        <div className={`${CARD} p-8 space-y-6 font-ninja text-ninja-navy`}>
 
           <section>
             <h2 className="text-lg font-bold mb-2">Our Commitment</h2>
