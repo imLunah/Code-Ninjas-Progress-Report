@@ -407,13 +407,15 @@ export default function AccountPage() {
             </motion.div>
             )}
 
-            {/* Location */}
+            {/* Location. Mobile only, same reason as Appearance: the desktop
+                sidebar carries the centre switcher (and the plain centre name
+                for anyone who can't switch) right under the logo. */}
             {!isForced && (
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.09, duration: 0.3 }}
-                className="bg-white border border-ninja-border rounded-2xl p-5 shadow-sm"
+                className="lg:hidden bg-white border border-ninja-border rounded-2xl p-5 shadow-sm"
               >
                 <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">Location</p>
                 {(['manager', 'admin'].includes(user?.role) || (user?.availableLocations?.length > 1)) ? (
