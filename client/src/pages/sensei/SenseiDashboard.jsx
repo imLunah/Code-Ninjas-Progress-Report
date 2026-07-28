@@ -7,9 +7,17 @@ import DashboardFilters from '../../components/shared/DashboardFilters';
 import BoardStats from '../../components/shared/BoardStats';
 import ClubSessionsPanel from '../../components/shared/ClubSessionsPanel';
 import EventCalendar from '../../components/manager/EventCalendar';
+
+const CalendarIcon = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <rect x="3" y="5" width="18" height="16" rx="2" />
+    <path d="M3 10h18M8 3v4M16 3v4" />
+  </svg>
+);
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
+import { CARD } from '../../lib/surfaces';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 14 },
@@ -29,6 +37,7 @@ export default function SenseiDashboard() {
   const [statusFilter, setStatusFilter] = useState('unlogged');
   const [programFilter, setProgramFilter] = useState(null);
   const navigate = useNavigate();
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const { user } = useAuth();
   const todayStr = today();
 
@@ -95,7 +104,8 @@ export default function SenseiDashboard() {
   return (
     <Layout>
       <motion.div className="space-y-6" variants={stagger} initial="hidden" animate="show">
-        <motion.div variants={fadeUp}>
+        <motion.div variants={fadeUp} className="flex items-start justify-between gap-4">
+          <div>
           <h1 className="text-2xl sm:text-4xl font-bold font-ninja text-ninja-navy tracking-wide">
             Today's <span className="text-ninja-blue">Ninjas</span>
           </h1>
@@ -111,7 +121,37 @@ export default function SenseiDashboard() {
               })()}
             </p>
           )}
+          </div>
+
+          {/* Shares a layoutId with the panel below, so pressing it morphs the
+              button into the calendar rather than swapping one for the other. */}
+          {!calendarOpen && (
+            <motion.button
+              layoutId="sensei-calendar"
+              type="button"
+              onClick={() => setCalendarOpen(true)}
+              aria-label="Open calendar"
+              aria-expanded={false}
+              className={`${CARD} flex-shrink-0 w-11 h-11 flex items-center justify-center text-ninja-muted hover:text-ninja-blue hover:border-ninja-blue/50 transition-colors`}
+            >
+              <CalendarIcon className="w-5 h-5" />
+            </motion.button>
+          )}
         </motion.div>
+
+        {calendarOpen && (
+          <motion.div layoutId="sensei-calendar" className="overflow-hidden">
+              {/* Fades in slightly behind the morph so the month grid doesn't
+                  appear squashed inside the button on the first frame. */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.18, delay: 0.06 }}
+            >
+              <EventCalendar canManage={false} onClose={() => setCalendarOpen(false)} />
+            </motion.div>
+          </motion.div>
+        )}
 
         {!loading && !error && assignments.length > 0 && (
           <motion.div variants={fadeUp}>
@@ -205,10 +245,6 @@ export default function SenseiDashboard() {
           onAttendeesUpdated={(id, attendees) => setClubSessions((prev) => prev.map((s) => s.id === id ? { ...s, attendees } : s))}
         />
 
-        {/* Last on the page and collapsed until asked for: today's board is
-            the reason to open this. Read-only, and the server enforces the
-            same thing. */}
-        <EventCalendar canManage={false} collapsible />
       </motion.div>
     </Layout>
   );

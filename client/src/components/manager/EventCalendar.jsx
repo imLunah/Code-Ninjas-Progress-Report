@@ -54,7 +54,6 @@ const ChevL = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 const ChevR = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m9 18 6-6-6-6" /></svg>);
 const ChevD = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m6 9 6 6 6-6" /></svg>);
 
-const OPEN_KEY = 'calendar-open';
 
 /* ---------------------------------------------------------------- form --- */
 
@@ -133,10 +132,9 @@ function EventForm({ initial, canDelete, onSave, onDelete, onCancel, busy }) {
 
 /* ------------------------------------------------------------ calendar --- */
 
-// `collapsible` puts the calendar behind a disclosure and remembers the choice.
-// Used where the calendar is reference material rather than the point of the
-// page, so a month grid doesn't push the real content down.
-export default function EventCalendar({ canManage = true, collapsible = false }) {
+// `onClose` adds a dismiss control to the header, for callers that show the
+// calendar as a panel they opened.
+export default function EventCalendar({ canManage = true, onClose }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
@@ -146,20 +144,7 @@ export default function EventCalendar({ canManage = true, collapsible = false })
   const [modal, setModal] = useState(null); // { event } — add uses a bare {event_date}
   const [dayView, setDayView] = useState(null); // ISO date whose full list is open
   const [busy, setBusy] = useState(false);
-  const [open, setOpen] = useState(() => {
-    if (!collapsible) return true;
-    return localStorage.getItem(OPEN_KEY) === '1';
-  });
-
-  const toggle = () => setOpen((o) => {
-    localStorage.setItem(OPEN_KEY, o ? '0' : '1');
-    return !o;
-  });
-
-  // Nothing is fetched until the calendar is actually open, so a collapsed one
-  // costs no requests on page load.
   useEffect(() => {
-    if (!open) return;
     let alive = true;
     Promise.all([
       api.get('/events').catch(() => []),
@@ -171,7 +156,7 @@ export default function EventCalendar({ canManage = true, collapsible = false })
       setLoading(false);
     });
     return () => { alive = false; };
-  }, [open, user?.activeLocation?.id]);
+  }, [user?.activeLocation?.id]);
 
   const byDay = useMemo(() => {
     const map = new Map();
@@ -244,43 +229,28 @@ export default function EventCalendar({ canManage = true, collapsible = false })
 
   return (
     <div className={`${CARD} p-5`}>
-      <div className={`flex items-center justify-between ${open ? 'mb-4' : ''}`}>
-        {collapsible ? (
-          <button
-            type="button"
-            onClick={toggle}
-            aria-expanded={open}
-            aria-controls="calendar-body"
-            className="group flex items-center gap-2 text-left rounded"
-          >
-            <ChevD className={`w-4 h-4 text-ninja-muted transition-transform duration-200 ease-[var(--ease-out)] ${open ? '' : '-rotate-90'}`} />
-            <span>
-              <span className="block font-ninja font-bold text-ninja-navy text-lg group-hover:text-ninja-blue transition-colors">Calendar</span>
-              <span className="block font-ninja text-xs text-ninja-muted">Events and ninja birthdays at this center</span>
-            </span>
-          </button>
-        ) : (
-          <div>
-            <h2 className="font-ninja font-bold text-ninja-navy text-lg">Calendar</h2>
-            <p className="font-ninja text-xs text-ninja-muted">Events and ninja birthdays at this center</p>
-          </div>
-        )}
-        {canManage && open && (
-          <button type="button" onClick={() => openAdd(tIso)}
-            className="font-ninja text-sm font-bold text-ninja-blue hover:underline rounded">+ New event</button>
-        )}
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="font-ninja font-bold text-ninja-navy text-lg">Calendar</h2>
+          <p className="font-ninja text-xs text-ninja-muted">Events and ninja birthdays at this center</p>
+        </div>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {canManage && (
+            <button type="button" onClick={() => openAdd(tIso)}
+              className="font-ninja text-sm font-bold text-ninja-blue hover:underline rounded">+ New event</button>
+          )}
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close calendar"
+              className="w-8 h-8 flex items-center justify-center rounded-full text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg transition-colors"
+            >
+              <ChevD className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
-
-      <AnimatePresence initial={false}>
-      {open && (
-      <motion.div
-        id="calendar-body"
-        initial={collapsible ? { opacity: 0, height: 0 } : false}
-        animate={{ opacity: 1, height: 'auto' }}
-        exit={{ opacity: 0, height: 0 }}
-        transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-        className="overflow-hidden"
-      >
 
       {/* Month nav */}
       <div className="flex items-center justify-between mb-3">
@@ -369,9 +339,6 @@ export default function EventCalendar({ canManage = true, collapsible = false })
           );
         })}
       </div>
-      </motion.div>
-      )}
-      </AnimatePresence>
 
       <Modal isOpen={!!dayView} onClose={() => setDayView(null)} title={dayView ? longDate(dayView) : ''} width="max-w-sm">
         <div className="space-y-1.5">
