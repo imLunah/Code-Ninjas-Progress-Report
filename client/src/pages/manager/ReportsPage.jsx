@@ -42,8 +42,18 @@ const TICK_FONT = '12px Nunito, sans-serif';
 const ICON_W = 22;      // artwork box
 const ICON_GAP = 6;
 const LABEL_GAP = 10;   // breathing room between the label and the bar
+const PAD_L = 2;        // keeps the artwork off the very edge of the plot
 const AXIS_MIN = 96;
 const AXIS_MAX = 190;
+
+// A left axis hands its tick `x = axisLine - tickSize - tickMargin`, and those
+// default to 6 and 2. Content laid out from the tick's own x was landing eight
+// pixels left of the band, which clipped the left edge off every program logo.
+// Zeroing both makes the tick x the axis line exactly, so -axisW is the band's
+// left edge and the arithmetic below is true rather than nearly true.
+// (tickLine={false} does NOT zero tickSize — it only stops the line drawing.)
+const TICK_SIZE = 0;
+const TICK_MARGIN = 0;
 
 // The axis band was a fixed 96px, so "Robotics Academy" overflowed it and ran
 // underneath its own bar. Measure the labels instead: the band is only ever as
@@ -59,7 +69,7 @@ function textWidth(text) {
 function axisWidthFor(rows, tickLabel, hasIcons) {
   const widest = rows.reduce((w, r) => Math.max(w, textWidth(tickLabel(r.name))), 0);
   const lead = hasIcons ? ICON_W + ICON_GAP : 0;
-  return Math.min(AXIS_MAX, Math.max(AXIS_MIN, Math.ceil(lead + widest + LABEL_GAP)));
+  return Math.min(AXIS_MAX, Math.max(AXIS_MIN, Math.ceil(PAD_L + lead + widest + LABEL_GAP)));
 }
 
 // Trims to fit rather than letting the label run over the bars. Only bites for
@@ -74,12 +84,15 @@ function ellipsize(text, room) {
 function ImageTick({ x, y, payload, src, label, axisW }) {
   const full = label(payload.value);
   const lead = src ? ICON_W + ICON_GAP : 0;
-  const room = axisW - lead - LABEL_GAP;
+  const room = axisW - PAD_L - lead - LABEL_GAP;
+  // Laid out rightward from the band's left edge, which the zeroed tickSize and
+  // tickMargin above make exactly `x - axisW`.
+  const left = -axisW + PAD_L;
   return (
     <g transform={`translate(${x},${y})`}>
-      {src && <image href={src} x={-axisW} y={-11} width={ICON_W} height={ICON_W} preserveAspectRatio="xMidYMid meet" />}
+      {src && <image href={src} x={left} y={-11} width={ICON_W} height={ICON_W} preserveAspectRatio="xMidYMid meet" />}
       <text
-        x={-axisW + lead}
+        x={left + lead}
         y={0}
         dy="0.32em"
         className="fill-ninja-navy font-ninja"
@@ -132,6 +145,8 @@ function DistributionBars({ rows, unit, tickSrc, tickLabel = (v) => v }) {
           width={axisW}
           axisLine={false}
           tickLine={false}
+          tickSize={TICK_SIZE}
+          tickMargin={TICK_MARGIN}
           tick={(props) => (
             <ImageTick {...props} axisW={axisW} src={tickSrc(props.payload.value)} label={tickLabel} />
           )}
