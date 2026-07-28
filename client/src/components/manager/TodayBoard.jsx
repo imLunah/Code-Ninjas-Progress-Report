@@ -116,25 +116,43 @@ function buildLogUrl(group) {
   if (group.assignments.some((a) => !a.program)) {
     return `/sensei/student/${group.student_id}`;
   }
+  // Dates and counts describe what is still to be logged, so completed
+  // assignments are left out of the tally.
   const programInfo = {};
   group.assignments.forEach((a) => {
+    if (a.completed) return;
     const d = a.session_date ? String(a.session_date).split('T')[0] : null;
     if (!programInfo[a.program]) programInfo[a.program] = { date: d, count: 0 };
     programInfo[a.program].count++;
   });
   const uniquePrograms = [...new Set(group.assignments.map((a) => a.program))];
+  // A class counts as done only when every one of its assignments is logged.
+  const fullDone = uniquePrograms.filter((p) =>
+    group.assignments.every((a) => a.program !== p || a.completed)
+  );
   const datesStr = Object.entries(programInfo).map(([p, { date }]) => `${p}:${date}`).join(',');
   const countsStr = Object.entries(programInfo).map(([p, { count }]) => `${p}:${count}`).join(',');
   return (
     `/sensei/student/${group.student_id}` +
     `?programs=${encodeURIComponent(uniquePrograms.join(','))}` +
+    `${fullDone.length > 0 ? `&done=${encodeURIComponent(fullDone.join(','))}` : ''}` +
     `&dates=${encodeURIComponent(datesStr)}` +
     `&counts=${encodeURIComponent(countsStr)}`
   );
 }
 
-export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlogged' }) {
+// `canRemove` is off for senseis: DELETE /daily/:id is requireManager, so the
+// × would only ever return a 403. `emptyHint` follows from that — the sensei
+// board has no check-in button to point at.
+export default function TodayBoard({
+  assignments,
+  onRemove,
+  statusFilter = 'unlogged',
+  canRemove = true,
+  emptyHint = 'Use the "+ Check In Ninja" button to get started.',
+}) {
   const { isReadOnly } = useAuth();
+  const showRemove = canRemove && !isReadOnly;
   const navigate = useNavigate();
   const [confirmId, setConfirmId] = useState(null);
   const todayStr = today();
@@ -162,7 +180,7 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
       >
         <img src="/CodeNinjasLaptop.png" alt="Code Ninjas" className="h-28 mx-auto mb-4 opacity-80" />
         <p className="text-lg font-semibold text-ninja-navy">No ninjas added for today yet.</p>
-        <p className="text-sm mt-1">Use the "+ Check In Ninja" button to get started.</p>
+        <p className="text-sm mt-1">{emptyHint}</p>
       </motion.div>
     );
   }
@@ -296,7 +314,7 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
                     <div className={`w-3 h-3 rounded-full flex-shrink-0 ${dotClass}`} />
-                    {!isReadOnly && (
+                    {showRemove && (
                       confirmId === group.student_id ? (
                         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                           <button
@@ -407,7 +425,7 @@ export default function TodayBoard({ assignments, onRemove, statusFilter = 'unlo
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 mt-1">
                   <div className={`w-3 h-3 rounded-full ${dotClass}`} />
-                  {!isReadOnly && (
+                  {showRemove && (
                     confirmId === group.student_id ? (
                       <div className="flex items-center gap-1">
                         <button
