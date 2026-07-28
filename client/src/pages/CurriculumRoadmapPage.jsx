@@ -5,6 +5,12 @@ import Layout from '../components/layout/Layout';
 import { api } from '../api/client';
 import { PROGRAM_LOGOS, BELTS } from '../utils/beltConfig';
 import { SkeletonList } from '../components/ui/Skeleton';
+import CurriculumResources from '../components/shared/CurriculumResources';
+
+const SECTIONS = [
+  { key: 'modules', label: 'Modules' },
+  { key: 'resources', label: 'Resources' },
+];
 
 const BELT_COLOR = Object.fromEntries(BELTS.map(b => [b.name, { color: b.color, text: b.textColor }]));
 
@@ -198,6 +204,7 @@ export default function CurriculumRoadmapPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeProgram, setActiveProgram] = useState(null);
+  const [section, setSection] = useState('modules');
 
   useEffect(() => {
     api.get('/curriculum/roadmap')
@@ -240,7 +247,7 @@ export default function CurriculumRoadmapPage() {
                 return (
                   <motion.button
                     key={p.program}
-                    onClick={() => setActiveProgram(p.program)}
+                    onClick={() => { setActiveProgram(p.program); setSection('modules'); }}
                     whileTap={{ scale: 0.97 }}
                     transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                     className={`font-ninja font-bold text-sm px-4 py-2 rounded-xl border transition-all flex items-center gap-2 ${
@@ -287,12 +294,39 @@ export default function CurriculumRoadmapPage() {
                     </div>
                   </div>
 
-                  <SubProgramView
-                    modules={current.modules}
-                    subPrograms={current.sub_programs.length > 0 ? current.sub_programs : null}
-                    accentColor={cfg.color}
-                    program={current.program}
-                  />
+                  {/* Modules is what the page has always been; Resources is the
+                      reference shelf beside it. Segmented rather than a second
+                      row of program-style buttons, so it doesn't read as another
+                      program picker. */}
+                  <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-ninja-border/20 border border-ninja-border mb-4">
+                    {SECTIONS.map((s) => {
+                      const isActive = section === s.key;
+                      return (
+                        <button
+                          key={s.key}
+                          onClick={() => setSection(s.key)}
+                          aria-pressed={isActive}
+                          className={`font-ninja font-semibold text-sm px-3.5 py-1.5 rounded-lg transition-colors ${
+                            isActive ? 'text-white' : 'text-ninja-muted hover:text-ninja-navy'
+                          }`}
+                          style={isActive ? { background: cfg.color } : {}}
+                        >
+                          {s.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {section === 'modules' ? (
+                    <SubProgramView
+                      modules={current.modules}
+                      subPrograms={current.sub_programs.length > 0 ? current.sub_programs : null}
+                      accentColor={cfg.color}
+                      program={current.program}
+                    />
+                  ) : (
+                    <CurriculumResources program={current.program} accentColor={cfg.color} />
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

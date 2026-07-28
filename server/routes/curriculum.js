@@ -1,6 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const { requireAdmin, requireSensei } = require('../middleware/auth');
+const { listResources, getResource } = require('../resources');
+
+// GET /api/curriculum/resources — reference docs for the Resources tab.
+// Staff only: these documents contain lesson answers.
+router.get('/resources', requireSensei, (req, res) => {
+  const program = typeof req.query.program === 'string' ? req.query.program : null;
+  res.json(listResources(program));
+});
+
+// GET /api/curriculum/resources/:slug — one document, body included.
+router.get('/resources/:slug', requireSensei, (req, res) => {
+  const doc = getResource(req.params.slug);
+  if (!doc) return res.status(404).json({ error: 'Resource not found' });
+  res.json(doc);
+});
 
 // GET /api/curriculum — public, returns { subPrograms, curriculum } matching progressData.js shape
 router.get('/', async (req, res) => {
