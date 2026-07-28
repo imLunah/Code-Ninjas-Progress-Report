@@ -473,12 +473,15 @@ export default function AccountPage() {
           {/* No items-start on the grid: that shrinks each column to its own
               content height, which leaves a sticky child nowhere to travel.
               The column stretches, and the sticky element lives inside it. */}
-          <div className="grid grid-cols-[240px_1fr] gap-10">
+          <div className="grid grid-cols-[272px_1fr]">
             {/* Rail. The page title lives in here rather than above the grid so
                 it stays put with the sections and Sign Out while the pane
                 scrolls past. Active state is a background tint and text colour
-                only, no left-edge marker. */}
-            <div>
+                only, no left-edge marker. The divider sits on this grid item
+                rather than on the sticky block inside it, so the line runs the
+                whole height of the pane instead of stopping where the rail
+                content ends. */}
+            <div className="pr-8 border-r border-ninja-border">
             <div className="space-y-6 sticky top-8 max-h-[calc(100dvh-5rem)] overflow-y-auto">
               <h1 className="font-ninja font-black text-2xl text-ninja-navy tracking-tight">Settings</h1>
             <nav aria-label="Settings sections" className="space-y-6">
@@ -523,7 +526,7 @@ export default function AccountPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
               aria-labelledby="section-heading"
-              className="space-y-6 min-w-0"
+              className="space-y-6 min-w-0 pl-10"
             >
               <h2 id="section-heading" className="font-ninja font-bold text-lg text-ninja-navy">
                 {HEADINGS[section]}
