@@ -119,6 +119,13 @@ export default function AccountPage() {
       if (!trimmedUsername && !trimmedPassword && !trimmedDisplay) return setError('Enter a new display name, username, or password.');
       if (!trimmedDisplay) return setError('Display name cannot be empty.');
     }
+    if (!isForced && trimmedUsername && trimmedUsername !== user?.username) {
+      // Mirrors server/lib/username.js. The server is still the authority.
+      if (trimmedUsername.length < 3) return setError('Username must be at least 3 characters.');
+      if (!/^[A-Za-z0-9._-]+$/.test(trimmedUsername)) {
+        return setError('Username can only use letters, numbers, dots, underscores and hyphens. No spaces.');
+      }
+    }
     if (trimmedPassword && trimmedPassword !== confirmPassword.trim()) return setError('Passwords do not match.');
     if (trimmedPassword && (trimmedPassword.length < 6 || !/[A-Z]/.test(trimmedPassword) || !/[^A-Za-z0-9]/.test(trimmedPassword))) {
       return setError('Password must be at least 6 characters and include an uppercase letter and a special character.');
@@ -373,7 +380,18 @@ export default function AccountPage() {
       </div>
       <div>
         <label className={LABEL}>Username</label>
-        <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" className={FIELD} />
+        <input
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          autoComplete="username"
+          spellCheck={false}
+          autoCapitalize="none"
+          className={FIELD}
+        />
+        <p className="text-ninja-muted font-ninja text-xs mt-1.5">
+          Letters, numbers, dots, underscores and hyphens. No spaces.
+        </p>
       </div>
     </>
   );
@@ -455,9 +473,12 @@ export default function AccountPage() {
           <h1 className="font-ninja font-black text-2xl text-ninja-navy tracking-tight mb-6">Settings</h1>
 
           <div className="grid grid-cols-[240px_1fr] gap-10 items-start">
-            {/* Rail. Active state is a background tint and text colour only —
-                no left-edge marker. */}
-            <div className="space-y-6">
+            {/* Rail. Sticky against <main>, which is the scroll container, so
+                the sections and Sign Out stay put while a long pane scrolls
+                past. It scrolls itself if it ever outgrows the viewport.
+                Active state is a background tint and text colour only, no
+                left-edge marker. */}
+            <div className="space-y-6 sticky top-8 self-start max-h-[calc(100dvh-5rem)] overflow-y-auto">
             <nav aria-label="Settings sections" className="space-y-6">
               {GROUPS.map((group) => (
                 <div key={group.title}>

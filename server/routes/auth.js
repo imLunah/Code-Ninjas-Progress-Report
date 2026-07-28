@@ -48,7 +48,9 @@ router.post('/login', loginLimiter, async (req, res) => {
     const pool = req.app.get('db');
     const { rows } = await pool.query(
       'SELECT id, username, display_name, role, location_id, profile_pic_url, password_hash, must_reset_password, theme_mode, theme_accent FROM users WHERE LOWER(username) = LOWER($1) AND active = true',
-      [username]
+      // Trimmed: a stray space picked up from autofill or a keyboard shouldn't
+      // read as a wrong username.
+      [String(username).trim()]
     );
     const user = rows[0];
 

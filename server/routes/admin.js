@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const router = express.Router();
 const { requireAdmin } = require('../middleware/auth');
 const { generateTempPassword } = require('../lib/tempPassword');
+const { validateUsername } = require('../lib/username');
 
 const SALT_ROUNDS = 10;
 
@@ -50,7 +51,13 @@ router.post('/locations', requireAdmin, async (req, res) => {
       return res.status(409).json({ error: 'A location with that name or slug already exists' });
     }
 
-    const { rows: existingUser } = await client.query('SELECT id FROM users WHERE username = $1', [manager_username.trim()]);
+    const checkedManager = validateUsername(manager_username);
+    if (checkedManager.error) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: checkedManager.error });
+    }
+    const { rows: existingUser } = await client.query(
+      'SELECT id FROM users WHERE LOWER(username) = LOWER($1)', [checkedManager.value]);
     if (existingUser.length) {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'Username already taken' });
@@ -66,7 +73,7 @@ router.post('/locations', requireAdmin, async (req, res) => {
     const hash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
     const { rows: userRows } = await client.query(
       'INSERT INTO users (username, password_hash, display_name, role, location_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, display_name, role',
-      [manager_username.trim(), hash, manager_display_name.trim(), 'manager', location.id]
+      [checkedManager.value, hash, manager_display_name.trim(), 'manager', location.id]
     );
 
     await client.query('COMMIT');
@@ -213,7 +220,10 @@ router.post('/users', requireAdmin, async (req, res) => {
   }
 
   try {
-    const { rows: existing } = await pool.query('SELECT id FROM users WHERE username = $1', [username.trim()]);
+    const checkedUser = validateUsername(username);
+    if (checkedUser.error) return res.status(400).json({ error: checkedUser.error });
+    const { rows: existing } = await pool.query(
+      'SELECT id FROM users WHERE LOWER(username) = LOWER($1)', [checkedUser.value]);
     if (existing[0]) return res.status(409).json({ error: 'Username already taken' });
 
     const { rows: validLocs } = await pool.query('SELECT id FROM locations WHERE id = ANY($1)', [requestedIds]);
@@ -229,7 +239,7 @@ router.post('/users', requireAdmin, async (req, res) => {
       await client.query('BEGIN');
       const { rows } = await client.query(
         'INSERT INTO users (username, password_hash, display_name, role, location_id, must_reset_password) VALUES ($1, $2, $3, $4, $5, true) RETURNING id, username, display_name, role, location_id, active, created_at',
-        [username.trim(), hash, display_name.trim(), role, homeId]
+        [checkedUser.value, hash, display_name.trim(), role, homeId]
       );
       const newUser = rows[0];
       for (const locId of validIds) {

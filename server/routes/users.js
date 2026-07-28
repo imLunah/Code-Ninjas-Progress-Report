@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
+const { validateUsername } = require('../lib/username');
 const { requireManager, requireSensei, requireOwnLocation } = require('../middleware/auth');
 const { generateTempPassword } = require('../lib/tempPassword');
 
@@ -91,7 +92,9 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   if (!username || !display_name || !role) {
     return res.status(400).json({ error: 'All fields are required' });
   }
-  if (username.length > 50) return res.status(400).json({ error: 'Username too long (max 50 chars)' });
+  const checked = validateUsername(username);
+  if (checked.error) return res.status(400).json({ error: checked.error });
+  const cleanUsername = checked.value;
   if (display_name.length > 80) return res.status(400).json({ error: 'Display name too long (max 80 chars)' });
 
   if (!['manager', 'sensei'].includes(role)) {
@@ -104,9 +107,11 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
     : [req.session.activeLocationId];
 
   try {
+    // Case-insensitive: login matches on LOWER(username), so `Alex` and `alex`
+    // must never both exist or the lookup picks one of them arbitrarily.
     const { rows: existing } = await pool.query(
-      'SELECT id FROM users WHERE username = $1',
-      [username]
+      'SELECT id FROM users WHERE LOWER(username) = LOWER($1)',
+      [cleanUsername]
     );
     if (existing[0]) return res.status(409).json({ error: 'Username already taken' });
 
@@ -128,7 +133,7 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
       await client.query('BEGIN');
       const { rows } = await client.query(
         'INSERT INTO users (username, password_hash, display_name, role, location_id, must_reset_password) VALUES ($1, $2, $3, $4, $5, true) RETURNING id, username, display_name, role, location_id, created_at',
-        [username, hash, display_name, role, homeId]
+        [cleanUsername, hash, display_name, role, homeId]
       );
       const newUser = rows[0];
       for (const locId of validIds) {
@@ -268,12 +273,19 @@ router.patch('/me', requireSensei, async (req, res) => {
   }
   try {
     if (username?.trim()) {
-      const { rows } = await pool.query(
-        'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id != $2',
-        [username.trim(), req.session.userId]
-      );
-      if (rows[0]) return res.status(409).json({ error: 'Username already taken' });
-      await pool.query('UPDATE users SET username = $1 WHERE id = $2', [username.trim(), req.session.userId]);
+      // Only validated when it actually changes: an account created before the
+      // format rule existed must still be able to edit its other fields.
+      const { rows: cur } = await pool.query('SELECT username FROM users WHERE id = $1', [req.session.userId]);
+      if (cur[0]?.username !== username.trim()) {
+        const checked = validateUsername(username);
+        if (checked.error) return res.status(400).json({ error: checked.error });
+        const { rows } = await pool.query(
+          'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id != $2',
+          [checked.value, req.session.userId]
+        );
+        if (rows[0]) return res.status(409).json({ error: 'Username already taken' });
+        await pool.query('UPDATE users SET username = $1 WHERE id = $2', [checked.value, req.session.userId]);
+      }
     }
     if (display_name?.trim()) {
       await pool.query('UPDATE users SET display_name = $1 WHERE id = $2', [display_name.trim(), req.session.userId]);
@@ -310,12 +322,14 @@ router.patch('/:id/credentials', requireManager, requireOwnLocation, async (req,
     if (!rows[0]) return res.status(404).json({ error: 'User not found' });
     if (rows[0].role !== 'sensei') return res.status(403).json({ error: 'Can only edit credentials of senseis' });
     if (username?.trim()) {
+      const checked = validateUsername(username);
+      if (checked.error) return res.status(400).json({ error: checked.error });
       const { rows: existing } = await pool.query(
         'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id != $2',
-        [username.trim(), targetId]
+        [checked.value, targetId]
       );
       if (existing[0]) return res.status(409).json({ error: 'Username already taken' });
-      await pool.query('UPDATE users SET username = $1 WHERE id = $2', [username.trim(), targetId]);
+      await pool.query('UPDATE users SET username = $1 WHERE id = $2', [checked.value, targetId]);
     }
     if (new_password?.trim()) {
       if (!validatePassword(new_password.trim())) return res.status(400).json({ error: 'Password must be at least 6 characters and include an uppercase letter and a special character' });
