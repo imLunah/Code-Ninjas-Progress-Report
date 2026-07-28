@@ -8,7 +8,26 @@ const GLASS = 'border border-white/20 dark:border-white/12 bg-white/[0.04] dark:
 // Liquid-glass backdrop: warps the content behind it (Chromium); iOS Safari falls back to blur.
 const REFRACT = { backdropFilter: 'url(#liquidGlass) blur(1px) saturate(1.6)', WebkitBackdropFilter: 'blur(1px) saturate(1.6)' };
 
-function TabIcon({ iconId, profilePicUrl, initials, active }) {
+function TabIcon({ iconId, svg, profilePicUrl, initials, active }) {
+  // Tabs without flat art draw their glyph inline. Stroke colour is a theme
+  // token, not white: the capsule is near-transparent, so in light mode a
+  // white icon would sit on a white page.
+  if (svg) {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.9}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+        className={`w-6 h-6 text-ninja-navy transition-opacity duration-200 ${active ? 'drop-shadow-[0_1px_3px_rgba(0,0,0,0.25)]' : 'opacity-45'}`}
+      >
+        <path d={svg} />
+      </svg>
+    );
+  }
   if (iconId === null) {
     if (profilePicUrl) {
       return <img src={profilePicUrl} alt="me" className="w-6 h-6 rounded-full object-cover border border-white/25" />;
@@ -42,6 +61,15 @@ export default function MobileNav({ compact = false, onBeforeNavigate }) {
   const tabs = getMobileNavTabs(user, viewAs);
   const activeIndex = getActiveTabIndex(tabs, location.pathname);
 
+  // Six tabs (directors) don't fit a 375px phone at the five-tab metrics —
+  // the buttons alone would eat the capsule and leave ~3px between them. The
+  // hit target narrows and the active pill tucks in so it still stops short
+  // of its neighbours.
+  const tight = tabs.length > 5;
+  const capsulePad = tight ? 'px-4' : 'px-5';
+  const tabSize = tight ? 'w-10 h-10' : 'w-12 h-10';
+  const pillInset = tight ? '-inset-x-2 -inset-y-1' : '-inset-x-4 -inset-y-1';
+
   return (
     <nav className="lg:hidden absolute bottom-0 inset-x-0 z-20 px-4 pb-[max(env(safe-area-inset-bottom),22px)] pt-2 pointer-events-none flex flex-col items-center">
       {/* Whole stack scales as one unit on scroll — no per-icon reflow */}
@@ -52,7 +80,7 @@ export default function MobileNav({ compact = false, onBeforeNavigate }) {
       >
         {/* Liquid glass capsule */}
         <div
-          className={`pointer-events-auto relative w-full max-w-[26rem] flex items-center justify-between rounded-full overflow-hidden px-5 py-1.5 ${GLASS}`}
+          className={`pointer-events-auto relative w-full max-w-[26rem] flex items-center justify-between rounded-full overflow-hidden ${capsulePad} py-1.5 ${GLASS}`}
           style={{ ...REFRACT, boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.28), inset 0 -1px 1px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.06), 0 12px 36px rgba(0,0,0,0.16)' }}
         >
           {/* refraction gloss — light sheen down the top half */}
@@ -71,12 +99,12 @@ export default function MobileNav({ compact = false, onBeforeNavigate }) {
                 transition={{ type: 'spring', stiffness: 500, damping: 28 }}
                 aria-label={tab.label}
                 aria-current={active ? 'page' : undefined}
-                className="relative flex items-center justify-center rounded-full w-12 h-10"
+                className={`relative flex items-center justify-center rounded-full ${tabSize}`}
               >
                 {active && (
                   <motion.div
                     layoutId="mobileNavPill"
-                    className="absolute -inset-x-4 -inset-y-1 rounded-full border border-white/30 dark:border-white/10 bg-white/25 dark:bg-white/[0.08] overflow-hidden"
+                    className={`absolute ${pillInset} rounded-full border border-white/30 dark:border-white/10 bg-white/25 dark:bg-white/[0.08] overflow-hidden`}
                     style={{ boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.45), inset 0 -1px 2px rgba(255,255,255,0.12), 0 4px 12px rgba(0,0,0,0.10)' }}
                     transition={PILL_SPRING}
                   >
@@ -91,6 +119,7 @@ export default function MobileNav({ compact = false, onBeforeNavigate }) {
                 >
                   <TabIcon
                     iconId={tab.iconId}
+                    svg={tab.svg}
                     profilePicUrl={user.profilePicUrl}
                     initials={initials}
                     active={active}

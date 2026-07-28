@@ -27,6 +27,7 @@ function touchTargetShouldScroll(el) {
 export const LayoutPreviewContext = createContext(false);
 
 const TAB_LAZY_MAP = {
+  '/manager/overview': lazy(() => import('../../pages/manager/DirectorDashboard')),
   '/manager/dashboard': lazy(() => import('../../pages/manager/ManagerDashboard')),
   '/sensei/dashboard': lazy(() => import('../../pages/sensei/SenseiDashboard')),
   '/manager/students': lazy(() => import('../../pages/manager/StudentRoster')),
