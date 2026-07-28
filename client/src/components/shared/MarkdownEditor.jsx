@@ -2,21 +2,12 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Markdown } from 'tiptap-markdown';
+import { ItalicIcon } from 'lucide-react';
 
 // WYSIWYG note/log editor. Typing plain text and markdown shortcuts
 // (**bold**, *italic*, "- " / "1. " for lists) converts in place. The value is
 // stored back as markdown so saved content renders identically wherever it's
 // shown. Shared by pinned notes, progress logs, and club logs.
-function ItalicIcon({ className }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className={className} aria-hidden>
-      <line x1="19" y1="4" x2="10" y2="4" />
-      <line x1="14" y1="20" x2="5" y2="20" />
-      <line x1="15" y1="4" x2="9" y2="20" />
-    </svg>
-  );
-}
-
 const btn = (active) =>
   `flex items-center justify-center font-ninja text-sm font-bold w-8 h-8 rounded-lg transition-colors ${
     active ? 'bg-ninja-blue/15 text-ninja-blue' : 'text-ninja-muted hover:bg-ninja-bg'

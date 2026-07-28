@@ -12,6 +12,7 @@ import { uploadToSigned } from '../lib/supabase';
 import { CARD } from '../lib/surfaces';
 import { SkeletonCards } from '../components/ui/Skeleton';
 import { TrashIcon, CameraIcon } from '../components/ui/icons';
+import { ClockIcon, PencilIcon } from 'lucide-react';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -56,9 +57,7 @@ function ClubCard({ club, onClick, onDelete, onEdit, canManage }) {
 
           {club.schedule && (
             <div className="flex items-center gap-1.5 mt-1.5 text-ninja-muted font-ninja text-xs font-semibold">
-              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="9" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" />
-              </svg>
+              <ClockIcon className="w-3.5 h-3.5 flex-shrink-0" />
               <span className="truncate">{club.schedule}</span>
             </div>
           )}
@@ -91,9 +90,7 @@ function ClubCard({ club, onClick, onDelete, onEdit, canManage }) {
             <>
               <button onClick={(e) => { e.stopPropagation(); onEdit(club); }} title="Edit club"
                 className="opacity-0 group-hover:opacity-100 transition-opacity text-white bg-black/25 hover:bg-black/40 backdrop-blur-sm p-1.5 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
+                <PencilIcon className="w-4 h-4" />
               </button>
               <button onClick={() => setConfirming(true)} title="Delete club"
                 className="opacity-0 group-hover:opacity-100 transition-opacity text-white bg-black/25 hover:bg-ninja-red backdrop-blur-sm p-1.5 rounded-lg">

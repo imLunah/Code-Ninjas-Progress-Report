@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { ChevronLeftIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import ThemeCustomizer from '../components/theme/ThemeCustomizer';
@@ -26,7 +27,7 @@ export default function AppearancePage() {
           animate={{ opacity: 1, x: 0 }}
           className="flex items-center gap-1.5 mb-4 text-sm font-ninja font-semibold text-ninja-muted hover:text-ninja-navy transition-colors"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+          <ChevronLeftIcon width={18} height={18} strokeWidth={2.2} />
           Account
         </motion.button>
 

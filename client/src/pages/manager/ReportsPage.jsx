@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Bar, BarChart, Cell, LabelList, XAxis, YAxis } from 'recharts';
 import Layout from '../../components/layout/Layout';
+import { ChartContainer, ChartTooltip } from '../../components/ui/chart';
 import { api } from '../../api/client';
 import { BELTS, PROGRAM_LOGOS } from '../../utils/beltConfig';
 import { formatDate } from '../../utils/dateUtils';
@@ -14,6 +16,12 @@ const BELT_ORDER = BELTS.map(b => b.name);
 
 const ENROLLMENT_COLORS = { CREATE: '#006ADD', 'Robotics Academy': '#7c3aed', 'AI Academy': '#0891b2', JR: '#16a34a', 'VR Coding': '#14b8a6' };
 
+// Same files BeltIcon serves. An SVG <image> inside the chart can't mount a
+// React component, so the axis ticks need the path itself.
+const BELT_IMAGES = Object.fromEntries(
+  BELT_ORDER.map((name) => [name, `/belts/belt-${name.toLowerCase()}.png`])
+);
+
 function StatCard({ label, value, sub }) {
   return (
     <div className={`${CARD} p-4`}>
@@ -24,99 +32,137 @@ function StatCard({ label, value, sub }) {
   );
 }
 
+// Both distributions are horizontal bars, so the category sits on the Y axis
+// and the count runs along X. The identity of a row is its artwork — a program
+// logo, a belt icon — so the tick renders an <image> rather than a text label.
+// That is the whole reason these are custom ticks: a plain Recharts category
+// axis can only draw text.
+const ROW_H = 34;
+const AXIS_W = 96;
+
+function ImageTick({ x, y, payload, src, label }) {
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {src && <image href={src} x={-AXIS_W} y={-11} width={22} height={22} preserveAspectRatio="xMidYMid meet" />}
+      <text
+        x={src ? -AXIS_W + 28 : -AXIS_W}
+        y={0}
+        dy="0.32em"
+        className="fill-ninja-navy font-ninja"
+        fontSize={12}
+      >
+        {label(payload.value)}
+      </text>
+    </g>
+  );
+}
+
+function CountTooltip({ active, payload, unit }) {
+  if (!active || !payload?.length) return null;
+  const row = payload[0].payload;
+  return (
+    <div className="rounded-lg border border-ninja-border bg-white px-2.5 py-1.5 shadow-lg">
+      <span className="block font-ninja text-[11px] text-ninja-muted leading-tight">{row.name}</span>
+      <span className="block font-ninja text-sm font-bold text-ninja-navy leading-tight tabular-nums">
+        {row.count} {unit}{row.count === 1 ? '' : 's'}
+        {row.pct != null && <span className="text-ninja-muted font-normal"> · {row.pct}%</span>}
+      </span>
+    </div>
+  );
+}
+
+// Bars carry per-row colours (a belt is its belt colour, a program its brand
+// colour), which Recharts takes as a <Cell> per datum rather than one series
+// colour.
+function DistributionBars({ rows, unit, tickSrc, tickLabel = (v) => v }) {
+  const height = Math.max(ROW_H * rows.length, ROW_H);
+  // Left margin stays 0: the YAxis already reserves AXIS_W and the tick draws
+  // itself back into that reserved band, so adding it here as well would indent
+  // the plot by twice the label width.
+  return (
+    <ChartContainer config={{ count: { label: unit } }} className="w-full" style={{ height }}>
+      <BarChart
+        data={rows}
+        layout="vertical"
+        margin={{ top: 0, right: 40, bottom: 0, left: 0 }}
+        barCategoryGap="22%"
+      >
+        <XAxis type="number" hide domain={[0, (max) => Math.max(1, max)]} />
+        <YAxis
+          type="category"
+          dataKey="name"
+          width={AXIS_W}
+          axisLine={false}
+          tickLine={false}
+          tick={(props) => <ImageTick {...props} src={tickSrc(props.payload.value)} label={tickLabel} />}
+        />
+        <ChartTooltip
+          cursor={{ fill: 'rgb(var(--ninja-muted) / 0.08)' }}
+          content={<CountTooltip unit={unit} />}
+        />
+        <Bar dataKey="count" radius={[999, 999, 999, 999]} animationDuration={600} barSize={14}>
+          {rows.map((row) => (
+            <Cell key={row.name} fill={row.color} stroke={row.stroke || 'none'} />
+          ))}
+          <LabelList
+            dataKey="count"
+            position="right"
+            offset={8}
+            className="fill-ninja-navy font-ninja"
+            fontSize={12}
+            fontWeight={700}
+          />
+        </Bar>
+      </BarChart>
+    </ChartContainer>
+  );
+}
+
 function EnrollmentChart({ data }) {
   const total = data.reduce((s, r) => s + r.count, 0);
-  const max = Math.max(...data.map(r => r.count), 1);
-  const top = data.reduce((m, r) => (r.count > m.count ? r : m), { count: -1 });
-  const colors = ENROLLMENT_COLORS;
+  const rows = data.map((r) => ({
+    name: r.program,
+    count: r.count,
+    pct: total > 0 ? Math.round((r.count / total) * 100) : 0,
+    color: ENROLLMENT_COLORS[r.program] || '#6b7280',
+  }));
+
   return (
     <div className={`${CARD} p-5`}>
       <div className="flex items-baseline justify-between mb-4">
         <h3 className="text-ninja-navy font-ninja font-bold text-base">Enrollment by Program</h3>
         <span className="font-ninja text-xs text-ninja-muted">{total} enrolled</span>
       </div>
-      <div className="space-y-3">
-        {data.map((row, i) => {
-          const pct = total > 0 ? Math.round((row.count / total) * 100) : 0;
-          const widthPct = Math.round((row.count / max) * 100);
-          const color = colors[row.program] || '#6b7280';
-          const logo = PROGRAM_LOGOS[row.program];
-          const isTop = row.program === top.program;
-          return (
-            <motion.div
-              key={row.program}
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: Math.min(i * 0.05, 0.3), ease: 'easeOut' }}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="flex items-center gap-2 min-w-0">
-                  {logo && <img src={logo} alt="" draggable={false} className="w-5 h-5 object-contain shrink-0" />}
-                  <span className="font-ninja text-sm text-ninja-navy truncate">{row.program}</span>
-                </span>
-                <span className="font-ninja text-sm font-semibold text-ninja-navy shrink-0">{row.count} <span className="text-ninja-muted font-normal">({pct}%)</span></span>
-              </div>
-              <div className="h-2.5 bg-ninja-bg rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${widthPct}%` }}
-                  transition={{ duration: 0.6, ease: 'easeOut' }}
-                  className="h-full rounded-full min-w-[6px]"
-                  style={{ background: color, boxShadow: isTop ? `0 0 0 2px ${color}33` : 'none' }}
-                />
-              </div>
-            </motion.div>
-          );
-        })}
-        {data.length === 0 && <p className="text-ninja-muted font-ninja text-sm">No enrollments yet.</p>}
-      </div>
+      {rows.length === 0 ? (
+        <p className="text-ninja-muted font-ninja text-sm">No enrollments yet.</p>
+      ) : (
+        <DistributionBars rows={rows} unit="ninja" tickSrc={(name) => PROGRAM_LOGOS[name]} />
+      )}
     </div>
   );
 }
 
 function BeltChart({ data }) {
   const sorted = [...data].sort((a, b) => BELT_ORDER.indexOf(a.belt_level) - BELT_ORDER.indexOf(b.belt_level));
-  const max = Math.max(...sorted.map(r => r.count), 1);
   const total = sorted.reduce((s, r) => s + r.count, 0);
-  const top = sorted.reduce((m, r) => (r.count > m.count ? r : m), { count: -1 });
+  const rows = sorted.map((r) => ({
+    name: r.belt_level,
+    count: r.count,
+    color: BELT_COLOR[r.belt_level] || '#e5e7eb',
+    // White on a white card needs an outline or the bar disappears.
+    stroke: r.belt_level === 'White' ? '#d1d5db' : undefined,
+  }));
+
   return (
     <div className={`${CARD} p-5`}>
       <div className="flex items-baseline justify-between mb-4">
         <h3 className="text-ninja-navy font-ninja font-bold text-base">Belt Distribution (CREATE)</h3>
         <span className="font-ninja text-xs text-ninja-muted">{total} ninja{total === 1 ? '' : 's'}</span>
       </div>
-      {sorted.length === 0 ? (
+      {rows.length === 0 ? (
         <p className="text-ninja-muted font-ninja text-sm">No CREATE students yet.</p>
       ) : (
-        <div className="space-y-2">
-          {sorted.map((row, i) => {
-            const widthPct = Math.round((row.count / max) * 100);
-            const bg = BELT_COLOR[row.belt_level] || '#e5e7eb';
-            const isTop = row.belt_level === top.belt_level;
-            return (
-              <motion.div
-                key={row.belt_level}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, delay: Math.min(i * 0.04, 0.4), ease: 'easeOut' }}
-                className="flex items-center gap-2.5"
-              >
-                <BeltIcon belt={row.belt_level} size={26} className="shrink-0" />
-                <span className="font-ninja text-xs text-ninja-navy w-16 shrink-0">{row.belt_level}</span>
-                <div className="flex-1 h-5 bg-ninja-bg rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${widthPct}%` }}
-                    transition={{ duration: 0.6, ease: 'easeOut' }}
-                    className="h-full rounded-full min-w-[6px]"
-                    style={{ background: bg, border: row.belt_level === 'White' ? '1px solid #d1d5db' : 'none' }}
-                  />
-                </div>
-                <span className={`font-ninja text-sm w-7 text-right shrink-0 ${isTop ? 'font-bold text-ninja-blue' : 'font-semibold text-ninja-navy'}`}>{row.count}</span>
-              </motion.div>
-            );
-          })}
-        </div>
+        <DistributionBars rows={rows} unit="ninja" tickSrc={(belt) => BELT_IMAGES[belt]} />
       )}
     </div>
   );

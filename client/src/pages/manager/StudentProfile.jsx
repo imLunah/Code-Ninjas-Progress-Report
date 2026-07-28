@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import BirthdayConfetti, { isBirthdayToday } from '../../components/shared/BirthdayConfetti';
 import RoadmapModal from '../../components/shared/RoadmapModal';
 import { motion } from 'framer-motion';
+import { MapIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Layout from '../../components/layout/Layout';
 import BeltBadge from '../../components/ui/BeltBadge';
@@ -282,9 +283,7 @@ function MobileProgramCard({ enrollment, onOpenRoadmap }) {
           onClick={onOpenRoadmap}
           className="mt-3 w-full flex items-center justify-center gap-1.5 text-ninja-blue font-ninja font-semibold text-sm py-2 rounded-xl border border-ninja-blue/25 hover:bg-ninja-blue/5 transition-colors"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-          </svg>
+          <MapIcon className="w-4 h-4" />
           View Roadmap
         </button>
       </div>

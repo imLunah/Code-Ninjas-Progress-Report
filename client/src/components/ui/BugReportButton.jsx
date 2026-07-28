@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { api } from '../../api/client';
 import ModalPortal from './ModalPortal';
+import { TriangleAlertIcon, LightbulbIcon } from 'lucide-react';
 
 const BUG_CATEGORIES = [
   'Login Issue',
@@ -270,16 +271,12 @@ export default function BugReportButton({ reporter, open, onClose }) {
 
 function BugIcon() {
   return (
-    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-    </svg>
+    <TriangleAlertIcon className="w-3.5 h-3.5 flex-shrink-0" />
   );
 }
 
 function BulbIcon() {
   return (
-    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3a6 6 0 00-3.6 10.8c.4.3.6.77.6 1.27V16a1 1 0 001 1h4a1 1 0 001-1v-.93c0-.5.2-.97.6-1.27A6 6 0 0012 3z" />
-    </svg>
+    <LightbulbIcon className="w-3.5 h-3.5 flex-shrink-0" />
   );
 }

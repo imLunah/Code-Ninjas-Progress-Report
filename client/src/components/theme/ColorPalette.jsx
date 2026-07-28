@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { RotateCcwIcon } from 'lucide-react';
 import { SWATCH_GRID, DEFAULT_OPTION } from '../../lib/accents';
 
 const eq = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
@@ -62,9 +63,7 @@ export default function ColorPalette({ value, onChange }) {
               style={{ backgroundColor: isDefault ? DEFAULT_OPTION.swatch : cell }}
             >
               {isDefault && (
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.6" strokeLinecap="round">
-                  <path d="M3 12a9 9 0 1 0 3-6.7" /><polyline points="3 4 3 9 8 9" />
-                </svg>
+                <RotateCcwIcon width={13} height={13} stroke="white" strokeWidth={2.6} />
               )}
             </motion.span>
           </button>

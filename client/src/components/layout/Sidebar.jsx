@@ -4,17 +4,17 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import ThemeToggle from '../ui/ThemeToggle';
 import { RocketIcon } from '../ui/icons';
+import { LogOutIcon } from 'lucide-react';
+import { LayoutGridIcon } from 'lucide-react';
 
 const EXPANDED_W = 224; // matches w-56
 const COLLAPSED_W = 76; // icon rail
 
-function NavIcon({ id, svg }) {
-  if (svg) {
+function NavIcon({ id, Glyph }) {
+  if (Glyph) {
     return (
       <span className="w-9 h-9 flex-shrink-0 flex items-center justify-center">
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-          <path strokeLinecap="round" strokeLinejoin="round" d={svg} />
-        </svg>
+        <Glyph className="w-5 h-5" strokeWidth={1.8} />
       </span>
     );
   }
@@ -44,7 +44,7 @@ function BugIcon() {
 }
 
 const managerLinks = [
-  { to: '/manager/overview', label: 'Dashboard', svg: 'M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25A2.25 2.25 0 0113.5 8.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z' },
+  { to: '/manager/overview', label: 'Dashboard', Glyph: LayoutGridIcon },
   { to: '/manager/dashboard', label: "Today's Board", icon: 'today' },
   { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
   { to: '/clubs', label: 'Clubs', icon: 'clubs' },
@@ -154,7 +154,7 @@ export default function Sidebar({ onOpenBug }) {
                   : 'text-ninja-navy hover:bg-ninja-bg'
               }`}
             >
-              <NavIcon id={link.icon} svg={link.svg} />
+              <NavIcon id={link.icon} Glyph={link.Glyph} />
               {!collapsed && (
                 <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15, delay: 0.08 }}>
                   {link.label}
@@ -189,9 +189,7 @@ export default function Sidebar({ onOpenBug }) {
               title="Log out"
               className="text-ninja-muted hover:text-ninja-red transition-colors p-1"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
+              <LogOutIcon className="w-4 h-4" />
             </button>
           </div>
         ) : (
@@ -221,9 +219,7 @@ export default function Sidebar({ onOpenBug }) {
               title="Log out"
               className="text-ninja-muted hover:text-ninja-red transition-colors flex-shrink-0 p-1"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
+              <LogOutIcon className="w-4 h-4" />
             </button>
           </div>
         )}

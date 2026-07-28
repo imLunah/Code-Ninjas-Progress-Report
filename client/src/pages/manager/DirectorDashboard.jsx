@@ -1,7 +1,14 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Area, AreaChart as RechartsAreaChart, XAxis, YAxis } from 'recharts';
+import {
+  ChartNoAxesColumnIncreasingIcon as ReportsIcon,
+  GiftIcon,
+  BookOpenIcon as CurriculumIcon,
+} from 'lucide-react';
 import Layout from '../../components/layout/Layout';
+import { ChartContainer, ChartTooltip } from '../../components/ui/chart';
 import EventCalendar from '../../components/manager/EventCalendar';
 import DirectorStickyNotes from '../../components/manager/DirectorStickyNotes';
 import Modal from '../../components/ui/Modal';
@@ -41,29 +48,6 @@ function CountUp({ value = 0, className }) {
   // the text beside it visibly shuffles for the whole animation.
   return <span className={`tabular-nums ${className}`}>{n}</span>;
 }
-
-/* ---------------------------------------------------------------- icons -- */
-
-const ReportsIcon = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M4 4v15a1 1 0 0 0 1 1h15" />
-    <path d="M8 16v-4" />
-    <path d="M13 16V8" />
-    <path d="M18 16v-6" />
-  </svg>
-);
-const GiftIcon = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
-  </svg>
-);
-const CurriculumIcon = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-  </svg>
-);
-
-
 
 /* ------------------------------------------------------------ check-ins -- */
 
@@ -161,160 +145,89 @@ function summarize(dayRows, days) {
   };
 }
 
-// Catmull-Rom through the points, emitted as cubic beziers, so the line curves
-// like the reference instead of reading as a jagged polyline.
-function smoothPath(pts) {
-  if (pts.length < 2) return '';
-  let d = `M ${pts[0].x} ${pts[0].y}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] || pts[i];
-    const p1 = pts[i];
-    const p2 = pts[i + 1];
-    const p3 = pts[i + 2] || p2;
-    d += ` C ${p1.x + (p2.x - p0.x) / 6} ${p1.y + (p2.y - p0.y) / 6},`
-       + ` ${p2.x - (p3.x - p1.x) / 6} ${p2.y - (p3.y - p1.y) / 6},`
-       + ` ${p2.x} ${p2.y}`;
-  }
-  return d;
-}
-
-const PAD_X = 10;  // keeps the end dot from clipping at the edge
-const PAD_T = 14;
-const PAD_B = 10;
-const TIP_W = 130; // approximate tooltip width, used to keep it inside the box
-
 // The chart drew itself in a hardcoded blue, so it was the one surface that
 // ignored the accent a user picked in Appearance. Reading the token keeps it in
-// step with every other blue on the page.
+// step with every other blue on the page. Recharts resolves this once per
+// render, so it follows a live accent change like any other CSS variable would.
 const ACCENT = 'rgb(var(--ninja-blue))';
 
-// The viewBox is sized to the measured pixel width so one unit is one pixel.
-// A fixed viewBox would letterbox under the default xMidYMid meet — the chart
-// would sit centred at its own aspect ratio while pointer math assumed it
-// spanned the full box, so the readout tracked the wrong place entirely.
+const CHART_CONFIG = { count: { label: 'Ninjas', color: ACCENT } };
+
+// Recharts hands the dot renderer every point; only the last one gets drawn, so
+// the curve keeps its end marker without a dot on every reading.
+function EndDot({ cx, cy, index, dataLength }) {
+  if (index !== dataLength - 1 || cx == null || cy == null) return null;
+  return (
+    // Halo takes the card surface, not flat white — a white ring on the dark
+    // card read as a bright speck rather than a cut-out.
+    <circle
+      cx={cx}
+      cy={cy}
+      r={5}
+      fill={ACCENT}
+      strokeWidth={2.5}
+      className="stroke-white dark:stroke-[#252c3e]"
+    />
+  );
+}
+
+function TrendTooltip({ active, payload, formatLabel }) {
+  if (!active || !payload?.length) return null;
+  const point = payload[0].payload;
+  return (
+    <div className="rounded-lg border border-ninja-border bg-white px-2.5 py-1.5 shadow-lg">
+      <span className="block font-ninja text-[11px] text-ninja-muted leading-tight">
+        {formatLabel(point.date)}
+      </span>
+      <span className="block font-ninja text-sm font-bold text-ninja-navy leading-tight tabular-nums">
+        {point.count} ninja{point.count === 1 ? '' : 's'}
+      </span>
+    </div>
+  );
+}
+
+// Margins stand in for the old manual padding: they keep the end dot and the
+// hover dot from clipping at the edges of the plot area.
+const CHART_MARGIN = { top: 10, right: 8, bottom: 4, left: 8 };
+
 function AreaChart({ points, height = 120, gradientId, className = '', formatLabel = shortDate }) {
-  const [hoverIdx, setHoverIdx] = useState(null);
-  const [width, setWidth] = useState(0);
-  const wrapRef = useRef(null);
-
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-    setWidth(el.getBoundingClientRect().width);
-    const ro = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const ready = points.length > 0 && width > 0;
-  const max = ready ? Math.max(1, ...points.map((p) => p.count)) : 1;
-  const innerW = Math.max(1, width - PAD_X * 2);
-  const base = height - PAD_B;
-  const coords = ready
-    ? points.map((p, i) => ({
-        ...p,
-        x: PAD_X + (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW),
-        y: PAD_T + (1 - p.count / max) * (base - PAD_T),
-      }))
-    : [];
-  const line = ready ? smoothPath(coords) : '';
-  const area = ready
-    ? `${line} L ${coords[coords.length - 1].x} ${base} L ${coords[0].x} ${base} Z`
-    : '';
-  const last = coords[coords.length - 1];
-  const hover = hoverIdx === null ? null : coords[hoverIdx];
-
-  // Pointer x is now 1:1 with viewBox units. Snaps to the nearest plotted point
-  // so the readout is real data, never a value interpolated off the curve.
-  // Mouse only — tracking touch here would fight page scrolling on phones.
-  const handleMove = (e) => {
-    if (e.pointerType !== 'mouse' || !ready) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    let best = 0;
-    let bestDist = Infinity;
-    for (let i = 0; i < coords.length; i++) {
-      const dist = Math.abs(coords[i].x - x);
-      if (dist < bestDist) { bestDist = dist; best = i; }
-    }
-    setHoverIdx(best);
-  };
+  if (points.length === 0) return <div className={className} style={{ height }} />;
 
   return (
-    <div ref={wrapRef} className={`relative ${className}`} style={{ height }}>
-      {ready && (
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        width={width}
-        height={height}
-        className="block"
-        onPointerMove={handleMove}
-        onPointerLeave={() => setHoverIdx(null)}
-      >
+    <ChartContainer
+      config={CHART_CONFIG}
+      className={`w-full ${className}`}
+      style={{ height }}
+    >
+      <RechartsAreaChart data={points} margin={CHART_MARGIN}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={ACCENT} stopOpacity="0.32" />
-            <stop offset="100%" stopColor={ACCENT} stopOpacity="0" />
+            <stop offset="0%" stopColor="var(--color-count)" stopOpacity="0.32" />
+            <stop offset="100%" stopColor="var(--color-count)" stopOpacity="0" />
           </linearGradient>
         </defs>
-        <motion.path
-          d={area}
-          fill={`url(#${gradientId})`}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
+        {/* The callers print their own date row under the chart, so the axes are
+            here only to scale the plot. */}
+        <XAxis dataKey="date" hide />
+        <YAxis hide domain={[0, (max) => Math.max(1, max)]} />
+        <ChartTooltip
+          cursor={{ stroke: 'rgb(var(--ninja-muted))', strokeWidth: 1, strokeDasharray: '3 3' }}
+          content={<TrendTooltip formatLabel={formatLabel} />}
         />
-        <motion.path
-          d={line}
-          fill="none"
-          stroke={ACCENT}
-          strokeWidth="2.5"
+        <Area
+          type="monotone"
+          dataKey="count"
+          stroke="var(--color-count)"
+          strokeWidth={2.5}
           strokeLinecap="round"
           strokeLinejoin="round"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 0.9, ease: 'easeInOut' }}
+          fill={`url(#${gradientId})`}
+          dot={<EndDot dataLength={points.length} />}
+          activeDot={{ r: 5, strokeWidth: 2.5, className: 'stroke-white dark:stroke-[#252c3e]' }}
+          animationDuration={900}
         />
-        {hover && (
-          <>
-            <line
-              x1={hover.x} y1={PAD_T - 8} x2={hover.x} y2={base}
-              stroke="currentColor" strokeWidth="1" strokeDasharray="3 3"
-              className="text-ninja-muted"
-            />
-            {/* Halo takes the card surface, not flat white — a white ring on the
-                dark card read as a bright speck rather than a cut-out. */}
-            <circle cx={hover.x} cy={hover.y} r="5" fill={ACCENT} strokeWidth="2.5" className="stroke-white dark:stroke-[#252c3e]" />
-          </>
-        )}
-        {!hover && (
-          <motion.circle
-            cx={last.x} cy={last.y} r="5"
-            fill={ACCENT} strokeWidth="2.5" className="stroke-white dark:stroke-[#252c3e]"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3, delay: 0.9 }}
-          />
-        )}
-      </svg>
-      )}
-      {hover && (
-        <div
-          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-ninja-border bg-white px-2.5 py-1.5 shadow-lg"
-          style={{
-            left: Math.min(width - TIP_W / 2, Math.max(TIP_W / 2, hover.x)),
-            top: Math.max(0, hover.y - 10),
-          }}
-        >
-          <span className="block font-ninja text-[11px] text-ninja-muted leading-tight">
-            {formatLabel(hover.date)}
-          </span>
-          <span className="block font-ninja text-sm font-bold text-ninja-navy leading-tight tabular-nums">
-            {hover.count} ninja{hover.count === 1 ? '' : 's'}
-          </span>
-        </div>
-      )}
-    </div>
+      </RechartsAreaChart>
+    </ChartContainer>
   );
 }
 

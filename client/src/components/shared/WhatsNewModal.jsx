@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { StarIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { api } from '../../api/client';
@@ -86,7 +87,7 @@ export default function WhatsNewModal() {
                     transition={{ delay: 0.18, type: 'spring', stiffness: 400, damping: 14 }}
                     className="inline-block"
                   >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 6.3L21 9.2l-5 4.3 1.6 6.5L12 16.8 6.4 20l1.6-6.5-5-4.3 6.6-.9z" /></svg>
+                    <StarIcon width="13" height="13" fill="currentColor" strokeWidth={0} />
                   </motion.span>
                   What's New
                 </motion.p>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { XIcon, CheckIcon, ChevronDownIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../api/client';
 
@@ -156,9 +157,7 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
             onClick={onClose}
             className="text-ninja-muted hover:text-ninja-navy transition-colors p-1 -mr-1 mt-0.5"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <XIcon className="w-5 h-5" />
           </button>
         </div>
 
@@ -207,9 +206,7 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
                   <div className="flex items-center gap-2.5 min-w-0">
                     {allDone ? (
                       <span className="shrink-0 w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center">
-                        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
+                        <CheckIcon className="w-2.5 h-2.5 text-white" strokeWidth={3} />
                       </span>
                     ) : (
                       <span className="shrink-0 w-4 h-4 rounded-full border-2 border-ninja-border" />
@@ -225,12 +222,9 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
                     <span className="text-xs font-ninja text-ninja-muted">
                       {completedInModule + pendingInModule}/{mod.lessons.length}
                     </span>
-                    <svg
+                    <ChevronDownIcon
                       className={`w-4 h-4 text-ninja-muted transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
-                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
+                    />
                   </div>
                 </button>
 
@@ -276,13 +270,9 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
                                 }`}
                               >
                                 {isUnchecked ? (
-                                  <svg className="w-3 h-3 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                  </svg>
+                                  <XIcon className="w-3 h-3 text-red-400" strokeWidth={3} />
                                 ) : showChecked ? (
-                                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                  </svg>
+                                  <CheckIcon className="w-3 h-3 text-white" strokeWidth={3} />
                                 ) : null}
                               </span>
                               <span className={`font-ninja text-sm leading-snug ${

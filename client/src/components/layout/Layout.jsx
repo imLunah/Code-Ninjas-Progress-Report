@@ -9,6 +9,7 @@ import { api } from '../../api/client';
 import { getMobileNavTabs } from '../../lib/navTabs';
 import { ONBOARDING_ENABLED } from '../../lib/features';
 import { WarningIcon } from '../ui/icons';
+import { XIcon } from 'lucide-react';
 
 const SKIP_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON']);
 
@@ -55,9 +56,7 @@ function AnnouncementBanner({ text, title, dismissId }) {
             {title && <span className="font-bold">{title}. </span>}{text}
           </p>
           <button onClick={dismiss} className="text-ninja-muted hover:text-ninja-navy transition-colors flex-shrink-0" aria-label="Dismiss announcement">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <XIcon className="w-4 h-4" />
           </button>
         </motion.div>
       )}

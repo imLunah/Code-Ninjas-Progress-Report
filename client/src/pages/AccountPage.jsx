@@ -9,6 +9,15 @@ import { ONBOARDING_ENABLED } from '../lib/features';
 import { PRESET_AVATARS } from '../lib/avatars';
 import { CARD } from '../lib/surfaces';
 import { MoonIcon, SunIcon } from '../components/ui/icons';
+import {
+  UserIcon,
+  LockIcon,
+  FlaskConicalIcon as FlaskIcon,
+  CircleQuestionMarkIcon as HelpIcon,
+  PaletteIcon,
+  ChevronRightIcon as Chevron,
+  MapPinIcon,
+} from 'lucide-react';
 
 // Desktop gets a settings rail + pane; the phone keeps the single scroll.
 // Matched in JS rather than with `lg:hidden` on both layouts, so only one of
@@ -28,38 +37,6 @@ function useIsDesktop() {
 const FIELD =
   'w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue';
 const LABEL = 'block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1.5';
-
-const UserIcon = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
-  </svg>
-);
-const LockIcon = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" />
-  </svg>
-);
-const FlaskIcon = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M9 3h6M10 3v6.5L5 18a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-8.5V3" /><path d="M7.5 14h9" />
-  </svg>
-);
-const HelpIcon = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />
-  </svg>
-);
-const PaletteIcon = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <circle cx="13.5" cy="6.5" r="1" /><circle cx="17.5" cy="10.5" r="1" /><circle cx="8.5" cy="7.5" r="1" /><circle cx="6.5" cy="12.5" r="1" />
-    <path d="M12 2C6.5 2 2 6 2 11a5 5 0 0 0 5 5h1.5a2 2 0 0 1 2 2 2 2 0 0 0 2 2c5.5 0 10-4.5 10-10S17.5 2 12 2z" />
-  </svg>
-);
-const Chevron = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <polyline points="9 18 15 12 9 6" />
-  </svg>
-);
 
 export default function AccountPage() {
   const { user, setUser, logout, switchLocation } = useAuth();
@@ -194,9 +171,7 @@ export default function AccountPage() {
 
   const forcedBanner = isForced && (
     <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3">
-      <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-      </svg>
+      <LockIcon className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
       <div>
         <p className="text-amber-800 font-ninja font-semibold text-sm">Password reset required</p>
         <p className="text-amber-700 font-ninja text-xs mt-0.5">Your password was reset by an admin. Set a new password to continue.</p>
@@ -329,7 +304,7 @@ export default function AccountPage() {
       ) : (
         <div className="flex items-center gap-3">
           <span className="w-9 h-9 rounded-xl bg-ninja-bg text-ninja-blue flex items-center justify-center flex-shrink-0">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+            <MapPinIcon width="17" height="17" />
           </span>
           <p className="text-ninja-navy font-ninja font-semibold text-sm truncate">{user?.activeLocation?.name ?? '—'}</p>
         </div>

@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import LazyMarkdownEditor from '../shared/LazyMarkdownEditor';
+import { PlusIcon } from 'lucide-react';
 
 // Markdown for note bodies. Inherits the note's own text color (currentColor)
 // so bold/lists/links match each sticky's palette. Images dropped (text-only).
@@ -70,12 +71,6 @@ function slotAt(x, y, cols, count) {
   return clamp(row * cols + col, 0, count - 1);
 }
 
-
-const PlusIcon = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M12 5v14M5 12h14" />
-  </svg>
-);
 
 function ColorDots({ value, onChange }) {
   return (

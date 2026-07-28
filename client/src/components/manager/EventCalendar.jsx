@@ -5,6 +5,7 @@ import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import Modal from '../ui/Modal';
 import { CARD } from '../../lib/surfaces';
+import { CakeIcon as Cake, ChevronLeftIcon as ChevL, ChevronRightIcon as ChevR } from 'lucide-react';
 
 
 
@@ -27,12 +28,6 @@ export const colorFor = (type) => TYPE_COLOR[(type || '').trim().toLowerCase()] 
 const BIRTHDAY_COLOR = '#db2777';
 const BIRTHDAY_TINT = 'rgba(219, 39, 119, 0.14)';
 
-const Cake = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M12 3.5v2M8.5 5v.5M15.5 5v.5M4 13.5c1.2 0 1.2 1 2.4 1s1.2-1 2.4-1 1.2 1 2.4 1 1.2-1 2.4-1 1.2 1 2.4 1 1.2-1 2.4-1M5 20V12a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8M3.5 20h17" />
-  </svg>
-);
-
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'];
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -50,8 +45,6 @@ const longDate = (dIso) => {
   return `${MONTHS[m - 1]} ${d}, ${y}`;
 };
 
-const ChevL = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m15 18-6-6 6-6" /></svg>);
-const ChevR = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m9 18 6-6-6-6" /></svg>);
 
 
 /* ---------------------------------------------------------------- form --- */

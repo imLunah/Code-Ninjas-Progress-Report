@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronRightIcon } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import { api } from '../api/client';
 import { PROGRAM_LOGOS, BELTS } from '../utils/beltConfig';
@@ -103,13 +104,11 @@ function ModuleCard({ mod, accentColor, isCreate, index }) {
             className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center"
             style={{ backgroundColor: open ? accentColor + '28' : 'transparent' }}
           >
-            <svg
+            <ChevronRightIcon
               className="w-3.5 h-3.5"
               style={{ color: open ? accentColor : '#8a9bb8' }}
-              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
+              strokeWidth={2.5}
+            />
           </motion.div>
           <span className="font-ninja font-bold text-sm text-ninja-navy truncate">{mod.module_name}</span>
         </div>

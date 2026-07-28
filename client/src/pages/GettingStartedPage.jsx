@@ -1,20 +1,32 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  SmilePlusIcon,
+  ClipboardCheckIcon,
+  PencilIcon,
+  TrendingUpIcon,
+  UsersIcon,
+  UserPlusIcon,
+  ChartNoAxesColumnIncreasingIcon,
+  UsersRoundIcon,
+  RocketIcon,
+} from 'lucide-react';
 import Lottie from 'lottie-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 
+// Screen glyphs, by the key each screen carries.
 const ICONS = {
-  wave: 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zM8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01',
-  checkin: 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
-  log: 'M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z',
-  progress: 'M3 3v18h18M7 14l3-3 3 3 5-5',
-  clubs: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
-  roster: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 11h-6M19 8v6',
-  reports: 'M21 21H3M7 21V11M12 21V5M17 21v-7',
-  staff: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM19 8v6M22 11h-6',
-  rocket: 'M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z',
+  wave: SmilePlusIcon,
+  checkin: ClipboardCheckIcon,
+  log: PencilIcon,
+  progress: TrendingUpIcon,
+  clubs: UsersIcon,
+  roster: UserPlusIcon,
+  reports: ChartNoAxesColumnIncreasingIcon,
+  staff: UsersRoundIcon,
+  rocket: RocketIcon,
 };
 
 // Each screen: media is tried first; falls back to the icon if the asset is missing.
@@ -36,11 +48,8 @@ const MANAGER = [
 ];
 
 function FallbackIcon({ name }) {
-  return (
-    <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-ninja-blue">
-      <path d={ICONS[name] || ICONS.rocket} />
-    </svg>
-  );
+  const Glyph = ICONS[name] || ICONS.rocket;
+  return <Glyph width={72} height={72} strokeWidth={1.6} className="text-ninja-blue" />;
 }
 
 function OnboardingMedia({ screen }) {

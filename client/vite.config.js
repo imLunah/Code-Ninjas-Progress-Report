@@ -1,3 +1,4 @@
+import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -5,6 +6,9 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      // shadcn's convention. Components pulled from the registry import from
+      // `@/lib/utils`, so the alias has to exist for them to resolve.
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
       // Full lottie-web uses eval() (expressions support), which our CSP
       // script-src correctly blocks. The light player is eval-free; our
       // animations don't use expressions. Do NOT add 'unsafe-eval' to CSP.
@@ -35,6 +39,9 @@ export default defineConfig({
           'supabase': ['@supabase/supabase-js'],
           'emoji': ['emoji-picker-react'],
           'markdown': ['react-markdown', 'remark-gfm'],
+          // Shared by the dashboard and Reports. Left in their route chunks it
+          // would be downloaded twice and cached separately.
+          'charts': ['recharts'],
           'csv': ['papaparse'],
           'crop': ['react-easy-crop'],
         }

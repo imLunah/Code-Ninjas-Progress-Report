@@ -1,5 +1,6 @@
 import { PROGRAM_LOGOS } from '../../utils/beltConfig';
 import BeltIcon from './BeltIcon';
+import { GraduationCapIcon } from 'lucide-react';
 
 // Program class tags keep their OWN fixed identity colors — they do NOT follow
 // the theme accent: JR = purple, Robotics + AI + CREATE = blue. No pill box —
@@ -86,10 +87,7 @@ export function ProgramAvatar({ program, belt, items, size = 'md' }) {
   }
   return (
     <div title="Class not set" className={`${s.cls} flex-shrink-0 flex items-center justify-center text-ninja-muted`}>
-      <svg className="w-2/3 h-2/3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l6.16-3.42A12 12 0 0112 21a12 12 0 01-6.16-10.42L12 14z" />
-      </svg>
+      <GraduationCapIcon className="w-2/3 h-2/3" />
     </div>
   );
 }

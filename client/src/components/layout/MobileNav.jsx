@@ -8,24 +8,17 @@ const GLASS = 'border border-white/20 dark:border-white/12 bg-white/[0.04] dark:
 // Liquid-glass backdrop: warps the content behind it (Chromium); iOS Safari falls back to blur.
 const REFRACT = { backdropFilter: 'url(#liquidGlass) blur(1px) saturate(1.6)', WebkitBackdropFilter: 'blur(1px) saturate(1.6)' };
 
-function TabIcon({ iconId, svg, profilePicUrl, initials, active }) {
-  // Tabs without flat art draw their glyph inline. Stroke colour is a theme
-  // token, not white: the capsule is near-transparent, so in light mode a
-  // white icon would sit on a white page.
-  if (svg) {
+function TabIcon({ iconId, Glyph, profilePicUrl, initials, active }) {
+  // Tabs without flat art draw a lucide glyph. Stroke colour is a theme token,
+  // not white: the capsule is near-transparent, so in light mode a white icon
+  // would sit on a white page.
+  if (Glyph) {
     return (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
+      <Glyph
         strokeWidth={1.9}
-        strokeLinecap="round"
-        strokeLinejoin="round"
         aria-hidden
         className={`w-6 h-6 text-ninja-navy transition-opacity duration-200 ${active ? 'drop-shadow-[0_1px_3px_rgba(0,0,0,0.25)]' : 'opacity-45'}`}
-      >
-        <path d={svg} />
-      </svg>
+      />
     );
   }
   if (iconId === null) {
@@ -119,7 +112,7 @@ export default function MobileNav({ compact = false, onBeforeNavigate }) {
                 >
                   <TabIcon
                     iconId={tab.iconId}
-                    svg={tab.svg}
+                    Glyph={tab.Glyph}
                     profilePicUrl={user.profilePicUrl}
                     initials={initials}
                     active={active}
