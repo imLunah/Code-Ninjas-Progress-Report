@@ -141,9 +141,11 @@ export default function SenseiProfileModal({
               >
                 <p className="text-ninja-navy font-ninja font-bold text-xl leading-tight">{sensei.display_name}</p>
                 <p className="text-ninja-muted font-ninja text-sm mt-0.5">@{sensei.username}</p>
-                <span className="inline-block mt-2 px-2.5 py-0.5 bg-ninja-blue/30 border border-ninja-blue/40 rounded-full text-ninja-blue text-[10px] font-ninja font-bold uppercase tracking-wider">
+                {/* Plain line, not an uppercase pill. The role is a fact about
+                    this person, not a status that needs a coloured badge. */}
+                <p className="text-ninja-muted font-ninja text-sm mt-1">
                   {sensei.role === 'manager' ? 'Center Director' : 'Sensei'}
-                </span>
+                </p>
               </motion.div>
             </div>
 
@@ -185,7 +187,7 @@ export default function SenseiProfileModal({
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {centerNames.map((name) => (
-                    <span key={name} className="inline-block px-2.5 py-0.5 bg-ninja-blue/10 border border-ninja-blue/20 rounded-full text-ninja-blue text-xs font-ninja font-semibold">
+                    <span key={name} className="inline-block px-2.5 py-0.5 bg-ninja-bg border border-ninja-border rounded-full text-ninja-navy text-xs font-ninja font-semibold">
                       {name}
                     </span>
                   ))}

@@ -216,7 +216,7 @@ export default function RoadmapModal({ open, onClose, student, enrollment, onUpd
                     )}
                     <span className="font-ninja font-bold text-ninja-navy text-sm truncate">{mod.module_name}</span>
                     {isCurrent && (
-                      <span className="shrink-0 text-xs font-ninja font-semibold text-ninja-blue border border-ninja-blue/30 bg-ninja-blue/10 px-2 py-0.5 rounded-full">
+                      <span className="shrink-0 font-ninja text-xs font-semibold text-ninja-blue">
                         Current
                       </span>
                     )}
