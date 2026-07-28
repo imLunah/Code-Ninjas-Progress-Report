@@ -344,7 +344,15 @@ export default function Layout({ children }) {
       <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
         {user?.announcement && <AnnouncementBanner text={user.announcement} />}
         {!isPreview && <LocationAnnouncements />}
-        <main onScroll={handleMainScroll} className="flex-1 overflow-y-auto min-h-0 max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 pt-[max(env(safe-area-inset-top),1.25rem)] lg:pt-8 pb-28 lg:pb-8">
+        {/* overflow-y-auto is the mobile app shell's scroller (the wrapper is
+            fixed inset-0 there). On desktop the wrapper is static and main
+            stretches to its content, so main never actually scrolls — the
+            document does. Leaving overflow-y-auto on regardless made main the
+            nearest scrollport for position:sticky, and a scrollport that never
+            scrolls gives sticky nothing to stick to, which killed sticky on
+            every desktop page. handleMainScroll only feeds MobileNav, so it
+            costs nothing to drop the scroller at lg. */}
+        <main onScroll={handleMainScroll} className="flex-1 overflow-y-auto lg:overflow-visible min-h-0 max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 pt-[max(env(safe-area-inset-top),1.25rem)] lg:pt-8 pb-28 lg:pb-8">
           <div className="relative overflow-x-hidden overflow-y-hidden lg:overflow-x-visible lg:overflow-y-visible">
             {prevTab && (
               <AdjacentPanel key={prevTab.to} tab={prevTab} panelRef={prevPanelRef} side="left" />
