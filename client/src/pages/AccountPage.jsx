@@ -472,13 +472,16 @@ export default function AccountPage() {
         <div className="mx-auto w-full max-w-5xl">
           <h1 className="font-ninja font-black text-2xl text-ninja-navy tracking-tight mb-6">Settings</h1>
 
-          <div className="grid grid-cols-[240px_1fr] gap-10 items-start">
+          {/* No items-start on the grid: that shrinks each column to its own
+              content height, which leaves a sticky child nowhere to travel.
+              The column stretches, and the sticky element lives inside it. */}
+          <div className="grid grid-cols-[240px_1fr] gap-10">
             {/* Rail. Sticky against <main>, which is the scroll container, so
                 the sections and Sign Out stay put while a long pane scrolls
-                past. It scrolls itself if it ever outgrows the viewport.
-                Active state is a background tint and text colour only, no
-                left-edge marker. */}
-            <div className="space-y-6 sticky top-8 self-start max-h-[calc(100dvh-5rem)] overflow-y-auto">
+                past. Active state is a background tint and text colour only,
+                no left-edge marker. */}
+            <div>
+            <div className="space-y-6 sticky top-8 max-h-[calc(100dvh-5rem)] overflow-y-auto">
             <nav aria-label="Settings sections" className="space-y-6">
               {GROUPS.map((group) => (
                 <div key={group.title}>
@@ -511,6 +514,7 @@ export default function AccountPage() {
 
             </nav>
               <div className="pt-4 border-t border-ninja-border">{signOut}</div>
+            </div>
             </div>
 
             {/* Pane */}
