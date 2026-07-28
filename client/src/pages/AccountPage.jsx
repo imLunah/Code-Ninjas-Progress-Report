@@ -29,8 +29,6 @@ const CARD = 'bg-white border border-ninja-border rounded-2xl shadow-sm';
 const FIELD =
   'w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue';
 const LABEL = 'block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1.5';
-const FOCUS_RING =
-  'focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue';
 
 const UserIcon = (p) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
@@ -212,7 +210,7 @@ export default function AccountPage() {
               type="button"
               onClick={() => handlePresetSelect(src)}
               disabled={savingAvatar}
-              className={`relative w-14 h-14 rounded-full overflow-hidden border-2 transition-all hover:scale-105 disabled:opacity-50 ${FOCUS_RING} ${
+              className={`relative w-14 h-14 rounded-full overflow-hidden border-2 transition-all hover:scale-105 disabled:opacity-50 ${
                 isActive ? 'border-ninja-blue ring-2 ring-ninja-blue/30' : 'border-ninja-border hover:border-ninja-blue'
               }`}
               title={label}
@@ -250,7 +248,7 @@ export default function AccountPage() {
         </div>
         <button
           type="button" role="switch" aria-checked={dark} aria-label="Toggle dark mode" onClick={toggle}
-          className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${FOCUS_RING} ${dark ? 'bg-ninja-blue' : 'bg-ninja-border'}`}
+          className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${dark ? 'bg-ninja-blue' : 'bg-ninja-border'}`}
         >
           <motion.span layout transition={{ type: 'spring', stiffness: 500, damping: 32 }}
             className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${dark ? 'right-1' : 'left-1'}`} />
@@ -274,7 +272,7 @@ export default function AccountPage() {
         <button
           type="button" role="switch" aria-checked={experimental} aria-label="Toggle experimental features"
           onClick={() => setExperimental(!experimental)}
-          className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${FOCUS_RING} ${experimental ? 'bg-ninja-blue' : 'bg-ninja-border'}`}
+          className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${experimental ? 'bg-ninja-blue' : 'bg-ninja-border'}`}
         >
           <motion.span layout transition={{ type: 'spring', stiffness: 500, damping: 32 }}
             className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${experimental ? 'right-1' : 'left-1'}`} />
@@ -293,7 +291,7 @@ export default function AccountPage() {
             <button
               type="button"
               onClick={() => navigate('/appearance')}
-              className={`mt-4 w-full flex items-center justify-between rounded-xl border border-ninja-border p-3 text-left transition-[transform,border-color] duration-150 ease-[var(--ease-out)] hover:border-ninja-blue/50 active:scale-[0.98] ${FOCUS_RING}`}
+              className="mt-4 w-full flex items-center justify-between rounded-xl border border-ninja-border p-3 text-left transition-[transform,border-color] duration-150 ease-[var(--ease-out)] hover:border-ninja-blue/50 active:scale-[0.98]"
             >
               <div className="flex items-center gap-3">
                 <span className="w-9 h-9 rounded-xl flex items-center justify-center text-ninja-blue bg-ninja-blue/10">
@@ -365,7 +363,7 @@ export default function AccountPage() {
     <button
       type="submit"
       disabled={saving}
-      className={`w-full bg-ninja-blue text-white font-ninja font-bold text-sm py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 ${FOCUS_RING}`}
+      className="w-full bg-ninja-blue text-white font-ninja font-bold text-sm py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
     >
       {saving ? 'Saving...' : 'Save Changes'}
     </button>
@@ -407,7 +405,7 @@ export default function AccountPage() {
   const signOut = (
     <button
       onClick={async () => { try { await logout(); } catch { /* sign out locally anyway */ } navigate('/login'); }}
-      className={`w-full border border-ninja-red text-ninja-red font-ninja font-semibold text-sm py-2.5 rounded-xl hover:bg-red-50 transition-colors ${FOCUS_RING}`}
+      className="w-full border border-ninja-red text-ninja-red font-ninja font-semibold text-sm py-2.5 rounded-xl hover:bg-red-50 transition-colors"
     >
       Sign Out
     </button>
@@ -480,7 +478,7 @@ export default function AccountPage() {
                           type="button"
                           onClick={() => setSection(key)}
                           aria-current={active ? 'page' : undefined}
-                          className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left font-ninja text-sm font-semibold transition-colors ${FOCUS_RING} ${
+                          className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left font-ninja text-sm font-semibold transition-colors ${
                             active
                               ? 'bg-ninja-bg text-ninja-navy'
                               : 'text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg/60'

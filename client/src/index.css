@@ -77,6 +77,32 @@ body {
   font-family: 'Nunito', sans-serif;
 }
 
+/* ── Keyboard focus ──
+   One global rule instead of a focus class per component. Nothing in the app
+   showed a focus marker before this, so tabbing was invisible everywhere.
+   :focus-visible only, so a mouse click never draws a ring. The accent token
+   keeps it in step with whatever accent the user picked. */
+:focus-visible {
+  outline: 2px solid rgb(var(--ninja-blue));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Elements that already carry their own radius keep it, so the ring hugs the
+   shape rather than boxing a pill or a circle in a rounded square. */
+.rounded-full:focus-visible { border-radius: 9999px; }
+.rounded-2xl:focus-visible { border-radius: 1rem; }
+.rounded-xl:focus-visible  { border-radius: 0.75rem; }
+.rounded-lg:focus-visible  { border-radius: 0.5rem; }
+
+/* Text inputs signal focus with a border colour change already; a ring on top
+   is a double marker. */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
 /* ── Smooth theme transition (only fires during the toggle) ── */
 .theme-transitioning *,
 .theme-transitioning *::before,

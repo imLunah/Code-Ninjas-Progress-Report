@@ -40,6 +40,7 @@ export default function ClubSessionPage() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [attendeeSearch, setAttendeeSearch] = useState('');
   const [savingAttendees, setSavingAttendees] = useState(false);
+  const [attendeeError, setAttendeeError] = useState('');
 
   useEffect(() => {
     // Resolve slug → club definition
@@ -71,13 +72,15 @@ export default function ClubSessionPage() {
 
   const handleSaveAttendees = async () => {
     setSavingAttendees(true);
+    setAttendeeError('');
     try {
       await api.patch(`/clubs/${id}/attendees`, { student_ids: [...selectedIds] });
       const updated = allStudents.filter((s) => selectedIds.has(s.id)).map((s) => ({ id: s.id, full_name: s.full_name }));
       setSession((prev) => ({ ...prev, attendees: updated }));
       setEditingAttendees(false);
     } catch {
-      alert('Failed to save attendees. Please try again.');
+      // alert() is silent when the app runs standalone from the home screen.
+      setAttendeeError("Couldn't save attendees. Please try again.");
     } finally {
       setSavingAttendees(false);
     }
@@ -172,6 +175,9 @@ export default function ClubSessionPage() {
                   setSelectedIds(new Set((session.attendees || []).map((a) => a.id)));
                 }}>Cancel</Button>
               </div>
+              {attendeeError && (
+                <p role="alert" className="font-ninja text-xs text-ninja-red">{attendeeError}</p>
+              )}
             </div>
           ) : (
             session.attendees?.length === 0 ? (

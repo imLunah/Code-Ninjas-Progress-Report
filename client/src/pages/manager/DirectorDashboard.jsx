@@ -69,10 +69,6 @@ const CARD =
   'rounded-2xl bg-white border border-ninja-border shadow-sm ' +
   'dark:shadow-[0_10px_34px_rgb(0_0_0/0.32)] ring-1 ring-transparent dark:ring-white/[0.05]';
 
-// Keyboard focus had no visible marker anywhere on this page. Ring only on
-// focus-visible so it never fires on a mouse click.
-const FOCUS_RING =
-  'focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue';
 
 // Loading placeholders shaped like the thing that's coming, instead of the word
 // "Loading…" — the card keeps its height so nothing jumps when data lands.
@@ -391,7 +387,7 @@ function CheckInTrend({ dayRows, onExpand }) {
       <button
         onClick={onExpand}
         aria-label="Expand check-ins"
-        className={`block w-full text-left group origin-center rounded-lg transition-transform duration-150 ease-[var(--ease-out)] active:scale-[0.99] ${FOCUS_RING}`}
+        className="block w-full text-left group origin-center rounded-lg transition-transform duration-150 ease-[var(--ease-out)] active:scale-[0.99]"
       >
         <div className="flex items-baseline justify-between mb-2">
           <span className="font-ninja text-sm text-ninja-navy font-semibold">
@@ -478,7 +474,7 @@ function CheckInDetail({ dayRows }) {
             key={r.key}
             onClick={() => setRangeKey(r.key)}
             aria-pressed={rangeKey === r.key}
-            className={`font-ninja text-sm font-semibold px-3 py-1.5 rounded-full transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-95 ${FOCUS_RING} ${
+            className={`font-ninja text-sm font-semibold px-3 py-1.5 rounded-full transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-95 ${
               rangeKey === r.key
                 ? 'bg-ninja-blue text-white'
                 : 'bg-ninja-bg text-ninja-muted hover:text-ninja-navy'
@@ -608,7 +604,7 @@ function QuickLinks() {
         >
           <Link
             to={t.to}
-            className={`group inline-flex items-center gap-2 font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-navy underline-offset-[6px] hover:underline decoration-ninja-blue/40 transition-colors rounded ${FOCUS_RING}`}
+            className="group inline-flex items-center gap-2 font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-navy underline-offset-[6px] hover:underline decoration-ninja-blue/40 transition-colors rounded"
           >
             <t.Icon className="w-4 h-4 flex-shrink-0 text-ninja-muted group-hover:text-ninja-blue transition-colors" />
             {t.label}

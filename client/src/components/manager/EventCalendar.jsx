@@ -9,10 +9,6 @@ const CARD =
   'rounded-2xl bg-white border border-ninja-border shadow-sm ' +
   'dark:shadow-[0_10px_34px_rgb(0_0_0/0.32)] ring-1 ring-transparent dark:ring-white/[0.05]';
 
-// Nothing on this grid showed keyboard focus, and every day cell and chip is
-// reachable by tab. Ring only on focus-visible so mouse users never see it.
-const FOCUS_RING =
-  'focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue';
 
 // Type is free text. These are just suggestions + known colors; anything else
 // falls back to a neutral chip. Avoids the pinned program hues (JR purple, VR
@@ -112,20 +108,20 @@ function EventForm({ initial, canDelete, onSave, onDelete, onCancel, busy }) {
           confirmDel ? (
             <div className="flex items-center gap-2">
               <button onClick={onDelete} disabled={busy}
-                className={`font-ninja text-sm font-bold px-3 py-2 rounded-lg bg-ninja-red text-white transition-transform duration-150 ease-[var(--ease-out)] active:scale-95 ${FOCUS_RING}`}>Delete</button>
-              <button onClick={() => setConfirmDel(false)} className={`font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-navy rounded ${FOCUS_RING}`}>Keep</button>
+                className="font-ninja text-sm font-bold px-3 py-2 rounded-lg bg-ninja-red text-white transition-transform duration-150 ease-[var(--ease-out)] active:scale-95">Delete</button>
+              <button onClick={() => setConfirmDel(false)} className="font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-navy rounded">Keep</button>
             </div>
           ) : (
-            <button onClick={() => setConfirmDel(true)} className={`font-ninja text-sm font-bold text-ninja-red hover:underline rounded ${FOCUS_RING}`}>Delete</button>
+            <button onClick={() => setConfirmDel(true)} className="font-ninja text-sm font-bold text-ninja-red hover:underline rounded">Delete</button>
           )
         ) : <span />}
 
         <div className="flex items-center gap-2">
-          <button onClick={onCancel} className={`font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-navy px-2 py-2 rounded ${FOCUS_RING}`}>Cancel</button>
+          <button onClick={onCancel} className="font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-navy px-2 py-2 rounded">Cancel</button>
           <button
             onClick={() => onSave({ title, event_date: date, event_time: time, type, description })}
             disabled={busy || !canSave}
-            className={`font-ninja text-sm font-bold px-4 py-2 rounded-lg bg-ninja-blue text-white transition-transform duration-150 ease-[var(--ease-out)] active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 ${FOCUS_RING}`}>
+            className="font-ninja text-sm font-bold px-4 py-2 rounded-lg bg-ninja-blue text-white transition-transform duration-150 ease-[var(--ease-out)] active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100">
             {initial.id ? 'Save' : 'Add event'}
           </button>
         </div>
@@ -237,7 +233,7 @@ export default function EventCalendar({ canManage = true }) {
         </div>
         {canManage && (
           <button type="button" onClick={() => openAdd(tIso)}
-            className={`font-ninja text-sm font-bold text-ninja-blue hover:underline rounded ${FOCUS_RING}`}>+ New event</button>
+            className="font-ninja text-sm font-bold text-ninja-blue hover:underline rounded">+ New event</button>
         )}
       </div>
 
@@ -245,9 +241,9 @@ export default function EventCalendar({ canManage = true }) {
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-ninja font-bold text-ninja-navy">{MONTHS[m]} {y}</h3>
         <div className="flex items-center gap-1">
-          <button type="button" onClick={goToday} className={`font-ninja text-xs font-bold text-ninja-muted hover:text-ninja-navy px-2.5 py-1 rounded-full hover:bg-ninja-bg transition-colors ${FOCUS_RING}`}>Today</button>
-          <button type="button" onClick={() => shift(-1)} aria-label="Previous month" className={`w-8 h-8 flex items-center justify-center rounded-full text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-90 ${FOCUS_RING}`}><ChevL className="w-4 h-4" /></button>
-          <button type="button" onClick={() => shift(1)} aria-label="Next month" className={`w-8 h-8 flex items-center justify-center rounded-full text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-90 ${FOCUS_RING}`}><ChevR className="w-4 h-4" /></button>
+          <button type="button" onClick={goToday} className="font-ninja text-xs font-bold text-ninja-muted hover:text-ninja-navy px-2.5 py-1 rounded-full hover:bg-ninja-bg transition-colors">Today</button>
+          <button type="button" onClick={() => shift(-1)} aria-label="Previous month" className="w-8 h-8 flex items-center justify-center rounded-full text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-90"><ChevL className="w-4 h-4" /></button>
+          <button type="button" onClick={() => shift(1)} aria-label="Next month" className="w-8 h-8 flex items-center justify-center rounded-full text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-90"><ChevR className="w-4 h-4" /></button>
         </div>
       </div>
 
@@ -279,7 +275,7 @@ export default function EventCalendar({ canManage = true }) {
               onClick={() => openAdd(dIso)}
               className={`group relative min-h-[68px] rounded-lg border p-1.5 text-left align-top transition-colors ${
                 isToday ? 'border-ninja-blue bg-ninja-blue/5' : 'border-transparent hover:border-ninja-border'
-              } ${canManage ? 'hover:bg-ninja-bg cursor-pointer' : 'cursor-default'} ${FOCUS_RING}`}
+              } ${canManage ? 'hover:bg-ninja-bg cursor-pointer' : 'cursor-default'}`}
             >
               <span className={`font-ninja text-xs font-bold tabular-nums ${isToday ? 'text-ninja-blue' : 'text-ninja-navy'}`}>{day}</span>
               <div className="mt-1 space-y-0.5">
@@ -291,7 +287,7 @@ export default function EventCalendar({ canManage = true }) {
                     onClick={(e) => { e.stopPropagation(); openEdit(ev); }}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); openEdit(ev); } }}
                     title={ev.title}
-                    className={`block truncate rounded px-1 py-0.5 font-ninja text-[10px] font-semibold text-white leading-tight cursor-pointer ${FOCUS_RING}`}
+                    className="block truncate rounded px-1 py-0.5 font-ninja text-[10px] font-semibold text-white leading-tight cursor-pointer"
                     style={{ backgroundColor: colorFor(ev.type) }}
                   >
                     {ev.title}
@@ -305,7 +301,7 @@ export default function EventCalendar({ canManage = true }) {
                     onClick={(e) => { e.stopPropagation(); navigate(`/manager/students/${b.id}`); }}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); navigate(`/manager/students/${b.id}`); } }}
                     title={`${b.full_name}'s birthday`}
-                    className={`flex items-center gap-1 rounded px-1 py-0.5 font-ninja text-[10px] font-semibold leading-tight cursor-pointer ${FOCUS_RING}`}
+                    className="flex items-center gap-1 rounded px-1 py-0.5 font-ninja text-[10px] font-semibold leading-tight cursor-pointer"
                     style={{ backgroundColor: BIRTHDAY_TINT, color: BIRTHDAY_COLOR }}
                   >
                     <Cake className="w-2.5 h-2.5 flex-shrink-0" />
@@ -318,7 +314,7 @@ export default function EventCalendar({ canManage = true }) {
                     tabIndex={0}
                     onClick={(e) => { e.stopPropagation(); setDayView(dIso); }}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setDayView(dIso); } }}
-                    className={`block font-ninja text-[10px] font-bold text-ninja-muted hover:text-ninja-navy px-1 cursor-pointer rounded ${FOCUS_RING}`}
+                    className="block font-ninja text-[10px] font-bold text-ninja-muted hover:text-ninja-navy px-1 cursor-pointer rounded"
                   >
                     +{hidden} more
                   </span>

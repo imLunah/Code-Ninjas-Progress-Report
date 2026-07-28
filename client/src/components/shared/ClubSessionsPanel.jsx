@@ -45,6 +45,9 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
   const [attendeeSearch, setAttendeeSearch] = useState('');
   const [draftAttendeeIds, setDraftAttendeeIds] = useState(new Set());
   const [savingAttendees, setSavingAttendees] = useState(false);
+  // alert() is silent when the app runs standalone from the home screen, so a
+  // failed save used to show nothing at all. Keyed by session id.
+  const [actionError, setActionError] = useState(null);
 
   const startEditAttendees = async (session) => {
     setEditingAttendeesId(session.id);
@@ -72,6 +75,7 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
 
   const saveAttendees = async (session) => {
     setSavingAttendees(true);
+    setActionError(null);
     try {
       await api.patch(`/clubs/${session.id}/attendees`, { student_ids: [...draftAttendeeIds] });
       // Only derive display names from allStudents if it has actually loaded — otherwise
@@ -82,18 +86,19 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
       if (updatedAttendees !== null) onAttendeesUpdated && onAttendeesUpdated(session.id, updatedAttendees);
       setEditingAttendeesId(null);
     } catch {
-      alert('Failed to save attendees. Please try again.');
+      setActionError({ id: session.id, message: "Couldn't save attendees. Please try again." });
     } finally {
       setSavingAttendees(false);
     }
   };
 
   const handleDelete = async (id) => {
+    setActionError(null);
     try {
       await api.delete(`/clubs/${id}`);
       onDeleted && onDeleted(id);
     } catch {
-      alert('Failed to delete session. Please try again.');
+      setActionError({ id, message: "Couldn't delete this session. Please try again." });
     } finally {
       setConfirmId(null);
     }
@@ -249,6 +254,9 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
                         </Button>
                         <Button size="sm" variant="secondary" onClick={() => setEditingAttendeesId(null)}>Cancel</Button>
                       </div>
+                      {actionError?.id === s.id && (
+                        <p role="alert" className="font-ninja text-xs text-ninja-red">{actionError.message}</p>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -289,6 +297,10 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
                     <Button variant="danger" size="sm" onClick={() => handleDelete(s.id)}>Confirm</Button>
                     <Button variant="secondary" size="sm" onClick={() => setConfirmId(null)}>Cancel</Button>
                   </div>
+                )}
+
+                {actionError?.id === s.id && editingAttendeesId !== s.id && (
+                  <p role="alert" className="font-ninja text-xs text-ninja-red">{actionError.message}</p>
                 )}
                 </div>
               </div>

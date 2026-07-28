@@ -70,8 +70,6 @@ function slotAt(x, y, cols, count) {
   return clamp(row * cols + col, 0, count - 1);
 }
 
-const FOCUS_RING =
-  'focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue';
 
 const PlusIcon = (p) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
@@ -88,7 +86,7 @@ function ColorDots({ value, onChange }) {
           type="button"
           onClick={() => onChange(c)}
           aria-label={c}
-          className={`w-5 h-5 rounded-full transition-transform hover:scale-110 ${FOCUS_RING}`}
+          className="w-5 h-5 rounded-full transition-transform hover:scale-110"
           style={{ backgroundColor: COLORS[c].bg, boxShadow: value === c ? `0 0 0 2px ${COLORS[c].ring}` : 'none' }}
         />
       ))}
@@ -221,8 +219,8 @@ function NoteCard({ note, canManage, onSaved, onDeleted, board, onDragToSlot, on
                 </div>
               ) : (
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <button onClick={() => setEditing(true)} className={`font-ninja text-[11px] font-bold opacity-70 hover:opacity-100 rounded ${FOCUS_RING}`}>Edit</button>
-                  <button onClick={() => setConfirmDel(true)} className={`font-ninja text-[11px] font-bold opacity-70 hover:opacity-100 rounded ${FOCUS_RING}`}>Delete</button>
+                  <button onClick={() => setEditing(true)} className="font-ninja text-[11px] font-bold opacity-70 hover:opacity-100 rounded">Edit</button>
+                  <button onClick={() => setConfirmDel(true)} className="font-ninja text-[11px] font-bold opacity-70 hover:opacity-100 rounded">Delete</button>
                 </div>
               )
             )}
@@ -326,7 +324,7 @@ export default function DirectorStickyNotes() {
           <p className="font-ninja text-xs text-ninja-muted">Shared with the directors at this center</p>
         </div>
         {!adding && (
-          <button type="button" onClick={() => setAdding(true)} className={`flex-shrink-0 font-ninja text-sm font-bold text-ninja-blue hover:underline underline-offset-4 rounded ${FOCUS_RING}`}>Add note</button>
+          <button type="button" onClick={() => setAdding(true)} className="flex-shrink-0 font-ninja text-sm font-bold text-ninja-blue hover:underline underline-offset-4 rounded">Add note</button>
         )}
       </div>
 
@@ -369,7 +367,7 @@ export default function DirectorStickyNotes() {
           type="button"
           onClick={() => setAdding(true)}
           style={{ height: NOTE_H }}
-          className={`group w-full sm:w-[248px] rounded-xl border border-dashed border-ninja-border p-3.5 flex flex-col items-start justify-center text-left transition-colors hover:border-ninja-blue/60 ${FOCUS_RING}`}
+          className="group w-full sm:w-[248px] rounded-xl border border-dashed border-ninja-border p-3.5 flex flex-col items-start justify-center text-left transition-colors hover:border-ninja-blue/60"
         >
           <span className="w-9 h-9 rounded-full border border-dashed border-ninja-border group-hover:border-ninja-blue/60 flex items-center justify-center text-ninja-muted group-hover:text-ninja-blue transition-colors">
             <PlusIcon className="w-4 h-4" />
