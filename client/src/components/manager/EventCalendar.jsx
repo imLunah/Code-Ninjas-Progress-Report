@@ -52,7 +52,6 @@ const longDate = (dIso) => {
 
 const ChevL = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m15 18-6-6 6-6" /></svg>);
 const ChevR = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m9 18 6-6-6-6" /></svg>);
-const ChevD = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m6 9 6 6 6-6" /></svg>);
 
 
 /* ---------------------------------------------------------------- form --- */
@@ -132,9 +131,9 @@ function EventForm({ initial, canDelete, onSave, onDelete, onCancel, busy }) {
 
 /* ------------------------------------------------------------ calendar --- */
 
-// `onClose` adds a dismiss control to the header, for callers that show the
-// calendar as a panel they opened.
-export default function EventCalendar({ canManage = true, onClose }) {
+// `bare` drops the card surface and the title row, for callers that host the
+// calendar inside a dialog that already supplies both.
+export default function EventCalendar({ canManage = true, bare = false }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
@@ -228,29 +227,25 @@ export default function EventCalendar({ canManage = true, onClose }) {
   };
 
   return (
-    <div className={`${CARD} p-5`}>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="font-ninja font-bold text-ninja-navy text-lg">Calendar</h2>
-          <p className="font-ninja text-xs text-ninja-muted">Events and ninja birthdays at this center</p>
-        </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
+    <div className={bare ? '' : `${CARD} p-5`}>
+      {!bare && (
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-ninja font-bold text-ninja-navy text-lg">Calendar</h2>
+            <p className="font-ninja text-xs text-ninja-muted">Events and ninja birthdays at this center</p>
+          </div>
           {canManage && (
             <button type="button" onClick={() => openAdd(tIso)}
-              className="font-ninja text-sm font-bold text-ninja-blue hover:underline rounded">+ New event</button>
-          )}
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close calendar"
-              className="w-8 h-8 flex items-center justify-center rounded-full text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg transition-colors"
-            >
-              <ChevD className="w-4 h-4" />
-            </button>
+              className="flex-shrink-0 font-ninja text-sm font-bold text-ninja-blue hover:underline rounded">+ New event</button>
           )}
         </div>
-      </div>
+      )}
+      {bare && canManage && (
+        <div className="flex justify-end mb-3">
+          <button type="button" onClick={() => openAdd(tIso)}
+            className="font-ninja text-sm font-bold text-ninja-blue hover:underline rounded">+ New event</button>
+        </div>
+      )}
 
       {/* Month nav */}
       <div className="flex items-center justify-between mb-3">

@@ -6,14 +6,23 @@ const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), ' +
   'select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+// Dialogs can nest (a calendar dialog opening a day-detail dialog), so the
+// scroll lock is counted — the inner one closing must not unlock the page
+// while the outer one is still up.
+let scrollLocks = 0;
+
 export default function Modal({ isOpen, onClose, title, children, subheader, width = 'max-w-lg' }) {
   const panelRef = useRef(null);
   const returnFocusTo = useRef(null);
 
   useEffect(() => {
     if (!isOpen) return;
+    scrollLocks += 1;
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      scrollLocks -= 1;
+      if (scrollLocks === 0) document.body.style.overflow = '';
+    };
   }, [isOpen]);
 
   // Escape to close, and Tab cycles within the dialog rather than walking the

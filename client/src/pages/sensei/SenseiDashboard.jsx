@@ -7,6 +7,7 @@ import DashboardFilters from '../../components/shared/DashboardFilters';
 import BoardStats from '../../components/shared/BoardStats';
 import ClubSessionsPanel from '../../components/shared/ClubSessionsPanel';
 import EventCalendar from '../../components/manager/EventCalendar';
+import Modal from '../../components/ui/Modal';
 
 const CalendarIcon = (p) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" {...p}>
@@ -123,35 +124,28 @@ export default function SenseiDashboard() {
           )}
           </div>
 
-          {/* Shares a layoutId with the panel below, so pressing it morphs the
-              button into the calendar rather than swapping one for the other. */}
-          {!calendarOpen && (
-            <motion.button
-              layoutId="sensei-calendar"
-              type="button"
-              onClick={() => setCalendarOpen(true)}
-              aria-label="Open calendar"
-              aria-expanded={false}
-              className={`${CARD} flex-shrink-0 w-11 h-11 flex items-center justify-center text-ninja-muted hover:text-ninja-blue hover:border-ninja-blue/50 transition-colors`}
-            >
-              <CalendarIcon className="w-5 h-5" />
-            </motion.button>
-          )}
+          {/* Opens over the page rather than pushing the board down — the
+              calendar is a reference, not part of the check-in flow. */}
+          <button
+            type="button"
+            onClick={() => setCalendarOpen(true)}
+            aria-label="Open calendar"
+            aria-haspopup="dialog"
+            aria-expanded={calendarOpen}
+            className={`${CARD} flex-shrink-0 w-11 h-11 flex items-center justify-center text-ninja-muted hover:text-ninja-blue hover:border-ninja-blue/50 transition-colors`}
+          >
+            <CalendarIcon className="w-5 h-5" />
+          </button>
         </motion.div>
 
-        {calendarOpen && (
-          <motion.div layoutId="sensei-calendar" className="overflow-hidden">
-              {/* Fades in slightly behind the morph so the month grid doesn't
-                  appear squashed inside the button on the first frame. */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.18, delay: 0.06 }}
-            >
-              <EventCalendar canManage={false} onClose={() => setCalendarOpen(false)} />
-            </motion.div>
-          </motion.div>
-        )}
+        <Modal
+          isOpen={calendarOpen}
+          onClose={() => setCalendarOpen(false)}
+          title="Calendar"
+          width="max-w-2xl"
+        >
+          <EventCalendar canManage={false} bare />
+        </Modal>
 
         {!loading && !error && assignments.length > 0 && (
           <motion.div variants={fadeUp}>
