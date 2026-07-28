@@ -56,7 +56,6 @@ const senseiLinks = [
   { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
   { to: '/clubs', label: 'Clubs', icon: 'clubs' },
   { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
-  { to: '/manager/reports', label: 'Reports', icon: 'report' },
 ];
 
 export default function Sidebar({ onOpenBug }) {

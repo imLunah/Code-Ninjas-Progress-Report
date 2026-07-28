@@ -194,7 +194,9 @@ export default function EventCalendar({ canManage = true }) {
   const goToday = () => { const n = new Date(); setCursor({ y: n.getFullYear(), m: n.getMonth() }); };
 
   const openAdd = (dateIso) => { if (canManage) setModal({ event: { event_date: dateIso } }); };
-  const openEdit = (ev) => setModal({ event: ev });
+  // Read-only viewers get no editor: the server rejects their writes, so
+  // opening the form would be a dead end.
+  const openEdit = (ev) => { if (canManage) setModal({ event: ev }); };
 
   const save = async (payload) => {
     setBusy(true);
@@ -280,10 +282,10 @@ export default function EventCalendar({ canManage = true }) {
                 {shownEvents.map((ev) => (
                   <span
                     key={ev.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => { e.stopPropagation(); openEdit(ev); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); openEdit(ev); } }}
+                    role={canManage ? 'button' : undefined}
+                    tabIndex={canManage ? 0 : undefined}
+                    onClick={canManage ? (e) => { e.stopPropagation(); openEdit(ev); } : undefined}
+                    onKeyDown={canManage ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); openEdit(ev); } } : undefined}
                     title={ev.title}
                     className="block truncate rounded px-1 py-0.5 font-ninja text-[10px] font-semibold text-white leading-tight cursor-pointer"
                     style={{ backgroundColor: colorFor(ev.type) }}
@@ -330,8 +332,9 @@ export default function EventCalendar({ canManage = true }) {
             <button
               key={ev.id}
               type="button"
+              disabled={!canManage}
               onClick={() => { setDayView(null); openEdit(ev); }}
-              className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left hover:bg-ninja-bg transition-colors"
+              className={`w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors ${canManage ? 'hover:bg-ninja-bg' : 'cursor-default'}`}
             >
               <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: colorFor(ev.type) }} />
               <span className="font-ninja text-sm text-ninja-navy truncate flex-1">{ev.title}</span>

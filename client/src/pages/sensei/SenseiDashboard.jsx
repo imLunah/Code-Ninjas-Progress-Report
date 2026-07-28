@@ -6,7 +6,7 @@ import StudentCard from '../../components/shared/StudentCard';
 import DashboardFilters from '../../components/shared/DashboardFilters';
 import BoardStats from '../../components/shared/BoardStats';
 import ClubSessionsPanel from '../../components/shared/ClubSessionsPanel';
-import UpcomingEvents from '../../components/sensei/UpcomingEvents';
+import EventCalendar from '../../components/manager/EventCalendar';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
@@ -113,7 +113,9 @@ export default function SenseiDashboard() {
           )}
         </motion.div>
 
-        <UpcomingEvents />
+        {/* Read-only: instructors see what's on at the centre but cannot
+            add, edit or delete. The server enforces the same thing. */}
+        <EventCalendar canManage={false} />
 
         {!loading && !error && assignments.length > 0 && (
           <motion.div variants={fadeUp}>

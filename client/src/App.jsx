@@ -67,7 +67,7 @@ export default function App() {
             <Route path="/manager/overview" element={<ProtectedRoute role="manager"><DirectorDashboard /></ProtectedRoute>} />
             <Route path="/manager/students"  element={<ProtectedRoute role="sensei"><StudentRoster /></ProtectedRoute>} />
             <Route path="/manager/staff"     element={<ProtectedRoute role="sensei"><StaffPage /></ProtectedRoute>} />
-            <Route path="/manager/reports"  element={<ProtectedRoute role="sensei"><ReportsPage /></ProtectedRoute>} />
+            <Route path="/manager/reports"  element={<ProtectedRoute role="manager"><ReportsPage /></ProtectedRoute>} />
             <Route path="/manager/students/new" element={<ProtectedRoute role="manager"><AddStudentPage /></ProtectedRoute>} />
             <Route path="/manager/students/:id" element={<ProtectedRoute role="sensei"><StudentProfile /></ProtectedRoute>} />
 
