@@ -18,6 +18,7 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/dateUtils';
 import { getClubColors } from '../utils/clubUtils';
+import { SkeletonProfile } from '../components/ui/Skeleton';
 
 export default function ClubSessionPage() {
   const { slug, id } = useParams();
@@ -94,7 +95,7 @@ export default function ClubSessionPage() {
   };
 
   if (notFound) return <Layout><p className="text-ninja-red font-ninja text-center py-12">Session not found.</p></Layout>;
-  if (loading || !clubDef || !session) return <Layout><p className="text-ninja-muted font-ninja text-center py-12">Loading...</p></Layout>;
+  if (loading || !clubDef || !session) return <Layout><SkeletonProfile label="Loading session" /></Layout>;
 
   const c = getClubColors(clubDef);
   const filteredStudents = allStudents.filter((s) =>

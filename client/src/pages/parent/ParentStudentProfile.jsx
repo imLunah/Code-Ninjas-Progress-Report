@@ -12,6 +12,7 @@ import { ClubBadge } from '../../components/shared/ClubSessionsPanel';
 import { Pin, MARKDOWN_COMPONENTS } from '../../components/shared/PinnedNote';
 import LazyMarkdownEditor from '../../components/shared/LazyMarkdownEditor';
 import { CARD } from '../../lib/surfaces';
+import { SkeletonProfile } from '../../components/ui/Skeleton';
 
 function calcAge(birthday) {
   if (!birthday || typeof birthday !== 'string' || !birthday.trim()) return null;
@@ -64,7 +65,7 @@ export default function ParentStudentProfile() {
   if (loading) {
     return (
       <ParentLayout>
-        <p className="text-ninja-muted font-ninja text-center py-12">Loading...</p>
+        <SkeletonProfile label="Loading ninja" />
       </ParentLayout>
     );
   }

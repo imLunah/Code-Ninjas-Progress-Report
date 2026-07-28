@@ -12,6 +12,7 @@ const stagger = {
 };
 import { api } from '../../api/client';
 import { CARD } from '../../lib/surfaces';
+import { SkeletonCards } from '../../components/ui/Skeleton';
 
 const ADMIN_NAV_LINKS = [
   { to: '/admin/locations', label: 'Locations' },
@@ -104,7 +105,7 @@ export default function SettingsPage() {
         </motion.div>
 
         {loading ? (
-          <p className="text-ninja-muted font-ninja text-center py-12">Loading…</p>
+          <SkeletonCards count={2} cols="sm:grid-cols-2" label="Loading settings" />
         ) : (
           <motion.div variants={fadeUp} className="space-y-6">
             <div className={`${CARD} p-6`}>

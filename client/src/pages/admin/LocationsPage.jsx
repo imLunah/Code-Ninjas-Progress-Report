@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import { api } from '../../api/client';
+import { SkeletonList } from '../../components/ui/Skeleton';
 
 const ADMIN_NAV_LINKS = [
   { to: '/admin/locations', label: 'Locations' },
@@ -386,7 +387,7 @@ export default function LocationsPage() {
         </div>
 
         {loading ? (
-          <p className="text-ninja-muted font-ninja text-center py-12">Loading…</p>
+          <SkeletonList rows={4} label="Loading locations" />
         ) : (
           <div className="space-y-3">
             <AnimatePresence>

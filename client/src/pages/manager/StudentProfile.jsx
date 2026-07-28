@@ -18,6 +18,7 @@ import { stickerUrl, stickerLabel } from '../../utils/stickers';
 import { api } from '../../api/client';
 import { PROGRAMS as STATIC_PROGRAMS, BELTS, PROJECTS, STATUSES, getMaxLevel, getLevels, getBelt, PROGRAM_LOGOS } from '../../utils/beltConfig';
 import { useCurriculum } from '../../context/CurriculumContext';
+import { SkeletonProfile } from '../../components/ui/Skeleton';
 
 // ── Animation variants ────────────────────────────────────────────────────────
 const fadeUp = {
@@ -650,7 +651,7 @@ export default function StudentProfile() {
     }
   };
 
-  if (loading) return <Layout><p className="text-ninja-muted font-ninja text-center py-12">Loading...</p></Layout>;
+  if (loading) return <Layout><SkeletonProfile label="Loading ninja" /></Layout>;
   if (error || !student) return <Layout><p className="text-ninja-red font-ninja text-center py-12">{error || 'Ninja not found'}</p></Layout>;
 
   const isStudentBirthday = isBirthdayToday(student.birthday);

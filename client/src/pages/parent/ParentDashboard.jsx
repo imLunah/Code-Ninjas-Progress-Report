@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
 import { formatDate } from '../../utils/dateUtils';
 import { CARD } from '../../lib/surfaces';
+import { SkeletonCards } from '../../components/ui/Skeleton';
 
 export default function ParentDashboard() {
   const { parent } = useParentAuth();
@@ -38,7 +39,7 @@ export default function ParentDashboard() {
 
 
         {loading && (
-          <p className="text-ninja-muted font-ninja text-center py-12">Loading...</p>
+          <SkeletonCards count={3} cols="sm:grid-cols-2 lg:grid-cols-3" label="Loading" />
         )}
         {error && (
           <p className="text-ninja-red font-ninja text-center py-12">{error}</p>

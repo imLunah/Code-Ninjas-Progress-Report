@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import ReleaseContent from '../components/shared/ReleaseContent';
 import { api } from '../api/client';
+import { Skeleton } from '../components/ui/Skeleton';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 14 },
@@ -29,7 +30,7 @@ export default function ChangelogPage() {
         </motion.div>
 
         {loading ? (
-          <p className="text-ninja-muted font-ninja text-sm">Loading…</p>
+          <div role="status" aria-busy="true" aria-label="Loading releases" className="space-y-2"><Skeleton className="h-4 w-1/3" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-4/5" /></div>
         ) : releases.length === 0 ? (
           <div className="bg-ninja-border/10 border border-ninja-border rounded-2xl p-8 text-center">
             <p className="text-ninja-muted font-ninja text-sm">No updates yet. Check back soon.</p>

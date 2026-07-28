@@ -10,6 +10,7 @@ import ModalPortal from '../components/ui/ModalPortal';
 import CropModal from '../components/ui/CropModal';
 import { uploadToSigned } from '../lib/supabase';
 import { CARD } from '../lib/surfaces';
+import { SkeletonCards } from '../components/ui/Skeleton';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -433,7 +434,7 @@ export default function ClubsPage() {
         </div>
 
         {loading ? (
-          <p className="text-ninja-muted font-ninja text-center py-12">Loading...</p>
+          <SkeletonCards count={6} label="Loading clubs" />
         ) : clubs.length === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
             <img src="/CodeNinjasIcon.svg" alt="" className="w-12 h-12 mx-auto mb-3 opacity-20" />

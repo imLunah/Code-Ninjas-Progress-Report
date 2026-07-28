@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import { api } from '../api/client';
 import { PROGRAM_LOGOS, BELTS } from '../utils/beltConfig';
+import { SkeletonList } from '../components/ui/Skeleton';
 
 const BELT_COLOR = Object.fromEntries(BELTS.map(b => [b.name, { color: b.color, text: b.textColor }]));
 
@@ -223,7 +224,7 @@ export default function CurriculumRoadmapPage() {
         </div>
 
         {loading && (
-          <p className="text-ninja-muted font-ninja text-sm py-12 text-center">Loading…</p>
+          <SkeletonList rows={5} label="Loading curriculum" />
         )}
         {error && (
           <p className="text-ninja-red font-ninja text-sm py-12 text-center">{error}</p>

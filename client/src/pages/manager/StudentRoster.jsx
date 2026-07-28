@@ -13,6 +13,7 @@ import { formatDate } from '../../utils/dateUtils';
 import { stickerUrl } from '../../utils/stickers';
 import { useAuth } from '../../context/AuthContext';
 import { CARD } from '../../lib/surfaces';
+import { Skeleton, SkeletonList } from '../../components/ui/Skeleton';
 
 
 function parseProgram(membership) {
@@ -441,7 +442,7 @@ export default function StudentRoster() {
         {/* ── Mobile list ── */}
         <div className="lg:hidden bg-white border border-ninja-border rounded-xl overflow-clip shadow-sm">
           {error && <p className="text-ninja-red font-ninja text-center py-8">{error}</p>}
-          {loading && <p className="text-ninja-muted font-ninja text-center py-8">Loading ninjas...</p>}
+          {loading && <SkeletonList rows={6} label="Loading ninjas" />}
           {!loading && !error && (
             <div className="divide-y divide-ninja-border/50">
               {sorted.length === 0 && (
@@ -505,7 +506,7 @@ export default function StudentRoster() {
           )}
           <div ref={mobileSentinelRef} className="h-1" />
           {loadingMore && (
-            <div className="py-3 text-center text-ninja-muted font-ninja text-sm">Loading...</div>
+            <div role="status" aria-busy="true" aria-label="Loading more ninjas" className="py-3 space-y-2"><Skeleton className="h-3.5 w-1/2 mx-auto" /><Skeleton className="h-3.5 w-1/3 mx-auto" /></div>
           )}
         </div>
 
@@ -566,7 +567,7 @@ export default function StudentRoster() {
           {/* Table card */}
           <div className={`${CARD} overflow-hidden flex flex-col flex-1 min-h-0`}>
             {error && <p className="text-ninja-red font-ninja text-center py-8">{error}</p>}
-            {loading && <p className="text-ninja-muted font-ninja text-center py-8">Loading ninjas...</p>}
+            {loading && <SkeletonList rows={6} label="Loading ninjas" />}
             {!loading && !error && (
               <>
                 {/* Table head — stays pinned, rows scroll below */}
@@ -680,7 +681,7 @@ export default function StudentRoster() {
                 })}
                 <div ref={desktopSentinelRef} className="h-1" />
                 {loadingMore && (
-                  <div className="py-3 text-center text-ninja-muted font-ninja text-sm">Loading...</div>
+                  <div role="status" aria-busy="true" aria-label="Loading more ninjas" className="py-3 space-y-2"><Skeleton className="h-3.5 w-1/2 mx-auto" /><Skeleton className="h-3.5 w-1/3 mx-auto" /></div>
                 )}
                 </div>
               </>

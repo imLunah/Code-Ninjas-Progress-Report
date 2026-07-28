@@ -11,6 +11,7 @@ import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
+import { SkeletonList } from '../../components/ui/Skeleton';
 
 export default function ManagerDashboard() {
   const { user, isReadOnly } = useAuth();
@@ -114,7 +115,7 @@ export default function ManagerDashboard() {
         )}
 
         {loading ? (
-          <p className="text-ninja-muted font-ninja text-center py-8">Loading...</p>
+          <SkeletonList rows={4} label="Loading today's board" />
         ) : (
           <TodayBoard
             assignments={visibleAssignments}

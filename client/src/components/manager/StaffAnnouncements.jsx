@@ -4,6 +4,7 @@ import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { formatDate } from '../../utils/dateUtils';
 import { CARD } from '../../lib/surfaces';
+import { Skeleton } from '../ui/Skeleton';
 
 // CD-authored announcements to staff. Center-scoped; shown to all staff at the
 // location via the app-wide banner (Layout). This panel is the authoring surface.
@@ -103,7 +104,7 @@ export default function StaffAnnouncements() {
       </AnimatePresence>
 
       {loading ? (
-        <p className="text-ninja-muted font-ninja text-sm py-4">Loading…</p>
+        <div role="status" aria-busy="true" aria-label="Loading announcements" className="space-y-2 py-1"><Skeleton className="h-4 w-1/3" /><Skeleton className="h-3 w-2/3" /></div>
       ) : items.length === 0 && !adding ? (
         <p className="text-ninja-muted font-ninja text-sm py-6 text-center">No announcements right now.</p>
       ) : (

@@ -18,6 +18,7 @@ import LazyMarkdownEditor from '../../components/shared/LazyMarkdownEditor';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { today, formatDate } from '../../utils/dateUtils';
+import { SkeletonList } from '../../components/ui/Skeleton';
 
 export default function LogClubPage() {
   const navigate = useNavigate();
@@ -188,7 +189,7 @@ export default function LogClubPage() {
                   className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue mb-2"
                 />
                 {loadingStudents ? (
-                  <p className="text-ninja-muted font-ninja text-sm text-center py-4">Loading...</p>
+                  <SkeletonList rows={4} label="Loading" />
                 ) : (
                   <div className="space-y-1 max-h-56 overflow-y-auto border border-ninja-border rounded-lg p-2 bg-ninja-bg">
                     {filtered.map((s) => {

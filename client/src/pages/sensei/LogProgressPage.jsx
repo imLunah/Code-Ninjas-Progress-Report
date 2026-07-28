@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import BirthdayConfetti, { isBirthdayToday } from '../../components/shared/BirthdayConfetti';
 import { formatDate } from '../../utils/dateUtils';
 import { PROGRAM_LOGOS } from '../../utils/beltConfig';
+import { SkeletonProfile } from '../../components/ui/Skeleton';
 
 export default function LogProgressPage() {
   const { id } = useParams();
@@ -68,7 +69,7 @@ export default function LogProgressPage() {
   if (loading) {
     return (
       <Layout>
-        <p className="text-ninja-muted font-ninja text-center py-12">Loading...</p>
+        <SkeletonProfile label="Loading ninja" />
       </Layout>
     );
   }

@@ -24,6 +24,7 @@ import { formatDate, today } from '../utils/dateUtils';
 import { COLOR_SETS, getClubColors } from '../utils/clubUtils';
 import { uploadToSigned } from '../lib/supabase';
 import { CARD } from '../lib/surfaces';
+import { SkeletonProfile } from '../components/ui/Skeleton';
 
 const relativeDate = (ts) => {
   if (!ts) return '';
@@ -707,7 +708,7 @@ export default function ClubProfilePage() {
   }, [slug, user?.activeLocation?.id]);
 
   if (notFound) return <Layout><p className="text-ninja-red font-ninja text-center py-12">Club not found.</p></Layout>;
-  if (loading || !clubDef) return <Layout><p className="text-ninja-muted font-ninja text-center py-12">Loading...</p></Layout>;
+  if (loading || !clubDef) return <Layout><SkeletonProfile label="Loading club" /></Layout>;
 
   const colors = getClubColors(clubDef);
   const locationName = user?.activeLocation?.name ?? '';

@@ -6,6 +6,7 @@ import { api } from '../../api/client';
 import Button from '../ui/Button';
 import { CLUB_COLORS, COLOR_SETS, toSlug } from '../../utils/clubUtils';
 import { CARD } from '../../lib/surfaces';
+import { Skeleton } from '../ui/Skeleton';
 
 function ClubBadge({ name }) {
   const c = CLUB_COLORS[name] || { bg: 'bg-ninja-bg', text: 'text-ninja-navy', border: 'border-ninja-border' };
@@ -222,7 +223,7 @@ export default function ClubSessionsPanel({ sessions = [], onDeleted, onAttendee
                         className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
                       />
                       {loadingStudents ? (
-                        <p className="text-ninja-muted font-ninja text-xs">Loading...</p>
+                        <div role="status" aria-busy="true" aria-label="Loading ninjas" className="space-y-1.5"><Skeleton className="h-3 w-2/3" /><Skeleton className="h-3 w-1/2" /></div>
                       ) : (
                         <div className="space-y-1 max-h-48 overflow-y-auto">
                           {allStudents

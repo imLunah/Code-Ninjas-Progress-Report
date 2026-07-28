@@ -6,6 +6,7 @@ import { BELTS, PROGRAM_LOGOS } from '../../utils/beltConfig';
 import { formatDate } from '../../utils/dateUtils';
 import BeltIcon from '../../components/ui/BeltIcon';
 import { CARD } from '../../lib/surfaces';
+import { SkeletonCards } from '../../components/ui/Skeleton';
 
 const BELT_COLOR = Object.fromEntries(BELTS.map(b => [b.name, b.color]));
 const BELT_TEXT = Object.fromEntries(BELTS.map(b => [b.name, b.textColor]));
@@ -201,7 +202,7 @@ export default function ReportsPage() {
           <p className="text-ninja-muted font-ninja text-sm mt-0.5">Enrollment and activity overview</p>
         </div>
 
-        {loading && <p className="text-ninja-muted font-ninja text-center py-12">Loading…</p>}
+        {loading && <SkeletonCards count={6} label="Loading reports" />}
         {error && <p className="text-ninja-red font-ninja text-center py-12">{error}</p>}
 
         {data && (

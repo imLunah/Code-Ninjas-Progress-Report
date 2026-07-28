@@ -9,6 +9,7 @@ import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 import { CARD } from '../../lib/surfaces';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 // Strong ease-out (Emil's design-eng default). The built-in easeOut is too
 // weak to read as intentional; this matches the CSS --ease-out token.
@@ -63,12 +64,6 @@ const CurriculumIcon = (p) => (
 );
 
 
-
-// Loading placeholders shaped like the thing that's coming, instead of the word
-// "Loading…" — the card keeps its height so nothing jumps when data lands.
-function Skeleton({ className = '', style }) {
-  return <div className={`animate-pulse rounded-md bg-ninja-bg ${className}`} style={style} />;
-}
 
 /* ------------------------------------------------------------ check-ins -- */
 

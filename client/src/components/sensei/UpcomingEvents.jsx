@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { CARD } from '../../lib/surfaces';
+import { Skeleton } from '../ui/Skeleton';
 
 // Local copy of the type palette (kept in sync with EventCalendar) so the sensei
 // bundle doesn't pull in the calendar + Modal just for a few colors. Type is
@@ -56,7 +57,7 @@ export default function UpcomingEvents() {
     <div className={`${CARD} p-5`}>
       <h2 className="font-ninja font-bold text-ninja-navy text-lg mb-4">Upcoming events</h2>
       {loading ? (
-        <p className="text-ninja-muted font-ninja text-sm py-2">Loading…</p>
+        <div role="status" aria-busy="true" aria-label="Loading events" className="space-y-2.5"><Skeleton className="h-3.5 w-3/4" /><Skeleton className="h-3.5 w-2/3" /><Skeleton className="h-3.5 w-1/2" /></div>
       ) : (
         <ul className="space-y-3">
           {upcoming.map((e) => (

@@ -4,6 +4,7 @@ import Layout from '../../components/layout/Layout';
 import { api } from '../../api/client';
 import { useCurriculum, invalidateCurriculumCache } from '../../context/CurriculumContext';
 import { BELT_LEVEL_PROJECTS as STATIC_BELT_PROJECTS, BELTS } from '../../utils/beltConfig';
+import { SkeletonList } from '../../components/ui/Skeleton';
 
 const PROGRAMS = ['AI Academy', 'Robotics Academy', 'JR', 'VR Coding', 'CREATE'];
 
@@ -472,7 +473,7 @@ function BeltEditor() {
   const sublevels = beltData?.[selectedBelt] ? Object.keys(beltData[selectedBelt]).map(Number).sort((a, b) => a - b) : [];
 
   if (!beltData) {
-    return <div className="text-ninja-muted font-ninja text-sm py-8 text-center">Loading…</div>;
+    return <SkeletonList rows={6} label="Loading curriculum" />;
   }
 
   return (

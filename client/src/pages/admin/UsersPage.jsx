@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import { api } from '../../api/client';
 import { CARD } from '../../lib/surfaces';
+import { SkeletonList } from '../../components/ui/Skeleton';
 
 const ADMIN_NAV_LINKS = [
   { to: '/admin/locations', label: 'Locations' },
@@ -382,7 +383,7 @@ export default function UsersPage() {
         {error && <p className="text-ninja-red font-ninja text-sm mb-4">{error}</p>}
 
         {loading ? (
-          <p className="text-ninja-muted font-ninja text-center py-12">Loading…</p>
+          <SkeletonList rows={8} label="Loading users" />
         ) : (
           <div className={`${CARD} overflow-hidden`}>
             {users.length === 0 ? (
