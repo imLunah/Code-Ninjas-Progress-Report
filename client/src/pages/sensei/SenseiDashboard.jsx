@@ -113,10 +113,6 @@ export default function SenseiDashboard() {
           )}
         </motion.div>
 
-        {/* Read-only: instructors see what's on at the centre but cannot
-            add, edit or delete. The server enforces the same thing. */}
-        <EventCalendar canManage={false} />
-
         {!loading && !error && assignments.length > 0 && (
           <motion.div variants={fadeUp}>
             <BoardStats counts={counts} active={statusFilter} onSelect={setStatusFilter} />
@@ -208,6 +204,12 @@ export default function SenseiDashboard() {
           onDeleted={(id) => setClubSessions((prev) => prev.filter((s) => s.id !== id))}
           onAttendeesUpdated={(id, attendees) => setClubSessions((prev) => prev.map((s) => s.id === id ? { ...s, attendees } : s))}
         />
+
+        {/* Last on the page. Today's board is the reason to open this, and a
+            month grid above it pushed the ninjas below the fold. Read-only:
+            instructors see what's on at the centre but cannot add, edit or
+            delete, and the server enforces the same thing. */}
+        <EventCalendar canManage={false} />
       </motion.div>
     </Layout>
   );
