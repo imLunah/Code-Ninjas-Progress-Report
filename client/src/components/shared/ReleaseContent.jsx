@@ -40,10 +40,10 @@ export default function ReleaseContent({ release, showDate = true }) {
     <div>
       <div className="flex flex-wrap items-center gap-2 mb-1">
         <h3 className="text-lg font-bold font-ninja text-ninja-navy">{release.title}</h3>
+        {/* Plain text, not a tinted pill. A version number is a label, and a
+            badge around it just adds a coloured blob beside the heading. */}
         {release.version && (
-          <span className="px-2 py-0.5 rounded-full bg-ninja-blue/10 text-ninja-blue text-xs font-ninja font-semibold">
-            {release.version}
-          </span>
+          <span className="font-ninja text-sm text-ninja-muted tabular-nums">{release.version}</span>
         )}
       </div>
       {showDate && release.published_at && (
