@@ -205,11 +205,10 @@ export default function SenseiDashboard() {
           onAttendeesUpdated={(id, attendees) => setClubSessions((prev) => prev.map((s) => s.id === id ? { ...s, attendees } : s))}
         />
 
-        {/* Last on the page. Today's board is the reason to open this, and a
-            month grid above it pushed the ninjas below the fold. Read-only:
-            instructors see what's on at the centre but cannot add, edit or
-            delete, and the server enforces the same thing. */}
-        <EventCalendar canManage={false} />
+        {/* Last on the page and collapsed until asked for: today's board is
+            the reason to open this. Read-only, and the server enforces the
+            same thing. */}
+        <EventCalendar canManage={false} collapsible />
       </motion.div>
     </Layout>
   );
