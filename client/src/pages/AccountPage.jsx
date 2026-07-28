@@ -469,7 +469,13 @@ export default function AccountPage() {
 
     return (
       <Layout>
-        <div className="mx-auto w-full max-w-5xl">
+        {/* Fills the width main gives it, like the dashboard does. Capped and
+            centred, collapsing the sidebar just turned the freed space into
+            margin instead of giving the content room. The pane caps its own
+            content below so form fields don't stretch across a wide monitor;
+            leftover space lands to the right rather than as dead margin on
+            both sides. */}
+        <div className="w-full">
           {/* No items-start on the grid: that shrinks each column to its own
               content height, which leaves a sticky child nowhere to travel.
               The column stretches, and the sticky element lives inside it. */}
@@ -526,7 +532,7 @@ export default function AccountPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
               aria-labelledby="section-heading"
-              className="space-y-6 min-w-0 pl-10"
+              className="space-y-6 min-w-0 pl-10 max-w-3xl"
             >
               <h2 id="section-heading" className="font-ninja font-bold text-lg text-ninja-navy">
                 {HEADINGS[section]}
