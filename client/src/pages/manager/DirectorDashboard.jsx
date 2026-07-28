@@ -682,12 +682,9 @@ export default function DirectorDashboard() {
           {/* Enrollment used to sit here; that breakdown lives on Reports, so
               it isn't duplicated on the dashboard. */}
           <section className={`${CARD} p-5`} aria-labelledby="checkins-heading">
-            <div className="flex items-center justify-between mb-3">
-              <h2 id="checkins-heading" className="font-ninja font-bold text-ninja-navy text-lg">Check-ins</h2>
-              <Link to="/manager/reports" className={`font-ninja text-sm font-bold text-ninja-blue hover:underline rounded ${FOCUS_RING}`}>
-                Reports →
-              </Link>
-            </div>
+            {/* No Reports link here: there is already one in the row under the
+                greeting, and two on one screen is one too many. */}
+            <h2 id="checkins-heading" className="font-ninja font-bold text-ninja-navy text-lg mb-3">Check-ins</h2>
             {loading ? (
               // Same shape and height as the loaded card, so nothing shifts
               // when the data lands.
