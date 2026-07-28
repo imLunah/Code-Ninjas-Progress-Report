@@ -299,19 +299,6 @@ export default function StaffPage() {
           </div>
         </div>
 
-        {/* Stats */}
-        {!loading && !error && senseis.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="bg-white border border-ninja-border rounded-xl p-4 text-center shadow-sm"
-          >
-            <p className="text-3xl font-bold font-ninja text-ninja-blue">{senseis.length}</p>
-            <p className="text-ninja-muted font-ninja text-sm mt-1">Staff Members</p>
-          </motion.div>
-        )}
-
         {/* Sensei list */}
         <div className="bg-white border border-ninja-border rounded-xl shadow-sm overflow-hidden">
           {error && (
