@@ -63,7 +63,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="theme-locked min-h-screen bg-ninja-bg flex flex-col items-center justify-start sm:justify-center px-5 sm:px-6 py-8 sm:py-12">
+    <div className="theme-locked min-h-[100dvh] bg-ninja-bg flex flex-col items-center justify-start sm:justify-center px-5 sm:px-6 py-8 sm:py-12">
       {fromLanding && (
         <motion.div
           className="fixed inset-0 z-50 pointer-events-none"

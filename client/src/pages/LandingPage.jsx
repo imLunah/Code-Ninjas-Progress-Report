@@ -32,7 +32,7 @@ export default function LandingPage() {
 
   if (loading || user) {
     return (
-      <div style={{ background: BG }} className="theme-locked min-h-screen flex items-center justify-center">
+      <div style={{ background: BG }} className="theme-locked min-h-[100dvh] flex items-center justify-center">
         <div
           className="w-8 h-8 rounded-full border-2 animate-spin"
           style={{ borderColor: BLUE, borderTopColor: 'transparent' }}
@@ -44,7 +44,7 @@ export default function LandingPage() {
   return (
     <motion.div
       style={{ background: BG, color: TEXT }}
-      className="min-h-screen flex flex-col font-ninja relative"
+      className="min-h-[100dvh] flex flex-col font-ninja relative"
       animate={{ opacity: leaving ? 0 : 1 }}
       transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
       onAnimationComplete={() => { if (leaving) navigate('/login', { state: { fromLanding: true } }); }}

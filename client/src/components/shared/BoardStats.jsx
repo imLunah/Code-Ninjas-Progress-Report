@@ -34,7 +34,7 @@ export default function BoardStats({ counts, active, onSelect }) {
           >
             <p className="font-ninja font-bold text-xs text-ninja-muted uppercase tracking-wide">{c.label}</p>
             <div className="flex items-baseline gap-2 mt-1.5">
-              <span className="font-ninja font-black text-3xl text-ninja-navy leading-none">{counts[c.key]}</span>
+              <span className="font-ninja font-black text-3xl text-ninja-navy leading-none tabular-nums">{counts[c.key]}</span>
               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.color }} />
             </div>
           </motion.button>

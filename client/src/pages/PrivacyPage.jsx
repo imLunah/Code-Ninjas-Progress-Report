@@ -3,7 +3,7 @@ import { CARD } from '../lib/surfaces';
 
 export default function PrivacyPage() {
   return (
-    <div className="theme-locked min-h-screen bg-ninja-bg py-12 px-4">
+    <div className="theme-locked min-h-[100dvh] bg-ninja-bg py-12 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-10 w-auto mb-6" />

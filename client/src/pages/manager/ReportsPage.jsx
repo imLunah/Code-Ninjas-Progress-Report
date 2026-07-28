@@ -18,7 +18,7 @@ function StatCard({ label, value, sub }) {
   return (
     <div className={`${CARD} p-4`}>
       <p className="text-ninja-muted font-ninja text-xs uppercase tracking-wide mb-1">{label}</p>
-      <p className="font-ninja font-black text-3xl leading-none text-ninja-navy">{value}</p>
+      <p className="font-ninja font-black text-3xl leading-none text-ninja-navy tabular-nums">{value}</p>
       {sub && <p className="text-ninja-muted font-ninja text-xs mt-1">{sub}</p>}
     </div>
   );

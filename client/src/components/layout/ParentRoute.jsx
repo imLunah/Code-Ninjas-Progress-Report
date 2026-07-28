@@ -6,7 +6,7 @@ export default function ParentRoute({ children }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-ninja-bg flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-ninja-bg flex items-center justify-center">
         <p className="text-ninja-muted font-ninja text-xl">Loading...</p>
       </div>
     );

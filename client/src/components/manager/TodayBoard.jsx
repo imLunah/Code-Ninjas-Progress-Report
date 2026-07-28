@@ -8,15 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { today } from '../../utils/dateUtils';
 import { ProgramAvatar } from '../ui/ProgramBadge';
 import { isBirthdayToday } from '../shared/BirthdayConfetti';
-import { MARKDOWN_COMPONENTS } from '../shared/PinnedNote';
-
-function PinGlyph({ className }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
-      <path d="M15.5 2.5a1 1 0 0 0 0 1.4l.3.3-4.2 4.2-2.6-.5a1 1 0 0 0-.9.27l-.7.7a1 1 0 0 0 0 1.42l3 3-3.9 3.9a1 1 0 1 0 1.4 1.42l3.9-3.9 3 3a1 1 0 0 0 1.42 0l.7-.7a1 1 0 0 0 .27-.9l-.5-2.6 4.2-4.2.3.3a1 1 0 0 0 1.4-1.42l-6-6a1 1 0 0 0-1.4 0z" />
-    </svg>
-  );
-}
+import { MARKDOWN_COMPONENTS, Pin } from '../shared/PinnedNote';
 
 // Sticky-note marker that reveals the ninja's pinned note on hover or click.
 // Filled amber square with a folded corner + text lines — reads as "note" at a
@@ -84,7 +76,7 @@ function PinnedNotePill({ note, parentNote }) {
             {hasNote && (
               <>
                 <div className="flex items-center gap-1.5 text-amber-700 mb-1.5">
-                  <PinGlyph className="w-3 h-3 -rotate-12" />
+                  <Pin className="w-3 h-3 -rotate-12" />
                   <span className="font-ninja font-bold text-[11px] uppercase tracking-wide">Pinned note</span>
                 </div>
                 <div className="font-ninja text-sm leading-relaxed text-ninja-navy break-words">

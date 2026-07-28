@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { getMobileNavTabs } from '../../lib/navTabs';
 import { ONBOARDING_ENABLED } from '../../lib/features';
+import { WarningIcon } from '../ui/icons';
 
 const SKIP_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON']);
 
@@ -48,9 +49,7 @@ function AnnouncementBanner({ text, title, dismissId }) {
           exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}
           className="border-b border-ninja-border px-4 sm:px-6 py-2.5 flex items-center gap-3"
         >
-          <svg className="w-4 h-4 text-ninja-red flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <WarningIcon className="w-4 h-4 text-ninja-red flex-shrink-0" />
           <p className="flex-1 text-ninja-navy font-ninja text-sm leading-snug">
             {title && <span className="font-bold">{title}. </span>}{text}
           </p>
