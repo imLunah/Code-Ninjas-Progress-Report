@@ -76,8 +76,8 @@ const FOCUS_RING =
 
 // Loading placeholders shaped like the thing that's coming, instead of the word
 // "Loading…" — the card keeps its height so nothing jumps when data lands.
-function Skeleton({ className = '' }) {
-  return <div className={`animate-pulse rounded-md bg-ninja-bg ${className}`} />;
+function Skeleton({ className = '', style }) {
+  return <div className={`animate-pulse rounded-md bg-ninja-bg ${className}`} style={style} />;
 }
 
 /* ------------------------------------------------------------ check-ins -- */
@@ -154,6 +154,26 @@ function byWeekday(dayRows) {
     avg: a.n ? a.total / a.n : 0,
     total: a.total,
   }));
+}
+
+// Peak day, weekly pace, and the change against the equally-long window before.
+// Shared by the card and the expanded view so the two can't drift apart.
+// `days` null means every day on record.
+function summarize(dayRows, days) {
+  const inRange = days ? dayRows.slice(-days) : dayRows;
+  const total = inRange.reduce((s, d) => s + d.count, 0);
+  const peak = inRange.reduce((best, d) => (d.count > (best?.count ?? -1) ? d : best), null);
+  const perWeek = inRange.length ? (total / inRange.length) * 7 : 0;
+  const prior = days ? dayRows.slice(-(days * 2), -days) : [];
+  const priorTotal = prior.reduce((s, d) => s + d.count, 0);
+  // Needs a FULL prior window, else a half-empty one reads as a fake collapse.
+  const hasPrior = prior.length === inRange.length && priorTotal > 0;
+  return {
+    total,
+    peak,
+    perWeek,
+    delta: hasPrior ? Math.round(((total - priorTotal) / priorTotal) * 100) : null,
+  };
 }
 
 // Catmull-Rom through the points, emitted as cubic beziers, so the line curves
@@ -325,14 +345,33 @@ const TOOLTIP_LABEL = { day: fullDate, week: weekOf, month: monthOf };
 // expanded view.
 const CARD_WEEKS = 8;
 
+const CARD_CHART_H = 208;
+
+// Label-left, number-right. The rail is only ~320px wide, so the expanded
+// view's three-across tiles don't fit here.
+function StatRow({ label, sub, value, tone = 'text-ninja-navy' }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="font-ninja text-sm text-ninja-muted truncate">
+        {label}
+        {sub && <span className="block text-xs text-ninja-muted/70">{sub}</span>}
+      </span>
+      <span className={`font-ninja text-lg font-black tabular-nums flex-shrink-0 ${tone}`}>{value}</span>
+    </div>
+  );
+}
+
 function CheckInTrend({ dayRows, onExpand }) {
   const weeks = useMemo(() => toWeeks(dayRows, CARD_WEEKS), [dayRows]);
+  // Same span the chart draws, so the numbers describe the curve above them.
+  const stats = useMemo(() => summarize(dayRows, CARD_WEEKS * 7), [dayRows]);
+
   if (weeks.length === 0) {
     // Composed empty state rather than a bare line of grey text: a flat baseline
     // where the curve will be, so the card reads as "nothing yet", not "broken".
     return (
       <div className="py-2">
-        <div className="h-[112px] flex items-end">
+        <div className="flex items-end" style={{ height: CARD_CHART_H }}>
           <div className="w-full border-b-2 border-dashed border-ninja-border" />
         </div>
         <p className="text-ninja-muted font-ninja text-sm mt-3 text-pretty">
@@ -343,28 +382,57 @@ function CheckInTrend({ dayRows, onExpand }) {
     );
   }
   const thisWeek = weeks[weeks.length - 1].count;
+  const { peak, perWeek, delta, total } = stats;
 
   return (
-    <button
-      onClick={onExpand}
-      aria-label="Expand check-ins"
-      className={`block w-full text-left group origin-center rounded-lg transition-transform duration-150 ease-[var(--ease-out)] active:scale-[0.99] ${FOCUS_RING}`}
-    >
-      <div className="flex items-baseline justify-between mb-2">
-        <span className="font-ninja text-sm text-ninja-navy font-semibold">
-          <CountUp value={thisWeek} className="font-black" /> ninja{thisWeek === 1 ? '' : 's'} this week
-        </span>
-        <span className="font-ninja text-xs text-ninja-muted group-hover:text-ninja-blue transition-colors">
-          expand →
-        </span>
+    <>
+      {/* Only the chart opens the expanded view. Wrapping the stats in the
+          button too would make the whole card one "Expand check-ins" target. */}
+      <button
+        onClick={onExpand}
+        aria-label="Expand check-ins"
+        className={`block w-full text-left group origin-center rounded-lg transition-transform duration-150 ease-[var(--ease-out)] active:scale-[0.99] ${FOCUS_RING}`}
+      >
+        <div className="flex items-baseline justify-between mb-2">
+          <span className="font-ninja text-sm text-ninja-navy font-semibold">
+            <CountUp value={thisWeek} className="font-black" /> ninja{thisWeek === 1 ? '' : 's'} this week
+          </span>
+          <span className="font-ninja text-xs text-ninja-muted group-hover:text-ninja-blue transition-colors">
+            expand →
+          </span>
+        </div>
+        <AreaChart points={weeks} height={CARD_CHART_H} gradientId="checkInCardFill" formatLabel={weekOf} />
+        <div className="flex justify-between font-ninja text-[10px] text-ninja-muted mt-1">
+          <span>{shortDate(weeks[0].date)}</span>
+          <span>{shortDate(weeks[Math.floor(weeks.length / 2)].date)}</span>
+          <span>This week</span>
+        </div>
+      </button>
+
+      {/* The three numbers that used to need a trip through the modal. */}
+      <div className="mt-4 pt-4 border-t border-ninja-border space-y-3">
+        <StatRow
+          label="Busiest day"
+          sub={peak?.count ? shortDate(peak.date) : null}
+          value={peak?.count ?? 0}
+        />
+        <StatRow label="Ninjas a week" value={Math.round(perWeek)} />
+        {/* A centre needs 16 weeks on record before the comparison means
+            anything, and none of them do yet. Until then this row carries the
+            period total instead of sitting blank. The comparison is never
+            estimated from a partial window: a half-empty one reads as a
+            collapse that didn't happen. */}
+        {delta === null ? (
+          <StatRow label="Check-ins, 8 weeks" value={total} />
+        ) : (
+          <StatRow
+            label="vs previous 8 weeks"
+            value={`${delta > 0 ? '+' : ''}${delta}%`}
+            tone={delta > 0 ? 'text-emerald-500' : delta < 0 ? 'text-ninja-red' : 'text-ninja-navy'}
+          />
+        )}
       </div>
-      <AreaChart points={weeks} height={112} gradientId="checkInCardFill" formatLabel={weekOf} />
-      <div className="flex justify-between font-ninja text-[10px] text-ninja-muted mt-1">
-        <span>{shortDate(weeks[0].date)}</span>
-        <span>{shortDate(weeks[Math.floor(weeks.length / 2)].date)}</span>
-        <span>This week</span>
-      </div>
-    </button>
+    </>
   );
 }
 
@@ -393,15 +461,11 @@ function CheckInDetail({ dayRows }) {
 
   // Peak single day in range, weekly pace, and how the range compares to the
   // equally-long window before it — the raw totals said nothing actionable.
-  const peak = inRange.reduce((best, d) => (d.count > (best?.count ?? -1) ? d : best), null);
-  const totalVisits = inRange.reduce((s, d) => s + d.count, 0);
-  const perWeek = inRange.length ? (totalVisits / inRange.length) * 7 : 0;
-
-  const prior = range.days ? dayRows.slice(-(range.days * 2), -range.days) : [];
-  const priorTotal = prior.reduce((s, d) => s + d.count, 0);
-  // Needs a full prior window, else a half-empty one reads as a fake collapse.
-  const hasPrior = prior.length === inRange.length && priorTotal > 0;
-  const delta = hasPrior ? Math.round(((totalVisits - priorTotal) / priorTotal) * 100) : null;
+  // Same helper the card uses, so the two readouts can't disagree.
+  const { peak, perWeek, delta } = useMemo(
+    () => summarize(dayRows, range.days),
+    [dayRows, range.days],
+  );
 
   const axisLabel = (d) => (range.bucket === 'month' ? monthShort(d) : shortDate(d));
 
@@ -625,16 +689,26 @@ export default function DirectorDashboard() {
               </Link>
             </div>
             {loading ? (
+              // Same shape and height as the loaded card, so nothing shifts
+              // when the data lands.
               <div aria-busy="true" aria-label="Loading check-ins">
                 <div className="flex items-baseline justify-between mb-2">
                   <Skeleton className="h-4 w-32" />
                   <Skeleton className="h-3 w-12" />
                 </div>
-                <Skeleton className="h-[112px] w-full rounded-lg" />
+                <Skeleton className="w-full rounded-lg" style={{ height: CARD_CHART_H }} />
                 <div className="flex justify-between mt-2">
                   <Skeleton className="h-2.5 w-10" />
                   <Skeleton className="h-2.5 w-10" />
                   <Skeleton className="h-2.5 w-14" />
+                </div>
+                <div className="mt-4 pt-4 border-t border-ninja-border space-y-3">
+                  {[28, 24, 32].map((w, i) => (
+                    <div key={i} className="flex items-baseline justify-between">
+                      <Skeleton className="h-4" style={{ width: `${w}%` }} />
+                      <Skeleton className="h-5 w-10" />
+                    </div>
+                  ))}
                 </div>
               </div>
             ) : (
