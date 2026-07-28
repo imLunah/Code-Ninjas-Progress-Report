@@ -101,7 +101,7 @@ export default function WelcomePage() {
       }));
       const dashPath = user?.role === 'sensei' ? '/sensei/dashboard'
         : user?.role === 'admin' ? '/admin/locations'
-        : '/manager/dashboard';
+        : '/manager/overview';
       navigate(dashPath, { replace: true });
     } catch (err) {
       setError(err?.message || 'Something went wrong. Please try again.');

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { getHomePath } from '../lib/navTabs';
 import { useParentAuth } from '../context/ParentAuthContext';
 import ThemeToggle from '../components/ui/ThemeToggle';
 
@@ -53,7 +54,7 @@ export default function LoginPage() {
         navigate('/parent/dashboard');
       } else {
         const user = await login(username, password, keepSignedIn);
-        navigate(['manager', 'admin'].includes(user.role) ? '/manager/dashboard' : '/sensei/dashboard');
+        navigate(getHomePath(user));
       }
     } catch (err) {
       setError(err.message || 'Login failed');

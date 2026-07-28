@@ -102,7 +102,7 @@ export default function AccountPage() {
 
   const dashPath = user?.role === 'sensei' ? '/sensei/dashboard'
     : user?.role === 'admin' ? '/admin/locations'
-    : '/manager/dashboard';
+    : '/manager/overview';
 
   const handleSave = async (e) => {
     e.preventDefault();

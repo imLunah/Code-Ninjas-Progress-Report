@@ -23,7 +23,7 @@ export default function AdminBar() {
   const activeLabel = isManager ? 'Manager' : isSensei ? 'Sensei' : isAdmin ? 'Admin' : null;
 
   const options = [
-    { label: 'Manager', path: '/manager/dashboard', view: 'manager', active: isManager },
+    { label: 'Manager', path: '/manager/overview', view: 'manager', active: isManager },
     { label: 'Sensei',  path: '/sensei/dashboard',  view: 'sensei',  active: isSensei },
     { label: 'Admin',   path: '/admin/locations',    view: 'admin',   active: isAdmin },
   ];
@@ -59,7 +59,7 @@ export default function AdminBar() {
         </span>
         <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
         <button
-          onClick={() => go('/manager/dashboard', 'manager')}
+          onClick={() => go('/manager/overview', 'manager')}
           title="UI preview — server permissions unchanged"
           className="px-3 py-1 rounded-xl transition-colors"
           style={{ background: isManager ? 'rgb(56,161,255)' : 'transparent', color: isManager ? '#fff' : 'rgba(255,255,255,0.5)' }}

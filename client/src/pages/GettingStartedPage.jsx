@@ -91,7 +91,7 @@ export default function GettingStartedPage() {
 
   const isManager = ['manager', 'admin'].includes(user?.role);
   const screens = [WELCOME, ...SENSEI, ...(isManager ? MANAGER : []), FINISH];
-  const dashPath = isManager ? '/manager/dashboard' : '/sensei/dashboard';
+  const dashPath = isManager ? '/manager/overview' : '/sensei/dashboard';
   const screen = screens[page];
   const isLast = page === screens.length - 1;
 
