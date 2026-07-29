@@ -7,6 +7,7 @@ import {
 import Markdown from './Markdown';
 import LazyMarkdownEditor from './LazyMarkdownEditor';
 import Button from '../ui/Button';
+import ActionMenu, { MenuItem } from '../ui/ActionMenu';
 import { TrashIcon } from '../ui/icons';
 import { api } from '../../api/client';
 import { uploadToSigned } from '../../lib/supabase';
@@ -51,27 +52,6 @@ function postTime(ts) {
   if (diffDays > 0 && diffDays < 7) return `${d.toLocaleDateString('en-US', { weekday: 'long' })} at ${clock}`;
   const withYear = d.getFullYear() !== now.getFullYear();
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(withYear && { year: 'numeric' }) });
-}
-
-// Round icon action. Rests quiet so the post's own text stays the loudest thing
-// on the row, per the sticky note actions. Visible at rest, not hover-only:
-// senseis run clubs off a tablet and a hover-only control does not exist there.
-function RowAction({ icon: Icon, label, onClick, danger = false, href }) {
-  const cls = `p-1.5 rounded-full text-ninja-muted opacity-50 hover:opacity-100 transition-[color,opacity] duration-150 ${
-    danger ? 'hover:text-ninja-red' : 'hover:text-ninja-blue'
-  }`;
-  if (href) {
-    return (
-      <a href={href} target="_blank" rel="noopener noreferrer" title={label} aria-label={label} className={cls}>
-        <Icon size={16} strokeWidth={1.75} />
-      </a>
-    );
-  }
-  return (
-    <button type="button" onClick={onClick} title={label} aria-label={label} className={cls}>
-      <Icon size={16} strokeWidth={1.75} />
-    </button>
-  );
 }
 
 function ImageAttachment({ post }) {
@@ -187,21 +167,52 @@ function Post({ post, canEdit, onUpdated, onDeleted }) {
         </time>
         {post.updated_at && <span className="font-ninja text-xs text-ninja-muted">(edited)</span>}
         {canEdit && (
-          <span className="ml-auto flex items-center gap-0.5 flex-shrink-0">
-            {confirming ? (
-              <span className="flex items-center gap-1">
-                <Button variant="danger" size="sm" onClick={remove} disabled={saving}>Delete</Button>
-                <Button variant="secondary" size="sm" onClick={() => setConfirming(false)}>Keep</Button>
-              </span>
-            ) : (
-              <>
-                {!editing && (post.body || !post.url) && (
-                  <RowAction icon={PencilIcon} label="Edit post" onClick={() => { setDraft(post.body || ''); setEditing(true); }} />
-                )}
-                <RowAction icon={TrashIcon} label="Delete post" danger onClick={() => setConfirming(true)} />
-              </>
-            )}
-          </span>
+          <ActionMenu
+            label="Post actions"
+            className="ml-auto flex-shrink-0"
+            onClosed={() => setConfirming(false)}
+          >
+            {({ close }) =>
+              confirming ? (
+                // The confirm stays inside the panel and keeps the word
+                // "Delete". Glyphs are fine for reversible actions.
+                <div className="p-1.5 w-48">
+                  <p className="font-ninja text-xs text-ninja-muted mb-2">
+                    Delete this post{post.url ? ' and its attachment' : ''}?
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <Button variant="danger" size="sm" onClick={remove} disabled={saving}>
+                      {saving ? 'Deleting…' : 'Delete'}
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => setConfirming(false)}>Keep</Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* An attachment-only post can still gain text, so Edit is
+                      offered on every post. Hidden mid-edit: reopening it would
+                      reset the draft to what is stored and lose the typing. */}
+                  {!editing && (
+                    <MenuItem
+                      icon={PencilIcon}
+                      onSelect={() => { setDraft(post.body || ''); setEditing(true); close(); }}
+                    >
+                      {post.body ? 'Edit' : 'Add text'}
+                    </MenuItem>
+                  )}
+                  {post.url && (
+                    <MenuItem
+                      icon={isImagePost(post) ? ExternalLinkIcon : ArrowDownToLineIcon}
+                      onSelect={() => { window.open(post.url, '_blank', 'noopener,noreferrer'); close(); }}
+                    >
+                      {isImagePost(post) ? 'Open image' : post.resource_type === 'url' ? 'Open link' : 'Download'}
+                    </MenuItem>
+                  )}
+                  <MenuItem icon={TrashIcon} danger onSelect={() => setConfirming(true)}>Delete</MenuItem>
+                </>
+              )
+            }
+          </ActionMenu>
         )}
       </header>
 
