@@ -6,7 +6,6 @@ module.exports = {
   program: 'AI Academy',
   title: 'Lesson Completion Passcodes',
   description: 'Lesson completion passcodes for every module.',
-  note: 'Do not share passcodes with Ninjas. The Sensei should always type the passcode into the box themselves.',
   body: `### Module 1
 | Lesson | Passcode |
 |---|---|

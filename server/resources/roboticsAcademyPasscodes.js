@@ -6,7 +6,6 @@ module.exports = {
   program: 'Robotics Academy',
   title: 'Lesson Completion Passcodes',
   description: 'Lesson completion passcodes for every module.',
-  note: 'Do not share passcodes with Ninjas. The Sensei should always type the passcode into the box themselves.',
   body: `### LEGO SPIKE Essentials Modules
 
 **Module E 1**

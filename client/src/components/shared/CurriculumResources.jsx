@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { FileTextIcon, ChevronRightIcon, TriangleAlertIcon } from 'lucide-react';
+import { FileTextIcon, ChevronRightIcon } from 'lucide-react';
 import { api } from '../../api/client';
 import Modal from '../ui/Modal';
 import { SkeletonList } from '../ui/Skeleton';
@@ -28,24 +28,16 @@ function DocBody({ slug }) {
   if (error) return <p className="font-ninja text-sm text-ninja-red py-6 text-center">{error}</p>;
   if (!doc) return <SkeletonList rows={6} label="Loading document" />;
 
+  // Mostly wide tables: they scroll inside this box rather than pushing the
+  // page sideways.
   return (
-    <div>
-      {doc.note && (
-        <p className="flex items-start gap-2.5 font-ninja text-sm text-ninja-navy leading-snug border-l-2 border-amber-400 pl-3 mb-5 text-pretty">
-          <TriangleAlertIcon className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-          {doc.note}
-        </p>
-      )}
-      {/* Mostly wide tables: they scroll inside this box rather than pushing the
-          page sideways. */}
-      <div className="md-view overflow-x-auto">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
-        >
-          {doc.body || ''}
-        </ReactMarkdown>
-      </div>
+    <div className="md-view overflow-x-auto">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
+      >
+        {doc.body || ''}
+      </ReactMarkdown>
     </div>
   );
 }

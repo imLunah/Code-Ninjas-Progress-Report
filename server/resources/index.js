@@ -6,7 +6,7 @@
 // production. Requiring them guarantees they deploy.
 //
 // To add a document: write a module in this folder exporting
-// { slug, program, title, description, note, body } and list it here.
+// { slug, program, title, description, body } and list it here.
 const RESOURCES = [
   require('./aiAcademyPasscodes'),
   require('./roboticsAcademyPasscodes'),
