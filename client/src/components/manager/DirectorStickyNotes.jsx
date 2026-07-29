@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import LazyMarkdownEditor from '../shared/LazyMarkdownEditor';
-import { PlusIcon } from 'lucide-react';
+import { PlusIcon, XIcon, CheckIcon } from 'lucide-react';
 
 // Markdown for note bodies. Inherits the note's own text color (currentColor)
 // so bold/lists/links match each sticky's palette. Images dropped (text-only).
@@ -86,6 +86,39 @@ function ColorDots({ value, onChange }) {
         />
       ))}
     </div>
+  );
+}
+
+// A note is 248px wide and the footer already carries five colour dots, so the
+// two word buttons wrapped onto a second line and pushed the paper apart. Round
+// icon buttons: discard is a ×, keeping it is a ✓, both labelled for screen
+// readers and on hover.
+function DiscardButton({ onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title="Discard"
+      aria-label="Discard"
+      className="w-7 h-7 rounded-full flex items-center justify-center opacity-60 hover:opacity-100 hover:bg-black/10 transition"
+    >
+      <XIcon className="w-4 h-4" strokeWidth={2.5} />
+    </button>
+  );
+}
+
+function ConfirmButton({ onClick, disabled, label }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      className="w-7 h-7 rounded-full flex items-center justify-center bg-black/10 hover:bg-black/20 disabled:opacity-40 disabled:hover:bg-black/10 transition"
+    >
+      <CheckIcon className="w-4 h-4" strokeWidth={2.5} />
+    </button>
   );
 }
 
@@ -173,9 +206,11 @@ function NoteCard({ note, canManage, onSaved, onDeleted, board, onDragToSlot, on
           </div>
           <div className="flex items-center justify-between mt-2 pt-2 border-t gap-2 flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
             <ColorDots value={color} onChange={setColor} />
-            <div className="flex items-center gap-1.5">
-              <button onClick={() => { setEditing(false); setDraft(note.body); setColor(note.color); }} className="font-ninja text-xs font-bold opacity-70 hover:opacity-100 px-2 py-1">Cancel</button>
-              <button
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <DiscardButton onClick={() => { setEditing(false); setDraft(note.body); setColor(note.color); }} />
+              <ConfirmButton
+                label="Save note"
+                disabled={busy || !draft.trim()}
                 onClick={async () => {
                   if (!draft.trim()) return;
                   setBusy(true);
@@ -185,11 +220,7 @@ function NoteCard({ note, canManage, onSaved, onDeleted, board, onDragToSlot, on
                     setEditing(false);
                   } catch { /* ignore */ } finally { setBusy(false); }
                 }}
-                disabled={busy || !draft.trim()}
-                className="font-ninja text-xs font-bold px-2.5 py-1 rounded-md bg-black/10 hover:bg-black/20 disabled:opacity-50"
-              >
-                Save
-              </button>
+              />
             </div>
           </div>
         </>
@@ -350,9 +381,9 @@ export default function DirectorStickyNotes() {
               </div>
               <div className="flex items-center justify-between mt-2 pt-2 border-t gap-2 flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
                 <ColorDots value={color} onChange={setColor} />
-                <div className="flex items-center gap-1.5">
-                  <button onClick={() => { setAdding(false); setDraft(''); }} className="font-ninja text-xs font-bold opacity-70 hover:opacity-100 px-2 py-1">Cancel</button>
-                  <button onClick={add} disabled={busy || !draft.trim()} className="font-ninja text-xs font-bold px-2.5 py-1 rounded-md bg-black/10 hover:bg-black/20 disabled:opacity-50">Pin note</button>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <DiscardButton onClick={() => { setAdding(false); setDraft(''); }} />
+                  <ConfirmButton label="Pin note" disabled={busy || !draft.trim()} onClick={add} />
                 </div>
               </div>
             </div>
