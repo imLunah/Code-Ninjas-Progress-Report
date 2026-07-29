@@ -316,7 +316,7 @@ export default function DirectorStickyNotes() {
       <div className="flex items-end justify-between gap-4 mb-4">
         <div>
           <h2 id="sticky-heading" className="font-ninja font-bold text-ninja-navy text-lg">Notes</h2>
-          <p className="font-ninja text-xs text-ninja-muted">Shared with the directors at this center</p>
+          <p className="font-ninja text-xs text-ninja-muted">Save any reminder here. Every director at this center sees it.</p>
         </div>
         {!adding && (
           <button type="button" onClick={() => setAdding(true)} className="flex-shrink-0 font-ninja text-sm font-bold text-ninja-blue hover:underline underline-offset-4 rounded">Add note</button>
