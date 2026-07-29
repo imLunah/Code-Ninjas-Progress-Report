@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import TodayBoard from '../../components/manager/TodayBoard';
@@ -7,7 +8,7 @@ import BoardStats from '../../components/shared/BoardStats';
 import ClubSessionsPanel from '../../components/shared/ClubSessionsPanel';
 import EventCalendar from '../../components/manager/EventCalendar';
 import Modal from '../../components/ui/Modal';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, BookOpenIcon } from 'lucide-react';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
@@ -87,18 +88,31 @@ export default function SenseiDashboard() {
           )}
           </div>
 
-          {/* Opens over the page rather than pushing the board down — the
-              calendar is a reference, not part of the check-in flow. */}
-          <button
-            type="button"
-            onClick={() => setCalendarOpen(true)}
-            aria-label="Open calendar"
-            aria-haspopup="dialog"
-            aria-expanded={calendarOpen}
-            className={`${CARD} flex-shrink-0 w-11 h-11 flex items-center justify-center text-ninja-muted hover:text-ninja-blue hover:border-ninja-blue/50 transition-colors`}
-          >
-            <CalendarIcon className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* The sidebar carries this too, but a phone never renders the
+                sidebar, so without it here Curriculum is unreachable mid
+                session, which is when the passcodes are wanted. */}
+            <Link
+              to="/curriculum-roadmap"
+              aria-label="Open curriculum"
+              className={`${CARD} w-11 h-11 flex items-center justify-center text-ninja-muted hover:text-ninja-blue hover:border-ninja-blue/50 transition-colors`}
+            >
+              <BookOpenIcon className="w-5 h-5" />
+            </Link>
+
+            {/* Opens over the page rather than pushing the board down, since the
+                calendar is a reference, not part of the check-in flow. */}
+            <button
+              type="button"
+              onClick={() => setCalendarOpen(true)}
+              aria-label="Open calendar"
+              aria-haspopup="dialog"
+              aria-expanded={calendarOpen}
+              className={`${CARD} w-11 h-11 flex items-center justify-center text-ninja-muted hover:text-ninja-blue hover:border-ninja-blue/50 transition-colors`}
+            >
+              <CalendarIcon className="w-5 h-5" />
+            </button>
+          </div>
         </motion.div>
 
         <Modal

@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import ThemeToggle from '../ui/ThemeToggle';
 import { RocketIcon } from '../ui/icons';
 import { LogOutIcon } from 'lucide-react';
-import { LayoutGridIcon } from 'lucide-react';
+import { LayoutGridIcon, BookOpenIcon } from 'lucide-react';
 
 const EXPANDED_W = 224; // matches w-56
 const COLLAPSED_W = 76; // icon rail
@@ -56,6 +56,9 @@ const senseiLinks = [
   { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
   { to: '/clubs', label: 'Clubs', icon: 'clubs' },
   { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
+  // Directors reach Curriculum from their dashboard. Instructors have no
+  // dashboard, so without this the page had no entry point for them at all.
+  { to: '/curriculum-roadmap', label: 'Curriculum', Glyph: BookOpenIcon },
 ];
 
 export default function Sidebar({ onOpenBug }) {
