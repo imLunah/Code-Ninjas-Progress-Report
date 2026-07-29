@@ -20,6 +20,9 @@ const mdComponents = {
   code: ({ children }) => <code className="bg-ninja-border/20 px-1 rounded font-mono text-xs">{children}</code>,
   blockquote: ({ children }) => <blockquote className="border-l-2 border-ninja-blue/50 pl-3 italic text-ninja-muted my-2">{children}</blockquote>,
   hr: () => <hr className="border-ninja-border my-3" />,
+  // A remote image in written text is an open-time beacon. Images belong in an
+  // attachment, which we serve from our own storage.
+  img: () => null,
 };
 
 export default function Markdown({ children }) {

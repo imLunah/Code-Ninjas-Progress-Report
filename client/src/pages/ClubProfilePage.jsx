@@ -26,7 +26,8 @@ import { uploadToSigned } from '../lib/supabase';
 import { CARD } from '../lib/surfaces';
 import { SkeletonProfile } from '../components/ui/Skeleton';
 import { TrashIcon, CameraIcon } from '../components/ui/icons';
-import { UsersIcon, LinkIcon, FileTextIcon, ImageIcon, FilmIcon, FileIcon, ArrowDownToLineIcon, ExternalLinkIcon } from 'lucide-react';
+import { UsersIcon } from 'lucide-react';
+import ClubBoard from '../components/shared/ClubBoard';
 
 const relativeDate = (ts) => {
   if (!ts) return '';
@@ -75,16 +76,6 @@ const mdComponents = {
   code: ({ children }) => <code className="bg-amber-100 px-1 rounded font-mono text-xs">{children}</code>,
   blockquote: ({ children }) => <blockquote className="border-l-2 border-amber-400 pl-3 italic text-amber-800">{children}</blockquote>,
 };
-
-// The glyph carries the file type, so the row needs no label for it.
-function resourceIcon(r) {
-  if (r.resource_type === 'url') return LinkIcon;
-  const ext = (r.file_name || r.url || '').split('.').pop().toLowerCase();
-  if (['pdf', 'doc', 'docx', 'ppt', 'pptx'].includes(ext)) return FileTextIcon;
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return ImageIcon;
-  if (['mp4', 'webm'].includes(ext)) return FilmIcon;
-  return FileIcon;
-}
 
 function PinnedNoteSection({ clubName, initialNote, initialAuthor, initialUpdatedAt, onUpdated, isReadOnly }) {
   const [editing, setEditing] = useState(false);
@@ -518,166 +509,6 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
   );
 }
 
-function ResourcesSection({ clubName, clubSlug, locationId, resources: initial, isReadOnly }) {
-  const [resources, setResources] = useState(initial);
-  const [adding, setAdding] = useState(false);
-  const [mode, setMode] = useState('url');
-  const [title, setTitle] = useState('');
-  const [url, setUrl] = useState('');
-  const [file, setFile] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState('');
-  const [confirmDelete, setConfirmDelete] = useState(null);
-
-  const resetForm = () => { setTitle(''); setUrl(''); setFile(null); setAdding(false); setUploadProgress(''); };
-
-  const handleAdd = async (e) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-    if (mode === 'url' && !url.trim()) return;
-    if (mode === 'file' && !file) return;
-    setSaving(true);
-    try {
-      let payload;
-      if (mode === 'file') {
-        setUploadProgress('Uploading...');
-        const sign = await api.post('/storage/club-resource', { filename: file.name });
-        await uploadToSigned(sign.bucket, sign.path, sign.token, file, file.type || undefined);
-        setUploadProgress('Saving...');
-        // Server signs the read URL from the path.
-        payload = { title: title.trim(), path: sign.path, resource_type: 'file', file_name: file.name };
-      } else {
-        payload = { title: title.trim(), url: url.trim(), resource_type: 'url' };
-      }
-      const resource = await api.post(`/clubs/profile/${encodeURIComponent(clubName)}/resources`, payload);
-      setResources((prev) => [resource, ...prev]);
-      resetForm();
-    } catch {
-      setUploadProgress('Upload failed. Try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (r) => {
-    try {
-      // Server deletes the DB row and the stored file (if any).
-      await api.delete(`/clubs/resources/${r.id}`);
-      setResources((prev) => prev.filter((x) => x.id !== r.id));
-    } catch { } finally {
-      setConfirmDelete(null);
-    }
-  };
-
-  return (
-    <div className={`${CARD} p-5`}>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-ninja font-bold text-ninja-navy text-base">Resources</h2>
-        {!isReadOnly && !adding && (
-          <button onClick={() => setAdding(true)}
-            className="text-ninja-blue font-ninja text-sm font-semibold hover:underline">
-            + Add file
-          </button>
-        )}
-      </div>
-
-      {adding && (
-        <form onSubmit={handleAdd} className="mb-4 space-y-3">
-          {/* Same sliding segmented control as the feedback modal. */}
-          <div className="relative flex bg-ninja-bg border border-ninja-border rounded-xl p-1">
-            <motion.div
-              className="absolute top-1 bottom-1 bg-white rounded-lg shadow-sm"
-              layout
-              transition={{ type: 'spring', damping: 28, stiffness: 380 }}
-              style={{ width: 'calc(50% - 4px)', left: mode === 'url' ? 4 : 'calc(50%)' }}
-            />
-            {[
-              { key: 'url', label: 'Link' },
-              { key: 'file', label: 'Upload' },
-            ].map(({ key, label }) => (
-              <button key={key} type="button" onClick={() => { setMode(key); setUrl(''); setFile(null); }}
-                className={`relative z-10 flex-1 py-1.5 font-ninja font-bold text-sm rounded-lg transition-colors duration-200 ${
-                  mode === key ? 'text-ninja-navy' : 'text-ninja-muted'
-                }`}>
-                {label}
-              </button>
-            ))}
-          </div>
-          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
-            placeholder="Title (e.g. Week 3 Slides)"
-            className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-xl px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue" />
-          {mode === 'url' ? (
-            <input type="url" value={url} onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://..."
-              className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-xl px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue" />
-          ) : (
-            <input type="file" onChange={(e) => setFile(e.target.files[0])}
-              accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.mp4,.webm"
-              className="w-full text-sm font-ninja text-ninja-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-ninja file:font-semibold file:bg-ninja-blue file:text-white file:cursor-pointer cursor-pointer" />
-          )}
-          {uploadProgress && <p className="text-ninja-muted font-ninja text-xs">{uploadProgress}</p>}
-          <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={saving || !title.trim() || (mode === 'url' ? !url.trim() : !file)}>
-              {saving ? 'Uploading...' : 'Add'}
-            </Button>
-            <Button size="sm" variant="secondary" type="button" onClick={resetForm}>Cancel</Button>
-          </div>
-        </form>
-      )}
-
-      {resources.length === 0 ? (
-        <p className="text-ninja-muted font-ninja text-sm italic">No resources yet.</p>
-      ) : (
-        <div className="space-y-2">
-          {resources.map((r) => {
-            const Icon = resourceIcon(r);
-            const isLink = r.resource_type === 'url';
-            const OpenIcon = isLink ? ExternalLinkIcon : ArrowDownToLineIcon;
-            const addedDate = r.created_at
-              ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-              : null;
-            return (
-              <div key={r.id} className="flex items-center gap-3 py-2 border-b border-ninja-border last:border-0">
-                <Icon size={18} strokeWidth={1.75} className="text-ninja-muted flex-shrink-0" aria-hidden="true" />
-                <div className="flex-1 min-w-0">
-                  <a href={r.url} target="_blank" rel="noopener noreferrer"
-                    className="text-ninja-navy font-ninja font-semibold text-sm hover:text-ninja-blue transition-colors truncate block">
-                    {r.title}
-                  </a>
-                  <p className="text-ninja-muted font-ninja text-xs mt-0.5">
-                    {r.added_by}{addedDate ? ` · ${addedDate}` : ''}
-                  </p>
-                </div>
-                {confirmDelete === r.id ? (
-                  <div className="flex gap-1 flex-shrink-0">
-                    <Button variant="danger" size="sm" onClick={() => handleDelete(r)}>Delete</Button>
-                    <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(null)}>Cancel</Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <a href={r.url} target="_blank" rel="noopener noreferrer"
-                      title={isLink ? 'Open link' : 'Download'} aria-label={isLink ? 'Open link' : 'Download'}
-                      className="p-1.5 rounded-full text-ninja-muted opacity-60 hover:opacity-100 hover:text-ninja-blue transition-colors">
-                      <OpenIcon size={16} strokeWidth={1.75} />
-                    </a>
-                    {!isReadOnly && (
-                      <button onClick={() => setConfirmDelete(r.id)}
-                        title="Remove" aria-label="Remove resource"
-                        className="p-1.5 rounded-full text-ninja-muted opacity-60 hover:opacity-100 hover:text-ninja-red transition-colors">
-                        <TrashIcon size={16} strokeWidth={1.75} />
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function ClubProfilePage() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -752,6 +583,12 @@ export default function ClubProfilePage() {
               isReadOnly={isReadOnly}
               onUpdated={(note) => setProfile((prev) => ({ ...prev, pinned_note: note, pinned_note_author: user?.displayName, pinned_note_updated_at: new Date().toISOString() }))}
             />
+            <ClubBoard
+              clubName={clubDef.name}
+              posts={resources}
+              isReadOnly={isReadOnly}
+              currentUser={{ id: user?.id, role: isSenseiView ? 'sensei' : user?.role }}
+            />
             <SessionsSection
               sessions={sessions}
               memberCount={memberCount}
@@ -771,13 +608,6 @@ export default function ClubProfilePage() {
               isManager={isManager}
               isReadOnly={isReadOnly}
               onCoverUpdated={(url) => setClubDef((prev) => ({ ...prev, cover_image_url: url }))}
-            />
-            <ResourcesSection
-              clubName={clubDef.name}
-              clubSlug={slug}
-              locationId={user?.activeLocation?.id}
-              resources={resources}
-              isReadOnly={isReadOnly}
             />
           </div>
         </motion.div>

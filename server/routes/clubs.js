@@ -7,6 +7,17 @@ function toSlug(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
+const MAX_POST_BODY = 4000;
+const MAX_POST_TITLE = 200;
+
+// A sensei owns their own board posts; directors and admin can tidy any of them.
+// Posts written before the board existed have no created_by, so only a manager
+// can clear those out.
+function canEditPost(req, createdBy) {
+  if (['manager', 'admin'].includes(req.session.role)) return true;
+  return createdBy != null && createdBy === req.session.userId;
+}
+
 async function getValidClubNames(pool, locationId) {
   const { rows } = await pool.query(
     'SELECT name FROM club_definitions WHERE location_id = $1 OR location_id IS NULL',
@@ -253,7 +264,13 @@ router.get('/profile/:clubName', requireAuth, async (req, res) => {
   try {
     const [profileRes, resourceRes, memberRes] = await Promise.all([
       pool.query('SELECT * FROM club_profiles WHERE club_name = $1 AND location_id = $2', [clubName, req.session.activeLocationId]),
-      pool.query('SELECT * FROM club_resources WHERE club_name = $1 AND location_id = $2 ORDER BY created_at DESC', [clubName, req.session.activeLocationId]),
+      pool.query(`
+        SELECT r.*, u.display_name AS author_name
+        FROM club_resources r
+        LEFT JOIN users u ON u.id = r.created_by
+        WHERE r.club_name = $1 AND r.location_id = $2
+        ORDER BY r.created_at DESC
+      `, [clubName, req.session.activeLocationId]),
       pool.query('SELECT COUNT(*) AS count FROM club_members WHERE club_name = $1 AND location_id = $2', [clubName, req.session.activeLocationId]),
     ]);
     const profile = profileRes.rows[0] || null;
@@ -289,18 +306,30 @@ router.patch('/profile/:clubName/pinned-note', requireSensei, requireOwnLocation
   }
 });
 
-// POST /api/clubs/profile/:clubName/resources
+// POST /api/clubs/profile/:clubName/resources — write a board post.
+// A post carries written text, one attachment, or both. The attachment is
+// either an uploaded file (path, signed server-side) or an external link.
 router.post('/profile/:clubName/resources', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const clubName = decodeURIComponent(req.params.clubName);
-  const { title, url, path, resource_type, file_name } = req.body;
+  const { title, body, url, path, resource_type, file_name } = req.body;
 
   const validClubs = await getValidClubNames(pool, req.session.activeLocationId);
   if (!validClubs.has(clubName)) return res.status(400).json({ error: 'Invalid club' });
-  if (!title?.trim()) return res.status(400).json({ error: 'Title is required' });
 
-  // A resource is either an uploaded file (path, signed server-side) or an external link (url).
-  let finalUrl;
+  if (body != null && typeof body !== 'string') return res.status(400).json({ error: 'Invalid text' });
+  if (body && body.length > MAX_POST_BODY) {
+    return res.status(400).json({ error: `Text is too long (max ${MAX_POST_BODY} characters)` });
+  }
+  const cleanBody = body?.trim() || null;
+  const hasAttachment = resource_type === 'file' || resource_type === 'url';
+  if (!cleanBody && !hasAttachment) return res.status(400).json({ error: 'Write something or attach a file' });
+  if (title != null && typeof title !== 'string') return res.status(400).json({ error: 'Invalid title' });
+  if (title && title.length > MAX_POST_TITLE) {
+    return res.status(400).json({ error: `Title is too long (max ${MAX_POST_TITLE} characters)` });
+  }
+
+  let finalUrl = null;
   if (resource_type === 'file') {
     const prefix = `resources/${req.session.activeLocationId}/`;
     if (typeof path !== 'string' || !path.startsWith(prefix) || path.includes('..')) {
@@ -311,7 +340,8 @@ router.post('/profile/:clubName/resources', requireSensei, requireOwnLocation, a
     } catch {
       return res.status(500).json({ error: 'Failed to sign uploaded file' });
     }
-  } else {
+    if (!title?.trim() && !file_name?.trim()) return res.status(400).json({ error: 'File is missing a name' });
+  } else if (resource_type === 'url') {
     if (!url?.trim()) return res.status(400).json({ error: 'URL is required' });
     try {
       const parsed = new URL(url.trim());
@@ -324,15 +354,57 @@ router.post('/profile/:clubName/resources', requireSensei, requireOwnLocation, a
 
   try {
     const { rows } = await pool.query(
-      `INSERT INTO club_resources (club_name, location_id, title, url, added_by, resource_type, file_name)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [clubName, req.session.activeLocationId, title.trim(), finalUrl, req.session.displayName,
-       resource_type === 'file' ? 'file' : 'url', file_name?.trim() || null]
+      `INSERT INTO club_resources
+         (club_name, location_id, title, body, url, added_by, created_by, resource_type, file_name)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [clubName, req.session.activeLocationId, title?.trim() || null, cleanBody, finalUrl,
+       req.session.displayName, req.session.userId,
+       hasAttachment ? resource_type : 'text', file_name?.trim() || null]
     );
-    res.status(201).json(rows[0]);
+    res.status(201).json({ ...rows[0], author_name: req.session.displayName });
   } catch (err) {
-    console.error('Club resource add error:', err);
-    res.status(500).json({ error: 'Failed to add resource' });
+    console.error('Club post add error:', err);
+    res.status(500).json({ error: 'Failed to add post' });
+  }
+});
+
+// PATCH /api/clubs/resources/:id — edit the written part of a post.
+// The attachment is immutable: swapping it would orphan the stored object.
+router.patch('/resources/:id', requireSensei, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { title, body } = req.body;
+
+  if (body != null && typeof body !== 'string') return res.status(400).json({ error: 'Invalid text' });
+  if (body && body.length > MAX_POST_BODY) {
+    return res.status(400).json({ error: `Text is too long (max ${MAX_POST_BODY} characters)` });
+  }
+  if (title != null && typeof title !== 'string') return res.status(400).json({ error: 'Invalid title' });
+  if (title && title.length > MAX_POST_TITLE) {
+    return res.status(400).json({ error: `Title is too long (max ${MAX_POST_TITLE} characters)` });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT created_by, url FROM club_resources WHERE id = $1 AND location_id = $2',
+      [req.params.id, req.session.activeLocationId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Post not found' });
+    if (!canEditPost(req, rows[0].created_by)) return res.status(403).json({ error: 'Not your post' });
+    // The CHECK guarantees a post says something; clearing the text of a
+    // text-only post would leave an empty row.
+    const cleanBody = body?.trim() || null;
+    if (!cleanBody && !rows[0].url) return res.status(400).json({ error: 'A post needs text' });
+
+    const { rows: updated } = await pool.query(
+      `UPDATE club_resources SET title = $3, body = $4, updated_at = NOW()
+       WHERE id = $1 AND location_id = $2 RETURNING *`,
+      [req.params.id, req.session.activeLocationId, title?.trim() || null, cleanBody]
+    );
+    const { rows: named } = await pool.query('SELECT display_name FROM users WHERE id = $1', [updated[0].created_by]);
+    res.json({ ...updated[0], author_name: named[0]?.display_name ?? updated[0].added_by });
+  } catch (err) {
+    console.error('Club post edit error:', err);
+    res.status(500).json({ error: 'Failed to save post' });
   }
 });
 
@@ -340,16 +412,23 @@ router.post('/profile/:clubName/resources', requireSensei, requireOwnLocation, a
 router.delete('/resources/:id', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   try {
+    const { rows: existing } = await pool.query(
+      'SELECT created_by FROM club_resources WHERE id = $1 AND location_id = $2',
+      [req.params.id, req.session.activeLocationId]
+    );
+    if (!existing[0]) return res.status(404).json({ error: 'Post not found' });
+    if (!canEditPost(req, existing[0].created_by)) return res.status(403).json({ error: 'Not your post' });
+
     const { rows } = await pool.query(
       'DELETE FROM club_resources WHERE id = $1 AND location_id = $2 RETURNING url, resource_type',
       [req.params.id, req.session.activeLocationId]
     );
-    // Clean up the stored file (links have no object to remove).
+    // Clean up the stored file (links and text posts have no object to remove).
     if (rows[0] && rows[0].resource_type === 'file') await storage.removeByUrl('club-resources', rows[0].url);
     res.json({ ok: true, deleted: rows[0] || null });
   } catch (err) {
-    console.error('Club resource delete error:', err);
-    res.status(500).json({ error: 'Failed to delete resource' });
+    console.error('Club post delete error:', err);
+    res.status(500).json({ error: 'Failed to delete post' });
   }
 });
 
