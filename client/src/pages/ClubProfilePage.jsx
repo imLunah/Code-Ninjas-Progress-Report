@@ -582,24 +582,34 @@ function ResourcesSection({ clubName, clubSlug, locationId, resources: initial, 
       </div>
 
       {adding && (
-        <form onSubmit={handleAdd} className="mb-4 space-y-3 p-3 bg-ninja-bg border border-ninja-border rounded-xl">
-          <div className="flex gap-1">
-            {['url', 'file'].map((m) => (
-              <button key={m} type="button" onClick={() => { setMode(m); setUrl(''); setFile(null); }}
-                className={`text-xs font-ninja font-semibold px-3 py-1.5 rounded-lg transition-colors ${
-                  mode === m ? 'bg-ninja-blue text-white' : 'bg-white border border-ninja-border text-ninja-navy hover:border-ninja-blue'
+        <form onSubmit={handleAdd} className="mb-4 space-y-3">
+          {/* Same sliding segmented control as the feedback modal. */}
+          <div className="relative flex bg-ninja-bg border border-ninja-border rounded-xl p-1">
+            <motion.div
+              className="absolute top-1 bottom-1 bg-white rounded-lg shadow-sm"
+              layout
+              transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+              style={{ width: 'calc(50% - 4px)', left: mode === 'url' ? 4 : 'calc(50%)' }}
+            />
+            {[
+              { key: 'url', label: 'Link' },
+              { key: 'file', label: 'Upload' },
+            ].map(({ key, label }) => (
+              <button key={key} type="button" onClick={() => { setMode(key); setUrl(''); setFile(null); }}
+                className={`relative z-10 flex-1 py-1.5 font-ninja font-bold text-sm rounded-lg transition-colors duration-200 ${
+                  mode === key ? 'text-ninja-navy' : 'text-ninja-muted'
                 }`}>
-                {m === 'url' ? '🔗 Link' : '📁 File'}
+                {label}
               </button>
             ))}
           </div>
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
             placeholder="Title (e.g. Week 3 Slides)"
-            className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue" />
+            className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-xl px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue" />
           {mode === 'url' ? (
             <input type="url" value={url} onChange={(e) => setUrl(e.target.value)}
               placeholder="https://..."
-              className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue" />
+              className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-xl px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue" />
           ) : (
             <input type="file" onChange={(e) => setFile(e.target.files[0])}
               accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.mp4,.webm"
