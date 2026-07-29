@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import LazyMarkdownEditor from '../shared/LazyMarkdownEditor';
-import { PlusIcon, XIcon, CheckIcon } from 'lucide-react';
+import { PlusIcon, XIcon, CheckIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 
 // Markdown for note bodies. Inherits the note's own text color (currentColor)
 // so bold/lists/links match each sticky's palette. Images dropped (text-only).
@@ -93,16 +93,35 @@ function ColorDots({ value, onChange }) {
 // two word buttons wrapped onto a second line and pushed the paper apart. Round
 // icon buttons: discard is a ×, keeping it is a ✓, both labelled for screen
 // readers and on hover.
-function DiscardButton({ onClick }) {
+function DiscardButton({ onClick, label = 'Discard' }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      title="Discard"
-      aria-label="Discard"
+      title={label}
+      aria-label={label}
       className="w-7 h-7 rounded-full flex items-center justify-center opacity-60 hover:opacity-100 hover:bg-black/10 transition"
     >
       <XIcon className="w-4 h-4" strokeWidth={2.5} />
+    </button>
+  );
+}
+
+// Note actions sit quietly under the author line and only come forward on
+// hover. Delete warms to red on hover so the destructive one is distinguishable
+// before it is pressed, not only after.
+function NoteAction({ onClick, label, danger, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className={`w-6 h-6 rounded-full flex items-center justify-center opacity-50 transition hover:opacity-100 ${
+        danger ? 'hover:bg-red-500 hover:text-white' : 'hover:bg-black/10'
+      }`}
+    >
+      {children}
     </button>
   );
 }
@@ -232,9 +251,13 @@ function NoteCard({ note, canManage, onSaved, onDeleted, board, onDragToSlot, on
           <div className="flex items-center justify-between mt-3 pt-2 border-t flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
             <span className="font-ninja text-[11px] font-semibold opacity-70 truncate">{note.created_by_name || 'Unknown'}</span>
             {canManage && (
+              // The confirm keeps its word. Icons are fine for reversible
+              // actions; a destructive one should never rest on the reader
+              // recognising a glyph.
               confirmDel ? (
-                <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <button
+                    type="button"
                     onClick={async () => {
                       setBusy(true);
                       try {
@@ -243,16 +266,20 @@ function NoteCard({ note, canManage, onSaved, onDeleted, board, onDragToSlot, on
                       } catch { setBusy(false); setConfirmDel(false); }
                     }}
                     disabled={busy}
-                    className="font-ninja text-[11px] font-bold px-1.5 py-0.5 rounded bg-red-500 text-white"
+                    className="font-ninja text-[11px] font-bold px-2 py-1 rounded-full bg-red-500 text-white hover:bg-red-600 disabled:opacity-60 transition"
                   >
                     Delete
                   </button>
-                  <button onClick={() => setConfirmDel(false)} className="font-ninja text-[11px] font-bold opacity-70">Keep</button>
+                  <DiscardButton onClick={() => setConfirmDel(false)} label="Keep note" />
                 </div>
               ) : (
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button onClick={() => setEditing(true)} className="font-ninja text-[11px] font-bold opacity-70 hover:opacity-100 rounded">Edit</button>
-                  <button onClick={() => setConfirmDel(true)} className="font-ninja text-[11px] font-bold opacity-70 hover:opacity-100 rounded">Delete</button>
+                <div className="flex items-center gap-0.5 flex-shrink-0">
+                  <NoteAction onClick={() => setEditing(true)} label="Edit note">
+                    <PencilIcon className="w-3.5 h-3.5" strokeWidth={2.25} />
+                  </NoteAction>
+                  <NoteAction onClick={() => setConfirmDel(true)} label="Delete note" danger>
+                    <Trash2Icon className="w-3.5 h-3.5" strokeWidth={2.25} />
+                  </NoteAction>
                 </div>
               )
             )}
@@ -356,7 +383,18 @@ export default function DirectorStickyNotes() {
           <p className="font-ninja text-xs text-ninja-muted">Save any reminder here. Every director at this center sees it.</p>
         </div>
         {!adding && (
-          <button type="button" onClick={() => setAdding(true)} className="flex-shrink-0 font-ninja text-sm font-bold text-ninja-blue hover:underline underline-offset-4 rounded">Add note</button>
+          // One glyph beside the heading rather than a blue word: the heading is
+          // what names the section, and the plus is the same shape as the one on
+          // the empty board, so both entry points read as the same action.
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            title="Add note"
+            aria-label="Add note"
+            className="flex-shrink-0 w-9 h-9 rounded-full border border-ninja-border text-ninja-muted flex items-center justify-center transition-colors hover:border-ninja-blue/60 hover:text-ninja-blue"
+          >
+            <PlusIcon className="w-4 h-4" strokeWidth={2.5} />
+          </button>
         )}
       </div>
 
