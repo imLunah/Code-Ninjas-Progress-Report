@@ -41,27 +41,23 @@ function getProjectPrefix(name, index, total) {
 
 // One tab treatment for the whole page: text carries the state, a rule under the
 // active one carries the position. No filled backgrounds, no chips.
-function TabRule({ active, color }) {
-  return (
-    <span
-      aria-hidden
-      className="absolute left-0 right-0 -bottom-px h-0.5 rounded-full transition-colors"
-      style={{ backgroundColor: active ? color : 'transparent' }}
-    />
-  );
-}
-
+//
+// The rule is the tab's own bottom border rather than a bar positioned against
+// the container, so a row that wraps to a second line still underlines the right
+// tab instead of leaving the marker floating on the row below.
 function Tab({ active, color = 'rgb(var(--ninja-navy))', onClick, children }) {
   return (
     <button
       onClick={onClick}
       aria-pressed={active}
-      className={`relative shrink-0 flex items-center gap-2 px-1 pb-2.5 font-ninja text-sm transition-colors ${
-        active ? 'font-bold text-ninja-navy' : 'font-semibold text-ninja-muted hover:text-ninja-navy'
+      className={`flex items-center gap-2 px-1 pb-2 border-b-2 font-ninja text-sm transition-colors ${
+        active
+          ? 'font-bold text-ninja-navy'
+          : 'font-semibold text-ninja-muted hover:text-ninja-navy border-transparent'
       }`}
+      style={active ? { borderBottomColor: color } : undefined}
     >
       {children}
-      <TabRule active={active} color={color} />
     </button>
   );
 }
@@ -151,7 +147,7 @@ function ModuleList({ modules, subPrograms, program, color }) {
   return (
     <div>
       {subPrograms?.length > 0 && (
-        <div className="flex gap-5 overflow-x-auto no-scrollbar border-b border-ninja-border mb-1">
+        <div className="flex flex-wrap gap-x-5 gap-y-2 border-b border-ninja-border mb-1">
           {subPrograms.map((sub) => (
             <Tab
               key={sub}
@@ -221,7 +217,7 @@ export default function CurriculumRoadmapPage() {
             {/* Program tabs. Logo identifies the program, the rule marks the one
                 you are in. Scrolls sideways on a phone rather than wrapping into
                 a block of buttons. */}
-            <div className="flex gap-6 overflow-x-auto no-scrollbar border-b border-ninja-border mt-7">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-b border-ninja-border mt-7">
               {programs.map((p) => (
                 <Tab
                   key={p.program}
