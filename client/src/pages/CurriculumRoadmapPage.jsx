@@ -1,57 +1,32 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRightIcon } from 'lucide-react';
+import { ChevronDownIcon } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import { api } from '../api/client';
 import { PROGRAM_LOGOS, BELTS } from '../utils/beltConfig';
+import BeltIcon from '../components/ui/BeltIcon';
 import { SkeletonList } from '../components/ui/Skeleton';
 import CurriculumResources from '../components/shared/CurriculumResources';
+
+// Program colour is used as a 2px rule under the active tab and nowhere else.
+// It marks which program you are in without filling a control with brand colour,
+// which is what made every control on this page read as a tinted chip.
+const PROGRAM_COLOR = {
+  'CREATE': '#60a5fa',
+  'JR': '#a78bfa',
+  'AI Academy': '#22d3ee',
+  'Robotics Academy': '#38a1ff',
+  'VR Coding': '#2dd4bf',
+};
+const DEFAULT_COLOR = '#38a1ff';
+const colorFor = (program) => PROGRAM_COLOR[program] || DEFAULT_COLOR;
+
+const BELT_NAMES = new Set(BELTS.map((b) => b.name));
 
 const SECTIONS = [
   { key: 'modules', label: 'Modules' },
   { key: 'resources', label: 'Resources' },
 ];
-
-const BELT_COLOR = Object.fromEntries(BELTS.map(b => [b.name, { color: b.color, text: b.textColor }]));
-
-const PROGRAM_CONFIG = {
-  'CREATE': {
-    color: '#60a5fa',
-    bg: 'rgba(96, 165, 250, 0.07)',
-    border: 'rgba(96, 165, 250, 0.18)',
-    label: 'CREATE',
-  },
-  'JR': {
-    color: '#a78bfa',
-    bg: 'rgba(167, 139, 250, 0.07)',
-    border: 'rgba(167, 139, 250, 0.18)',
-    label: 'JR',
-  },
-  'AI Academy': {
-    color: '#22d3ee',
-    bg: 'rgba(34, 211, 238, 0.07)',
-    border: 'rgba(34, 211, 238, 0.18)',
-    label: 'AI Academy',
-  },
-  'Robotics Academy': {
-    color: '#38a1ff',
-    bg: 'rgba(56, 161, 255, 0.07)',
-    border: 'rgba(56, 161, 255, 0.18)',
-    label: 'Robotics Academy',
-  },
-  'VR Coding': {
-    color: '#2dd4bf',
-    bg: 'rgba(45, 212, 191, 0.07)',
-    border: 'rgba(45, 212, 191, 0.18)',
-    label: 'VR Coding',
-  },
-};
-
-const defaultConfig = { color: '#38a1ff', bg: 'rgba(56, 161, 255, 0.07)', border: 'rgba(56, 161, 255, 0.18)', label: '' };
-
-function getConfig(program) {
-  return PROGRAM_CONFIG[program] || { ...defaultConfig, label: program };
-}
 
 function getProjectPrefix(name, index, total) {
   const lower = name.toLowerCase();
@@ -64,70 +39,83 @@ function getProjectPrefix(name, index, total) {
   return index === total - 1 ? 'Adventure' : `Build ${Math.floor(index / 2) + 1}`;
 }
 
-function LessonList({ lessons, isCreate }) {
+// One tab treatment for the whole page: text carries the state, a rule under the
+// active one carries the position. No filled backgrounds, no chips.
+function TabRule({ active, color }) {
   return (
-    <ul className="mt-3 space-y-1 pl-1">
-      {lessons.map((l, i) => {
-        const prefix = isCreate ? getProjectPrefix(l.lesson_name, i, lessons.length) : null;
-        return (
-          <li key={l.id ?? i} className="flex items-start gap-2 text-sm font-ninja text-ninja-navy/80">
-            <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-ninja-border" />
-            {prefix && (
-              <span className="shrink-0 font-ninja font-semibold text-ninja-muted text-xs mt-0.5 min-w-[52px]">{prefix}:</span>
-            )}
-            {l.lesson_name}
-          </li>
-        );
-      })}
-    </ul>
+    <span
+      aria-hidden
+      className="absolute left-0 right-0 -bottom-px h-0.5 rounded-full transition-colors"
+      style={{ backgroundColor: active ? color : 'transparent' }}
+    />
   );
 }
 
-function ModuleCard({ mod, accentColor, isCreate, index }) {
-  const [open, setOpen] = useState(false);
-
+function Tab({ active, color = 'rgb(var(--ninja-navy))', onClick, children }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.22, delay: Math.min(index, 8) * 0.04, ease: [0.22, 1, 0.36, 1] }}
-      className={`rounded-xl overflow-hidden border transition-colors duration-150 ${
-        open
-          ? 'border-ninja-border bg-ninja-border/20'
-          : 'border-ninja-border bg-ninja-border/10 hover:bg-ninja-border/20'
+    <button
+      onClick={onClick}
+      aria-pressed={active}
+      className={`relative shrink-0 flex items-center gap-2 px-1 pb-2.5 font-ninja text-sm transition-colors ${
+        active ? 'font-bold text-ninja-navy' : 'font-semibold text-ninja-muted hover:text-ninja-navy'
       }`}
     >
-      <motion.button
-        className="w-full flex items-center justify-between px-4 py-3.5 text-left"
-        onClick={() => setOpen(o => !o)}
-        whileTap={{ scale: 0.98 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <motion.div
-            animate={{ rotate: open ? 90 : 0 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ backgroundColor: open ? accentColor + '28' : 'transparent' }}
+      {children}
+      <TabRule active={active} color={color} />
+    </button>
+  );
+}
+
+function LessonList({ lessons, isCreate }) {
+  return (
+    <ol className="mt-1 mb-1">
+      {lessons.map((l, i) => {
+        const prefix = isCreate ? getProjectPrefix(l.lesson_name, i, lessons.length) : null;
+        return (
+          <li
+            key={l.id ?? i}
+            className="flex items-baseline gap-3 py-1.5 font-ninja text-sm text-ninja-navy"
           >
-            <ChevronRightIcon
-              className="w-3.5 h-3.5"
-              style={{ color: open ? accentColor : '#8a9bb8' }}
-              strokeWidth={2.5}
-            />
-          </motion.div>
-          <span className="font-ninja font-bold text-sm text-ninja-navy truncate">{mod.module_name}</span>
-        </div>
-        <span
-          className="shrink-0 text-xs font-ninja font-semibold px-2.5 py-1 rounded-full ml-3 transition-colors duration-150"
-          style={{
-            backgroundColor: open ? accentColor + '22' : 'rgba(44, 55, 82, 0.7)',
-            color: open ? accentColor : '#8a9bb8',
-          }}
+            {/* The lesson's own number, not a decorative bullet. */}
+            <span className="shrink-0 w-6 text-right tabular-nums text-xs text-ninja-muted">{i + 1}</span>
+            {prefix && (
+              <span className="shrink-0 min-w-[56px] font-semibold text-xs text-ninja-muted">{prefix}</span>
+            )}
+            <span className="text-pretty">{l.lesson_name}</span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+// A module is a row in a list, not a card. Cards on every module turned a
+// reference index into twenty stacked boxes.
+function ModuleRow({ mod, isCreate }) {
+  const [open, setOpen] = useState(false);
+  const count = mod.lessons.length;
+
+  return (
+    <div className="border-b border-ninja-border last:border-b-0">
+      <button
+        className="w-full flex items-center gap-3 py-3.5 text-left group"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        <motion.span
+          animate={{ rotate: open ? 0 : -90 }}
+          transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+          className="shrink-0 text-ninja-muted group-hover:text-ninja-navy transition-colors"
         >
-          {mod.lessons.length} {isCreate ? 'project' : 'lesson'}{mod.lessons.length !== 1 ? 's' : ''}
+          <ChevronDownIcon className="w-4 h-4" />
+        </motion.span>
+        <span className="flex-1 min-w-0 font-ninja font-bold text-sm text-ninja-navy text-pretty">
+          {mod.module_name}
         </span>
-      </motion.button>
+        <span className="shrink-0 font-ninja text-xs text-ninja-muted tabular-nums">
+          {count} {isCreate ? 'project' : 'lesson'}{count === 1 ? '' : 's'}
+        </span>
+      </button>
 
       <AnimatePresence initial={false}>
         {open && (
@@ -136,65 +124,59 @@ function ModuleCard({ mod, accentColor, isCreate, index }) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-4 pt-1 border-t border-ninja-border/50">
+            <div className="pb-3 pl-7">
               {mod.description && (
-                <p className="text-sm font-ninja text-ninja-muted leading-relaxed mb-2">{mod.description}</p>
+                <p className="font-ninja text-sm text-ninja-muted leading-relaxed mb-1 max-w-[65ch] text-pretty">
+                  {mod.description}
+                </p>
               )}
-              {mod.lessons.length > 0 && <LessonList lessons={mod.lessons} isCreate={isCreate} />}
+              {count > 0 && <LessonList lessons={mod.lessons} isCreate={isCreate} />}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }
 
-function SubProgramView({ modules, subPrograms, accentColor, program }) {
-  const [activeTab, setActiveTab] = useState(subPrograms?.[0] ?? null);
-
-  const visibleModules = activeTab
-    ? modules.filter(m => m.sub_program === activeTab)
-    : modules;
-
+function ModuleList({ modules, subPrograms, program, color }) {
+  const [activeSub, setActiveSub] = useState(subPrograms?.[0] ?? null);
   const isCreate = program === 'CREATE';
+
+  const visible = activeSub ? modules.filter((m) => m.sub_program === activeSub) : modules;
 
   return (
     <div>
       {subPrograms?.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          {subPrograms.map(sub => {
-            const isActive = activeTab === sub;
-            const beltC = isCreate ? BELT_COLOR[sub] : null;
-            const activeBg = isCreate && beltC ? beltC.color : accentColor;
-            const activeText = isCreate && beltC ? beltC.text : '#fff';
-            return (
-              <button
-                key={sub}
-                onClick={() => setActiveTab(sub)}
-                className={`font-ninja font-semibold text-sm px-3.5 py-1.5 rounded-lg transition-colors ${
-                  isActive
-                    ? ''
-                    : 'text-ninja-muted hover:text-ninja-navy bg-ninja-border/20 border border-ninja-border hover:border-ninja-border'
-                }`}
-                style={isActive ? { background: activeBg, color: activeText } : {}}
-              >
-                {sub}
-              </button>
-            );
-          })}
+        <div className="flex gap-5 overflow-x-auto no-scrollbar border-b border-ninja-border mb-1">
+          {subPrograms.map((sub) => (
+            <Tab
+              key={sub}
+              active={activeSub === sub}
+              color={color}
+              onClick={() => setActiveSub(sub)}
+            >
+              {/* CREATE's sub-programs are belts, so the belt's own icon does the
+                  identifying instead of a colour swatch. */}
+              {isCreate && BELT_NAMES.has(sub) && <BeltIcon belt={sub} size={18} />}
+              {sub}
+            </Tab>
+          ))}
         </div>
       )}
-      <div className="space-y-2">
-        {visibleModules.map((mod, i) => (
-          <ModuleCard key={mod.id} mod={mod} accentColor={accentColor} isCreate={isCreate} index={i} />
-        ))}
-        {visibleModules.length === 0 && (
-          <p className="text-ninja-muted font-ninja text-sm py-4 text-center">No modules yet.</p>
-        )}
-      </div>
+
+      {visible.length > 0 ? (
+        <div>
+          {visible.map((mod) => (
+            <ModuleRow key={mod.id} mod={mod} isCreate={isCreate} />
+          ))}
+        </div>
+      ) : (
+        <p className="font-ninja text-sm text-ninja-muted py-10 text-center">No modules yet.</p>
+      )}
     </div>
   );
 }
@@ -208,7 +190,7 @@ export default function CurriculumRoadmapPage() {
 
   useEffect(() => {
     api.get('/curriculum/roadmap')
-      .then(data => {
+      .then((data) => {
         setPrograms(data);
         if (data.length > 0) setActiveProgram(data[0].program);
       })
@@ -216,116 +198,92 @@ export default function CurriculumRoadmapPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const current = programs.find(p => p.program === activeProgram);
-  const cfg = current ? getConfig(current.program) : defaultConfig;
+  const current = programs.find((p) => p.program === activeProgram);
+  const color = colorFor(activeProgram);
+
+  const moduleCount = current?.modules.length ?? 0;
+  const lessonCount = current?.modules.reduce((n, m) => n + m.lessons.length, 0) ?? 0;
+  const unit = current?.program === 'CREATE' ? 'project' : 'lesson';
 
   return (
     <Layout>
       <div className="max-w-3xl mx-auto">
+        <h1 className="font-ninja font-extrabold text-2xl text-ninja-navy">Curriculum</h1>
+        <p className="font-ninja text-sm text-ninja-muted mt-1">
+          Every program, module and lesson, plus the reference material for each.
+        </p>
 
-        {/* Page header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-ninja font-extrabold text-ninja-navy">Curriculum Roadmap</h1>
-          <p className="text-ninja-muted font-ninja text-sm mt-1">All programs, modules, and lessons</p>
-        </div>
-
-        {loading && (
-          <SkeletonList rows={5} label="Loading curriculum" />
-        )}
-        {error && (
-          <p className="text-ninja-red font-ninja text-sm py-12 text-center">{error}</p>
-        )}
+        {loading && <div className="mt-8"><SkeletonList rows={6} label="Loading curriculum" /></div>}
+        {error && <p className="font-ninja text-sm text-ninja-red py-12 text-center">{error}</p>}
 
         {!loading && !error && programs.length > 0 && (
           <>
-            {/* Program selector tabs */}
-            <div className="flex flex-wrap gap-2 mb-6">
-              {programs.map(p => {
-                const c = getConfig(p.program);
-                const isActive = p.program === activeProgram;
-                const logo = PROGRAM_LOGOS[p.program];
-                return (
-                  <motion.button
-                    key={p.program}
-                    onClick={() => { setActiveProgram(p.program); setSection('modules'); }}
-                    whileTap={{ scale: 0.97 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                    className={`font-ninja font-bold text-sm px-4 py-2 rounded-xl border transition-all flex items-center gap-2 ${
-                      isActive
-                        ? 'text-white border-transparent shadow-sm'
-                        : 'bg-ninja-border/20 border-ninja-border text-ninja-navy hover:border-ninja-border'
-                    }`}
-                    style={isActive ? { background: c.color, borderColor: c.color } : {}}
-                  >
-                    {logo && <img src={logo} alt="" className="w-5 h-5 object-contain rounded" />}
-                    {p.program}
-                  </motion.button>
-                );
-              })}
+            {/* Program tabs. Logo identifies the program, the rule marks the one
+                you are in. Scrolls sideways on a phone rather than wrapping into
+                a block of buttons. */}
+            <div className="flex gap-6 overflow-x-auto no-scrollbar border-b border-ninja-border mt-7">
+              {programs.map((p) => (
+                <Tab
+                  key={p.program}
+                  active={p.program === activeProgram}
+                  color={colorFor(p.program)}
+                  onClick={() => { setActiveProgram(p.program); setSection('modules'); }}
+                >
+                  {PROGRAM_LOGOS[p.program] && (
+                    <img
+                      src={PROGRAM_LOGOS[p.program]}
+                      alt=""
+                      className={`w-5 h-5 object-contain transition-opacity ${
+                        p.program === activeProgram ? '' : 'opacity-50'
+                      }`}
+                    />
+                  )}
+                  {p.program}
+                </Tab>
+              ))}
             </div>
 
-            {/* Program body */}
             <AnimatePresence mode="wait">
               {current && (
                 <motion.div
                   key={current.program}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.18 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
                 >
-                  {/* Program header strip */}
-                  <div
-                    className="rounded-2xl px-5 py-4 mb-5 border flex items-center gap-3"
-                    style={{ background: cfg.bg, borderColor: cfg.border }}
-                  >
-                    {PROGRAM_LOGOS[current.program] && (
-                      <img src={PROGRAM_LOGOS[current.program]} alt="" className="w-10 h-10 object-contain shrink-0" />
-                    )}
-                    <div>
-                      <h2 className="font-ninja font-extrabold text-lg" style={{ color: cfg.color }}>
-                        {current.program}
-                      </h2>
-                      <p className="text-sm font-ninja mt-0.5" style={{ color: cfg.color, opacity: 0.7 }}>
-                        {current.modules.length} module{current.modules.length !== 1 ? 's' : ''}
-                        {' · '}
-                        {current.modules.reduce((n, m) => n + m.lessons.length, 0)} total {current.program === 'CREATE' ? 'projects' : 'lessons'}
-                      </p>
+                  {/* What used to be a tinted strip is now a line of text. The
+                      program name is already in the active tab above it. */}
+                  <div className="flex items-baseline justify-between gap-4 flex-wrap pt-5 pb-4">
+                    <p className="font-ninja text-sm text-ninja-muted tabular-nums">
+                      {moduleCount} module{moduleCount === 1 ? '' : 's'}
+                      <span className="px-2 text-ninja-border">/</span>
+                      {lessonCount} {unit}{lessonCount === 1 ? '' : 's'}
+                    </p>
+
+                    <div className="flex gap-5">
+                      {SECTIONS.map((s) => (
+                        <Tab
+                          key={s.key}
+                          active={section === s.key}
+                          color={color}
+                          onClick={() => setSection(s.key)}
+                        >
+                          {s.label}
+                        </Tab>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Modules is what the page has always been; Resources is the
-                      reference shelf beside it. Segmented rather than a second
-                      row of program-style buttons, so it doesn't read as another
-                      program picker. */}
-                  <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-ninja-border/20 border border-ninja-border mb-4">
-                    {SECTIONS.map((s) => {
-                      const isActive = section === s.key;
-                      return (
-                        <button
-                          key={s.key}
-                          onClick={() => setSection(s.key)}
-                          aria-pressed={isActive}
-                          className={`font-ninja font-semibold text-sm px-3.5 py-1.5 rounded-lg transition-colors ${
-                            isActive ? 'text-white' : 'text-ninja-muted hover:text-ninja-navy'
-                          }`}
-                          style={isActive ? { background: cfg.color } : {}}
-                        >
-                          {s.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-
                   {section === 'modules' ? (
-                    <SubProgramView
+                    <ModuleList
                       modules={current.modules}
                       subPrograms={current.sub_programs.length > 0 ? current.sub_programs : null}
-                      accentColor={cfg.color}
                       program={current.program}
+                      color={color}
                     />
                   ) : (
-                    <CurriculumResources program={current.program} accentColor={cfg.color} />
+                    <CurriculumResources program={current.program} />
                   )}
                 </motion.div>
               )}
