@@ -28,10 +28,11 @@ function DocBody({ slug }) {
   if (error) return <p className="font-ninja text-sm text-ninja-red py-6 text-center">{error}</p>;
   if (!doc) return <SkeletonList rows={6} label="Loading document" />;
 
-  // Mostly wide tables: they scroll inside this box rather than pushing the
-  // page sideways.
+  // No overflow wrapper: the tables are fixed-layout so they always fit, and an
+  // overflow-x container here would become the nearest scrollport and kill the
+  // sticky column header, which needs the dialog's own scroller to stick to.
   return (
-    <div className="md-view overflow-x-auto">
+    <div className="md-view">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
