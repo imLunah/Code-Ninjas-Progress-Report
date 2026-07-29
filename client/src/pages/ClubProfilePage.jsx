@@ -26,7 +26,7 @@ import { uploadToSigned } from '../lib/supabase';
 import { CARD } from '../lib/surfaces';
 import { SkeletonProfile } from '../components/ui/Skeleton';
 import { TrashIcon, CameraIcon } from '../components/ui/icons';
-import { UsersIcon } from 'lucide-react';
+import { UsersIcon, LinkIcon, FileTextIcon, ImageIcon, FilmIcon, FileIcon, ArrowDownToLineIcon, ExternalLinkIcon } from 'lucide-react';
 
 const relativeDate = (ts) => {
   if (!ts) return '';
@@ -76,14 +76,14 @@ const mdComponents = {
   blockquote: ({ children }) => <blockquote className="border-l-2 border-amber-400 pl-3 italic text-amber-800">{children}</blockquote>,
 };
 
-function resourceTypeBadge(r) {
-  if (r.resource_type === 'url') {
-    return { label: 'LINK', bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200' };
-  }
+// The glyph carries the file type, so the row needs no label for it.
+function resourceIcon(r) {
+  if (r.resource_type === 'url') return LinkIcon;
   const ext = (r.file_name || r.url || '').split('.').pop().toLowerCase();
-  if (ext === 'pdf') return { label: 'PDF', bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-200' };
-  if (['jpg','jpeg','png','gif','webp'].includes(ext)) return { label: 'IMG', bg: 'bg-green-50', text: 'text-green-600', border: 'border-green-200' };
-  return { label: 'FILE', bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' };
+  if (['pdf', 'doc', 'docx', 'ppt', 'pptx'].includes(ext)) return FileTextIcon;
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return ImageIcon;
+  if (['mp4', 'webm'].includes(ext)) return FilmIcon;
+  return FileIcon;
 }
 
 function PinnedNoteSection({ clubName, initialNote, initialAuthor, initialUpdatedAt, onUpdated, isReadOnly }) {
@@ -620,15 +620,15 @@ function ResourcesSection({ clubName, clubSlug, locationId, resources: initial, 
       ) : (
         <div className="space-y-2">
           {resources.map((r) => {
-            const badge = resourceTypeBadge(r);
+            const Icon = resourceIcon(r);
+            const isLink = r.resource_type === 'url';
+            const OpenIcon = isLink ? ExternalLinkIcon : ArrowDownToLineIcon;
             const addedDate = r.created_at
               ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
               : null;
             return (
               <div key={r.id} className="flex items-center gap-3 py-2 border-b border-ninja-border last:border-0">
-                <span className={`text-[10px] font-ninja font-bold px-1.5 py-0.5 rounded border flex-shrink-0 ${badge.bg} ${badge.text} ${badge.border}`}>
-                  {badge.label}
-                </span>
+                <Icon size={18} strokeWidth={1.75} className="text-ninja-muted flex-shrink-0" aria-hidden="true" />
                 <div className="flex-1 min-w-0">
                   <a href={r.url} target="_blank" rel="noopener noreferrer"
                     className="text-ninja-navy font-ninja font-semibold text-sm hover:text-ninja-blue transition-colors truncate block">
@@ -638,20 +638,26 @@ function ResourcesSection({ clubName, clubSlug, locationId, resources: initial, 
                     {r.added_by}{addedDate ? ` · ${addedDate}` : ''}
                   </p>
                 </div>
-                {!isReadOnly && (
-                  confirmDelete === r.id ? (
-                    <div className="flex gap-1 flex-shrink-0">
-                      <Button variant="danger" size="sm" onClick={() => handleDelete(r)}>Delete</Button>
-                      <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(null)}>Cancel</Button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setConfirmDelete(r.id)}
-                      className="text-ninja-muted hover:text-ninja-red text-sm flex-shrink-0 transition-colors">↓</button>
-                  )
-                )}
-                {isReadOnly && (
-                  <a href={r.url} target="_blank" rel="noopener noreferrer"
-                    className="text-ninja-muted hover:text-ninja-blue text-sm flex-shrink-0 transition-colors">↓</a>
+                {confirmDelete === r.id ? (
+                  <div className="flex gap-1 flex-shrink-0">
+                    <Button variant="danger" size="sm" onClick={() => handleDelete(r)}>Delete</Button>
+                    <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(null)}>Cancel</Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <a href={r.url} target="_blank" rel="noopener noreferrer"
+                      title={isLink ? 'Open link' : 'Download'} aria-label={isLink ? 'Open link' : 'Download'}
+                      className="p-1.5 rounded-full text-ninja-muted opacity-60 hover:opacity-100 hover:text-ninja-blue transition-colors">
+                      <OpenIcon size={16} strokeWidth={1.75} />
+                    </a>
+                    {!isReadOnly && (
+                      <button onClick={() => setConfirmDelete(r.id)}
+                        title="Remove" aria-label="Remove resource"
+                        className="p-1.5 rounded-full text-ninja-muted opacity-60 hover:opacity-100 hover:text-ninja-red transition-colors">
+                        <TrashIcon size={16} strokeWidth={1.75} />
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             );
