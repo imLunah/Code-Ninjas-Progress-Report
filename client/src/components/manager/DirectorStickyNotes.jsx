@@ -141,8 +141,10 @@ function NoteCard({ note, canManage, onSaved, onDeleted, board, onDragToSlot, on
         board ? 'absolute left-0 top-0' : 'relative w-full'
       } ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
       style={{
+        // While editing, the paper previews the colour being picked — text as
+        // well as background, or a light note keeps the old dark palette's ink.
         backgroundColor: editing ? COLORS[color].bg : c.bg,
-        color: c.text,
+        color: editing ? COLORS[color].text : c.text,
         width: board ? NOTE_W : undefined,
         height: NOTE_H,
         x: board ? x : undefined,
@@ -158,14 +160,18 @@ function NoteCard({ note, canManage, onSaved, onDeleted, board, onDragToSlot, on
     >
       {editing ? (
         <>
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          {/* The editor scrolls its own body, so no wrapper scroller: two nested
+              scrollers in a 200px note left a stub of a text area with a
+              scrollbar down the middle of it. */}
+          <div className="flex-1 min-h-0">
             <LazyMarkdownEditor
+              variant="bare"
               value={draft}
               onChange={setDraft}
-              placeholder="Jot something down… **bold**, or '- ' for a list"
+              placeholder="Jot something down…"
             />
           </div>
-          <div className="flex items-center justify-between mt-2 gap-2 flex-shrink-0">
+          <div className="flex items-center justify-between mt-2 pt-2 border-t gap-2 flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
             <ColorDots value={color} onChange={setColor} />
             <div className="flex items-center gap-1.5">
               <button onClick={() => { setEditing(false); setDraft(note.body); setColor(note.color); }} className="font-ninja text-xs font-bold opacity-70 hover:opacity-100 px-2 py-1">Cancel</button>
@@ -331,13 +337,18 @@ export default function DirectorStickyNotes() {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden mb-3"
           >
-            <div className="rounded-xl p-3.5 shadow-sm sm:max-w-md" style={{ backgroundColor: COLORS[color].bg, color: COLORS[color].text }}>
-              <LazyMarkdownEditor
-                value={draft}
-                onChange={setDraft}
-                placeholder="Jot something down… **bold**, or '- ' for a list"
-              />
-              <div className="flex items-center justify-between mt-2 gap-2">
+            {/* Same paper as a pinned note, so what you type looks like what
+                lands on the board. */}
+            <div className="rounded-xl p-3.5 shadow-sm sm:w-[248px] flex flex-col" style={{ backgroundColor: COLORS[color].bg, color: COLORS[color].text, height: NOTE_H }}>
+              <div className="flex-1 min-h-0">
+                <LazyMarkdownEditor
+                  variant="bare"
+                  value={draft}
+                  onChange={setDraft}
+                  placeholder="Jot something down…"
+                />
+              </div>
+              <div className="flex items-center justify-between mt-2 pt-2 border-t gap-2 flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
                 <ColorDots value={color} onChange={setColor} />
                 <div className="flex items-center gap-1.5">
                   <button onClick={() => { setAdding(false); setDraft(''); }} className="font-ninja text-xs font-bold opacity-70 hover:opacity-100 px-2 py-1">Cancel</button>
