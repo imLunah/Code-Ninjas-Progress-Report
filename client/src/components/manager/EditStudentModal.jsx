@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
+import ProgramsEditor, { toRows, commitPrograms } from './ProgramsEditor';
 
-export default function EditStudentModal({ isOpen, onClose, student, onSaved }) {
+export default function EditStudentModal({ isOpen, onClose, student, programs = [], onSaved, onProgramsChanged }) {
   const [form, setForm] = useState({ full_name: '', birthday: '', parent_name: '', parent_email: '', parent_phone: '' });
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -17,6 +19,7 @@ export default function EditStudentModal({ isOpen, onClose, student, onSaved }) 
         parent_email: student.parent_email || '',
         parent_phone: student.parent_phone || '',
       });
+      setRows(toRows(programs));
       setError('');
     }
   }, [student, isOpen]);
@@ -37,7 +40,12 @@ export default function EditStudentModal({ isOpen, onClose, student, onSaved }) 
         parent_email: form.parent_email || null,
         parent_phone: form.parent_phone || null,
       });
+      // Enrollments are written after the ninja's own fields. A failure here
+      // leaves the name saved, so the dialog stays open holding the enrollment
+      // edits rather than reporting success it did not achieve.
+      const savedPrograms = await commitPrograms(student.id, programs, rows);
       onSaved && onSaved(updated);
+      onProgramsChanged && onProgramsChanged(savedPrograms);
       onClose();
     } catch (err) {
       setError(err.message || 'Failed to update ninja');
@@ -78,6 +86,11 @@ export default function EditStudentModal({ isOpen, onClose, student, onSaved }) 
             onChange={handleChange}
             className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
           />
+        </div>
+
+        <div className="border-t border-ninja-border pt-4">
+          <p className="text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-3">Programs</p>
+          <ProgramsEditor rows={rows} setRows={setRows} disabled={loading} />
         </div>
 
         <div className="border-t border-ninja-border pt-4">

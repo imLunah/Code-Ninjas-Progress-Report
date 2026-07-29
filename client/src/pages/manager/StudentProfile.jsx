@@ -6,19 +6,15 @@ import { motion } from 'framer-motion';
 import { MapIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Layout from '../../components/layout/Layout';
-import BeltBadge from '../../components/ui/BeltBadge';
 import BeltIcon from '../../components/ui/BeltIcon';
-import ProgramBadge from '../../components/ui/ProgramBadge';
 import Button from '../../components/ui/Button';
 import ProgressHistory from '../../components/shared/ProgressHistory';
 import PinnedNote from '../../components/shared/PinnedNote';
 import EditStudentModal from '../../components/manager/EditStudentModal';
-import EnrollmentEditModal from '../../components/manager/EnrollmentEditModal';
 import StickerPickerModal from '../../components/shared/StickerPickerModal';
 import { stickerUrl, stickerLabel } from '../../utils/stickers';
 import { api } from '../../api/client';
-import { PROGRAMS as STATIC_PROGRAMS, BELTS, PROJECTS, STATUSES, getMaxLevel, getLevels, getBelt, PROGRAM_LOGOS } from '../../utils/beltConfig';
-import { useCurriculum } from '../../context/CurriculumContext';
+import { BELTS, getMaxLevel, getLevels, getBelt, PROGRAM_LOGOS } from '../../utils/beltConfig';
 import { SkeletonProfile } from '../../components/ui/Skeleton';
 
 // ── Animation variants ────────────────────────────────────────────────────────
@@ -461,99 +457,6 @@ function DesktopActivityChart({ logs }) {
   );
 }
 
-// ── AddProgramForm ────────────────────────────────────────────────────────────
-function AddProgramForm({ studentId, existingPrograms, onAdded, onCancel }) {
-  const [program, setProgram] = useState('');
-  const [beltLevel, setBeltLevel] = useState('');
-  const [beltSublevel, setBeltSublevel] = useState('');
-  const [currentProject, setCurrentProject] = useState('');
-  const [projectStatus, setProjectStatus] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const { subPrograms } = useCurriculum();
-  // Merge dynamic programs from curriculum with static fallback, deduplicated
-  const allPrograms = [
-    ...STATIC_PROGRAMS,
-    ...Object.keys(subPrograms || {}).filter(p => !STATIC_PROGRAMS.includes(p)),
-  ];
-
-  const isCreate = program === 'CREATE';
-  const levelOpts = ['Black', 'Bronze', 'Silver', 'Platinum'].includes(beltLevel) ? [] : getLevels(beltLevel);
-  const available = allPrograms.filter((p) => !existingPrograms.includes(p));
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const added = await api.post(`/students/${studentId}/programs`, {
-        program,
-        belt_level: isCreate && beltLevel ? beltLevel : null,
-        belt_sublevel: isCreate && beltSublevel ? parseInt(beltSublevel) : null,
-        current_project: isCreate && currentProject ? currentProject : null,
-        project_status: isCreate && projectStatus ? projectStatus : null,
-      });
-      onAdded && onAdded(added);
-    } catch (err) {
-      setError(err.message || 'Failed to add program');
-      setLoading(false);
-    }
-  };
-
-  if (available.length === 0) {
-    return <div className="text-ninja-muted font-ninja text-sm italic">Ninja is already enrolled in all programs.</div>;
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-3 border border-ninja-border rounded-xl p-4 bg-ninja-bg">
-      {error && <p className="text-ninja-red text-sm font-ninja">{error}</p>}
-      <select
-        value={program}
-        onChange={(e) => { setProgram(e.target.value); setBeltLevel(''); setBeltSublevel(''); setCurrentProject(''); setProjectStatus(''); }}
-        required
-        className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors"
-      >
-        <option value="">Select program...</option>
-        {available.map((p) => <option key={p} value={p}>{p}</option>)}
-      </select>
-
-      {isCreate && (
-        <div className="space-y-2 pt-1">
-          <select value={beltLevel} onChange={(e) => { setBeltLevel(e.target.value); setBeltSublevel(''); }}
-            className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors">
-            <option value="">Select belt (optional)...</option>
-            {BELTS.map((b) => <option key={b.name} value={b.name}>{b.name}</option>)}
-          </select>
-          {levelOpts.length > 0 && (
-            <select value={beltSublevel} onChange={(e) => setBeltSublevel(e.target.value)}
-              className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors">
-              <option value="">Select level (optional)...</option>
-              {levelOpts.map((lv) => <option key={lv} value={lv}>Level {lv}</option>)}
-            </select>
-          )}
-          <select value={currentProject} onChange={(e) => setCurrentProject(e.target.value)}
-            className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors">
-            <option value="">Select project (optional)...</option>
-            {PROJECTS.map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
-          <select value={projectStatus} onChange={(e) => setProjectStatus(e.target.value)}
-            className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-4 py-2 font-ninja focus:outline-none focus:border-ninja-blue transition-colors">
-            <option value="">Select status (optional)...</option>
-            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-      )}
-
-      <div className="flex gap-2">
-        <Button type="submit" disabled={loading || !program} size="sm">{loading ? 'Adding...' : 'Add Program'}</Button>
-        <Button variant="secondary" size="sm" type="button" onClick={onCancel}>Cancel</Button>
-      </div>
-    </form>
-  );
-}
-
-
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function StudentProfile() {
   const { id } = useParams();
@@ -567,9 +470,6 @@ export default function StudentProfile() {
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
   const [confirmHardDelete, setConfirmHardDelete] = useState(false);
   const [hardDeleting, setHardDeleting] = useState(false);
-  const [confirmRemoveProgram, setConfirmRemoveProgram] = useState(null);
-  const [editingEnrollment, setEditingEnrollment] = useState(null);
-  const [showAddProgram, setShowAddProgram] = useState(false);
   const [roadmapEnrollment, setRoadmapEnrollment] = useState(null);
   const [showStickerPicker, setShowStickerPicker] = useState(false);
 
@@ -601,28 +501,8 @@ export default function StudentProfile() {
       progress_logs: (prev.progress_logs || []).filter((l) => l.id !== logId),
     }));
 
-  const handleEnrollmentSaved = (updated) => {
-    setStudent((prev) => ({
-      ...prev,
-      programs: (prev.programs || []).map((p) => p.program === updated.program ? { ...p, ...updated } : p),
-    }));
-  };
 
-  const handleProgramAdded = (newEnrollment) => {
-    setStudent((prev) => ({ ...prev, programs: [...(prev.programs || []), newEnrollment] }));
-    setShowAddProgram(false);
-  };
 
-  const handleRemoveProgram = async (program) => {
-    try {
-      await api.delete(`/students/${id}/programs/${encodeURIComponent(program)}`);
-      setStudent((prev) => ({ ...prev, programs: (prev.programs || []).filter((p) => p.program !== program) }));
-    } catch {
-      setError('Failed to remove program');
-    } finally {
-      setConfirmRemoveProgram(null);
-    }
-  };
 
   const handleDeactivate = async () => {
     setDeactivating(true);
@@ -892,60 +772,8 @@ export default function StudentProfile() {
                 </motion.div>
               )}
 
-              {/* Enrollments management */}
-              {isManager && !isReadOnly && (
-                <motion.div variants={fadeUp} className="bg-white rounded-2xl p-5 border border-ninja-border shadow-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-ninja font-bold text-ninja-navy">Enrollments</h2>
-                    {!showAddProgram && (
-                      <button onClick={() => setShowAddProgram(true)} className="text-ninja-blue font-ninja text-sm hover:underline">
-                        + Add Program
-                      </button>
-                    )}
-                  </div>
-                  {programs.length === 0 && !showAddProgram && (
-                    <p className="text-ninja-muted font-ninja text-sm italic">No programs enrolled.</p>
-                  )}
-                  <div className="space-y-2">
-                    {programs.map((enrollment) => (
-                      <div key={enrollment.program} className="flex flex-wrap items-center justify-between gap-3 p-3 bg-ninja-bg border border-ninja-border rounded-xl">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <ProgramBadge program={enrollment.program} size="sm" />
-                          {enrollment.program === 'CREATE' && enrollment.belt_level && (
-                            <BeltBadge belt={enrollment.belt_level} sublevel={enrollment.belt_sublevel} size="xs" />
-                          )}
-                          {enrollment.current_project && (
-                            <span className="text-ninja-muted font-ninja text-sm">
-                              {enrollment.current_project}{enrollment.project_status && ` — ${enrollment.project_status}`}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          {enrollment.program === 'CREATE' && (
-                            <Button size="sm" variant="secondary" onClick={() => setEditingEnrollment(enrollment)}>Edit</Button>
-                          )}
-                          {confirmRemoveProgram === enrollment.program ? (
-                            <div className="flex items-center gap-1">
-                              <Button size="sm" variant="danger" onClick={() => handleRemoveProgram(enrollment.program)}>Confirm</Button>
-                              <Button size="sm" variant="secondary" onClick={() => setConfirmRemoveProgram(null)}>Cancel</Button>
-                            </div>
-                          ) : (
-                            <Button size="sm" variant="danger" onClick={() => setConfirmRemoveProgram(enrollment.program)}>Remove</Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                    {showAddProgram && (
-                      <AddProgramForm
-                        studentId={student.id}
-                        existingPrograms={programs.map((p) => p.program)}
-                        onAdded={handleProgramAdded}
-                        onCancel={() => setShowAddProgram(false)}
-                      />
-                    )}
-                  </div>
-                </motion.div>
-              )}
+              {/* Enrollments are managed in the Edit Ninja dialog, beside the
+                  ninja's own fields, rather than as a card of red buttons. */}
             </motion.div>
 
             {/* Right column */}
@@ -1070,14 +898,20 @@ export default function StudentProfile() {
         </div>
       </div>
 
-      <EditStudentModal isOpen={showEdit} onClose={() => setShowEdit(false)} student={student} onSaved={handleSaved} />
+      <EditStudentModal
+        isOpen={showEdit}
+        onClose={() => setShowEdit(false)}
+        student={student}
+        programs={programs}
+        onSaved={handleSaved}
+        onProgramsChanged={(saved) => setStudent((prev) => ({ ...prev, programs: saved }))}
+      />
       <StickerPickerModal
         isOpen={showStickerPicker}
         onClose={() => setShowStickerPicker(false)}
         student={student}
         onSaved={(sticker) => setStudent((prev) => ({ ...prev, codeorg_sticker: sticker }))}
       />
-      <EnrollmentEditModal isOpen={!!editingEnrollment} onClose={() => setEditingEnrollment(null)} studentId={student.id} enrollment={editingEnrollment} onSaved={handleEnrollmentSaved} />
       <RoadmapModal
         open={!!roadmapEnrollment}
         onClose={() => setRoadmapEnrollment(null)}
