@@ -558,11 +558,11 @@ function ClubHero({ clubDef, colors, memberCount, locationName, isManager, isRea
               {clubDef.description}
             </p>
           )}
+          {/* Arbitrary hex on the pill below, not bg-white and not the ninja
+              tokens: it sits on a coloured surface, where `.dark .bg-white`
+              would darken the rest state while `hover:bg-white/90` escapes that
+              same override and flashes true white under near-white ink. */}
           {isManager && !isReadOnly && (
-            {/* Arbitrary hex, not bg-white and not the ninja tokens: this pill
-                sits on a coloured surface, where `.dark .bg-white` would darken
-                the rest state while `hover:bg-white/90` escapes that same
-                override and flashes true white under near-white ink. */}
             <button onClick={onNewSession}
               className="mt-4 inline-flex items-center gap-1.5 font-ninja font-bold text-sm text-[#0f1729] bg-[#ffffff] hover:bg-[#e6ecf7] rounded-xl px-4 py-2 transition duration-150 ease-[var(--ease-out)] active:scale-[0.97]">
               <PlusIcon size={16} strokeWidth={2.5} aria-hidden="true" />
