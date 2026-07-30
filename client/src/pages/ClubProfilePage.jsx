@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 
 const fadeUp = {
@@ -21,13 +21,14 @@ import { Pin, MARKDOWN_COMPONENTS } from '../components/shared/PinnedNote';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { formatDate, today } from '../utils/dateUtils';
-import { COLOR_SETS, getClubColors } from '../utils/clubUtils';
+import { getClubColors } from '../utils/clubUtils';
 import { uploadToSigned } from '../lib/supabase';
 import { CARD } from '../lib/surfaces';
 import { SkeletonProfile } from '../components/ui/Skeleton';
 import { TrashIcon, CameraIcon } from '../components/ui/icons';
-import { UsersIcon } from 'lucide-react';
+import { UsersIcon, ChevronLeftIcon, PlusIcon } from 'lucide-react';
 import ClubBoard from '../components/shared/ClubBoard';
+import ActionMenu, { MenuItem } from '../components/ui/ActionMenu';
 
 const relativeDate = (ts) => {
   if (!ts) return '';
@@ -377,30 +378,29 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
   );
 }
 
-function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }) {
+// The club's identity is its photo and its color, so the page opens with them
+// at full width instead of a thumbnail in a 288px rail. The title lives here
+// and nowhere else; it used to be printed twice.
+function ClubHero({ clubDef, colors, memberCount, locationName, isManager, isReadOnly, onCoverUpdated, onNewSession, onBack }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [cropSrc, setCropSrc] = useState(null);
   const [coverError, setCoverError] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const fileInputRef = useRef(null);
+  const reduce = useReducedMotion();
 
-  const initials = clubDef.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-  const createdYear = clubDef.created_at
+  const hasCover = Boolean(clubDef.cover_image_url) && !coverError;
+  const canEditCover = isManager && !isReadOnly && clubDef.location_id !== null;
+  const createdOn = clubDef.created_at
     ? new Date(clubDef.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
     : null;
-  const canEditCover = isManager && !isReadOnly && clubDef.location_id !== null;
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setUploadError('Please select an image file.');
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      setUploadError('Image must be under 10 MB.');
-      return;
-    }
+    if (!file.type.startsWith('image/')) { setUploadError('Please select an image file.'); return; }
+    if (file.size > 10 * 1024 * 1024) { setUploadError('Image must be under 10 MB.'); return; }
     setUploadError('');
     const reader = new FileReader();
     reader.onload = () => setCropSrc(reader.result);
@@ -415,10 +415,12 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
       // Server clears the DB and deletes the orphaned object.
       await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { path: null });
       onCoverUpdated(null);
+      setCoverError(false);
     } catch {
       setUploadError('Remove failed. Try again.');
     } finally {
       setUploading(false);
+      setConfirmRemove(false);
     }
   };
 
@@ -432,6 +434,7 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
       // Server signs the read URL, stores it, and deletes the old cover.
       const updated = await api.patch(`/clubs/definitions/${clubDef.id}/cover-image`, { path: sign.path });
       onCoverUpdated(updated?.cover_image_url || null);
+      setCoverError(false);
     } catch {
       setUploadError('Upload failed. Try again.');
     } finally {
@@ -439,72 +442,145 @@ function ClubInfoCard({ clubDef, colors, isManager, isReadOnly, onCoverUpdated }
     }
   };
 
+  // With no photo the field is built from the club's own colour rather than a
+  // pastel tint with the initials ghosted across it. Inline hex on purpose:
+  // this surface is coloured, so the .dark bg-* overrides must not reach it.
+  const solid = colors.solid;
+  const colorField = {
+    backgroundColor: '#111a2e',
+    backgroundImage: [
+      `radial-gradient(115% 130% at 6% -10%, ${solid} 0%, ${solid}cc 38%, ${solid}33 68%, rgba(17,26,46,0) 100%)`,
+      `radial-gradient(80% 120% at 100% 120%, ${solid}55 0%, rgba(17,26,46,0) 70%)`,
+      'repeating-linear-gradient(115deg, rgba(255,255,255,0.045) 0px, rgba(255,255,255,0.045) 1px, rgba(255,255,255,0) 1px, rgba(255,255,255,0) 13px)',
+    ].join(', '),
+  };
+
+  const meta = [
+    locationName,
+    memberCount > 0 && `${memberCount} member${memberCount !== 1 ? 's' : ''}`,
+    clubDef.schedule && `Meets ${clubDef.schedule}`,
+    createdOn && `Since ${createdOn}`,
+  ].filter(Boolean);
+
   return (
-    <div className={`${CARD} overflow-hidden`}>
-      {/* Cover image / color banner */}
-      <div className="relative h-40 w-full overflow-hidden">
-        {clubDef.cover_image_url && !coverError ? (
-          <img src={clubDef.cover_image_url} alt={clubDef.name} onError={() => setCoverError(true)} className="w-full h-full object-cover" />
+    <div className="relative">
+      {/* The media layer clips itself so the actions above it can overflow. */}
+      <div className="absolute inset-0 rounded-2xl overflow-hidden">
+        {hasCover ? (
+          <>
+            <motion.img
+              src={clubDef.cover_image_url}
+              alt=""
+              onError={() => setCoverError(true)}
+              className="w-full h-full object-cover"
+              initial={reduce ? false : { scale: 1.06, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            />
+            {/* Weighted to the bottom left, where the title sits, so the copy
+                holds up over a bright photo without flattening the whole image. */}
+            <div className="absolute inset-0" style={{
+              backgroundImage:
+                'linear-gradient(to top, rgba(8,12,22,0.92) 0%, rgba(8,12,22,0.55) 38%, rgba(8,12,22,0.12) 70%, rgba(8,12,22,0.35) 100%),' +
+                'linear-gradient(to right, rgba(8,12,22,0.6) 0%, rgba(8,12,22,0) 55%)',
+            }} />
+          </>
         ) : (
-          <div className={`w-full h-full flex items-center justify-center ${colors.bg}`}>
-            <span className={`font-ninja font-black text-4xl opacity-30 ${colors.text}`}>{initials}</span>
-          </div>
+          <div className="w-full h-full" style={colorField} />
         )}
-        {canEditCover && (
-          <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
-            {clubDef.cover_image_url && (
-              <button
-                onClick={handleRemoveCover}
-                disabled={uploading}
-                className="bg-black/50 hover:bg-red-600/80 disabled:opacity-50 text-white text-xs font-ninja font-semibold px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
-              >
-                <TrashIcon className="w-3 h-3" />
-                Remove
+      </div>
+
+      <div className="relative flex flex-col min-h-[13rem] sm:min-h-[15rem] p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <button onClick={onBack}
+            className="font-ninja text-sm font-semibold text-white/70 hover:text-white transition-colors duration-150 flex items-center gap-1.5">
+            <ChevronLeftIcon size={16} strokeWidth={2.25} aria-hidden="true" />
+            Clubs
+          </button>
+
+          {canEditCover && (
+            hasCover ? (
+              <ActionMenu label="Club photo" onClosed={() => setConfirmRemove(false)}
+                className="[&>button]:text-white/70 [&>button]:opacity-100 [&>button:hover]:text-white">
+                {({ close }) => (
+                  confirmRemove ? (
+                    <div className="p-1.5 w-44">
+                      <p className="font-ninja text-xs text-ninja-muted mb-2">Remove this photo?</p>
+                      <div className="flex items-center gap-1.5">
+                        <Button variant="danger" size="sm" onClick={handleRemoveCover} disabled={uploading}>
+                          {uploading ? 'Removing…' : 'Remove'}
+                        </Button>
+                        <Button variant="secondary" size="sm" onClick={() => setConfirmRemove(false)}>Keep</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <MenuItem icon={CameraIcon} onSelect={() => { fileInputRef.current?.click(); close(); }}>
+                        {uploading ? 'Uploading…' : 'Change photo'}
+                      </MenuItem>
+                      <MenuItem icon={TrashIcon} danger onSelect={() => setConfirmRemove(true)}>Remove photo</MenuItem>
+                    </>
+                  )
+                )}
+              </ActionMenu>
+            ) : (
+              <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+                className="font-ninja text-xs font-bold text-white/80 hover:text-white border border-white/25 hover:border-white/60 rounded-full px-3 py-1.5 transition-colors duration-150 flex items-center gap-1.5 disabled:opacity-50">
+                <CameraIcon className="w-3.5 h-3.5" />
+                {uploading ? 'Uploading…' : 'Add photo'}
               </button>
-            )}
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="bg-black/50 hover:bg-black/70 disabled:opacity-50 text-white text-xs font-ninja font-semibold px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
-            >
-              <CameraIcon className="w-3 h-3" />
-              {uploading ? 'Uploading…' : clubDef.cover_image_url ? 'Change photo' : 'Add photo'}
-            </button>
-          </div>
-        )}
-        {canEditCover && (
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-        )}
-        {cropSrc && (
-          <CropModal
-            imageSrc={cropSrc}
-            aspect={16 / 9}
-            cropShape="rect"
-            onConfirm={handleCropConfirm}
-            onCancel={() => setCropSrc(null)}
-          />
-        )}
-      </div>
-
-      {uploadError && <p className="text-ninja-red font-ninja text-xs px-4 pt-2">{uploadError}</p>}
-
-      <div className="p-4">
-        <div className="flex items-start gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="font-ninja font-bold text-ninja-navy text-lg leading-tight">{clubDef.name}</p>
-            {(createdYear || clubDef.creator_name) && (
-              <p className="text-ninja-muted font-ninja text-xs mt-0.5">
-                {createdYear && `Created ${createdYear}`}
-                {createdYear && clubDef.creator_name && ' · '}
-                {clubDef.creator_name}
-              </p>
-            )}
-          </div>
+            )
+          )}
         </div>
-        {clubDef.description && (
-          <p className="text-ninja-muted font-ninja text-sm mt-3 leading-relaxed">{clubDef.description}</p>
-        )}
+
+        {/* Title block sits on the floor of the hero, hard left. */}
+        <motion.div
+          className="mt-auto pt-8 max-w-2xl"
+          initial={reduce ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.08 }}
+        >
+          <h1 className="font-ninja font-black text-white text-3xl sm:text-[2.6rem] leading-[1.05] tracking-[-0.02em]">
+            {clubDef.name}
+          </h1>
+          {meta.length > 0 && (
+            <p className="mt-2 font-ninja text-sm text-white/70 flex flex-wrap items-center gap-x-2 gap-y-1">
+              {meta.map((bit, i) => (
+                <span key={bit} className="flex items-center gap-2">
+                  {i > 0 && <span aria-hidden="true" className="w-1 h-1 rounded-full bg-white/35" />}
+                  {bit}
+                </span>
+              ))}
+            </p>
+          )}
+          {clubDef.description && (
+            <p className="mt-3 font-ninja text-sm text-white/60 leading-relaxed line-clamp-2">
+              {clubDef.description}
+            </p>
+          )}
+          {isManager && !isReadOnly && (
+            <button onClick={onNewSession}
+              className="mt-4 inline-flex items-center gap-1.5 font-ninja font-bold text-sm text-ninja-navy bg-white hover:bg-white/90 rounded-xl px-4 py-2 transition duration-150 ease-[var(--ease-out)] active:scale-[0.97]">
+              <PlusIcon size={16} strokeWidth={2.5} aria-hidden="true" />
+              New session
+            </button>
+          )}
+        </motion.div>
       </div>
+
+      {canEditCover && (
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+      )}
+      {uploadError && <p className="text-ninja-red font-ninja text-xs mt-2">{uploadError}</p>}
+      {cropSrc && (
+        <CropModal
+          imageSrc={cropSrc}
+          aspect={16 / 9}
+          cropShape="rect"
+          onConfirm={handleCropConfirm}
+          onCancel={() => setCropSrc(null)}
+        />
+      )}
     </div>
   );
 }
@@ -549,67 +625,45 @@ export default function ClubProfilePage() {
 
   return (
     <Layout>
-      <motion.div className="space-y-6" variants={stagger} initial="hidden" animate="show">
-        {/* Header */}
-        <motion.div variants={fadeUp} className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <button onClick={() => navigate('/clubs')}
-              className="text-ninja-muted hover:text-ninja-blue font-ninja text-sm flex items-center gap-1 transition-colors mb-2">
-              ← Back to Clubs
-            </button>
-            <h1 className="text-2xl sm:text-3xl font-bold font-ninja text-ninja-navy">{clubDef.name}</h1>
-            <p className="text-ninja-muted font-ninja text-sm mt-1">
-              {locationName}
-              {memberCount > 0 && ` · ${memberCount} member${memberCount !== 1 ? 's' : ''}`}
-              {clubDef.schedule && ` · Meets ${clubDef.schedule}`}
-            </p>
-          </div>
-          {isManager && !isReadOnly && (
-            <Button onClick={() => navigate(`/clubs/log?club=${encodeURIComponent(clubDef.name)}`)}>
-              + New session
-            </Button>
-          )}
-        </motion.div>
+      <motion.div className="space-y-5" variants={stagger} initial="hidden" animate="show">
+        <ClubHero
+          clubDef={clubDef}
+          colors={colors}
+          memberCount={memberCount}
+          locationName={locationName}
+          isManager={isManager}
+          isReadOnly={isReadOnly}
+          onBack={() => navigate('/clubs')}
+          onNewSession={() => navigate(`/clubs/log?club=${encodeURIComponent(clubDef.name)}`)}
+          onCoverUpdated={(url) => setClubDef((prev) => ({ ...prev, cover_image_url: url }))}
+        />
 
-        {/* Two-column body */}
-        <motion.div variants={fadeUp} className="lg:flex lg:gap-6 lg:items-start space-y-5 lg:space-y-0">
-          {/* Left: pinned note + sessions */}
-          <div className="flex-1 min-w-0 space-y-5">
-            <PinnedNoteSection
-              clubName={clubDef.name}
-              initialNote={profile?.pinned_note}
-              initialAuthor={profile?.pinned_note_author}
-              initialUpdatedAt={profile?.pinned_note_updated_at}
-              isReadOnly={isReadOnly}
-              onUpdated={(note) => setProfile((prev) => ({ ...prev, pinned_note: note, pinned_note_author: user?.displayName, pinned_note_updated_at: new Date().toISOString() }))}
-            />
-            <ClubBoard
-              clubName={clubDef.name}
-              posts={resources}
-              isReadOnly={isReadOnly}
-              currentUser={{ id: user?.id, role: isSenseiView ? 'sensei' : user?.role }}
-            />
-            <SessionsSection
-              sessions={sessions}
-              memberCount={memberCount}
-              slug={slug}
-              navigate={navigate}
-              isManager={isManager}
-              isReadOnly={isReadOnly}
-              onDeleted={(id) => setSessions((prev) => prev.filter((s) => s.id !== id))}
-            />
-          </div>
-
-          {/* Right: club info + resources */}
-          <div className="lg:w-72 lg:flex-shrink-0 space-y-4">
-            <ClubInfoCard
-              clubDef={clubDef}
-              colors={colors}
-              isManager={isManager}
-              isReadOnly={isReadOnly}
-              onCoverUpdated={(url) => setClubDef((prev) => ({ ...prev, cover_image_url: url }))}
-            />
-          </div>
+        {/* One column. The hero carries the club's identity, so nothing needs a
+            rail beside it and the board gets the full width. */}
+        <motion.div variants={fadeUp} className="space-y-5">
+          <PinnedNoteSection
+            clubName={clubDef.name}
+            initialNote={profile?.pinned_note}
+            initialAuthor={profile?.pinned_note_author}
+            initialUpdatedAt={profile?.pinned_note_updated_at}
+            isReadOnly={isReadOnly}
+            onUpdated={(note) => setProfile((prev) => ({ ...prev, pinned_note: note, pinned_note_author: user?.displayName, pinned_note_updated_at: new Date().toISOString() }))}
+          />
+          <ClubBoard
+            clubName={clubDef.name}
+            posts={resources}
+            isReadOnly={isReadOnly}
+            currentUser={{ id: user?.id, role: isSenseiView ? 'sensei' : user?.role }}
+          />
+          <SessionsSection
+            sessions={sessions}
+            memberCount={memberCount}
+            slug={slug}
+            navigate={navigate}
+            isManager={isManager}
+            isReadOnly={isReadOnly}
+            onDeleted={(id) => setSessions((prev) => prev.filter((s) => s.id !== id))}
+          />
         </motion.div>
       </motion.div>
     </Layout>
