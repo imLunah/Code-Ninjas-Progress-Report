@@ -113,6 +113,21 @@ export default function Layout({ children }) {
   const lastScrollY = useRef(0);
   const [navCompact, setNavCompact] = useState(false);
 
+  // The swipe preview panels are mobile-only, and `lg:hidden` was hiding them
+  // rather than skipping them: on desktop both adjacent routes still mounted
+  // inside display:none, so every Recharts container in the dashboard and
+  // Reports measured 0x0 and warned on each render. Decide in JS instead, the
+  // way the Account page picks its layout, so desktop mounts neither panel.
+  const [isWide, setIsWide] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const onChange = (e) => setIsWide(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
   const handleMainScroll = (e) => {
     const y = e.currentTarget.scrollTop;
     if (y < 24) { setNavCompact(false); lastScrollY.current = y; return; }
@@ -354,10 +369,10 @@ export default function Layout({ children }) {
             costs nothing to drop the scroller at lg. */}
         <main onScroll={handleMainScroll} className="flex-1 overflow-y-auto lg:overflow-visible min-h-0 max-w-7xl lg:max-w-none mx-auto w-full px-4 sm:px-6 lg:px-8 pt-[max(env(safe-area-inset-top),1.25rem)] lg:pt-8 pb-28 lg:pb-8">
           <div className="relative overflow-x-hidden overflow-y-hidden lg:overflow-x-visible lg:overflow-y-visible">
-            {prevTab && (
+            {!isWide && prevTab && (
               <AdjacentPanel key={prevTab.to} tab={prevTab} panelRef={prevPanelRef} side="left" />
             )}
-            {nextTab && (
+            {!isWide && nextTab && (
               <AdjacentPanel key={nextTab.to} tab={nextTab} panelRef={nextPanelRef} side="right" />
             )}
 
