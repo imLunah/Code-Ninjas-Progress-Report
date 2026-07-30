@@ -1,0 +1,24 @@
+# DojoLink is a private studio management app.
+# Only the sign-in and legal pages are open to crawlers.
+# Everything else sits behind a session and is not useful to index.
+
+User-agent: *
+Allow: /$
+Allow: /login
+Allow: /privacy
+Allow: /terms
+Allow: /accessibility
+
+# Render assets: these must stay crawlable or the allowed pages
+# cannot be rendered and evaluated correctly.
+Allow: /assets/
+Allow: /fonts/
+Allow: /favicon.png
+Allow: /og-preview.jpg
+Allow: /CodeNinjasIcon.svg
+Allow: /CodeNinjasCelebrate.webp
+Allow: /ninja_background.jpg
+
+Disallow: /
+
+Sitemap: https://www.dojolink.app/sitemap.xml
