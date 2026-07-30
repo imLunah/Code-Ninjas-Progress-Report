@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { BELTS, PROGRAM_LOGOS, getLevels, getBelt } from '../../utils/beltConfig';
+import { BELTS, PROGRAM_LOGOS, PROGRAM_BANNERS, getLevels, getBelt } from '../../utils/beltConfig';
 import BeltIcon from '../ui/BeltIcon';
 import { useCurriculum } from '../../context/CurriculumContext';
 import { formatDate } from '../../utils/dateUtils';
@@ -83,11 +83,26 @@ const nodeVariants = {
 function ProgramCardBanner({ program, lastDate, sessions }) {
   const gradient = PROGRAM_GRADIENTS[program];
   const logo = PROGRAM_LOGOS[program];
+  const banner = PROGRAM_BANNERS[program];
 
   return (
-    <div style={{ background: gradient, padding: '20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+    <div style={{ background: gradient, padding: '20px', display: 'flex', alignItems: 'center', gap: 16, position: 'relative', overflow: 'hidden' }}>
+      {/* Real banner art where the program has it. The gradient stays underneath
+          rather than being replaced: the art arcs across its top edge, so the
+          corners are transparent and need something to sit on. */}
+      {banner && (
+        <img
+          src={banner}
+          alt=""
+          aria-hidden="true"
+          style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            objectFit: 'cover', objectPosition: 'center 30%', pointerEvents: 'none',
+          }}
+        />
+      )}
       <motion.div
-        style={{ flex: 1, minWidth: 0 }}
+        style={{ flex: 1, minWidth: 0, position: 'relative' }}
         initial={{ opacity: 0, x: -14 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
@@ -128,6 +143,7 @@ function ProgramCardBanner({ program, lastDate, sessions }) {
             width: 76, height: 76,
             objectFit: 'contain',
             flexShrink: 0,
+            position: 'relative',
             filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.5))',
           }}
         />

@@ -32,6 +32,13 @@ export const PROGRAM_LOGOS = {
   'Gold Godot':       '/programs/gold_godot_logo.png',
 };
 
+// Wide banner art for the programs that have it. Anything absent falls back to
+// the CSS gradient the banner surfaces already carry.
+export const PROGRAM_BANNERS = {
+  'Robotics Academy': '/programs/robotics_banner.png',
+  'AI Academy':       '/programs/ai_banner.png',
+};
+
 // Project names per belt + level. Keyed by belt name → level number → ordered
 // project options (each level's Build/Solve titles then its Adventure).
 // Levels are NOT always 1-based: Green runs 6–10 (it continues Orange's count,
