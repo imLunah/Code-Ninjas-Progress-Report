@@ -501,7 +501,7 @@ function ClubHero({ clubDef, colors, memberCount, locationName, isManager, isRea
           {canEditCover && (
             hasCover ? (
               <ActionMenu label="Club photo" onClosed={() => setConfirmRemove(false)}
-                className="[&>button]:text-white/70 [&>button]:opacity-100 [&>button:hover]:text-white">
+                className="[&>button]:text-white [&>button:hover]:text-white [&>button]:bg-black/25 [&>button:hover]:bg-black/40">
                 {({ close }) => (
                   confirmRemove ? (
                     <div className="p-1.5 w-44">

@@ -4,7 +4,9 @@ import { MoreHorizontalIcon } from 'lucide-react';
 
 // A row's actions behind one glyph. Two icons sitting on every row compete with
 // the row's own content; a single "..." asks nothing of the reader until they
-// want something.
+// want something. It stays quiet by being muted and small, NOT by being faded:
+// muted at half opacity lands around 2.3:1 on a dark card, which is under the
+// 3:1 a control has to clear to be findable at all.
 //
 // `children` is a render prop so the consumer can swap the panel's contents for
 // its own confirm step without the menu closing underneath it.
@@ -68,11 +70,11 @@ export default function ActionMenu({ children, label = 'Actions', align = 'right
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        className={`p-1.5 rounded-full text-ninja-muted transition-[color,opacity] duration-150 hover:opacity-100 hover:text-ninja-navy ${
-          open ? 'opacity-100 text-ninja-navy bg-ninja-bg' : 'opacity-50'
+        className={`p-1.5 rounded-full transition-colors duration-150 hover:text-ninja-navy hover:bg-ninja-bg ${
+          open ? 'text-ninja-navy bg-ninja-bg' : 'text-ninja-muted'
         }`}
       >
-        <MoreHorizontalIcon size={16} strokeWidth={2} />
+        <MoreHorizontalIcon size={18} strokeWidth={2.25} />
       </button>
 
       <AnimatePresence>
