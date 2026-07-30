@@ -10,6 +10,52 @@ function toSlug(name) {
 const MAX_POST_BODY = 4000;
 const MAX_POST_TITLE = 200;
 const MAX_COMMENT = 2000;
+// A wall of one-off emoji is noise, and every distinct one is another chip the
+// board has to lay out. Nobody is stopped from reacting, only from opening a
+// twenty-first flavour of it.
+const MAX_POST_REACTIONS = 20;
+
+// The picker hands back whatever the platform has, so this cannot be an
+// allowlist. It asks two things instead: the string is exactly ONE grapheme
+// (a family emoji is seven code points but still one thing you see), and that
+// grapheme is pictographic. Together those reject text, markup and pasted
+// paragraphs without caring which emoji exist this year.
+//
+// Keycaps (1️⃣, #️⃣) are rejected as collateral: they are built out of an ASCII
+// character, so they cannot be told apart from text by shape. The DB CHECK is
+// the backstop if this is ever bypassed.
+const GRAPHEMES = new Intl.Segmenter('en', { granularity: 'grapheme' });
+
+function isEmoji(value) {
+  if (typeof value !== 'string') return false;
+  const str = value.trim();
+  if (!str || str.length > 24) return false;
+  if ([...GRAPHEMES.segment(str)].length !== 1) return false;
+  if (!/\p{Extended_Pictographic}/u.test(str)) return false;
+  return !/[\p{L}\p{N}\s]/u.test(str);
+}
+
+// One row per person per emoji, collapsed into what the board draws: the emoji,
+// how many picked it, whether YOU are one of them, and who they were. Ordered by
+// first use so a chip does not jump position as counts change.
+const REACTIONS_FOR = `
+  COALESCE((
+    SELECT json_agg(json_build_object(
+             'emoji', x.emoji, 'count', x.count, 'reacted', x.reacted, 'names', x.names
+           ) ORDER BY x.first_at)
+    FROM (
+      SELECT rx.emoji,
+             COUNT(*)::int AS count,
+             BOOL_OR(rx.user_id = $USER$) AS reacted,
+             MIN(rx.created_at) AS first_at,
+             json_agg(COALESCE(ru.display_name, 'Someone') ORDER BY rx.created_at) AS names
+      FROM club_resource_reactions rx
+      LEFT JOIN users ru ON ru.id = rx.user_id
+      WHERE rx.resource_id = r.id
+      GROUP BY rx.emoji
+    ) x
+  ), '[]'::json) AS reactions
+`;
 
 // A sensei owns their own board posts; directors and admin can tidy any of them.
 // Posts written before the board existed have no created_by, so only a manager
@@ -266,12 +312,13 @@ router.get('/profile/:clubName', requireAuth, async (req, res) => {
     const [profileRes, resourceRes, memberRes] = await Promise.all([
       pool.query('SELECT * FROM club_profiles WHERE club_name = $1 AND location_id = $2', [clubName, req.session.activeLocationId]),
       pool.query(`
-        SELECT r.*, u.display_name AS author_name
+        SELECT r.*, u.display_name AS author_name,
+               ${REACTIONS_FOR.replace('$USER$', '$3')}
         FROM club_resources r
         LEFT JOIN users u ON u.id = r.created_by
         WHERE r.club_name = $1 AND r.location_id = $2
         ORDER BY r.created_at DESC
-      `, [clubName, req.session.activeLocationId]),
+      `, [clubName, req.session.activeLocationId, req.session.userId]),
       pool.query('SELECT COUNT(*) AS count FROM club_members WHERE club_name = $1 AND location_id = $2', [clubName, req.session.activeLocationId]),
     ]);
     const profile = profileRes.rows[0] || null;
@@ -362,7 +409,7 @@ router.post('/profile/:clubName/resources', requireSensei, requireOwnLocation, a
        req.session.displayName, req.session.userId,
        hasAttachment ? resource_type : 'text', file_name?.trim() || null]
     );
-    res.status(201).json({ ...rows[0], author_name: req.session.displayName });
+    res.status(201).json({ ...rows[0], author_name: req.session.displayName, reactions: [] });
   } catch (err) {
     console.error('Club post add error:', err);
     res.status(500).json({ error: 'Failed to add post' });
@@ -402,7 +449,17 @@ router.patch('/resources/:id', requireSensei, requireOwnLocation, async (req, re
       [req.params.id, req.session.activeLocationId, title?.trim() || null, cleanBody]
     );
     const { rows: named } = await pool.query('SELECT display_name FROM users WHERE id = $1', [updated[0].created_by]);
-    res.json({ ...updated[0], author_name: named[0]?.display_name ?? updated[0].added_by });
+    // The client swaps the whole post for this row, so an edit that answered
+    // without the reactions would silently clear them off the card.
+    const { rows: withReactions } = await pool.query(
+      `SELECT ${REACTIONS_FOR.replace('$USER$', '$2')} FROM club_resources r WHERE r.id = $1`,
+      [updated[0].id, req.session.userId]
+    );
+    res.json({
+      ...updated[0],
+      author_name: named[0]?.display_name ?? updated[0].added_by,
+      reactions: withReactions[0]?.reactions ?? [],
+    });
   } catch (err) {
     console.error('Club post edit error:', err);
     res.status(500).json({ error: 'Failed to save post' });
@@ -430,6 +487,79 @@ router.delete('/resources/:id', requireSensei, requireOwnLocation, async (req, r
   } catch (err) {
     console.error('Club post delete error:', err);
     res.status(500).json({ error: 'Failed to delete post' });
+  }
+});
+
+// POST /api/clubs/resources/:id/reactions — toggle one emoji on a post.
+// Anyone at the center can react to any post, their own included; this is not
+// gated on canEditPost. requireOwnLocation still applies, so a director reading
+// another center's board can see the reactions but cannot add to them.
+router.post('/resources/:id/reactions', requireSensei, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { emoji } = req.body;
+  if (!isEmoji(emoji)) return res.status(400).json({ error: 'That is not an emoji' });
+  const value = emoji.trim();
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows: post } = await client.query(
+      'SELECT id FROM club_resources WHERE id = $1 AND location_id = $2',
+      [req.params.id, req.session.activeLocationId]
+    );
+    if (!post[0]) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    // Toggle off first. If nothing came out, this is a new reaction and the cap
+    // applies, but only to emoji the post does not already carry: joining a
+    // chip that exists adds no width.
+    const { rowCount: removed } = await client.query(
+      'DELETE FROM club_resource_reactions WHERE resource_id = $1 AND user_id = $2 AND emoji = $3',
+      [post[0].id, req.session.userId, value]
+    );
+    if (!removed) {
+      const { rows: distinct } = await client.query(
+        `SELECT COUNT(DISTINCT emoji)::int AS n, BOOL_OR(emoji = $2) AS exists
+         FROM club_resource_reactions WHERE resource_id = $1`,
+        [post[0].id, value]
+      );
+      if (!distinct[0].exists && distinct[0].n >= MAX_POST_REACTIONS) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: `A post can carry ${MAX_POST_REACTIONS} different reactions` });
+      }
+      // ON CONFLICT covers the double click that races its own toggle.
+      await client.query(
+        `INSERT INTO club_resource_reactions (resource_id, user_id, emoji)
+         VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+        [post[0].id, req.session.userId, value]
+      );
+    }
+
+    // Hand back the whole set rather than a delta, so an optimistic client
+    // settles on the server's count instead of drifting from it.
+    const { rows } = await client.query(
+      `SELECT rx.emoji,
+              COUNT(*)::int AS count,
+              BOOL_OR(rx.user_id = $2) AS reacted,
+              MIN(rx.created_at) AS first_at,
+              json_agg(COALESCE(ru.display_name, 'Someone') ORDER BY rx.created_at) AS names
+       FROM club_resource_reactions rx
+       LEFT JOIN users ru ON ru.id = rx.user_id
+       WHERE rx.resource_id = $1
+       GROUP BY rx.emoji
+       ORDER BY first_at`,
+      [post[0].id, req.session.userId]
+    );
+    await client.query('COMMIT');
+    res.json({ reactions: rows.map(({ first_at, ...chip }) => chip) });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('Club post reaction error:', err);
+    res.status(500).json({ error: 'Failed to save reaction' });
+  } finally {
+    client.release();
   }
 });
 

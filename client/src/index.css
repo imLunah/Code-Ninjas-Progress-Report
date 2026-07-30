@@ -212,7 +212,11 @@ textarea:focus-visible {
 .row-actions:focus-within { opacity: 1; }
 @media (hover: hover) and (pointer: fine) {
   .row-actions { opacity: 0; transition: opacity 150ms ease; }
-  .group:hover .row-actions { opacity: 1; }
+  /* An open menu or picker holds the actions up on its own: the pointer has to
+     be able to leave the row to reach a panel that hangs below it. */
+  .group:hover .row-actions,
+  .row-actions:focus-within,
+  .row-actions:has([aria-expanded='true']) { opacity: 1; }
 }
 
 /* ── WYSIWYG note/log editor (Tiptap) ── */
