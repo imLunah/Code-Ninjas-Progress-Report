@@ -520,7 +520,7 @@ function QuickLinks() {
 /* ----------------------------------------------------------------- page -- */
 
 export default function DirectorDashboard() {
-  const { user } = useAuth();
+  const { user, isReadOnly } = useAuth();
   const todayStr = today();
   const [loading, setLoading] = useState(true);
   const [attendance, setAttendance] = useState(null);
@@ -574,7 +574,11 @@ export default function DirectorDashboard() {
             rail beside it. Asymmetric on purpose. */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2">
-            <EventCalendar />
+            {/* A director viewing a center they aren't assigned to gets it
+                read-only, same as the sensei board. The server already refuses
+                these writes (requireOwnLocation); this stops us offering a
+                control whose only outcome is a 403. */}
+            <EventCalendar canManage={!isReadOnly} />
           </div>
 
           {/* Enrollment used to sit here; that breakdown lives on Reports, so

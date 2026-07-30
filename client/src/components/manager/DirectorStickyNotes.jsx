@@ -141,7 +141,7 @@ function ConfirmButton({ onClick, disabled, label }) {
   );
 }
 
-function NoteCard({ note, canManage, onSaved, onDeleted, board, onDragToSlot, onDropped }) {
+function NoteCard({ note, canManage, canReorder = true, onSaved, onDeleted, board, onDragToSlot, onDropped }) {
   const c = COLORS[note.color] || COLORS.yellow;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note.body);
@@ -174,7 +174,7 @@ function NoteCard({ note, canManage, onSaved, onDeleted, board, onDragToSlot, on
 
   // Dragging is off while editing so selecting text inside a note doesn't drag
   // the paper out from under the cursor.
-  const canDrag = !!board && !editing;
+  const canDrag = !!board && !editing && canReorder;
 
   return (
     <motion.div
@@ -291,7 +291,10 @@ function NoteCard({ note, canManage, onSaved, onDeleted, board, onDragToSlot, on
 }
 
 export default function DirectorStickyNotes() {
-  const { user } = useAuth();
+  // isReadOnly: a director viewing a center they aren't assigned to. The server
+  // refuses every write here (all of /director-notes is requireOwnLocation), so
+  // without this the board would offer add/edit/delete/drag that only 403.
+  const { user, isReadOnly } = useAuth();
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -322,7 +325,7 @@ export default function DirectorStickyNotes() {
     return () => { alive = false; };
   }, [user?.activeLocation?.id]);
 
-  const canManage = (note) => note.created_by === user?.id || user?.role === 'admin';
+  const canManage = (note) => !isReadOnly && (note.created_by === user?.id || user?.role === 'admin');
 
   // Two notes side by side is the least that can be rearranged.
   const boardOn = boardW >= NOTE_W * 2 + GAP;
@@ -382,7 +385,7 @@ export default function DirectorStickyNotes() {
           <h2 id="sticky-heading" className="font-ninja font-bold text-ninja-navy text-lg">Notes</h2>
           <p className="font-ninja text-xs text-ninja-muted">Save any reminder here. Every director at this center sees it.</p>
         </div>
-        {!adding && (
+        {!adding && !isReadOnly && (
           // One glyph beside the heading rather than a blue word: the heading is
           // what names the section, and the plus is the same shape as the one on
           // the empty board, so both entry points read as the same action.
@@ -435,6 +438,9 @@ export default function DirectorStickyNotes() {
             <div key={i} className="animate-pulse rounded-xl bg-ninja-bg" style={{ height: NOTE_H }} />
           ))}
         </div>
+      ) : notes.length === 0 && isReadOnly ? (
+        // Nothing to pin here, and no invitation to try.
+        <p className="font-ninja text-sm text-ninja-muted">No notes at this center.</p>
       ) : notes.length === 0 && !adding ? (
         // Shaped like the note it will become, so the empty board already shows
         // you the size of the thing you are about to pin.
@@ -464,6 +470,10 @@ export default function DirectorStickyNotes() {
                 key={note.id}
                 note={note}
                 canManage={canManage(note)}
+                // Reordering stays deliberately NOT author-gated (the arrangement
+                // is shared), so it can't ride on canManage — but it is still a
+                // write, so it goes away when the center isn't ours.
+                canReorder={!isReadOnly}
                 board={layout ? { ...slotFor(i, layout.cols), maxX: layout.maxX, maxY: layout.maxY } : null}
                 onDragToSlot={dragToSlot}
                 onDropped={persistOrder}
