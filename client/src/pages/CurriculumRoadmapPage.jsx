@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDownIcon } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import { api } from '../api/client';
-import { PROGRAM_LOGOS, BELTS } from '../utils/beltConfig';
+import { PROGRAM_LOGOS, PROGRAM_BANNERS, BELTS } from '../utils/beltConfig';
 import BeltIcon from '../components/ui/BeltIcon';
 import { SkeletonList } from '../components/ui/Skeleton';
 import CurriculumResources from '../components/shared/CurriculumResources';
@@ -248,14 +248,45 @@ export default function CurriculumRoadmapPage() {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.15 }}
                 >
-                  {/* What used to be a tinted strip is now a line of text. The
-                      program name is already in the active tab above it. */}
+                  {/* Programs with real banner art get it here, carrying the
+                      crest and the counts. The name is deliberately absent: the
+                      active tab above already says it, which is why this was a
+                      line of plain text before the artwork existed. Programs
+                      without art keep that text row. */}
+                  {PROGRAM_BANNERS[current.program] ? (
+                    <div className="relative h-24 sm:h-28 rounded-2xl overflow-hidden mt-5">
+                      <img
+                        src={PROGRAM_BANNERS[current.program]}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover object-[center_35%]"
+                      />
+                      <div className="relative h-full flex items-center gap-3.5 px-5">
+                        {PROGRAM_LOGOS[current.program] && (
+                          <img
+                            src={PROGRAM_LOGOS[current.program]}
+                            alt=""
+                            aria-hidden="true"
+                            className="w-12 h-12 sm:w-14 sm:h-14 object-contain flex-shrink-0"
+                          />
+                        )}
+                        <p className="font-ninja font-bold text-white text-sm sm:text-base tabular-nums">
+                          {moduleCount} module{moduleCount === 1 ? '' : 's'}
+                          <span className="px-2 text-white/40">/</span>
+                          {lessonCount} {unit}{lessonCount === 1 ? '' : 's'}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="flex items-baseline justify-between gap-4 flex-wrap pt-5 pb-4">
-                    <p className="font-ninja text-sm text-ninja-muted tabular-nums">
-                      {moduleCount} module{moduleCount === 1 ? '' : 's'}
-                      <span className="px-2 text-ninja-border">/</span>
-                      {lessonCount} {unit}{lessonCount === 1 ? '' : 's'}
-                    </p>
+                    {PROGRAM_BANNERS[current.program] ? <span /> : (
+                      <p className="font-ninja text-sm text-ninja-muted tabular-nums">
+                        {moduleCount} module{moduleCount === 1 ? '' : 's'}
+                        <span className="px-2 text-ninja-border">/</span>
+                        {lessonCount} {unit}{lessonCount === 1 ? '' : 's'}
+                      </p>
+                    )}
 
                     <div className="flex gap-5">
                       {SECTIONS.map((s) => (
