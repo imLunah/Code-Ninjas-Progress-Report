@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { PlusIcon, XIcon, UndoIcon } from 'lucide-react';
 import { api } from '../../api/client';
 import ProgramBadge from '../ui/ProgramBadge';
-import { PROGRAMS, BELTS, PROJECTS, STATUSES, getLevels } from '../../utils/beltConfig';
+import { PROGRAMS, BELTS, getLevels } from '../../utils/beltConfig';
 
 // Black + bonus tracks don't use an explicit level.
 const NO_LEVEL_BELTS = ['Black', 'Bronze', 'Silver', 'Platinum'];
@@ -29,6 +29,10 @@ const same = (a, b) =>
   a.current_project === b.current_project &&
   a.project_status === b.project_status;
 
+// The project and status are set by logging progress, not by hand, so the
+// editor shows no control for them. They still travel in the payload because
+// PATCH overwrites the whole enrollment: leave them out and a sensei's logged
+// project is silently nulled.
 const payload = (row) => ({
   belt_level: row.belt_level || null,
   belt_sublevel: row.belt_sublevel ? parseInt(row.belt_sublevel, 10) : null,
@@ -129,26 +133,14 @@ export default function ProgramsEditor({ rows, setRows, disabled = false }) {
                     <option value="">Belt: none</option>
                     {BELTS.map((b) => <option key={b.name} value={b.name}>{b.name}</option>)}
                   </select>
-                  {levels.length > 0 ? (
+                  {levels.length > 0 && (
                     <select value={row.belt_sublevel} disabled={disabled}
                       onChange={(e) => patchRow(row.program, { belt_sublevel: e.target.value })}
                       aria-label="Level" className={FIELD}>
                       <option value="">Level: none</option>
                       {levels.map((lv) => <option key={lv} value={lv}>Level {lv}</option>)}
                     </select>
-                  ) : <span />}
-                  <select value={row.current_project} disabled={disabled}
-                    onChange={(e) => patchRow(row.program, { current_project: e.target.value })}
-                    aria-label="Current project" className={FIELD}>
-                    <option value="">Project: none</option>
-                    {PROJECTS.map((p) => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                  <select value={row.project_status} disabled={disabled}
-                    onChange={(e) => patchRow(row.program, { project_status: e.target.value })}
-                    aria-label="Project status" className={FIELD}>
-                    <option value="">Status: none</option>
-                    {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  )}
                 </div>
               )
             )}
