@@ -12,6 +12,9 @@ const loginLimiter = rateLimit({
   message: { error: 'Too many login attempts. Try again in 15 minutes.' },
 });
 
+// Matches the staff-side pinned-note ceiling in students.js.
+const MAX_INSTRUCTIONS = 2000;
+
 const STUDENT_PROGRAMS_SUBQUERY = `
   COALESCE(
     (SELECT json_agg(
@@ -139,6 +142,15 @@ router.patch('/students/:id/instructions', requireParent, async (req, res) => {
   const pool = req.app.get('db');
   const { id } = req.params;
   const { special_instructions } = req.body;
+
+  // Parent-authored text rendered in staff context — capped like the staff-side
+  // pinned note rather than left bounded only by the 10mb JSON body limit.
+  if (special_instructions != null && typeof special_instructions !== 'string') {
+    return res.status(400).json({ error: 'Invalid note' });
+  }
+  if (typeof special_instructions === 'string' && special_instructions.length > MAX_INSTRUCTIONS) {
+    return res.status(400).json({ error: `Note too long (max ${MAX_INSTRUCTIONS} characters)` });
+  }
 
   try {
     const { rows } = await pool.query(

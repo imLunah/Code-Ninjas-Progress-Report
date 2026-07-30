@@ -7,6 +7,12 @@ const { generateTempPassword } = require('../lib/tempPassword');
 
 const SALT_ROUNDS = 10;
 
+// Host of our own Supabase storage, the only remote origin an avatar may come from.
+// Resolved once at load; null when SUPABASE_URL is unset (local dev without storage).
+const STORAGE_HOST = (() => {
+  try { return new URL(process.env.SUPABASE_URL).host; } catch { return null; }
+})();
+
 function validatePassword(pw) {
   return pw.length >= 6 && /[A-Z]/.test(pw) && /[^A-Za-z0-9]/.test(pw);
 }
@@ -211,11 +217,20 @@ router.patch('/me/avatar', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
   const { profile_pic_url } = req.body;
   if (profile_pic_url) {
+    if (typeof profile_pic_url !== 'string') return res.status(400).json({ error: 'Invalid URL' });
     const isPreset = /^\/profile\/[\w\-]+\.png$/.test(profile_pic_url);
     if (!isPreset) {
+      // Only our own storage host. Accepting any http(s) URL let a staff member
+      // point their avatar at a server they control — it renders in every other
+      // staff member's browser (StaffPage, SenseiProfileModal), which leaks each
+      // viewer's IP and the time they were reading staff records. CSP's img-src
+      // does not save us: it allows https://*.supabase.co, a wildcard over every
+      // Supabase project, so a self-hosted pixel passes. Same exfiltration channel
+      // session 32 closed for note markdown with img: () => null.
+      if (!STORAGE_HOST) return res.status(503).json({ error: 'File storage is not configured on the server.' });
       try {
         const parsed = new URL(profile_pic_url);
-        if (!['http:', 'https:'].includes(parsed.protocol)) {
+        if (parsed.protocol !== 'https:' || parsed.host !== STORAGE_HOST) {
           return res.status(400).json({ error: 'Invalid URL' });
         }
       } catch {

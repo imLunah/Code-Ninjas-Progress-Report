@@ -9,6 +9,7 @@ function toSlug(name) {
 
 const MAX_POST_BODY = 4000;
 const MAX_POST_TITLE = 200;
+const MAX_COMMENT = 2000;
 
 // A sensei owns their own board posts; directors and admin can tidy any of them.
 // Posts written before the board existed have no created_by, so only a manager
@@ -528,7 +529,11 @@ router.patch('/:id/notes', requireSensei, requireOwnLocation, async (req, res) =
 router.post('/:id/comments', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { body } = req.body;
+  if (body != null && typeof body !== 'string') return res.status(400).json({ error: 'Invalid comment' });
   if (!body?.trim()) return res.status(400).json({ error: 'Comment cannot be empty' });
+  if (body.length > MAX_COMMENT) {
+    return res.status(400).json({ error: `Comment too long (max ${MAX_COMMENT} characters)` });
+  }
   try {
     const { rows: sessionRows } = await pool.query(
       'SELECT id FROM club_sessions WHERE id = $1 AND location_id = $2',

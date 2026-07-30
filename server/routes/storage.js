@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 const { requireSensei, requireManager, requireOwnLocation } = require('../middleware/auth');
 const storage = require('../lib/storage');
@@ -8,8 +9,10 @@ const BUCKET = 'club-resources';
 // Image types allowed for club covers.
 const IMAGE_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
 
+// CSPRNG, not Math.random(): object paths shouldn't be predictable even though
+// the bucket is private and reads go through signed URLs.
 function rand() {
-  return Math.random().toString(36).slice(2, 10);
+  return crypto.randomBytes(6).toString('hex');
 }
 
 // Derive a safe extension from a filename, falling back to a default.

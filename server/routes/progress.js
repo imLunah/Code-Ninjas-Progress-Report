@@ -8,6 +8,9 @@ const { ALL_BELTS, isValidBelt, validateSublevel } = require('../lib/belts');
 // rather than a closed vocabulary — same defense-in-depth as the notes cap.
 const MAX_FIELD = 200;
 
+// Log comments are prose, so they get the same ceiling as notes rather than MAX_FIELD.
+const MAX_COMMENT = 2000;
+
 // POST /api/progress
 // Accepts either single-lesson fields OR lesson_entries array for multi-lesson sessions.
 router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
@@ -297,11 +300,21 @@ router.delete('/:id', requireSensei, requireOwnLocation, async (req, res) => {
   }
 });
 
-// POST /api/progress/:id/comments — any staff member can comment on a log entry
-router.post('/:id/comments', requireSensei, async (req, res) => {
+// POST /api/progress/:id/comments — any staff member can comment on a log entry.
+// requireOwnLocation is load-bearing: managers may switch activeLocationId to any
+// center to VIEW it, so scoping the lookup below to activeLocationId picks the
+// target, it does not authorize the write. Without this gate a director could
+// comment into a center they aren't assigned to (the club equivalent at
+// clubs.js POST /:id/comments has always had it). The UI hides the box via
+// isReadOnly, but that is a browser-side affordance, not a boundary.
+router.post('/:id/comments', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const { body } = req.body;
+  if (body != null && typeof body !== 'string') return res.status(400).json({ error: 'Invalid comment' });
   if (!body?.trim()) return res.status(400).json({ error: 'Comment cannot be empty' });
+  if (body.length > MAX_COMMENT) {
+    return res.status(400).json({ error: `Comment too long (max ${MAX_COMMENT} characters)` });
+  }
 
   try {
     const { rows: logRows } = await pool.query(
