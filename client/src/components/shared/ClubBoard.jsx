@@ -158,7 +158,11 @@ function Post({ post, canEdit, onUpdated, onDeleted }) {
     <motion.article
       layout="position"
       exit={{ opacity: 0, y: -4, transition: { duration: 0.15, ease: [0.22, 1, 0.36, 1] } }}
-      className="group py-4 first:pt-0 last:pb-0"
+      // The tint bleeds past the text so the row reads as one object under the
+      // pointer. It is an alpha over whatever is behind it, not a ninja-bg
+      // swap: on the dark card ninja-bg is DARKER than the surface, which
+      // recesses the row you are pointing at instead of lifting it.
+      className="group -mx-3 px-3 py-4 first:pt-0 last:pb-0 rounded-lg transition-colors duration-150 hover:bg-ninja-navy/[0.04] dark:hover:bg-white/[0.05]"
     >
       <header className="flex items-baseline gap-2">
         <span className="font-ninja font-bold text-sm text-ninja-navy">{post.author_name || post.added_by}</span>
@@ -169,7 +173,7 @@ function Post({ post, canEdit, onUpdated, onDeleted }) {
         {canEdit && (
           <ActionMenu
             label="Post actions"
-            className="ml-auto flex-shrink-0"
+            className="row-actions ml-auto flex-shrink-0"
             onClosed={() => setConfirming(false)}
           >
             {({ close }) =>

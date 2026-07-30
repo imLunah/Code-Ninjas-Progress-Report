@@ -202,6 +202,19 @@ textarea:focus-visible {
 ::-webkit-scrollbar-thumb { background: rgb(var(--ninja-border)); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgb(var(--ninja-blue)); }
 
+/* ── Row actions ──
+   A row's actions stay out of the reader's way until the row is pointed at.
+   Touch has no hover, so there they simply stay visible: hiding them behind a
+   gesture nobody is told about would make the row's own actions unreachable.
+   Kept in CSS rather than stacked Tailwind variants because the reveal has to
+   beat the hidden state deterministically, and variant sort order is not
+   something to bet a control's existence on. */
+.row-actions:focus-within { opacity: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .row-actions { opacity: 0; transition: opacity 150ms ease; }
+  .group:hover .row-actions { opacity: 1; }
+}
+
 /* ── WYSIWYG note/log editor (Tiptap) ── */
 .tiptap-note p { margin: 0 0 0.4rem; }
 .tiptap-note > :last-child { margin-bottom: 0; }
