@@ -1,4 +1,5 @@
 import ReactMarkdown from 'react-markdown';
+import '../../styles/markdown.css';
 
 // Renders a stored markdown note/log. Plain text (old notes with no markdown)
 // renders unchanged, so this is safe to drop in anywhere notes are displayed.

@@ -1,4 +1,5 @@
 import { useEditor, EditorContent } from '@tiptap/react';
+import '../../styles/markdown.css';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Markdown } from 'tiptap-markdown';

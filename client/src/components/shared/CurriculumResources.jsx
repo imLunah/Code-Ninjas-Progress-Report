@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import '../../styles/markdown.css';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { FileTextIcon, ChevronRightIcon } from 'lucide-react';
