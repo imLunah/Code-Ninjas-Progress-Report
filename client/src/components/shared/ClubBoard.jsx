@@ -116,9 +116,10 @@ function Attachment({ post }) {
   return <FileAttachment post={post} />;
 }
 
-// The six that cover almost every reaction a staff board actually needs. The
-// picker is there for the rest, so this row is a shortcut, not a limit.
-const QUICK_REACTIONS = ['👍', '❤️', '🎉', '👀', '✅', '😂'];
+// Three, not a shelf of them. The row is a shortcut for the reactions that get
+// used without thinking; the picker is one button away for everything else, and
+// a shorter row leaves each glyph enough room to be read at a glance.
+const QUICK_REACTIONS = ['👍', '❤️', '🎉'];
 
 // What the chip says on hover. Past three names it stops listing, because the
 // point of the tooltip is "who", not a roster.
@@ -178,11 +179,11 @@ function EmojiPickerButton({ onPick }) {
         aria-label="More reactions"
         aria-haspopup="dialog"
         aria-expanded={open}
-        className={`p-1 rounded-full transition-colors duration-150 hover:text-ninja-navy hover:bg-ninja-navy/[0.06] dark:hover:bg-white/10 ${
+        className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors duration-150 hover:text-ninja-navy hover:bg-ninja-navy/[0.06] dark:hover:bg-white/10 ${
           open ? 'text-ninja-navy bg-ninja-navy/[0.06] dark:bg-white/10' : 'text-ninja-muted'
         }`}
       >
-        <SmilePlusIcon size={17} strokeWidth={1.75} />
+        <SmilePlusIcon size={20} strokeWidth={2} />
       </button>
       {open && (
         <div className="absolute z-30 top-full right-0 mt-1" role="dialog" aria-label="Pick a reaction">
@@ -205,7 +206,7 @@ function QuickReactions({ onPick }) {
           onClick={() => onPick(emoji)}
           title={`React with ${emoji}`}
           aria-label={`React with ${emoji}`}
-          className="w-7 h-7 flex items-center justify-center rounded-full text-base leading-none transition-[background-color,transform] duration-150 hover:bg-ninja-navy/[0.06] dark:hover:bg-white/10 hover:scale-110"
+          className="w-8 h-8 flex items-center justify-center rounded-md text-xl leading-none transition-[background-color,transform] duration-150 hover:bg-ninja-navy/[0.06] dark:hover:bg-white/10 hover:scale-110"
         >
           <span aria-hidden="true">{emoji}</span>
         </button>
@@ -314,13 +315,18 @@ function Post({ post, canEdit, canReact, onUpdated, onDeleted }) {
         </time>
         {post.updated_at && <span className="font-ninja text-xs text-ninja-muted">(edited)</span>}
 
+        {/* One raised strip rather than loose glyphs, so the actions read as a
+            tool that belongs to the post under the pointer. The surface is
+            ninja-bg: on the white card it is a shade off-white, and on the dark
+            card it is darker than the card, so it separates either way.
+            bg-white could not do this on a card that is already white. */}
         {(canReact || canEdit) && (
-          <div className="row-actions ml-auto self-center flex-shrink-0 flex items-center gap-0.5">
+          <div className="row-actions ml-auto self-center flex-shrink-0 flex items-center gap-0.5 rounded-lg border border-ninja-border bg-ninja-bg px-1 py-0.5 shadow-sm">
             {canReact && (
               <>
-                {/* Six emoji, a picker and a menu do not fit beside a name and a
-                    timestamp on a phone, and touch shows them all at once with
-                    no hover to hide behind. The picker still reaches every
+                {/* Three emoji, a picker and a menu do not fit beside a name and
+                    a timestamp on a phone, and touch shows them all at once
+                    with no hover to hide behind. The picker still reaches every
                     emoji there, and existing chips are tappable either way. */}
                 <span className="hidden sm:flex items-center gap-0.5">
                   <QuickReactions onPick={react} />
@@ -331,7 +337,9 @@ function Post({ post, canEdit, canReact, onUpdated, onDeleted }) {
             {canEdit && (
           <ActionMenu
             label="Post actions"
-            className="flex-shrink-0"
+            // The trigger's own hover fill is ninja-bg, which is what this strip
+            // is made of, so inside it the hover would land invisible.
+            className="flex-shrink-0 [&>button:hover]:bg-ninja-navy/[0.06] dark:[&>button:hover]:bg-white/10 [&>button[aria-expanded=true]]:bg-ninja-navy/[0.06] dark:[&>button[aria-expanded=true]]:bg-white/10"
             onClosed={() => setConfirming(false)}
           >
             {({ close }) =>
