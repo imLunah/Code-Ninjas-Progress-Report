@@ -32,7 +32,10 @@ async function getValidClubNames(pool, locationId) {
   return new Set(rows.map((r) => r.name));
 }
 
-const SESSION_SELECT = `
+// A function, not a constant, because the reaction aggregate needs to know which
+// placeholder holds the viewer's id, and the two callers number theirs
+// differently.
+const sessionSelect = (userParam) => `
   SELECT
     cs.id, cs.club_name, cs.session_date, cs.notes, cs.created_at,
     cs.sensei_id,
@@ -48,7 +51,8 @@ const SESSION_SELECT = `
       (SELECT json_agg(json_build_object('id', c.id, 'user_name', c.user_name, 'body', c.body, 'created_at', c.created_at) ORDER BY c.created_at ASC)
        FROM club_session_comments c WHERE c.session_id = cs.id),
       '[]'::json
-    ) AS comments
+    ) AS comments,
+    ${reactionsSubquery({ table: 'club_session_reactions', fk: 'session_id', subject: 'cs.id', userParam })} AS reactions
   FROM club_sessions cs
   LEFT JOIN users u ON cs.sensei_id = u.id
   LEFT JOIN club_definitions cd
@@ -194,13 +198,17 @@ router.delete('/definitions/:id', requireManager, requireOwnLocation, async (req
 router.get('/', requireAuth, async (req, res) => {
   const pool = req.app.get('db');
   try {
-    let query = SESSION_SELECT + ' WHERE cs.location_id = $1';
+    // Params are collected before the SELECT is built: the viewer's id goes on
+    // the end, so its placeholder number depends on whether ?club= took one.
     const params = [req.session.activeLocationId];
+    let where = ' WHERE cs.location_id = $1';
     if (req.query.club) {
-      query += ' AND cs.club_name = $2';
       params.push(req.query.club);
+      where += ` AND cs.club_name = $${params.length}`;
     }
-    query += ' ORDER BY cs.session_date DESC, cs.created_at DESC LIMIT 50';
+    params.push(req.session.userId);
+    const query = sessionSelect(`$${params.length}`) + where
+      + ' ORDER BY cs.session_date DESC, cs.created_at DESC LIMIT 50';
     const { rows } = await pool.query(query, params);
     res.json(rows);
   } catch (err) {
@@ -482,8 +490,8 @@ router.get('/sessions/:id', requireAuth, async (req, res) => {
   const pool = req.app.get('db');
   try {
     const { rows } = await pool.query(
-      SESSION_SELECT + ' WHERE cs.id = $1 AND cs.location_id = $2',
-      [req.params.id, req.session.activeLocationId]
+      sessionSelect('$3') + ' WHERE cs.id = $1 AND cs.location_id = $2',
+      [req.params.id, req.session.activeLocationId, req.session.userId]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Session not found' });
     res.json(rows[0]);
@@ -591,6 +599,33 @@ router.post('/:id/comments', requireSensei, requireOwnLocation, async (req, res)
     res.status(201).json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'Failed to save comment' });
+  }
+});
+
+// POST /api/clubs/:id/reactions — toggle one emoji on a club session.
+// Same shape as the board's: reacting is not editing, so any staff member at
+// the center can react to any session there, and requireOwnLocation is what
+// decides whether they may write at all.
+router.post('/:id/reactions', requireSensei, requireOwnLocation, async (req, res) => {
+  try {
+    const result = await toggleReaction(req.app.get('db'), {
+      table: 'club_session_reactions',
+      fk: 'session_id',
+      emoji: req.body.emoji,
+      userId: req.session.userId,
+      verify: async (client) => {
+        const { rows } = await client.query(
+          'SELECT id FROM club_sessions WHERE id = $1 AND location_id = $2',
+          [req.params.id, req.session.activeLocationId]
+        );
+        return rows[0]?.id ?? null;
+      },
+    });
+    if (result.error) return res.status(result.status).json({ error: result.error });
+    res.json({ reactions: result.reactions });
+  } catch (err) {
+    console.error('Club session reaction error:', err);
+    res.status(500).json({ error: 'Failed to save reaction' });
   }
 });
 

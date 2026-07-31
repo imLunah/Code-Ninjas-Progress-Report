@@ -26,9 +26,10 @@ import { uploadToSigned } from '../lib/supabase';
 import { CARD } from '../lib/surfaces';
 import { SkeletonProfile } from '../components/ui/Skeleton';
 import { TrashIcon, CameraIcon } from '../components/ui/icons';
-import { UsersIcon, ChevronLeftIcon, PlusIcon } from 'lucide-react';
+import { UsersIcon, ChevronLeftIcon, PlusIcon, ReplyIcon } from 'lucide-react';
 import ClubBoard from '../components/shared/ClubBoard';
 import ActionMenu, { MenuItem } from '../components/ui/ActionMenu';
+import { ReactionPicker, ReactionChips, RowActions, StripButton, toggleLocally } from '../components/ui/Reactions';
 
 const relativeDate = (ts) => {
   if (!ts) return '';
@@ -165,15 +166,102 @@ function PinnedNoteSection({ clubName, initialNote, initialAuthor, initialUpdate
   );
 }
 
-// Quick-look popup for a session — inspect notes/attendance without leaving the
-// page. Esc, backdrop click, or × to close; "Open full session" for editing.
-function SessionQuickView({ session, memberCount, onClose, onOpenFull }) {
+// A session's comments, which the server has stored and returned all along
+// without anything ever drawing them. Same shape as a progress log's: the thread
+// is content and always shows, while replying is a button on the row.
+function SessionComment({ comment }) {
+  return (
+    <div className="flex gap-2">
+      <div className="flex-shrink-0 w-1 rounded-full bg-ninja-blue" />
+      <div className="min-w-0">
+        <p className="text-ninja-navy font-ninja text-sm break-words">{comment.body}</p>
+        <p className="text-ninja-muted font-ninja text-xs mt-0.5">
+          {comment.user_name} · {new Date(comment.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function SessionReplyBox({ sessionId, onAdded, onClose }) {
+  const [body, setBody] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!body.trim()) return;
+    setSaving(true);
+    setError('');
+    try {
+      const comment = await api.post(`/clubs/${sessionId}/comments`, { body: body.trim() });
+      onAdded(comment);
+      setBody('');
+      onClose();
+    } catch (err) {
+      setError(err?.message || 'Could not post that reply.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="flex gap-2">
+      <input
+        type="text"
+        value={body}
+        autoFocus
+        onChange={(e) => setBody(e.target.value)}
+        // Escape closes the box, and must not bubble: the modal listens for
+        // Escape too, and would close the whole session behind it.
+        onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } }}
+        placeholder="Write a reply…"
+        className="flex-1 bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-sm focus:outline-none focus:border-ninja-blue transition-colors"
+      />
+      <Button type="submit" size="sm" disabled={saving || !body.trim()}>{saving ? '…' : 'Reply'}</Button>
+      {error && <p className="text-ninja-red font-ninja text-xs mt-1">{error}</p>}
+    </form>
+  );
+}
+
+// Quick-look popup for a session — notes, attendance, reactions and the comment
+// thread, without leaving the page. Esc, backdrop click, or × to close.
+function SessionQuickView({ session, memberCount, isReadOnly, onClose, onLogSession, onSessionChanged }) {
+  const [comments, setComments] = useState(session.comments || []);
+  const [reactions, setReactions] = useState(session.reactions || []);
+  const [replying, setReplying] = useState(false);
+  const [error, setError] = useState('');
+
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
   }, [onClose]);
+
+  // Optimistic, then corrected by the server's own count. The list behind the
+  // modal is told too, so closing does not throw the change away.
+  const react = async (emoji) => {
+    if (isReadOnly) return;
+    const before = reactions;
+    const next = toggleLocally(before, emoji);
+    setReactions(next);
+    setError('');
+    try {
+      const res = await api.post(`/clubs/${session.id}/reactions`, { emoji });
+      setReactions(res.reactions);
+      onSessionChanged?.(session.id, { reactions: res.reactions });
+    } catch (err) {
+      setReactions(before);
+      setError(err?.message || 'Could not save that reaction.');
+    }
+  };
+
+  const addComment = (comment) => {
+    const next = [...comments, comment];
+    setComments(next);
+    onSessionChanged?.(session.id, { comments: next });
+  };
 
   const present = session.attendees?.length ?? 0;
   const rel = relativeDate(session.session_date);
@@ -225,31 +313,67 @@ function SessionQuickView({ session, memberCount, onClose, onOpenFull }) {
               ))}
             </div>
           )}
-          {session.notes ? (
-            <div className="md-view font-ninja text-sm text-ninja-navy leading-relaxed">
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{session.notes}</ReactMarkdown>
+          {/* The session and its actions. Unlike a row in a list there is only
+              one subject here, so nothing is hover-revealed: there is nothing to
+              disambiguate and no second thing the strip could belong to. */}
+          <div className="group">
+            {session.notes ? (
+              <div className="md-view font-ninja text-sm text-ninja-navy leading-relaxed">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{session.notes}</ReactMarkdown>
+              </div>
+            ) : (
+              <p className="text-ninja-muted font-ninja text-sm italic">No notes logged yet.</p>
+            )}
+
+            <ReactionChips reactions={reactions} canReact={!isReadOnly} onToggle={react} className="mt-3" />
+            {error && <p className="text-ninja-red font-ninja text-xs mt-1.5">{error}</p>}
+
+            {!isReadOnly && (
+              <div className="mt-3">
+                <RowActions surface="bg-ninja-bg" className="w-fit">
+                  <ReactionPicker onPick={react} />
+                  <StripButton
+                    icon={ReplyIcon}
+                    label={replying ? 'Cancel reply' : 'Reply'}
+                    active={replying}
+                    onClick={() => setReplying((v) => !v)}
+                  />
+                </RowActions>
+              </div>
+            )}
+          </div>
+
+          {comments.length > 0 && (
+            <div className="space-y-2 border-t border-ninja-border pt-4">
+              {comments.map((c) => <SessionComment key={c.id} comment={c} />)}
             </div>
-          ) : (
-            <p className="text-ninja-muted font-ninja text-sm italic">No notes logged yet.</p>
+          )}
+
+          {!isReadOnly && replying && (
+            <SessionReplyBox sessionId={session.id} onAdded={addComment} onClose={() => setReplying(false)} />
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex-shrink-0 px-5 py-3.5 border-t border-ninja-border">
-          <button
-            onClick={onOpenFull}
-            className="w-full py-2.5 rounded-xl bg-ninja-blue text-white font-ninja font-bold text-sm hover:bg-ninja-blue/90 transition-colors"
-          >
-            {session.notes ? 'Open full session' : 'Log this session'}
-          </button>
-        </div>
+        {/* Logging notes is still a trip to the session page, because it is an
+            editor and not a thing to read. Reading, reacting and replying all
+            happen here now, so the old "Open full session" way out is gone. */}
+        {!session.notes && !isReadOnly && (
+          <div className="flex-shrink-0 px-5 py-3.5 border-t border-ninja-border">
+            <button
+              onClick={onLogSession}
+              className="w-full py-2.5 rounded-xl bg-ninja-blue text-white font-ninja font-bold text-sm hover:bg-ninja-blue/90 transition-colors"
+            >
+              Log this session
+            </button>
+          </div>
+        )}
       </motion.div>
     </motion.div>,
     document.body
   );
 }
 
-function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isReadOnly, onDeleted }) {
+function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isReadOnly, onDeleted, onSessionChanged }) {
   const [expanded, setExpanded] = useState(false);
   const [confirmId, setConfirmId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -292,6 +416,9 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
             const isOverdue = !s.notes && String(s.session_date).split('T')[0] < todayStr;
             const present = s.attendees?.length ?? 0;
             const rel = relativeDate(s.session_date);
+            const replies = s.comments?.length ?? 0;
+            const reacted = s.reactions || [];
+            const reactionTotal = reacted.reduce((n, r) => n + r.count, 0);
             return (
               <div
                 key={s.id}
@@ -358,6 +485,25 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
                 ) : (
                   <p className="mt-1.5 text-ninja-muted/70 font-ninja text-xs italic">No notes yet</p>
                 )}
+                {/* A reply or a reaction lives inside the session, so without
+                    this the row gives no sign either happened and nobody opens
+                    it to find out. */}
+                {(replies > 0 || reacted.length > 0) && (
+                  <div className="mt-2 flex items-center gap-2.5 font-ninja text-[11px] text-ninja-muted">
+                    {reacted.length > 0 && (
+                      <span className="flex items-center gap-1">
+                        <span aria-hidden="true">{reacted.slice(0, 3).map((r) => r.emoji).join(' ')}</span>
+                        {reactionTotal}
+                      </span>
+                    )}
+                    {replies > 0 && (
+                      <span className="flex items-center gap-1">
+                        <ReplyIcon size={12} strokeWidth={2} aria-hidden="true" />
+                        {replies}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -369,8 +515,10 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
           <SessionQuickView
             session={quickView}
             memberCount={memberCount}
+            isReadOnly={isReadOnly}
             onClose={() => setQuickView(null)}
-            onOpenFull={() => { setQuickView(null); navigate(`/clubs/${slug}/sessions/${quickView.id}`); }}
+            onLogSession={() => { setQuickView(null); navigate(`/clubs/${slug}/sessions/${quickView.id}`); }}
+            onSessionChanged={onSessionChanged}
           />
         )}
       </AnimatePresence>
@@ -667,6 +815,9 @@ export default function ClubProfilePage() {
             isManager={isManager}
             isReadOnly={isReadOnly}
             onDeleted={(id) => setSessions((prev) => prev.filter((s) => s.id !== id))}
+            onSessionChanged={(id, patch) =>
+              setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)))
+            }
           />
         </motion.div>
       </motion.div>
