@@ -26,6 +26,42 @@ function LogComment({ comment }) {
   );
 }
 
+// Status was a filled green box, sitting beside four other coloured boxes. The
+// colour is the whole signal, so it only needs a dot to carry it: bg-current
+// takes the text's own colour, which the dark overrides have already corrected.
+const STATUS_TONE = {
+  Completed: 'text-green-700',
+  'Working On': 'text-blue-700',
+};
+
+function StatusMark({ status }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 font-ninja text-xs font-semibold ${STATUS_TONE[status] || 'text-ninja-muted'}`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-current" aria-hidden="true" />
+      {status}
+    </span>
+  );
+}
+
+// Where in the curriculum the session happened. This was three bordered pills in
+// three different colours, which gave a lesson name the same weight as the
+// program it belongs to. It is one line now, read left to right, with the
+// emphasis falling off as it narrows: course, then module, then lesson.
+function CurriculumPath({ log }) {
+  const crumbs = [log.sub_program, log.module_name, log.lesson_name].filter(Boolean);
+  if (!crumbs.length) return null;
+  return (
+    <p className="font-ninja text-xs mb-1.5">
+      {crumbs.map((crumb, i) => (
+        <span key={i}>
+          {i > 0 && <span className="mx-1.5 text-ninja-muted opacity-50" aria-hidden="true">·</span>}
+          <span className={i === 0 ? 'text-ninja-navy font-semibold' : 'text-ninja-muted'}>{crumb}</span>
+        </span>
+      ))}
+    </p>
+  );
+}
+
 // Opened from the row's reply button rather than parked under every entry. A
 // permanently mounted box asks a question of every log you scroll past; most of
 // them do not need an answer.
@@ -237,22 +273,20 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                         i > 0 ? 'border-t border-ninja-border/60 pt-3' : ''
                       }`}
                     >
-                      <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                        <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-start justify-between gap-2 mb-1.5">
+                        {/* Program and belt keep their badges: those are
+                            identities the eye picks out, and the program colours
+                            are pinned to the program. Everything that was merely
+                            a word in a coloured box is a word again. */}
+                        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 min-w-0">
                           {log.program && <ProgramBadge program={log.program} size="xs" />}
-                          {!sharedSensei && log.sensei_name && (
-                            <span className="text-ninja-muted text-xs font-ninja">by {log.sensei_name}</span>
-                          )}
                           {log.belt_level_at && <BeltBadge belt={log.belt_level_at} sublevel={log.belt_sublevel_at} size="xs" />}
                           {log.project_at && (
-                            <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-ninja font-semibold">{log.project_at}</span>
+                            <span className="font-ninja text-xs text-ninja-muted">{log.project_at}</span>
                           )}
-                          {log.status_at && (
-                            <span className={`text-xs px-2 py-0.5 rounded-md font-ninja font-semibold ${
-                              log.status_at === 'Completed' ? 'bg-green-100 text-green-700'
-                              : log.status_at === 'Working On' ? 'bg-blue-100 text-blue-700'
-                              : 'bg-gray-100 text-gray-600'
-                            }`}>{log.status_at}</span>
+                          {log.status_at && <StatusMark status={log.status_at} />}
+                          {!sharedSensei && log.sensei_name && (
+                            <span className="text-ninja-muted text-xs font-ninja">by {log.sensei_name}</span>
                           )}
                         </div>
                         {!isEditing && (!isReadOnly || canEdit) && (
@@ -306,19 +340,7 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                         )}
                       </div>
 
-                      {(log.sub_program || log.module_name || log.lesson_name) && (
-                        <div className="flex flex-wrap gap-1.5 mb-2">
-                          {log.sub_program && (
-                            <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-md font-ninja font-semibold">{log.sub_program}</span>
-                          )}
-                          {log.module_name && (
-                            <span className="text-xs bg-ninja-bg border border-ninja-border text-ninja-navy px-2 py-0.5 rounded-md font-ninja">{log.module_name}</span>
-                          )}
-                          {log.lesson_name && (
-                            <span className="text-xs bg-ninja-bg border border-ninja-border text-ninja-muted px-2 py-0.5 rounded-md font-ninja">{log.lesson_name}</span>
-                          )}
-                        </div>
-                      )}
+                      <CurriculumPath log={log} />
 
                       {isEditing ? (
                         <div className="space-y-2 mt-1">
