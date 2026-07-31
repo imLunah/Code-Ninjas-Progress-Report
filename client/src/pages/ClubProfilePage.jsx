@@ -227,9 +227,8 @@ function SessionReplyBox({ sessionId, onAdded, onClose }) {
 // Quick-look popup for a session — notes, attendance, reactions and the comment
 // thread, without leaving the page. Esc, backdrop click, or × to close.
 function SessionQuickView({ session, memberCount, isReadOnly, onClose, onLogSession, onSessionChanged }) {
-  const [comments, setComments] = useState(session.comments || []);
+  const comments = session.comments || [];
   const [reactions, setReactions] = useState(session.reactions || []);
-  const [replying, setReplying] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -255,12 +254,6 @@ function SessionQuickView({ session, memberCount, isReadOnly, onClose, onLogSess
       setReactions(before);
       setError(err?.message || 'Could not save that reaction.');
     }
-  };
-
-  const addComment = (comment) => {
-    const next = [...comments, comment];
-    setComments(next);
-    onSessionChanged?.(session.id, { comments: next });
   };
 
   const present = session.attendees?.length ?? 0;
@@ -325,32 +318,18 @@ function SessionQuickView({ session, memberCount, isReadOnly, onClose, onLogSess
               <p className="text-ninja-muted font-ninja text-sm italic">No notes logged yet.</p>
             )}
 
+            {/* Chips stay live in here so you can join a reaction while
+                reading, but the picker and reply live on the row in the list.
+                Reacting is a thing you do TO a session in a list of them, not
+                something to open a session for. */}
             <ReactionChips reactions={reactions} canReact={!isReadOnly} onToggle={react} className="mt-3" />
             {error && <p className="text-ninja-red font-ninja text-xs mt-1.5">{error}</p>}
-
-            {!isReadOnly && (
-              <div className="mt-3">
-                <RowActions surface="bg-ninja-bg" className="w-fit">
-                  <ReactionPicker onPick={react} />
-                  <StripButton
-                    icon={ReplyIcon}
-                    label={replying ? 'Cancel reply' : 'Reply'}
-                    active={replying}
-                    onClick={() => setReplying((v) => !v)}
-                  />
-                </RowActions>
-              </div>
-            )}
           </div>
 
           {comments.length > 0 && (
             <div className="space-y-2 border-t border-ninja-border pt-4">
               {comments.map((c) => <SessionComment key={c.id} comment={c} />)}
             </div>
-          )}
-
-          {!isReadOnly && replying && (
-            <SessionReplyBox sessionId={session.id} onAdded={addComment} onClose={() => setReplying(false)} />
           )}
         </div>
 
@@ -378,9 +357,26 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
   const [confirmId, setConfirmId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [quickView, setQuickView] = useState(null);
+  const [replyingId, setReplyingId] = useState(null);
+  const [rowErrors, setRowErrors] = useState({});
   const todayStr = today();
   const shown = expanded ? sessions : sessions.slice(0, 4);
   const canDelete = isManager && !isReadOnly;
+
+  // Optimistic, then corrected by the server's own count.
+  const react = async (session, emoji) => {
+    if (isReadOnly) return;
+    const before = session.reactions || [];
+    onSessionChanged?.(session.id, { reactions: toggleLocally(before, emoji) });
+    setRowErrors((prev) => ({ ...prev, [session.id]: '' }));
+    try {
+      const { reactions } = await api.post(`/clubs/${session.id}/reactions`, { emoji });
+      onSessionChanged?.(session.id, { reactions });
+    } catch (err) {
+      onSessionChanged?.(session.id, { reactions: before });
+      setRowErrors((prev) => ({ ...prev, [session.id]: err?.message || 'Could not save that reaction.' }));
+    }
+  };
 
   const handleDelete = async (id) => {
     setDeletingId(id);
@@ -418,7 +414,6 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
             const rel = relativeDate(s.session_date);
             const replies = s.comments?.length ?? 0;
             const reacted = s.reactions || [];
-            const reactionTotal = reacted.reduce((n, r) => n + r.count, 0);
             return (
               <div
                 key={s.id}
@@ -443,6 +438,22 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* The whole row opens the session, so anything live inside
+                        it has to swallow its own clicks and keys or reacting
+                        would also open the thing you reacted to. */}
+                    {!isReadOnly && (
+                      <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                        <RowActions surface="bg-white">
+                          <ReactionPicker onPick={(emoji) => react(s, emoji)} />
+                          <StripButton
+                            icon={ReplyIcon}
+                            label={replyingId === s.id ? 'Cancel reply' : 'Reply'}
+                            active={replyingId === s.id}
+                            onClick={() => setReplyingId(replyingId === s.id ? null : s.id)}
+                          />
+                        </RowActions>
+                      </div>
+                    )}
                     <span
                       title="Present"
                       className="inline-flex items-center gap-1 rounded-full bg-white border border-ninja-border px-2 py-0.5 font-ninja text-xs font-semibold text-ninja-navy"
@@ -485,23 +496,45 @@ function SessionsSection({ sessions, memberCount, slug, navigate, isManager, isR
                 ) : (
                   <p className="mt-1.5 text-ninja-muted/70 font-ninja text-xs italic">No notes yet</p>
                 )}
-                {/* A reply or a reaction lives inside the session, so without
-                    this the row gives no sign either happened and nobody opens
-                    it to find out. */}
-                {(replies > 0 || reacted.length > 0) && (
-                  <div className="mt-2 flex items-center gap-2.5 font-ninja text-[11px] text-ninja-muted">
-                    {reacted.length > 0 && (
-                      <span className="flex items-center gap-1">
-                        <span aria-hidden="true">{reacted.slice(0, 3).map((r) => r.emoji).join(' ')}</span>
-                        {reactionTotal}
-                      </span>
-                    )}
+                {/* Chips and the reply box are live controls sitting inside a
+                    row that opens on click, so they stop their own events for
+                    the same reason the strip above does. */}
+                {(reacted.length > 0 || replies > 0 || replyingId === s.id) && (
+                  <div
+                    className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1.5"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
+                    <ReactionChips
+                      reactions={reacted}
+                      canReact={!isReadOnly}
+                      onToggle={(emoji) => react(s, emoji)}
+                      className="mt-0"
+                    />
                     {replies > 0 && (
-                      <span className="flex items-center gap-1">
+                      // The thread itself lives in the session; this only says
+                      // it is in there, so the row does not grow a conversation.
+                      <span className="flex items-center gap-1 font-ninja text-[11px] text-ninja-muted">
                         <ReplyIcon size={12} strokeWidth={2} aria-hidden="true" />
                         {replies}
                       </span>
                     )}
+                  </div>
+                )}
+                {rowErrors[s.id] && (
+                  <p className="mt-1 font-ninja text-[11px] text-ninja-red">{rowErrors[s.id]}</p>
+                )}
+                {replyingId === s.id && !isReadOnly && (
+                  <div
+                    className="mt-2"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
+                    <SessionReplyBox
+                      sessionId={s.id}
+                      onAdded={(c) => onSessionChanged?.(s.id, { comments: [...(s.comments || []), c] })}
+                      onClose={() => setReplyingId(null)}
+                    />
                   </div>
                 )}
               </div>
