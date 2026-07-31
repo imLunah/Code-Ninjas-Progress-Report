@@ -1,0 +1,166 @@
+import { useState, useRef, useEffect } from 'react';
+import { SmilePlusIcon } from 'lucide-react';
+import LazyEmojiPicker from '../shared/LazyEmojiPicker';
+
+// Emoji reactions, shared by the club board and the progress log. Each surface
+// owns its own request and its own table; what lives here is the way they look
+// and behave, so the two cannot drift into being nearly the same thing.
+
+// Three, not a shelf of them. The row is a shortcut for the reactions that get
+// used without thinking; the picker is one button away for everything else, and
+// a shorter row leaves each glyph enough room to be read at a glance.
+const QUICK_REACTIONS = ['👍', '❤️', '🎉'];
+
+// What a chip says on hover. Past three names it stops listing, because the
+// point of the tooltip is "who", not a roster.
+export function reactionTitle({ emoji, names }) {
+  const list = names || [];
+  if (!list.length) return `Reacted with ${emoji}`;
+  const shown = list.slice(0, 3).join(', ');
+  const rest = list.length - 3;
+  return `${rest > 0 ? `${shown} and ${rest} more` : shown} reacted with ${emoji}`;
+}
+
+// Applied before the request goes out. The server answers with the whole set,
+// so this only has to be right for the moment between click and response.
+export function toggleLocally(list, emoji) {
+  const at = list.findIndex((r) => r.emoji === emoji);
+  if (at === -1) return [...list, { emoji, count: 1, reacted: true, names: [] }];
+  const chip = list[at];
+  if (chip.reacted) {
+    if (chip.count <= 1) return list.filter((_, i) => i !== at);
+    return list.map((c, i) => (i === at ? { ...c, count: c.count - 1, reacted: false } : c));
+  }
+  return list.map((c, i) => (i === at ? { ...c, count: c.count + 1, reacted: true } : c));
+}
+
+// The "+" that opens the full picker. Its own popover rather than an ActionMenu
+// because the panel is a 320px grid with its own chrome, and ActionMenu's shell
+// would draw a second card around it.
+function EmojiPickerButton({ onPick }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+  const triggerRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
+    const onPointerDown = (e) => { if (!wrapRef.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        title="More reactions"
+        aria-label="More reactions"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors duration-150 hover:text-ninja-navy hover:bg-ninja-navy/[0.06] dark:hover:bg-white/10 ${
+          open ? 'text-ninja-navy bg-ninja-navy/[0.06] dark:bg-white/10' : 'text-ninja-muted'
+        }`}
+      >
+        <SmilePlusIcon size={20} strokeWidth={2} />
+      </button>
+      {open && (
+        <div className="absolute z-30 top-full right-0 mt-1" role="dialog" aria-label="Pick a reaction">
+          <LazyEmojiPicker onPick={onPick} onClose={() => setOpen(false)} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The quick row plus the picker. Rendered inside a row's action strip so both
+// arrive on the same gesture rather than as two separate things.
+//
+// The quick three are desktop only: three emoji, a picker and a menu do not fit
+// beside a name and a timestamp on a phone, and touch shows them all at once
+// with no hover to hide behind. The picker still reaches every emoji there, and
+// existing chips stay tappable either way.
+export function ReactionPicker({ onPick }) {
+  return (
+    <>
+      <span className="hidden sm:flex items-center gap-0.5">
+        {QUICK_REACTIONS.map((emoji) => (
+          <button
+            key={emoji}
+            type="button"
+            onClick={() => onPick(emoji)}
+            title={`React with ${emoji}`}
+            aria-label={`React with ${emoji}`}
+            className="w-8 h-8 flex items-center justify-center rounded-md text-xl leading-none transition-[background-color,transform] duration-150 hover:bg-ninja-navy/[0.06] dark:hover:bg-white/10 hover:scale-110"
+          >
+            <span aria-hidden="true">{emoji}</span>
+          </button>
+        ))}
+      </span>
+      <EmojiPickerButton onPick={onPick} />
+    </>
+  );
+}
+
+// The chips under a row. These are NOT hover-revealed: a reaction nobody can
+// see until they point at it is not worth leaving.
+export function ReactionChips({ reactions, canReact, onToggle, className = 'mt-2' }) {
+  if (!reactions?.length) return null;
+  return (
+    <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
+      {reactions.map((chip) => (
+        <button
+          key={chip.emoji}
+          type="button"
+          disabled={!canReact}
+          onClick={() => onToggle(chip.emoji)}
+          title={reactionTitle(chip)}
+          aria-pressed={chip.reacted}
+          className={`flex items-center gap-1 h-6 pl-1.5 pr-2 rounded-full border font-ninja text-xs font-semibold tabular-nums transition-colors duration-150 disabled:cursor-default ${
+            chip.reacted
+              ? 'border-ninja-blue bg-ninja-blue/10 text-ninja-blue'
+              : 'border-ninja-border text-ninja-muted enabled:hover:border-ninja-blue enabled:hover:text-ninja-navy'
+          }`}
+        >
+          <span className="text-sm leading-none" aria-hidden="true">{chip.emoji}</span>
+          {chip.count}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// The strip the actions sit on. One raised surface rather than loose glyphs, so
+// they read as a tool belonging to the row under the pointer.
+//
+// `surface` is the caller's to choose, because a strip has to differ from the
+// card it sits on and the two boards sit on opposite ones. Default ninja-bg
+// suits a white card: off-white in light, darker than the card in dark. On a
+// card that is ALREADY ninja-bg it would disappear, so those pass bg-white,
+// which the .dark override turns into the lighter #252c3e. Neither value is
+// right in both places; that is why it is a prop and not a constant.
+export function RowActions({ children, className = '', surface = 'bg-ninja-bg' }) {
+  return (
+    <div className={`row-actions flex-shrink-0 flex items-center gap-0.5 rounded-lg border border-ninja-border ${surface} px-1 py-0.5 shadow-sm ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+// ActionMenu's trigger fills with ninja-bg on hover, which is what RowActions is
+// made of, so inside the strip that fill lands invisible. Any ActionMenu placed
+// in a strip takes this on its className.
+export const IN_STRIP_MENU =
+  '[&>button:hover]:bg-ninja-navy/[0.06] dark:[&>button:hover]:bg-white/10 ' +
+  '[&>button[aria-expanded=true]]:bg-ninja-navy/[0.06] dark:[&>button[aria-expanded=true]]:bg-white/10';

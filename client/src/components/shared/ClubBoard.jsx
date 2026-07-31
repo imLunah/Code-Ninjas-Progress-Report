@@ -3,13 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LinkIcon, FileTextIcon, ImageIcon, FilmIcon, FileIcon,
   ArrowDownToLineIcon, ExternalLinkIcon, PaperclipIcon, PencilIcon, PlusIcon,
-  SmilePlusIcon,
 } from 'lucide-react';
 import Markdown from './Markdown';
 import LazyMarkdownEditor from './LazyMarkdownEditor';
-import LazyEmojiPicker from './LazyEmojiPicker';
 import Button from '../ui/Button';
 import ActionMenu, { MenuItem } from '../ui/ActionMenu';
+import { ReactionPicker, ReactionChips, RowActions, IN_STRIP_MENU, toggleLocally } from '../ui/Reactions';
 import { TrashIcon } from '../ui/icons';
 import { api } from '../../api/client';
 import { uploadToSigned } from '../../lib/supabase';
@@ -116,133 +115,6 @@ function Attachment({ post }) {
   return <FileAttachment post={post} />;
 }
 
-// Three, not a shelf of them. The row is a shortcut for the reactions that get
-// used without thinking; the picker is one button away for everything else, and
-// a shorter row leaves each glyph enough room to be read at a glance.
-const QUICK_REACTIONS = ['👍', '❤️', '🎉'];
-
-// What the chip says on hover. Past three names it stops listing, because the
-// point of the tooltip is "who", not a roster.
-function reactionTitle({ emoji, names, reacted }) {
-  const list = names || [];
-  if (!list.length) return `Reacted with ${emoji}`;
-  const shown = list.slice(0, 3).join(', ');
-  const rest = list.length - 3;
-  return `${rest > 0 ? `${shown} and ${rest} more` : shown} reacted with ${emoji}`;
-}
-
-// Applied before the request goes out. The server answers with the whole set,
-// so this only has to be right for the moment between click and response.
-function toggleLocally(list, emoji) {
-  const at = list.findIndex((r) => r.emoji === emoji);
-  if (at === -1) return [...list, { emoji, count: 1, reacted: true, names: [] }];
-  const chip = list[at];
-  if (chip.reacted) {
-    if (chip.count <= 1) return list.filter((_, i) => i !== at);
-    return list.map((c, i) => (i === at ? { ...c, count: c.count - 1, reacted: false } : c));
-  }
-  return list.map((c, i) => (i === at ? { ...c, count: c.count + 1, reacted: true } : c));
-}
-
-// The "+" that opens the full picker. Its own popover rather than an ActionMenu
-// because the panel is a 320px grid with its own chrome, and ActionMenu's shell
-// would draw a second card around it.
-function EmojiPickerButton({ onPick }) {
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef(null);
-  const triggerRef = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (e) => {
-      if (e.key !== 'Escape') return;
-      e.stopPropagation();
-      setOpen(false);
-      triggerRef.current?.focus();
-    };
-    const onPointerDown = (e) => { if (!wrapRef.current?.contains(e.target)) setOpen(false); };
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('pointerdown', onPointerDown);
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('pointerdown', onPointerDown);
-    };
-  }, [open]);
-
-  return (
-    <div ref={wrapRef} className="relative">
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        title="More reactions"
-        aria-label="More reactions"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors duration-150 hover:text-ninja-navy hover:bg-ninja-navy/[0.06] dark:hover:bg-white/10 ${
-          open ? 'text-ninja-navy bg-ninja-navy/[0.06] dark:bg-white/10' : 'text-ninja-muted'
-        }`}
-      >
-        <SmilePlusIcon size={20} strokeWidth={2} />
-      </button>
-      {open && (
-        <div className="absolute z-30 top-full right-0 mt-1" role="dialog" aria-label="Pick a reaction">
-          <LazyEmojiPicker onPick={onPick} onClose={() => setOpen(false)} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-// The quick row. Sits with the actions so both appear together on hover rather
-// than as two separate things arriving on the same gesture.
-function QuickReactions({ onPick }) {
-  return (
-    <>
-      {QUICK_REACTIONS.map((emoji) => (
-        <button
-          key={emoji}
-          type="button"
-          onClick={() => onPick(emoji)}
-          title={`React with ${emoji}`}
-          aria-label={`React with ${emoji}`}
-          className="w-8 h-8 flex items-center justify-center rounded-md text-xl leading-none transition-[background-color,transform] duration-150 hover:bg-ninja-navy/[0.06] dark:hover:bg-white/10 hover:scale-110"
-        >
-          <span aria-hidden="true">{emoji}</span>
-        </button>
-      ))}
-    </>
-  );
-}
-
-// The chips under a post. These are NOT hover-revealed: a reaction nobody can
-// see until they point at it is not worth leaving.
-function ReactionChips({ reactions, canReact, onToggle }) {
-  if (!reactions?.length) return null;
-  return (
-    <div className="flex flex-wrap items-center gap-1.5 mt-2">
-      {reactions.map((chip) => (
-        <button
-          key={chip.emoji}
-          type="button"
-          disabled={!canReact}
-          onClick={() => onToggle(chip.emoji)}
-          title={reactionTitle(chip)}
-          aria-pressed={chip.reacted}
-          className={`flex items-center gap-1 h-6 pl-1.5 pr-2 rounded-full border font-ninja text-xs font-semibold tabular-nums transition-colors duration-150 disabled:cursor-default ${
-            chip.reacted
-              ? 'border-ninja-blue bg-ninja-blue/10 text-ninja-blue'
-              : 'border-ninja-border text-ninja-muted enabled:hover:border-ninja-blue enabled:hover:text-ninja-navy'
-          }`}
-        >
-          <span className="text-sm leading-none" aria-hidden="true">{chip.emoji}</span>
-          {chip.count}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function Post({ post, canEdit, canReact, onUpdated, onDeleted }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(post.body || '');
@@ -315,31 +187,13 @@ function Post({ post, canEdit, canReact, onUpdated, onDeleted }) {
         </time>
         {post.updated_at && <span className="font-ninja text-xs text-ninja-muted">(edited)</span>}
 
-        {/* One raised strip rather than loose glyphs, so the actions read as a
-            tool that belongs to the post under the pointer. The surface is
-            ninja-bg: on the white card it is a shade off-white, and on the dark
-            card it is darker than the card, so it separates either way.
-            bg-white could not do this on a card that is already white. */}
         {(canReact || canEdit) && (
-          <div className="row-actions ml-auto self-center flex-shrink-0 flex items-center gap-0.5 rounded-lg border border-ninja-border bg-ninja-bg px-1 py-0.5 shadow-sm">
-            {canReact && (
-              <>
-                {/* Three emoji, a picker and a menu do not fit beside a name and
-                    a timestamp on a phone, and touch shows them all at once
-                    with no hover to hide behind. The picker still reaches every
-                    emoji there, and existing chips are tappable either way. */}
-                <span className="hidden sm:flex items-center gap-0.5">
-                  <QuickReactions onPick={react} />
-                </span>
-                <EmojiPickerButton onPick={react} />
-              </>
-            )}
+          <RowActions className="ml-auto self-center">
+            {canReact && <ReactionPicker onPick={react} />}
             {canEdit && (
           <ActionMenu
             label="Post actions"
-            // The trigger's own hover fill is ninja-bg, which is what this strip
-            // is made of, so inside it the hover would land invisible.
-            className="flex-shrink-0 [&>button:hover]:bg-ninja-navy/[0.06] dark:[&>button:hover]:bg-white/10 [&>button[aria-expanded=true]]:bg-ninja-navy/[0.06] dark:[&>button[aria-expanded=true]]:bg-white/10"
+            className={`flex-shrink-0 ${IN_STRIP_MENU}`}
             onClosed={() => setConfirming(false)}
           >
             {({ close }) =>
@@ -384,7 +238,7 @@ function Post({ post, canEdit, canReact, onUpdated, onDeleted }) {
             }
           </ActionMenu>
             )}
-          </div>
+          </RowActions>
         )}
       </header>
 

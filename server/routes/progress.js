@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { requireSensei, requireOwnLocation } = require('../middleware/auth');
 const { ALL_BELTS, isValidBelt, validateSublevel } = require('../lib/belts');
+const { toggleReaction } = require('../lib/reactions');
+
+const REACTION_TABLE = { table: 'progress_log_reactions', fk: 'log_id' };
 
 // Free-text curriculum/progress fields are intentionally freeform (senseis log custom
 // lesson/module names not in the curriculum tables), so they're bounded by length
@@ -334,6 +337,35 @@ router.post('/:id/comments', requireSensei, requireOwnLocation, async (req, res)
   } catch (err) {
     console.error('Progress log comment error:', err);
     res.status(500).json({ error: 'Failed to save comment' });
+  }
+});
+
+// POST /api/progress/:id/reactions — toggle one emoji on a log entry.
+// requireOwnLocation is load-bearing for exactly the reason the comment route
+// above spells out: activeLocationId picks the target, it does not authorize
+// writing to it. Reacting is not editing, so this is not gated on whose log it
+// is; any staff member at that center can react to any log there.
+router.post('/:id/reactions', requireSensei, requireOwnLocation, async (req, res) => {
+  try {
+    const result = await toggleReaction(req.app.get('db'), {
+      ...REACTION_TABLE,
+      emoji: req.body.emoji,
+      userId: req.session.userId,
+      verify: async (client) => {
+        const { rows } = await client.query(
+          `SELECT pl.id FROM progress_logs pl
+           JOIN students s ON pl.student_id = s.id
+           WHERE pl.id = $1 AND s.location_id = $2`,
+          [req.params.id, req.session.activeLocationId]
+        );
+        return rows[0]?.id ?? null;
+      },
+    });
+    if (result.error) return res.status(result.status).json({ error: result.error });
+    res.json({ reactions: result.reactions });
+  } catch (err) {
+    console.error('Progress log reaction error:', err);
+    res.status(500).json({ error: 'Failed to save reaction' });
   }
 });
 

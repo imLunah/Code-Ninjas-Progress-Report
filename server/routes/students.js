@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth, requireManager, requireSensei, requireOwnLocation } = require('../middleware/auth');
 const { ALL_BELTS, isValidBelt, validateSublevel } = require('../lib/belts');
+const { reactionsSubquery } = require('../lib/reactions');
 
 // Code.AI (Code.org) login sticker set — must match the students.codeorg_sticker
 // DB CHECK list and CODEORG_STICKERS in client/src/utils/stickers.js.
@@ -148,12 +149,13 @@ router.get('/:id', requireAuth, async (req, res) => {
           (SELECT json_agg(json_build_object('id', c.id, 'user_name', c.user_name, 'body', c.body, 'created_at', c.created_at) ORDER BY c.created_at ASC)
            FROM progress_log_comments c WHERE c.log_id = pl.id),
           '[]'::json
-        ) AS comments
+        ) AS comments,
+        ${reactionsSubquery({ table: 'progress_log_reactions', fk: 'log_id', subject: 'pl.id', userParam: '$2' })} AS reactions
       FROM progress_logs pl
       LEFT JOIN users u ON pl.sensei_id = u.id
       WHERE pl.student_id = $1
       ORDER BY pl.session_date DESC, pl.created_at DESC
-    `, [id]);
+    `, [id, req.session.userId]);
 
     // Club attendance — counts as activity sessions alongside progress logs
     const { rows: clubSessions } = await pool.query(`

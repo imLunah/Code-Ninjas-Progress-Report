@@ -1,10 +1,14 @@
 import { useState } from 'react';
+import { PencilIcon } from 'lucide-react';
 import { formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import BeltBadge from '../ui/BeltBadge';
 import ProgramBadge from '../ui/ProgramBadge';
 import Button from '../ui/Button';
+import ActionMenu, { MenuItem } from '../ui/ActionMenu';
+import { TrashIcon } from '../ui/icons';
+import { ReactionPicker, ReactionChips, RowActions, IN_STRIP_MENU, toggleLocally } from '../ui/Reactions';
 import LazyMarkdownEditor from './LazyMarkdownEditor';
 import MarkdownView from './MarkdownView';
 
@@ -79,6 +83,23 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [commentErrors, setCommentErrors] = useState({});
+  const [reactionErrors, setReactionErrors] = useState({});
+
+  // Optimistic, then corrected by the server's own count. A failure puts the
+  // chips back rather than leaving a reaction that was never stored.
+  const react = async (log, emoji) => {
+    if (isReadOnly || !onLogUpdated) return;
+    const before = log.reactions || [];
+    onLogUpdated(log.id, { reactions: toggleLocally(before, emoji) });
+    setReactionErrors((prev) => ({ ...prev, [log.id]: '' }));
+    try {
+      const { reactions } = await api.post(`/progress/${log.id}/reactions`, { emoji });
+      onLogUpdated(log.id, { reactions });
+    } catch (err) {
+      onLogUpdated(log.id, { reactions: before });
+      setReactionErrors((prev) => ({ ...prev, [log.id]: err.message || 'Could not save that reaction.' }));
+    }
+  };
 
   const visible = filter ? logs.filter((l) => l.program === filter) : logs;
 
@@ -193,8 +214,19 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                   const isEditing = editingId === log.id;
                   const isConfirmingDelete = confirmDeleteId === log.id;
 
+                  const canEdit = !isReadOnly && (isManager || log.sensei_id === user?.id);
+
                   return (
-                    <div key={log.id} className={i > 0 ? 'border-t border-ninja-border/60 pt-3' : ''}>
+                    // The tint bleeds past the text so the entry reads as one
+                    // object under the pointer, and is an alpha over whatever is
+                    // behind it rather than a bg-* swap that the dark overrides
+                    // would fight.
+                    <div
+                      key={log.id}
+                      className={`group -mx-2 px-2 rounded-lg transition-colors duration-150 hover:bg-ninja-navy/[0.04] dark:hover:bg-white/[0.05] ${
+                        i > 0 ? 'border-t border-ninja-border/60 pt-3' : ''
+                      }`}
+                    >
                       <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                         <div className="flex flex-wrap items-center gap-2">
                           {log.program && <ProgramBadge program={log.program} size="xs" />}
@@ -213,33 +245,44 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                             }`}>{log.status_at}</span>
                           )}
                         </div>
-                        {!isReadOnly && (isManager || log.sensei_id === user?.id) && !isEditing && (
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              onClick={() => startEdit(log)}
-                              className="text-ninja-muted hover:text-ninja-blue font-ninja text-xs font-semibold transition-colors"
-                            >
-                              Edit
-                            </button>
-                            {(isManager || log.sensei_id === user?.id) && (
-                              isConfirmingDelete ? (
-                                <>
-                                  <Button variant="danger" size="sm" onClick={() => handleDelete(log.id)} disabled={deleting}>
-                                    {deleting ? '...' : 'Confirm'}
-                                  </Button>
-                                  <Button variant="secondary" size="sm" onClick={() => { setConfirmDeleteId(null); setDeleteError(''); }}>Cancel</Button>
-                                  {deleteError && <p className="text-ninja-red font-ninja text-xs">{deleteError}</p>}
-                                </>
-                              ) : (
-                                <button
-                                  onClick={() => { setConfirmDeleteId(log.id); setEditingId(null); }}
-                                  className="text-ninja-muted hover:text-ninja-red font-ninja text-xs font-semibold transition-colors"
-                                >
-                                  Delete
-                                </button>
-                              )
+                        {!isEditing && (!isReadOnly || canEdit) && (
+                          // bg-white, not the default: this card is already
+                          // ninja-bg, so a ninja-bg strip would vanish into it.
+                          <RowActions surface="bg-white" className="self-center">
+                            {!isReadOnly && <ReactionPicker onPick={(emoji) => react(log, emoji)} />}
+                            {canEdit && (
+                              <ActionMenu
+                                label="Log actions"
+                                className={`flex-shrink-0 ${IN_STRIP_MENU}`}
+                                onClosed={() => { setConfirmDeleteId(null); setDeleteError(''); }}
+                              >
+                                {({ close }) =>
+                                  isConfirmingDelete ? (
+                                    // The confirm keeps the word "Delete" while
+                                    // everything around it is a glyph. Icons are
+                                    // fine for reversible actions.
+                                    <div className="p-1.5 w-48">
+                                      <p className="font-ninja text-xs text-ninja-muted mb-2">Delete this log entry?</p>
+                                      <div className="flex items-center gap-1.5">
+                                        <Button variant="danger" size="sm" onClick={() => handleDelete(log.id)} disabled={deleting}>
+                                          {deleting ? 'Deleting…' : 'Delete'}
+                                        </Button>
+                                        <Button variant="secondary" size="sm" onClick={() => setConfirmDeleteId(null)}>Keep</Button>
+                                      </div>
+                                      {deleteError && <p className="text-ninja-red font-ninja text-xs mt-1.5">{deleteError}</p>}
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <MenuItem icon={PencilIcon} onSelect={() => { startEdit(log); close(); }}>Edit</MenuItem>
+                                      <MenuItem icon={TrashIcon} danger onSelect={() => { setConfirmDeleteId(log.id); setEditingId(null); }}>
+                                        Delete
+                                      </MenuItem>
+                                    </>
+                                  )
+                                }
+                              </ActionMenu>
                             )}
-                          </div>
+                          </RowActions>
                         )}
                       </div>
 
@@ -270,6 +313,15 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                         </div>
                       ) : (
                         log.notes && <MarkdownView className="text-ninja-navy font-ninja text-sm leading-relaxed">{log.notes}</MarkdownView>
+                      )}
+
+                      <ReactionChips
+                        reactions={log.reactions}
+                        canReact={!isReadOnly}
+                        onToggle={(emoji) => react(log, emoji)}
+                      />
+                      {reactionErrors[log.id] && (
+                        <p className="text-ninja-red font-ninja text-xs mt-1">{reactionErrors[log.id]}</p>
                       )}
 
                       {allComments.length > 0 && (
