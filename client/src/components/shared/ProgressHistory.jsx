@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PencilIcon } from 'lucide-react';
+import { PencilIcon, ReplyIcon } from 'lucide-react';
 import { formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
@@ -8,7 +8,7 @@ import ProgramBadge from '../ui/ProgramBadge';
 import Button from '../ui/Button';
 import ActionMenu, { MenuItem } from '../ui/ActionMenu';
 import { TrashIcon } from '../ui/icons';
-import { ReactionPicker, ReactionChips, RowActions, IN_STRIP_MENU, toggleLocally } from '../ui/Reactions';
+import { ReactionPicker, ReactionChips, RowActions, StripButton, IN_STRIP_MENU, toggleLocally } from '../ui/Reactions';
 import LazyMarkdownEditor from './LazyMarkdownEditor';
 import MarkdownView from './MarkdownView';
 
@@ -26,7 +26,10 @@ function LogComment({ comment }) {
   );
 }
 
-function CommentBox({ logId, onAdded }) {
+// Opened from the row's reply button rather than parked under every entry. A
+// permanently mounted box asks a question of every log you scroll past; most of
+// them do not need an answer.
+function CommentBox({ logId, onAdded, onClose }) {
   const [body, setBody] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -40,6 +43,7 @@ function CommentBox({ logId, onAdded }) {
       const comment = await api.post(`/progress/${logId}/comments`, { body: body.trim() });
       onAdded(comment);
       setBody('');
+      onClose?.();
     } catch (err) {
       setError(err.message || 'Failed to post comment.');
     } finally {
@@ -53,8 +57,12 @@ function CommentBox({ logId, onAdded }) {
         <input
           type="text"
           value={body}
+          autoFocus
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Add a comment..."
+          // Escape backs out of a box you opened by mistake, without reaching
+          // for a Cancel button that would sit there for the other 99% of uses.
+          onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); onClose?.(); } }}
+          placeholder="Write a reply…"
           className="flex-1 bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-sm focus:outline-none focus:border-ninja-blue transition-colors"
         />
         <Button type="submit" size="sm" disabled={saving || !body.trim()}>
@@ -84,6 +92,7 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
   const [deleteError, setDeleteError] = useState('');
   const [commentErrors, setCommentErrors] = useState({});
   const [reactionErrors, setReactionErrors] = useState({});
+  const [replyingId, setReplyingId] = useState(null);
 
   // Optimistic, then corrected by the server's own count. A failure puts the
   // chips back rather than leaving a reaction that was never stored.
@@ -213,6 +222,7 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                   const allComments = [...(log.comments || []), ...(localComments[log.id] || [])];
                   const isEditing = editingId === log.id;
                   const isConfirmingDelete = confirmDeleteId === log.id;
+                  const isReplying = replyingId === log.id;
 
                   const canEdit = !isReadOnly && (isManager || log.sensei_id === user?.id);
 
@@ -249,7 +259,17 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                           // bg-white, not the default: this card is already
                           // ninja-bg, so a ninja-bg strip would vanish into it.
                           <RowActions surface="bg-white" className="self-center">
-                            {!isReadOnly && <ReactionPicker onPick={(emoji) => react(log, emoji)} />}
+                            {!isReadOnly && (
+                              <>
+                                <ReactionPicker onPick={(emoji) => react(log, emoji)} />
+                                <StripButton
+                                  icon={ReplyIcon}
+                                  label={isReplying ? 'Cancel reply' : 'Reply'}
+                                  active={isReplying}
+                                  onClick={() => setReplyingId(isReplying ? null : log.id)}
+                                />
+                              </>
+                            )}
                             {canEdit && (
                               <ActionMenu
                                 label="Log actions"
@@ -329,7 +349,13 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                           {allComments.map((c) => <LogComment key={c.id} comment={c} />)}
                         </div>
                       )}
-                      {!isReadOnly && <CommentBox logId={log.id} onAdded={(c) => handleCommentAdded(log.id, c)} />}
+                      {!isReadOnly && isReplying && (
+                        <CommentBox
+                          logId={log.id}
+                          onAdded={(c) => handleCommentAdded(log.id, c)}
+                          onClose={() => setReplyingId(null)}
+                        />
+                      )}
                     </div>
                   );
                 })}

@@ -158,6 +158,25 @@ export function RowActions({ children, className = '', surface = 'bg-ninja-bg' }
   );
 }
 
+// A plain glyph button sized to sit in a strip beside the reaction picker, so
+// anything a row wants to offer matches it instead of approximating it.
+export function StripButton({ icon: Icon, label, active = false, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      aria-pressed={active}
+      className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors duration-150 hover:text-ninja-navy hover:bg-ninja-navy/[0.06] dark:hover:bg-white/10 ${
+        active ? 'text-ninja-navy bg-ninja-navy/[0.06] dark:bg-white/10' : 'text-ninja-muted'
+      }`}
+    >
+      <Icon size={19} strokeWidth={2} aria-hidden="true" />
+    </button>
+  );
+}
+
 // ActionMenu's trigger fills with ninja-bg on hover, which is what RowActions is
 // made of, so inside the strip that fill lands invisible. Any ActionMenu placed
 // in a strip takes this on its className.
