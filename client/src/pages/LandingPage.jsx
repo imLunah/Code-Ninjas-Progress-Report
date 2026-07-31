@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, hadSession } from '../context/AuthContext';
 import { getHomePath } from '../lib/navTabs';
 
 const BG    = '#1c2132';
@@ -19,6 +19,9 @@ export default function LandingPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [leaving, setLeaving] = useState(false);
+  // Only someone who has signed in before is worth holding a spinner for. A first-time
+  // visitor gets the hero on the first frame instead of waiting out /auth/me.
+  const [maybeSignedIn] = useState(hadSession);
 
   useEffect(() => {
     if (!loading && user) {
@@ -28,7 +31,7 @@ export default function LandingPage() {
 
   const handleSignIn = () => setLeaving(true);
 
-  if (loading || user) {
+  if ((loading && maybeSignedIn) || user) {
     return (
       <div style={{ background: BG }} className="theme-locked min-h-[100dvh] flex items-center justify-center">
         <div
@@ -51,7 +54,7 @@ export default function LandingPage() {
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          backgroundImage: 'url(/ninja_background.jpg)',
+          backgroundImage: 'url(/ninja_background.webp)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           opacity: 0.12,

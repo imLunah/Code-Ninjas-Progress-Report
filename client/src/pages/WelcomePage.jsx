@@ -114,7 +114,7 @@ export default function WelcomePage() {
       {/* Scenic background */}
       <div
         className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: 'url(/onboarding-bg.jpg)' }}
+        style={{ backgroundImage: 'url(/onboarding-bg.webp)' }}
       />
       {/* Dark scrim so dark-theme text stays legible over the bright scene */}
       <div className="absolute inset-0 bg-gradient-to-b from-ninja-bg/70 via-ninja-bg/85 to-ninja-bg lg:from-ninja-bg/60 lg:via-ninja-bg/70 lg:to-ninja-bg/85" />

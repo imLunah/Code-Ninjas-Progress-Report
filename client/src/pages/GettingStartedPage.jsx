@@ -125,7 +125,7 @@ export default function GettingStartedPage() {
       {/* Scenic background (matches the Welcome onboarding page) */}
       <div
         className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: 'url(/onboarding-bg.jpg)' }}
+        style={{ backgroundImage: 'url(/onboarding-bg.webp)' }}
       />
       <div className="absolute inset-0 bg-gradient-to-b from-ninja-bg/70 via-ninja-bg/85 to-ninja-bg" />
 

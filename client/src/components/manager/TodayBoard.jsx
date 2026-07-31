@@ -178,7 +178,7 @@ export default function TodayBoard({
         animate={{ opacity: 1 }}
         className="text-center py-16 text-ninja-muted font-ninja"
       >
-        <img src="/CodeNinjasLaptop.png" alt="Code Ninjas" className="h-28 mx-auto mb-4 opacity-80" />
+        <img src="/CodeNinjasLaptop.webp" alt="Code Ninjas" className="h-28 mx-auto mb-4 opacity-80" />
         <p className="text-lg font-semibold text-ninja-navy">No ninjas added for today yet.</p>
         <p className="text-sm mt-1">{emptyHint}</p>
       </motion.div>

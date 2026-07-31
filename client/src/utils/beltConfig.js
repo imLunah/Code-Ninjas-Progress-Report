@@ -22,21 +22,21 @@ export const STATUSES = ['Started', 'Working On', 'Completed'];
 export const PROGRAMS = ['CREATE', 'Robotics Academy', 'AI Academy', 'JR', 'VR Coding', 'Silver', 'Gold Unity', 'Gold Godot'];
 
 export const PROGRAM_LOGOS = {
-  'CREATE':           '/programs/create_logo.png',
-  'JR':               '/programs/jr_logo.png',
-  'Robotics Academy': '/programs/robotics_logo.png',
-  'AI Academy':       '/programs/ai_logo.png',
-  'VR Coding':        '/programs/vr_coding_logo.png',
-  'Silver':           '/programs/silver_logo.png',
-  'Gold Unity':       '/programs/gold_unity_logo.png',
-  'Gold Godot':       '/programs/gold_godot_logo.png',
+  'CREATE':           '/programs/create_logo.webp',
+  'JR':               '/programs/jr_logo.webp',
+  'Robotics Academy': '/programs/robotics_logo.webp',
+  'AI Academy':       '/programs/ai_logo.webp',
+  'VR Coding':        '/programs/vr_coding_logo.webp',
+  'Silver':           '/programs/silver_logo.webp',
+  'Gold Unity':       '/programs/gold_unity_logo.webp',
+  'Gold Godot':       '/programs/gold_godot_logo.webp',
 };
 
 // Wide banner art for the programs that have it. Anything absent falls back to
 // the CSS gradient the banner surfaces already carry.
 export const PROGRAM_BANNERS = {
-  'Robotics Academy': '/programs/robotics_banner.png',
-  'AI Academy':       '/programs/ai_banner.png',
+  'Robotics Academy': '/programs/robotics_banner.webp',
+  'AI Academy':       '/programs/ai_banner.webp',
 };
 
 // Project names per belt + level. Keyed by belt name → level number → ordered

@@ -6,6 +6,22 @@ import ModalPortal from '../components/ui/ModalPortal';
 
 export const AuthContext = createContext(null);
 
+// The session cookie is httpOnly, so the app cannot read it. This flag is the hint that a
+// staff session probably exists, and the landing page uses it to decide whether waiting on
+// /auth/me is worth a blank screen. It never grants anything — the server still decides.
+const SESSION_HINT = 'dj-session';
+
+export function hadSession() {
+  try { return localStorage.getItem(SESSION_HINT) === '1'; } catch { return false; }
+}
+
+function setSessionHint(on) {
+  try {
+    if (on) localStorage.setItem(SESSION_HINT, '1');
+    else localStorage.removeItem(SESSION_HINT);
+  } catch {}
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,8 +30,8 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     api.get('/auth/me')
-      .then((data) => setUser(data))
-      .catch(() => setUser(null))
+      .then((data) => { setUser(data); setSessionHint(true); })
+      .catch(() => { setUser(null); setSessionHint(false); })
       .finally(() => setLoading(false));
   }, []);
 
@@ -31,6 +47,7 @@ export function AuthProvider({ children }) {
   async function login(username, password, keepSignedIn = false) {
     const data = await api.post('/auth/login', { username, password, keep_signed_in: keepSignedIn });
     setUser(data);
+    setSessionHint(true);
     return data;
   }
 
@@ -41,6 +58,7 @@ export function AuthProvider({ children }) {
       invalidateCurriculumCache();
       setViewAs(null);
       setUser(null);
+      setSessionHint(false);
     }
   }
 
