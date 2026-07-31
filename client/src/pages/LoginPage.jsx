@@ -88,7 +88,7 @@ export default function LoginPage() {
 
         {/* DojoLink logo — big and prominent */}
         <motion.div variants={fadeUp} className="mb-5 sm:mb-8">
-          <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-11 sm:h-16 w-auto" />
+          <img src="/DojoLinkLogoH.webp" alt="DojoLink" width="800" height="420" className="h-11 sm:h-16 w-auto" />
         </motion.div>
 
         {/* Hero copy */}

@@ -178,7 +178,7 @@ export default function TodayBoard({
         animate={{ opacity: 1 }}
         className="text-center py-16 text-ninja-muted font-ninja"
       >
-        <img src="/CodeNinjasLaptop.webp" alt="Code Ninjas" className="h-28 mx-auto mb-4 opacity-80" />
+        <img src="/CodeNinjasLaptop.webp" alt="Code Ninjas" width="384" height="320" className="h-28 w-auto mx-auto mb-4 opacity-80" />
         <p className="text-lg font-semibold text-ninja-navy">No ninjas added for today yet.</p>
         <p className="text-sm mt-1">{emptyHint}</p>
       </motion.div>
@@ -222,7 +222,7 @@ export default function TodayBoard({
         animate={{ opacity: 1, scale: 1 }}
         className="text-center py-16 font-ninja"
       >
-        <img src="/CodeNinjasCelebrate.webp" alt="" className="h-28 mx-auto mb-4" />
+        <img src="/CodeNinjasCelebrate.webp" alt="" width="581" height="694" className="h-28 w-auto mx-auto mb-4" />
         <p className="text-xl font-bold text-ninja-navy">{msg}</p>
         {celebratory && <p className="text-sm mt-1 text-ninja-muted">Great session today.</p>}
       </motion.div>

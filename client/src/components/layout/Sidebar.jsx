@@ -112,9 +112,9 @@ export default function Sidebar({ onOpenBug }) {
       <div className={`py-5 border-b border-ninja-border overflow-hidden ${collapsed ? 'px-2 flex justify-center' : 'px-5'}`}>
         <Link to="/" className="block outline-none" aria-label="DojoLink">
           {collapsed ? (
-            <img src="/favicon.png" alt="DojoLink" className="h-9 w-9 select-none" draggable={false} />
+            <img src="/favicon.png" alt="DojoLink" width="512" height="512" className="h-9 w-9 select-none" draggable={false} />
           ) : (
-            <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-14 w-auto max-w-none select-none" draggable={false} />
+            <img src="/DojoLinkLogoH.webp" alt="DojoLink" width="800" height="420" className="h-14 w-auto max-w-none select-none" draggable={false} />
           )}
         </Link>
       </div>

@@ -25,7 +25,7 @@ export default function ParentLayout({ children, wide = false }) {
     <div className="min-h-[100dvh] bg-ninja-bg">
       <nav className="bg-white border-b border-ninja-border h-20 flex items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-3">
-          <img src="/DojoLinkLogoH.png" alt="DojoLink" className="h-14" />
+          <img src="/DojoLinkLogoH.webp" alt="DojoLink" width="800" height="420" className="h-14 w-auto" />
           <span className="text-ninja-muted font-ninja text-sm hidden sm:inline">Parent Portal</span>
         </div>
         <div className="flex items-center gap-3">
