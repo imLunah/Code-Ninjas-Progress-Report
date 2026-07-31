@@ -11,6 +11,7 @@ import ParentRoute from './components/layout/ParentRoute';
 import AdminBar from './components/ui/AdminBar';
 import WhatsNewModal from './components/shared/WhatsNewModal';
 import ThemeSync from './components/ThemeSync';
+import CanonicalUrl from './components/CanonicalUrl';
 
 // Eager: only the pages on the unauthenticated first-paint path.
 import LoginPage from './pages/LoginPage';
@@ -53,6 +54,7 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user">
     <BrowserRouter>
+      <CanonicalUrl />
       <ThemeProvider>
       <CurriculumProvider>
       <ParentAuthProvider>
