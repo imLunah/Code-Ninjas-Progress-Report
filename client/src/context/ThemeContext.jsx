@@ -3,7 +3,7 @@ import { getAccent, buildAccentTokens, buildCustomTokens, isDefaultAccent, isCus
 
 const ThemeContext = createContext(null);
 
-const ACCENT_VARS = ['--ninja-blue', '--ninja-blue-hover'];
+const ACCENT_VARS = ['--ninja-blue', '--ninja-blue-hover', '--ninja-blue-ink'];
 // Cleared on every apply so any stale tint from older builds (which used to
 // recolor the surfaces) goes away — accent now only touches the brand color.
 const STALE_TINT_VARS = ['--ninja-bg', '--ninja-border', '--ninja-navy', '--ninja-muted'];

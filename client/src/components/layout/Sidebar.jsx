@@ -124,6 +124,7 @@ export default function Sidebar({ onOpenBug }) {
         <div className="px-3 pt-3">
           {(['manager', 'admin'].includes(user.role) || (user.availableLocations?.length > 1)) && !isSenseiView ? (
             <select
+              aria-label="Active center"
               value={user.activeLocation?.id ?? ''}
               onChange={(e) => switchLocation(Number(e.target.value))}
               className="w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm font-semibold focus:outline-none focus:border-ninja-blue transition-colors"
@@ -153,7 +154,7 @@ export default function Sidebar({ onOpenBug }) {
                 collapsed ? 'px-0 justify-center' : 'px-3'
               } ${
                 isActive
-                  ? 'bg-ninja-blue/10 text-ninja-blue'
+                  ? 'bg-ninja-blue/10 text-ninja-blue-ink'
                   : 'text-ninja-navy hover:bg-ninja-bg'
               }`}
             >

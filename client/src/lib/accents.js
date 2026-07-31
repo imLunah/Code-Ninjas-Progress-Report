@@ -54,11 +54,48 @@ const mix = (a, b, t) => a.map((v, i) => Math.round(v * t + b[i] * (1 - t)));
 // Accent only swaps the brand color tokens — same logic as the default blue:
 // the dark slate background / borders / text stay neutral, just like the stock
 // theme. We do NOT tint the neutral surfaces (that looked muddy).
+// ── Readable accent ink ─────────────────────────────────────────────────────
+// Accent text on an accent tint (the active nav item, the selected reaction)
+// is the one place the brand color has to carry meaning at 14px or smaller, and
+// the stock blue lands at 4.44:1 light / 4.35:1 dark — just under WCAG AA. A
+// fixed replacement hex would only fix blue: the accent is any hue the user
+// picks, and yellow on a yellow tint is far worse. So the ink is solved for.
+
+const relLum = (c) => {
+  const s = c.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * s[0] + 0.7152 * s[1] + 0.0722 * s[2];
+};
+const contrast = (a, b) => {
+  const [l1, l2] = [relLum(a), relLum(b)];
+  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+};
+
+// The surface under the tint: white in light, the dark card in dark.
+const SURFACE = { light: [255, 255, 255], dark: [37, 44, 62] };
+const TINT_ALPHA = 0.1;
+
+/**
+ * Darken (light mode) or lighten (dark mode) the accent until it clears 4.5:1
+ * against its own 10% tint. Returns the accent untouched when it already does.
+ */
+export function accentInk(rgb, dark) {
+  const surface = dark ? SURFACE.dark : SURFACE.light;
+  const pill = mix(rgb, surface, TINT_ALPHA);
+  const toward = dark ? [255, 255, 255] : [0, 0, 0];
+  let ink = rgb;
+  for (let step = 0; step <= 20 && contrast(ink, pill) < 4.5; step++) {
+    ink = mix(rgb, toward, 1 - step * 0.05);
+  }
+  return ink;
+}
+
 export function buildAccentTokens(accent, dark) {
   const a = getAccent(accent.id ? accent.id : accent);
+  const base = (dark ? a.dark : a.light).split(' ').map(Number);
   return {
     '--ninja-blue':       dark ? a.dark : a.light,
     '--ninja-blue-hover': dark ? a.hoverDark : a.hoverLight,
+    '--ninja-blue-ink':   rgbStr(accentInk(base, dark)),
   };
 }
 
@@ -81,6 +118,7 @@ export function buildCustomTokens(hex, dark) {
   return {
     '--ninja-blue':       rgbStr(base),
     '--ninja-blue-hover': rgbStr(hover),
+    '--ninja-blue-ink':   rgbStr(accentInk(base, dark)),
   };
 }
 

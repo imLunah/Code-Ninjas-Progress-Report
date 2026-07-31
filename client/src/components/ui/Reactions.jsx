@@ -129,7 +129,7 @@ export function ReactionChips({ reactions, canReact, onToggle, className = 'mt-2
           aria-pressed={chip.reacted}
           className={`flex items-center gap-1 h-6 pl-1.5 pr-2 rounded-full border font-ninja text-xs font-semibold tabular-nums transition-colors duration-150 disabled:cursor-default ${
             chip.reacted
-              ? 'border-ninja-blue bg-ninja-blue/10 text-ninja-blue'
+              ? 'border-ninja-blue bg-ninja-blue/10 text-ninja-blue-ink'
               : 'border-ninja-border text-ninja-muted enabled:hover:border-ninja-blue enabled:hover:text-ninja-navy'
           }`}
         >

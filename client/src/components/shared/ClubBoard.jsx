@@ -366,14 +366,14 @@ function Composer({ clubName, onPosted }) {
         <button type="button" onClick={() => setAttach(attach === 'file' ? null : 'file')}
           title="Attach a file" aria-label="Attach a file" aria-pressed={attach === 'file'}
           className={`p-2 rounded-full transition-colors duration-150 ${
-            attach === 'file' ? 'bg-ninja-blue/10 text-ninja-blue' : 'text-ninja-muted hover:text-ninja-blue'
+            attach === 'file' ? 'bg-ninja-blue/10 text-ninja-blue-ink' : 'text-ninja-muted hover:text-ninja-blue'
           }`}>
           <PaperclipIcon size={17} strokeWidth={1.75} />
         </button>
         <button type="button" onClick={() => setAttach(attach === 'url' ? null : 'url')}
           title="Add a link" aria-label="Add a link" aria-pressed={attach === 'url'}
           className={`p-2 rounded-full transition-colors duration-150 ${
-            attach === 'url' ? 'bg-ninja-blue/10 text-ninja-blue' : 'text-ninja-muted hover:text-ninja-blue'
+            attach === 'url' ? 'bg-ninja-blue/10 text-ninja-blue-ink' : 'text-ninja-muted hover:text-ninja-blue'
           }`}>
           <LinkIcon size={17} strokeWidth={1.75} />
         </button>

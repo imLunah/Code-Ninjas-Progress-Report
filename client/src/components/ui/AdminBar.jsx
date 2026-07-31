@@ -49,12 +49,15 @@ export default function AdminBar() {
 
   return (
     <>
-      {/* Desktop — full pill at bottom center */}
-      <div
+      {/* Desktop — full pill at bottom center. A <nav> because axe counts any
+          content outside a landmark as orphaned, and this pill floats above
+          everything with nothing else claiming it. */}
+      <nav
+        aria-label="Admin view switcher"
         className="hidden lg:flex fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] items-center gap-1 px-2 py-1.5 rounded-2xl shadow-xl font-ninja text-xs font-bold"
         style={pillStyle}
       >
-        <span style={{ color: 'rgba(56,161,255,0.6)' }} className="px-2 tracking-widest uppercase text-[10px]">
+        <span style={{ color: 'rgba(56,161,255,0.9)' }} className="px-2 tracking-widest uppercase text-[10px]">
           Admin
         </span>
         <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
@@ -82,10 +85,10 @@ export default function AdminBar() {
         >
           Admin
         </button>
-      </div>
+      </nav>
 
       {/* Mobile — compact pill above Report Bug button */}
-      <div ref={ref} className="lg:hidden fixed bottom-36 right-4 z-[9999] flex flex-col items-end gap-2">
+      <nav ref={ref} aria-label="Admin view switcher" className="lg:hidden fixed bottom-36 right-4 z-[9999] flex flex-col items-end gap-2">
         <AnimatePresence>
           {open && (
             <motion.div
@@ -131,7 +134,7 @@ export default function AdminBar() {
             </span>
           )}
         </button>
-      </div>
+      </nav>
     </>
   );
 }

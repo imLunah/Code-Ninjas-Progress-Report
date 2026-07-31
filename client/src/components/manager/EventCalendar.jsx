@@ -23,9 +23,12 @@ const TYPE_COLOR = {
 export const colorFor = (type) => TYPE_COLOR[(type || '').trim().toLowerCase()] || '#64748b';
 
 // Birthdays sit on the same grid as events but must not read as one, so they get
-// a tinted chip + cake glyph instead of a solid bar. Inline colors so the chip
-// looks the same in light and dark (a `.dark .bg-*` override can't reach these).
-const BIRTHDAY_COLOR = '#db2777';
+// a tinted chip + cake glyph instead of a solid bar. The ink comes from a custom
+// property rather than a literal: one pink cannot clear 4.5:1 against both a near
+// white tint and the same tint over a dark card, so index.css supplies a darker
+// pink in light and a lighter one in dark. A `bg-*` utility could not do this —
+// the `.dark` overrides never reach an inline style.
+const BIRTHDAY_COLOR = 'var(--birthday-ink)';
 const BIRTHDAY_TINT = 'rgba(219, 39, 119, 0.14)';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -272,58 +275,74 @@ export default function EventCalendar({ canManage = true, bare = false }) {
           const shownBirthdays = dayBirthdays.slice(0, Math.max(0, MAX_CHIPS - shownEvents.length));
           const hidden = (dayEvents.length - shownEvents.length) + (dayBirthdays.length - shownBirthdays.length);
           return (
-            <button
+            // The cell used to be the <button>, with the chips as role="button"
+            // spans inside it — interactive inside interactive, which is invalid
+            // and what a screen reader trips over. The cell is a plain box now,
+            // and "add an event here" is a real button stretched behind the
+            // chips. Siblings, so a chip click never reaches the one underneath.
+            <div
               key={dIso}
-              type="button"
-              onClick={() => openAdd(dIso)}
               className={`group relative min-h-[68px] rounded-lg border p-1.5 text-left align-top transition-colors ${
                 isToday ? 'border-ninja-blue bg-ninja-blue/5' : 'border-transparent hover:border-ninja-border'
-              } ${canManage ? 'hover:bg-ninja-bg cursor-pointer' : 'cursor-default'}`}
+              } ${canManage ? 'hover:bg-ninja-bg' : ''}`}
             >
-              <span className={`font-ninja text-xs font-bold tabular-nums ${isToday ? 'text-ninja-blue' : 'text-ninja-navy'}`}>{day}</span>
-              <div className="mt-1 space-y-0.5">
+              {canManage && (
+                <button
+                  type="button"
+                  onClick={() => openAdd(dIso)}
+                  aria-label={`Add an event on ${longDate(dIso)}`}
+                  className="absolute inset-0 w-full h-full rounded-lg cursor-pointer"
+                />
+              )}
+              <span className={`relative pointer-events-none font-ninja text-xs font-bold tabular-nums ${isToday ? 'text-ninja-blue' : 'text-ninja-navy'}`}>{day}</span>
+              <div className="relative mt-1 space-y-0.5 pointer-events-none">
                 {shownEvents.map((ev) => (
-                  <span
-                    key={ev.id}
-                    role={canManage ? 'button' : undefined}
-                    tabIndex={canManage ? 0 : undefined}
-                    onClick={canManage ? (e) => { e.stopPropagation(); openEdit(ev); } : undefined}
-                    onKeyDown={canManage ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); openEdit(ev); } } : undefined}
-                    title={ev.title}
-                    className="block truncate rounded px-1 py-0.5 font-ninja text-[10px] font-semibold text-white leading-tight cursor-pointer"
-                    style={{ backgroundColor: colorFor(ev.type) }}
-                  >
-                    {ev.title}
-                  </span>
+                  canManage ? (
+                    <button
+                      key={ev.id}
+                      type="button"
+                      onClick={() => openEdit(ev)}
+                      title={ev.title}
+                      className="pointer-events-auto block w-full truncate rounded px-1 py-0.5 text-left font-ninja text-[10px] font-semibold text-white leading-tight"
+                      style={{ backgroundColor: colorFor(ev.type) }}
+                    >
+                      {ev.title}
+                    </button>
+                  ) : (
+                    <span
+                      key={ev.id}
+                      title={ev.title}
+                      className="block truncate rounded px-1 py-0.5 font-ninja text-[10px] font-semibold text-white leading-tight"
+                      style={{ backgroundColor: colorFor(ev.type) }}
+                    >
+                      {ev.title}
+                    </span>
+                  )
                 ))}
                 {shownBirthdays.map((b) => (
-                  <span
+                  <button
                     key={`b${b.id}`}
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => { e.stopPropagation(); navigate(`/manager/students/${b.id}`); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); navigate(`/manager/students/${b.id}`); } }}
+                    type="button"
+                    onClick={() => navigate(`/manager/students/${b.id}`)}
                     title={`${b.full_name}'s birthday`}
-                    className="flex items-center gap-1 rounded px-1 py-0.5 font-ninja text-[10px] font-semibold leading-tight cursor-pointer"
+                    className="pointer-events-auto flex w-full items-center gap-1 rounded px-1 py-0.5 font-ninja text-[10px] font-semibold leading-tight"
                     style={{ backgroundColor: BIRTHDAY_TINT, color: BIRTHDAY_COLOR }}
                   >
                     <Cake className="w-2.5 h-2.5 flex-shrink-0" />
                     <span className="truncate">{firstName(b.full_name)}</span>
-                  </span>
+                  </button>
                 ))}
                 {hidden > 0 && (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => { e.stopPropagation(); setDayView(dIso); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setDayView(dIso); } }}
-                    className="block font-ninja text-[10px] font-bold text-ninja-muted hover:text-ninja-navy px-1 cursor-pointer rounded"
+                  <button
+                    type="button"
+                    onClick={() => setDayView(dIso)}
+                    className="pointer-events-auto block font-ninja text-[10px] font-bold text-ninja-muted hover:text-ninja-navy px-1 rounded"
                   >
                     +{hidden} more
-                  </span>
+                  </button>
                 )}
               </div>
-            </button>
+            </div>
           );
         })}
       </div>

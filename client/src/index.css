@@ -36,6 +36,8 @@
   --ninja-border:      226 232 240;
   --ninja-blue:        0 106 221;
   --ninja-blue-hover:  0 88 184;
+  --ninja-blue-ink:    0 97 204;   /* #0061cc — accent text on an accent tint; the brand blue itself is 4.44:1 there, just under AA */
+  --birthday-ink:      #be185d;    /* calendar birthday chip, on a pink tint over white */
   --ninja-navy:        26 46 74;
   --ninja-muted:       80 102 144;
   --ninja-hero:        26 46 74;   /* fixed brand navy for hero banners — does NOT flip in dark */
@@ -51,6 +53,8 @@
   --ninja-border:      44 55 82;    /* #2c3752 — cool-tinted border */
   --ninja-blue:        56 161 255;
   --ninja-blue-hover:  28 138 255;
+  --ninja-blue-ink:    74 170 255; /* #4aaaff — same job, lightened instead of darkened */
+  --birthday-ink:      #f472b6;    /* same tint over the dark card needs the pink lightened, not darkened */
   --ninja-navy:        208 218 234; /* #d0daed — cool near-white */
   --ninja-muted:       138 155 184; /* #8a9bb8 — cool blue-gray, WCAG AA */
   --ninja-hero:        26 46 74;    /* intentionally NOT flipped — hero banners stay navy in dark */

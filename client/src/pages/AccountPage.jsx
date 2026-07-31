@@ -238,7 +238,7 @@ export default function AccountPage() {
     <div className={`${CARD} p-5`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className={`w-9 h-9 rounded-xl flex items-center justify-center ${experimental ? 'text-ninja-blue bg-ninja-blue/10' : 'text-ninja-muted bg-ninja-bg'}`}>
+          <span className={`w-9 h-9 rounded-xl flex items-center justify-center ${experimental ? 'text-ninja-blue-ink bg-ninja-blue/10' : 'text-ninja-muted bg-ninja-bg'}`}>
             <FlaskIcon width="17" height="17" />
           </span>
           <div>
@@ -271,7 +271,7 @@ export default function AccountPage() {
               className="mt-4 w-full flex items-center justify-between rounded-xl border border-ninja-border p-3 text-left transition-[transform,border-color] duration-150 ease-[var(--ease-out)] hover:border-ninja-blue/50 active:scale-[0.98]"
             >
               <div className="flex items-center gap-3">
-                <span className="w-9 h-9 rounded-xl flex items-center justify-center text-ninja-blue bg-ninja-blue/10">
+                <span className="w-9 h-9 rounded-xl flex items-center justify-center text-ninja-blue-ink bg-ninja-blue/10">
                   <PaletteIcon width="17" height="17" />
                 </span>
                 <div>
@@ -316,7 +316,7 @@ export default function AccountPage() {
     <a href="/getting-started" className={`block ${CARD} p-5 hover:border-ninja-blue/50 transition-colors`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="w-9 h-9 rounded-xl flex items-center justify-center text-ninja-blue bg-ninja-blue/10">
+          <span className="w-9 h-9 rounded-xl flex items-center justify-center text-ninja-blue-ink bg-ninja-blue/10">
             <HelpIcon width="17" height="17" />
           </span>
           <div>

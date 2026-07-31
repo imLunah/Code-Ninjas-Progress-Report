@@ -249,7 +249,7 @@ function NoteCard({ note, canManage, canReorder = true, onSaved, onDeleted, boar
             <ReactMarkdown components={STICKY_MD} urlTransform={mdUrl}>{note.body}</ReactMarkdown>
           </div>
           <div className="flex items-center justify-between mt-3 pt-2 border-t flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
-            <span className="font-ninja text-[11px] font-semibold opacity-70 truncate">{note.created_by_name || 'Unknown'}</span>
+            <span className="font-ninja text-[11px] font-semibold opacity-80 truncate">{note.created_by_name || 'Unknown'}</span>
             {canManage && (
               // The confirm keeps its word. Icons are fine for reversible
               // actions; a destructive one should never rest on the reader
