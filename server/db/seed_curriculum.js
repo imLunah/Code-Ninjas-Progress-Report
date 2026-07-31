@@ -34,8 +34,10 @@ const CURRICULUM = {
     { module: '3. Reimagine the World', lessons: ['1. Surfing', '2. Dancer Model', '3. Gymnastics Boy', '4. Basketball Game', '5. Sit Up', '6. Rollo the Robot', '7. Pirate Ship', '8. Scott the Skier', '9. Perry the Plane', '10. My World Reimagined'] },
     { module: '4. Useful Inventions', lessons: ['1. Automatic Feeder', '2. Smart Roof', '3. Smart Bin', '4. Harvestor', '5. Wake Up Giant', '6. Vertical Farm', '7. My Amazing Invention'] },
     { module: '5. Animal Friends', lessons: ['1. Crabby the Crab', '2. Sammi the Seal', '3. Sally the Spider', '4. Freddy the Fish', '5. Undersea Creature', '6. Gregory the Gorilla', '7. Peggy the Penguin', '8. Manny the Manta Ray', '9. Danny the Dino', '10. Elli the Elephant', '11. Bernie the Bird', '12. My Animal Friend'] },
-    { module: '6. Happy Traveler', lessons: [] },
-    { module: '7. Crazy Carnival Games', lessons: [] },
+    // '6. Happy Traveler' and '7. Crazy Carnival Games' were dropped when the
+    // curriculum spreadsheet stopped listing them. They carried no lessons, so
+    // the 59 sessions logged against them recorded a module and nothing under
+    // it. Those logs keep their text: progress_logs stores names, not ids.
   ],
 
   'LEGO Spike Prime': [
