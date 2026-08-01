@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { SearchIcon } from 'lucide-react';
 import ModalPortal from '../../components/ui/ModalPortal';
 
 function StaffAvatar({ url, name }) {
@@ -22,6 +23,8 @@ import AddSenseiModal from '../../components/manager/AddSenseiModal';
 import SenseiProfileModal from '../../components/manager/SenseiProfileModal';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { PANEL } from '../../lib/surfaces';
+import { SkeletonList } from '../../components/ui/Skeleton';
 
 function EditCredentialsModal({ sensei, onClose }) {
   const [username, setUsername] = useState(sensei.username || '');
@@ -196,6 +199,7 @@ export default function StaffPage() {
   const [managingSensei, setManagingSensei] = useState(null);
   const [resetLoginData, setResetLoginData] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [search, setSearch] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const { user, isReadOnly, viewAs } = useAuth();
@@ -210,6 +214,16 @@ export default function StaffPage() {
       .catch(() => setError('Failed to load staff'))
       .finally(() => setLoading(false));
   }, [user?.activeLocation?.id, showArchived]);
+
+  // A center's staff list arrives whole, so the filter is local. Name and
+  // username both match: you look someone up by whichever one you know.
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return senseis;
+    return senseis.filter(
+      (s) => s.display_name?.toLowerCase().includes(q) || s.username?.toLowerCase().includes(q)
+    );
+  }, [senseis, search]);
 
   const handleAdded = (newSensei) => {
     setSenseis((prev) => [...prev, { ...newSensei, progress_log_count: 0 }]);
@@ -278,16 +292,30 @@ export default function StaffPage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      {/* On desktop the page owns the viewport and the list scrolls inside it,
+          so the header and the column titles stay put. On mobile the page is
+          the scroller, as it is everywhere else. */}
+      <div className="space-y-6 lg:h-[calc(100dvh-64px)] lg:flex lg:flex-col lg:space-y-0 lg:gap-6">
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 flex-shrink-0">
           <div>
             <h1 className="text-2xl sm:text-4xl font-bold font-ninja text-ninja-navy tracking-wide">
               Center <span className="text-ninja-blue">{showArchived ? 'Archive' : 'Staff'}</span>
             </h1>
             <p className="text-ninja-muted font-ninja mt-1">{user?.activeLocation?.name}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ninja-muted pointer-events-none" />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search staff..."
+                aria-label="Search staff by name or username"
+                className="bg-white border border-ninja-border text-ninja-navy rounded-lg pl-8 pr-3 py-1.5 font-ninja text-sm focus:outline-none focus:border-ninja-blue transition-colors w-40 sm:w-48"
+              />
+            </div>
             {isManager && (
               <Button variant="secondary" onClick={() => setShowArchived((v) => !v)}>
                 {showArchived ? 'Active Staff' : 'Archived'}
@@ -300,13 +328,11 @@ export default function StaffPage() {
         </div>
 
         {/* Sensei list */}
-        <div className="bg-white border border-ninja-border rounded-xl shadow-sm overflow-hidden">
+        <div className={`${PANEL} overflow-hidden lg:flex lg:flex-col lg:flex-1 lg:min-h-0`}>
           {error && (
             <p className="text-ninja-red font-ninja text-center py-8">{error}</p>
           )}
-          {loading && (
-            <p className="text-ninja-muted font-ninja text-center py-8">Loading senseis...</p>
-          )}
+          {loading && <SkeletonList rows={5} label="Loading staff" />}
           {!loading && !error && senseis.length === 0 && (
             <div className="text-center py-12">
               <p className="text-ninja-muted font-ninja">
@@ -321,20 +347,25 @@ export default function StaffPage() {
           )}
           {!loading && !error && senseis.length > 0 && (
             <>
-              <div className="grid grid-cols-3 border-b border-ninja-border bg-ninja-bg px-5 py-3">
+              <div className="grid grid-cols-3 border-b border-ninja-border bg-ninja-bg px-5 py-3 flex-shrink-0">
                 <span className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest">Name</span>
                 <span className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest">Username</span>
                 <span className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest text-right">
                   {showArchived ? 'Action' : 'Progress Logs'}
                 </span>
               </div>
-              <div className="divide-y divide-ninja-border">
-                {senseis.map((s, i) => (
+              <div className="divide-y divide-ninja-border lg:overflow-y-auto lg:flex-1">
+                {filtered.length === 0 && (
+                  <p className="text-center text-ninja-muted font-ninja py-12">
+                    No staff match "{search.trim()}".
+                  </p>
+                )}
+                {filtered.map((s, i) => (
                   <motion.div
                     key={s.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.06, duration: 0.25, ease: 'easeOut' }}
+                    transition={{ delay: Math.min(i * 0.06, 0.3), duration: 0.25, ease: 'easeOut' }}
                     className="grid grid-cols-3 items-center px-5 py-4 gap-2 hover:bg-ninja-bg cursor-pointer transition-colors"
                     onClick={() => !showArchived && handleRowClick(s)}
                   >
