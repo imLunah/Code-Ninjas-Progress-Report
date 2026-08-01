@@ -11,6 +11,7 @@ import { TrashIcon } from '../ui/icons';
 import { ReactionPicker, ReactionChips, RowActions, StripButton, IN_STRIP_MENU, toggleLocally } from '../ui/Reactions';
 import LazyMarkdownEditor from './LazyMarkdownEditor';
 import MarkdownView from './MarkdownView';
+import { authorName } from '../../lib/authors';
 
 function LogComment({ comment }) {
   return (
@@ -19,7 +20,7 @@ function LogComment({ comment }) {
       <div>
         <p className="text-ninja-navy font-ninja text-sm">{comment.body}</p>
         <p className="text-ninja-muted font-ninja text-xs mt-0.5">
-          {comment.user_name} · {new Date(comment.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          {authorName(comment.user_name)} · {new Date(comment.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </p>
       </div>
     </div>
@@ -240,9 +241,11 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
 
         return dates.map((date) => {
           const dayLogs = groups[date];
-          const sharedSensei = dayLogs.every((l) => l.sensei_name === dayLogs[0].sensei_name)
-            ? dayLogs[0].sensei_name
-            : null;
+          // Resolve the name first, so a day logged entirely by a deleted account
+          // still collapses to one header line instead of falling through to the
+          // per-entry byline and printing nothing at all.
+          const names = dayLogs.map((l) => authorName(l.sensei_name));
+          const sharedSensei = names.every((n) => n === names[0]) ? names[0] : null;
 
           return (
             <div key={date} className="bg-ninja-bg border border-ninja-border rounded-xl p-4">
@@ -285,8 +288,8 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                             <span className="font-ninja text-xs text-ninja-muted">{log.project_at}</span>
                           )}
                           {log.status_at && <StatusMark status={log.status_at} />}
-                          {!sharedSensei && log.sensei_name && (
-                            <span className="text-ninja-muted text-xs font-ninja">by {log.sensei_name}</span>
+                          {!sharedSensei && (
+                            <span className="text-ninja-muted text-xs font-ninja">by {authorName(log.sensei_name)}</span>
                           )}
                         </div>
                         {!isEditing && (!isReadOnly || canEdit) && (

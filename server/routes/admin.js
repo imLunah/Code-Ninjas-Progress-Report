@@ -350,18 +350,20 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      // Delete comments on OTHER senseis' logs authored by this user (not covered by cascade below)
-      await client.query('DELETE FROM progress_log_comments WHERE user_id = $1', [id]);
-      // Delete this sensei's logs — cascades to all remaining comments on those logs
-      await client.query('DELETE FROM progress_logs WHERE sensei_id = $1', [id]);
-      // Delete club session comments by this user (NOT NULL FK — cannot nullify)
-      await client.query('DELETE FROM club_session_comments WHERE user_id = $1', [id]);
-      // Nullify nullable FK references
+      // Same rule as the center-level delete in routes/users.js: the person goes,
+      // their session history stays and reads as "Deleted user". Nulling user_name
+      // alongside user_id is what keeps their name from outliving the account.
+      await client.query('UPDATE progress_logs SET sensei_id = NULL WHERE sensei_id = $1', [id]);
+      await client.query('UPDATE progress_log_comments SET user_id = NULL, user_name = NULL WHERE user_id = $1', [id]);
+      await client.query('UPDATE club_session_comments SET user_id = NULL, user_name = NULL WHERE user_id = $1', [id]);
+      // Nullify the remaining FK references (all NO ACTION, so a miss fails the delete)
       await client.query('UPDATE daily_assignments SET sensei_id = NULL WHERE sensei_id = $1', [id]);
       await client.query('UPDATE club_sessions SET sensei_id = NULL WHERE sensei_id = $1', [id]);
       await client.query('UPDATE club_definitions SET created_by = NULL WHERE created_by = $1', [id]);
+      await client.query('UPDATE club_resources SET created_by = NULL WHERE created_by = $1', [id]);
       await client.query('UPDATE app_settings SET updated_by = NULL WHERE updated_by = $1', [id]);
       await client.query('UPDATE announcements SET created_by = NULL WHERE created_by = $1', [id]);
+      await client.query('UPDATE releases SET created_by = NULL WHERE created_by = $1', [id]);
       await client.query('DELETE FROM users WHERE id = $1', [id]);
       await client.query('COMMIT');
       res.json({ ok: true });

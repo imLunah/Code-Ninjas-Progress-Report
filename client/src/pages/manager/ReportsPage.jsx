@@ -8,6 +8,7 @@ import { BELTS, PROGRAM_LOGOS } from '../../utils/beltConfig';
 import { formatDate } from '../../utils/dateUtils';
 import BeltIcon from '../../components/ui/BeltIcon';
 import { CARD } from '../../lib/surfaces';
+import { authorName } from '../../lib/authors';
 import { SkeletonCards } from '../../components/ui/Skeleton';
 
 const BELT_COLOR = Object.fromEntries(BELTS.map(b => [b.name, b.color]));
@@ -273,7 +274,7 @@ function BeltLog({ data }) {
                 <p className="font-ninja text-sm text-ninja-navy truncate">{row.full_name}</p>
                 <p className="font-ninja text-xs text-ninja-muted truncate">Earned {row.belt_level_at}{row.belt_sublevel_at ? ` · Lv ${row.belt_sublevel_at}` : ''}</p>
               </div>
-              <span className="font-ninja text-xs text-ninja-muted text-right shrink-0">{formatDate(row.session_date)}<br />{row.sensei_name}</span>
+              <span className="font-ninja text-xs text-ninja-muted text-right shrink-0">{formatDate(row.session_date)}<br />{authorName(row.sensei_name)}</span>
             </motion.div>
           ))}
         </div>

@@ -66,7 +66,9 @@ router.get('/overview', requireManager, async (req, res) => {
                u.display_name AS sensei_name
         FROM progress_logs pl
         JOIN students s ON pl.student_id = s.id
-        JOIN users u ON pl.sensei_id = u.id
+        -- LEFT, so a belt-up logged by someone who has since been deleted still
+        -- appears. An inner join would drop the advancement, not just the name.
+        LEFT JOIN users u ON pl.sensei_id = u.id
         WHERE s.location_id = $1
           AND pl.belt_level_at IN ('White','Yellow','Orange','Green','Blue','Purple','Brown','Red','Black')
           AND pl.session_date >= CURRENT_DATE - INTERVAL '30 days'

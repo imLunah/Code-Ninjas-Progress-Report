@@ -31,6 +31,7 @@ import { UsersIcon, ChevronLeftIcon, PlusIcon, ReplyIcon } from 'lucide-react';
 import ClubBoard from '../components/shared/ClubBoard';
 import ActionMenu, { MenuItem } from '../components/ui/ActionMenu';
 import { ReactionPicker, ReactionChips, RowActions, StripButton, toggleLocally } from '../components/ui/Reactions';
+import { authorName } from '../lib/authors';
 
 const relativeDate = (ts) => {
   if (!ts) return '';
@@ -177,7 +178,7 @@ function SessionComment({ comment }) {
       <div className="min-w-0">
         <p className="text-ninja-navy font-ninja text-sm break-words">{comment.body}</p>
         <p className="text-ninja-muted font-ninja text-xs mt-0.5">
-          {comment.user_name} · {new Date(comment.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          {authorName(comment.user_name)} · {new Date(comment.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </p>
       </div>
     </div>

@@ -448,17 +448,23 @@ router.delete('/:id/permanent', requireManager, requireOwnLocation, async (req, 
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      // Comments this sensei left on OTHER senseis' logs (not covered by the cascade below)
-      await client.query('DELETE FROM progress_log_comments WHERE user_id = $1', [id]);
-      // This sensei's own logs — cascades to remaining comments on those logs
-      await client.query('DELETE FROM progress_logs WHERE sensei_id = $1', [id]);
-      // Club session comments by this user (NOT NULL FK — can't nullify)
-      await client.query('DELETE FROM club_session_comments WHERE user_id = $1', [id]);
-      // Nullify nullable references so real clubs/sessions/assignments survive
+      // The work outlives the worker. Their logs and comments are a ninja's real
+      // session history, so the author is nulled out rather than the row deleted,
+      // and the UI reads a null author as "Deleted user". user_name is nulled too:
+      // it is the one place a removed staff member's name would otherwise survive.
+      await client.query('UPDATE progress_logs SET sensei_id = NULL WHERE sensei_id = $1', [id]);
+      await client.query('UPDATE progress_log_comments SET user_id = NULL, user_name = NULL WHERE user_id = $1', [id]);
+      await client.query('UPDATE club_session_comments SET user_id = NULL, user_name = NULL WHERE user_id = $1', [id]);
+      // Nullify the remaining references so real clubs/sessions/assignments survive.
+      // Every one of these FKs is NO ACTION, so a missed table fails the delete.
       await client.query('UPDATE daily_assignments SET sensei_id = NULL WHERE sensei_id = $1', [id]);
       await client.query('UPDATE club_sessions SET sensei_id = NULL WHERE sensei_id = $1', [id]);
       await client.query('UPDATE club_definitions SET created_by = NULL WHERE created_by = $1', [id]);
+      await client.query('UPDATE club_resources SET created_by = NULL WHERE created_by = $1', [id]);
       await client.query('UPDATE announcements SET created_by = NULL WHERE created_by = $1', [id]);
+      await client.query('UPDATE releases SET created_by = NULL WHERE created_by = $1', [id]);
+      await client.query('UPDATE app_settings SET updated_by = NULL WHERE updated_by = $1', [id]);
+      // Reactions carry no attribution worth keeping and cascade on their own.
       await client.query('DELETE FROM users WHERE id = $1', [id]);
       await client.query('COMMIT');
       res.json({ ok: true });

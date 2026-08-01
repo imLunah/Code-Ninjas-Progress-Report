@@ -292,8 +292,8 @@ ALTER SEQUENCE public.club_resources_id_seq OWNED BY public.club_resources.id;
 CREATE TABLE public.club_session_comments (
     id integer NOT NULL,
     session_id integer NOT NULL,
-    user_id integer NOT NULL,
-    user_name text NOT NULL,
+    user_id integer,
+    user_name text,
     body text NOT NULL,
     created_at timestamp with time zone DEFAULT now()
 );
@@ -536,8 +536,8 @@ ALTER SEQUENCE public.onboarding_steps_id_seq OWNED BY public.onboarding_steps.i
 CREATE TABLE public.progress_log_comments (
     id integer NOT NULL,
     log_id integer NOT NULL,
-    user_id integer NOT NULL,
-    user_name text NOT NULL,
+    user_id integer,
+    user_name text,
     body text NOT NULL,
     created_at timestamp with time zone DEFAULT now()
 );
@@ -570,7 +570,7 @@ ALTER SEQUENCE public.progress_log_comments_id_seq OWNED BY public.progress_log_
 CREATE TABLE public.progress_logs (
     id integer NOT NULL,
     student_id integer NOT NULL,
-    sensei_id integer NOT NULL,
+    sensei_id integer,
     session_date date NOT NULL,
     belt_level_at text,
     belt_sublevel_at integer,
