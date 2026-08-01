@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { SearchIcon } from 'lucide-react';
+import { SearchIcon, ArchiveRestoreIcon, Trash2Icon, XIcon } from 'lucide-react';
 import ModalPortal from '../../components/ui/ModalPortal';
 
 function StaffAvatar({ url, name }) {
@@ -24,6 +24,7 @@ import SenseiProfileModal from '../../components/manager/SenseiProfileModal';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { PANEL } from '../../lib/surfaces';
+import IconAction from '../../components/ui/IconAction';
 import { SkeletonList } from '../../components/ui/Skeleton';
 
 function EditCredentialsModal({ sensei, onClose }) {
@@ -383,35 +384,41 @@ export default function StaffPage() {
                       {showArchived ? (
                         confirmDeleteId === s.id ? (
                           <>
+                            {/* The confirm keeps its word on purpose. Glyphs are
+                                fine for an action you can undo; this one you
+                                cannot, so it should not rest on recognising a
+                                bin. Only the way out is an icon. */}
                             <span className="text-xs font-ninja text-ninja-muted mr-1 hidden sm:inline">Delete forever?</span>
                             <button
                               onClick={(e) => { e.stopPropagation(); handlePermanentDelete(s.id); }}
                               disabled={deletingId === s.id}
-                              className="text-xs font-ninja font-semibold text-ninja-red border border-red-300 rounded-lg px-3 py-1 hover:bg-red-50 transition-colors disabled:opacity-50"
+                              className="text-xs font-ninja font-semibold text-white bg-ninja-red rounded-lg px-3 py-1 hover:opacity-90 transition-opacity disabled:opacity-50"
                             >
                               {deletingId === s.id ? 'Deleting…' : 'Delete'}
                             </button>
-                            <button
+                            <IconAction
                               onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
-                              className="text-xs font-ninja font-semibold text-ninja-muted border border-ninja-border rounded-lg px-3 py-1 hover:bg-ninja-bg transition-colors"
+                              label="Keep account"
                             >
-                              Cancel
-                            </button>
+                              <XIcon className="w-4 h-4" strokeWidth={2.25} />
+                            </IconAction>
                           </>
                         ) : (
                           <>
-                            <button
+                            <IconAction
                               onClick={(e) => { e.stopPropagation(); handleRestore(s.id); }}
-                              className="text-xs font-ninja font-semibold text-green-700 border border-green-300 rounded-lg px-3 py-1 hover:bg-green-50 transition-colors"
+                              label={`Restore ${s.display_name}`}
+                              tone="positive"
                             >
-                              Restore
-                            </button>
-                            <button
+                              <ArchiveRestoreIcon className="w-4 h-4" strokeWidth={2} />
+                            </IconAction>
+                            <IconAction
                               onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(s.id); }}
-                              className="text-xs font-ninja font-semibold text-ninja-red border border-red-300 rounded-lg px-3 py-1 hover:bg-red-50 transition-colors"
+                              label={`Delete ${s.display_name} forever`}
+                              tone="danger"
                             >
-                              Delete
-                            </button>
+                              <Trash2Icon className="w-4 h-4" strokeWidth={2} />
+                            </IconAction>
                           </>
                         )
                       ) : (

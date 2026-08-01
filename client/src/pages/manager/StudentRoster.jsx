@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Papa from 'papaparse';
-import { SearchIcon, UploadIcon } from 'lucide-react';
+import { SearchIcon, UploadIcon, ArchiveRestoreIcon, Trash2Icon, XIcon } from 'lucide-react';
+import IconAction from '../../components/ui/IconAction';
 import Layout from '../../components/layout/Layout';
 import ModalPortal from '../../components/ui/ModalPortal';
 import BeltBadge from '../../components/ui/BeltBadge';
@@ -488,12 +489,18 @@ export default function StudentRoster() {
                         {confirmPermanentId === s.id ? (
                           <>
                             <button onClick={() => handlePermanentDelete(s.id)} className="text-xs font-ninja font-semibold text-white bg-ninja-red rounded-lg px-2 py-1">Yes, delete</button>
-                            <button onClick={() => setConfirmPermanentId(null)} className="text-xs font-ninja text-ninja-muted">No</button>
+                            <IconAction onClick={() => setConfirmPermanentId(null)} label="Keep ninja">
+                              <XIcon className="w-4 h-4" strokeWidth={2.25} />
+                            </IconAction>
                           </>
                         ) : (
                           <>
-                            <button onClick={() => handleRestore(s.id)} className="text-xs font-ninja font-semibold text-green-700 border border-green-300 rounded-lg px-2 py-1 hover:bg-green-50 transition-colors">Restore</button>
-                            <button onClick={() => setConfirmPermanentId(s.id)} className="text-xs font-ninja text-ninja-muted hover:text-ninja-red transition-colors">Delete</button>
+                            <IconAction onClick={() => handleRestore(s.id)} label={`Restore ${s.full_name}`} tone="positive">
+                              <ArchiveRestoreIcon className="w-4 h-4" strokeWidth={2} />
+                            </IconAction>
+                            <IconAction onClick={() => setConfirmPermanentId(s.id)} label={`Delete ${s.full_name} forever`} tone="danger">
+                              <Trash2Icon className="w-4 h-4" strokeWidth={2} />
+                            </IconAction>
                           </>
                         )}
                       </div>
@@ -660,12 +667,18 @@ export default function StudentRoster() {
                               <>
                                 <span className="text-ninja-red font-ninja text-xs">Delete?</span>
                                 <button onClick={() => handlePermanentDelete(s.id)} className="text-xs font-ninja font-semibold text-white bg-ninja-red rounded-lg px-2 py-1 hover:opacity-90">Yes</button>
-                                <button onClick={() => setConfirmPermanentId(null)} className="text-xs font-ninja text-ninja-muted hover:text-ninja-navy">No</button>
+                                <IconAction onClick={() => setConfirmPermanentId(null)} label="Keep ninja">
+                                  <XIcon className="w-4 h-4" strokeWidth={2.25} />
+                                </IconAction>
                               </>
                             ) : (
                               <>
-                                <button onClick={() => handleRestore(s.id)} className="text-xs font-ninja font-semibold text-green-700 border border-green-300 rounded-lg px-2 py-1.5 hover:bg-green-50 transition-colors">Restore</button>
-                                <button onClick={() => setConfirmPermanentId(s.id)} className="text-xs font-ninja text-ninja-muted hover:text-ninja-red transition-colors">Delete</button>
+                                <IconAction onClick={() => handleRestore(s.id)} label={`Restore ${s.full_name}`} tone="positive">
+                                  <ArchiveRestoreIcon className="w-4 h-4" strokeWidth={2} />
+                                </IconAction>
+                                <IconAction onClick={() => setConfirmPermanentId(s.id)} label={`Delete ${s.full_name} forever`} tone="danger">
+                                  <Trash2Icon className="w-4 h-4" strokeWidth={2} />
+                                </IconAction>
                               </>
                             )}
                           </div>
