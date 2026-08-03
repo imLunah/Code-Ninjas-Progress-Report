@@ -145,6 +145,11 @@ function TaskEditor({
   busy, onCancel, onSave, saveLabel,
 }) {
   const field = 'font-ninja text-xs rounded-lg border border-ninja-border bg-white px-2 py-1.5 text-ninja-navy';
+  // A title OR a description, matching what the server will accept. Requiring a
+  // title stranded every card that came over from the old sticky wall: those
+  // have a body and no title, so Save was disabled the moment you opened one
+  // and there was no way to set a date on it.
+  const canSave = !!(title.trim() || body.trim());
   return (
     <div className="space-y-2">
       <input
@@ -197,7 +202,7 @@ function TaskEditor({
         <button
           type="button"
           onClick={onSave}
-          disabled={busy || !title.trim()}
+          disabled={busy || !canSave}
           className="font-ninja text-xs font-bold px-3 py-1.5 rounded-full bg-ninja-blue text-white hover:brightness-95 disabled:opacity-50 transition"
         >
           {saveLabel}
@@ -248,7 +253,7 @@ function TaskCard({
   const canDrag = !!board && !editing && canReorder;
 
   const save = async () => {
-    if (!title.trim() || busy) return;
+    if ((!title.trim() && !body.trim()) || busy) return;
     setBusy(true);
     try {
       const updated = await api.patch(`/tasks/${task.id}`, {
@@ -413,7 +418,7 @@ function Composer({ lane, board, reportHeight, assignees, onCreated }) {
   };
 
   const create = async () => {
-    if (!title.trim() || busy) return;
+    if ((!title.trim() && !body.trim()) || busy) return;
     setBusy(true);
     try {
       const created = await api.post('/tasks', {
