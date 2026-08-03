@@ -118,8 +118,17 @@ function toMonths(dayRows) {
   return [...buckets.values()].sort((a, b) => a.date - b.date);
 }
 
-const bucketBy = (dayRows, bucket) =>
-  bucket === 'day' ? dayRows : bucket === 'month' ? toMonths(dayRows) : toWeeks(dayRows);
+// `open` is the set of weekdays the center works. Day-by-day the curve plotted
+// every closed Sunday as a zero, so a month read as a sawtooth diving to the
+// floor once a week and the shape of the actual trading days was lost in it.
+// Weeks and months are sums, so a zero there adds nothing and the filter is
+// only worth applying to the day series.
+const bucketBy = (dayRows, bucket, open) =>
+  bucket === 'day'
+    ? dayRows.filter((r) => !open || open.has(r.date.getDay()))
+    : bucket === 'month'
+      ? toMonths(dayRows)
+      : toWeeks(dayRows);
 
 // Average ninjas per occurrence of each weekday. Two things this deliberately
 // does NOT do:
@@ -468,7 +477,7 @@ function CheckInDetail({ dayRows }) {
     return {
       span: s,
       inRange: rows,
-      series: bucketBy(rows, range.bucket),
+      series: bucketBy(rows, range.bucket, everOpen),
       weekdays: byWeekday(rows).filter((w) => everOpen.has(w.index)),
       stats: { ...summarize(rows), delta: cmp.delta },
     };
