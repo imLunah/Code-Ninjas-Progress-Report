@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import {
   PlusIcon, PencilIcon, Trash2Icon, ChevronLeftIcon, ChevronRightIcon,
@@ -11,9 +12,9 @@ import LazyMarkdownEditor from '../../shared/LazyMarkdownEditor';
 import { PANEL } from '../../../lib/surfaces';
 import { today } from '../../../utils/dateUtils';
 import {
-  GAP, SPRING, clamp, MD, mdUrl, shortDate, dayLabel, firstName,
+  clamp, MD, mdUrl, shortDate, dayLabel, firstName,
   LANES, LANE_INDEX, COLUMN_SURFACE, IconButton, DiscardButton,
-  useReportedHeight, splitLanes, flattenLanes,
+  splitLanes, flattenLanes,
 } from './boardShared';
 
 // Columns of cards. Work you are tracking wants a name you can scan a column
@@ -62,46 +63,29 @@ const invoicePayload = (draft, category) => {
 };
 
 const COL_MIN_W = 264;
-const PAD = 12;        // column padding
-const CARD_GAP = 10;   // between cards in a column
-const MIN_CANVAS_H = 220;
-
-// Heights are measured, but the first paint happens before the observer has
-// reported anything. These keep the first frame close enough that nothing
-// visibly jumps into place.
-const EST_CARD_H = 92;
-const EST_ADD_H = 36;
+const COL_GAP = 16;
 
 // Three columns of cards is the least this can be. Narrower and they stack as
-// plain lists with dragging off: the drag maths needs a stable canvas width,
-// and a drag surface on a phone fights both page scroll and the app's own
-// swipe navigation.
-export const LANES_MIN_W = LANES.length * COL_MIN_W + (LANES.length - 1) * GAP;
+// plain lists with dragging off: a drag surface on a phone fights both page
+// scroll and the app's own swipe navigation.
+export const LANES_MIN_W = LANES.length * COL_MIN_W + (LANES.length - 1) * COL_GAP;
 
-// Where a card sits in a column, given what is above it. Cards are whatever
-// height their contents need, so the column stacks measured heights rather than
-// multiplying a constant.
-function stackOffsets(items, heights) {
-  const offsets = [];
-  let y = PAD;
-  for (const item of items) {
-    offsets.push(y);
-    y += (heights[item.id] ?? EST_CARD_H) + CARD_GAP;
-  }
-  return { offsets, end: y };
-}
+// The board is a window, not a page that grows. Columns fill it and scroll
+// inside themselves, so thirty cards in To do never pushes the other two
+// columns off the bottom of the screen.
+const BOARD_H = 'clamp(380px, calc(100dvh - 21rem), 780px)';
 
-// Which gap in the column is the cursor nearest. Compared against each card's
-// midpoint, so a card dropped on the top half of another goes above it.
-function insertIndex(items, heights, y) {
-  let acc = PAD;
-  for (let i = 0; i < items.length; i += 1) {
-    const h = heights[items[i].id] ?? EST_CARD_H;
-    if (y < acc + h / 2) return i;
-    acc += h + CARD_GAP;
-  }
-  return items.length;
-}
+// How close to a column's edge the pointer has to get before that column
+// starts scrolling under a held card, and how fast it goes.
+const EDGE = 52;
+const EDGE_SPEED = 14;
+
+// Pointer travel before a press becomes a drag. Without it, every click on a
+// card would be a one pixel drag and the board would rearrange itself when you
+// only meant to read something.
+const DRAG_THRESHOLD = 4;
+
+/* ---------------------------------------------------------------- chips -- */
 
 function CategoryChip({ category }) {
   const cat = categoryOf(category);
@@ -142,6 +126,66 @@ function AssigneeChip({ name }) {
     </span>
   );
 }
+
+/* ----------------------------------------------------------- card face -- */
+
+// What a card looks like, with nothing you can do to it. Split out so the
+// dashboard preview and the drag overlay show the real card rather than
+// something drawn by a second piece of code that can drift.
+export function TaskFace({ task }) {
+  return (
+    <>
+      <CategoryChip category={task.category} />
+      <h4 className={`font-ninja font-bold text-ninja-navy text-sm leading-snug text-pretty ${task.category !== 'other' ? 'mt-1.5' : ''}`}>
+        {task.title || task.body}
+      </h4>
+      {task.title && task.body && (
+        // A preview, not the whole thing. Opening the card is what shows the
+        // rest, and a column of full descriptions is a column you scroll
+        // instead of scan.
+        <div
+          className="font-ninja text-xs text-ninja-muted mt-1.5 break-words overflow-hidden"
+          style={{ maxHeight: '3.4rem' }}
+        >
+          <ReactMarkdown components={MD} urlTransform={mdUrl}>{task.body}</ReactMarkdown>
+        </div>
+      )}
+
+      {/* The claim in one line, in the order somebody chasing it reads: how
+          much, for when, from whom. The rest is in the editor. */}
+      {task.invoice && task.category === 'submit_invoice' && (
+        <p className="font-ninja text-[11px] text-ninja-muted mt-1.5 truncate">
+          {[
+            task.invoice.amount != null ? money(task.invoice.amount) : null,
+            task.invoice.service_month
+              ? `${MONTHS[task.invoice.service_month - 1].slice(0, 3)} ${task.invoice.service_year || ''}`.trim()
+              : null,
+            task.invoice.rc_name,
+          ].filter(Boolean).join(' · ')}
+        </p>
+      )}
+
+      {(task.due_date || task.assignee_id || task.student_id) && (
+        <div className="flex flex-wrap items-center gap-1.5 mt-2">
+          {task.due_date && <DueChip due={task.due_date} status={task.status} />}
+          {task.assignee_id && <AssigneeChip name={task.assignee_name} />}
+          {task.student_id && (
+            // Straight to the record the task is about. A cancellation with the
+            // ninja one click away is the whole reason a task knows about them.
+            <Link
+              to={`/manager/students/${task.student_id}`}
+              className="font-ninja text-[10px] font-bold px-2 py-0.5 rounded-full bg-ninja-bg text-ninja-blue hover:underline underline-offset-2 truncate max-w-[10rem]"
+            >
+              {task.student_name || 'Ninja'}
+            </Link>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ---------------------------------------------------------------- form -- */
 
 // Searches rather than loading the roster: a center has hundreds of ninjas and
 // a task form has no business pulling all of them down to fill one field.
@@ -242,62 +286,6 @@ function InvoiceFields({ draft, set, field }) {
   );
 }
 
-// What a card looks like, with nothing you can do to it. Split out so the
-// dashboard preview shows the real card rather than a line of text pretending
-// to be one: two things claiming to be the same board should not be drawn by
-// two pieces of code that can drift apart.
-export function TaskFace({ task }) {
-  return (
-    <>
-      <CategoryChip category={task.category} />
-      <h4 className={`font-ninja font-bold text-ninja-navy text-sm leading-snug text-pretty ${task.category !== 'other' ? 'mt-1.5' : ''}`}>
-        {task.title || task.body}
-      </h4>
-      {task.title && task.body && (
-        // A preview, not the whole thing. Opening the card is what shows the
-        // rest, and a column of full descriptions is a column you scroll
-        // instead of scan.
-        <div
-          className="font-ninja text-xs text-ninja-muted mt-1.5 break-words overflow-hidden"
-          style={{ maxHeight: '3.4rem' }}
-        >
-          <ReactMarkdown components={MD} urlTransform={mdUrl}>{task.body}</ReactMarkdown>
-        </div>
-      )}
-      {/* The claim in one line, in the order somebody chasing it reads: how
-          much, for when, from whom. The rest is in the editor. */}
-      {task.invoice && task.category === 'submit_invoice' && (
-        <p className="font-ninja text-[11px] text-ninja-muted mt-1.5 truncate">
-          {[
-            task.invoice.amount != null ? money(task.invoice.amount) : null,
-            task.invoice.service_month
-              ? `${MONTHS[task.invoice.service_month - 1].slice(0, 3)} ${task.invoice.service_year || ''}`.trim()
-              : null,
-            task.invoice.rc_name,
-          ].filter(Boolean).join(' · ')}
-        </p>
-      )}
-
-      {(task.due_date || task.assignee_id || task.student_id) && (
-        <div className="flex flex-wrap items-center gap-1.5 mt-2">
-          {task.due_date && <DueChip due={task.due_date} status={task.status} />}
-          {task.assignee_id && <AssigneeChip name={task.assignee_name} />}
-          {task.student_id && (
-            // Straight to the record the task is about. A cancellation with the
-            // ninja one click away is the whole reason a task knows about them.
-            <Link
-              to={`/manager/students/${task.student_id}`}
-              className="font-ninja text-[10px] font-bold px-2 py-0.5 rounded-full bg-ninja-bg text-ninja-blue hover:underline underline-offset-2 truncate max-w-[10rem]"
-            >
-              {task.student_name || 'Ninja'}
-            </Link>
-          )}
-        </div>
-      )}
-    </>
-  );
-}
-
 // Title is a single line, description is optional. The editor needs a resolved
 // height for its bare variant, so the wrapper gives it one rather than letting
 // it collapse to a toolbar and one line.
@@ -327,6 +315,7 @@ function TaskEditor({
         aria-label="Task name"
         className="w-full font-ninja text-sm font-bold rounded-lg border border-ninja-border bg-white px-2.5 py-1.5 text-ninja-navy placeholder:text-ninja-muted placeholder:font-normal"
       />
+
       {/* A select rather than chips: six kinds of work wrapped to three rows of
           pills inside a 264px column and pushed everything else off the card. */}
       <div className="grid grid-cols-2 gap-2">
@@ -367,6 +356,7 @@ function TaskEditor({
       {category === 'submit_invoice' && (
         <InvoiceFields draft={invoice} set={setInvoice} field={field} />
       )}
+
       <div className="h-28 flex flex-col min-h-0 rounded-lg border border-ninja-border px-2 py-1.5 text-ninja-navy">
         <LazyMarkdownEditor variant="bare" value={body} onChange={setBody} placeholder="Any detail worth keeping…" />
       </div>
@@ -391,9 +381,11 @@ function TaskEditor({
   );
 }
 
+/* ---------------------------------------------------------------- card -- */
+
 function TaskCard({
-  task, canManage, canReorder, canRearrange, board, reportHeight, assignees,
-  onDragToSlot, onDropped, onMoveLane, onSaved, onDeleted,
+  task, canManage, canReorder, canDrag, assignees, dragging,
+  onBeginDrag, onMoveLane, onSaved, onDeleted, cardRef,
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title || '');
@@ -406,33 +398,9 @@ function TaskCard({
   const [invoice, setInvoice] = useState(() => toInvoiceDraft(task.invoice));
   const [confirmDel, setConfirmDel] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [dragging, setDragging] = useState(false);
 
-  const measureRef = useReportedHeight(task.id, reportHeight);
   const lane = LANE_INDEX[task.status] ?? 0;
   const isDone = task.status === 'done';
-
-  // Motion values, not state: a drag writes to them every frame and state would
-  // re-render the whole board on each one.
-  const x = useMotionValue(board ? board.x : 0);
-  const y = useMotionValue(board ? board.y : 0);
-  const settled = useRef(false);
-
-  useEffect(() => {
-    if (!board || dragging) return;
-    if (!settled.current) {
-      x.set(board.x); y.set(board.y);
-      settled.current = true;
-      return;
-    }
-    const a = animate(x, board.x, SPRING);
-    const b = animate(y, board.y, SPRING);
-    return () => { a.stop(); b.stop(); };
-  }, [board?.x, board?.y, dragging]);
-
-  // Dragging is off while editing so selecting text in a field doesn't drag the
-  // card out from under the cursor.
-  const canDrag = !!board && !editing && canRearrange;
 
   const save = async () => {
     if ((!title.trim() && !body.trim()) || busy) return;
@@ -452,31 +420,26 @@ function TaskCard({
 
   return (
     <motion.div
-      ref={measureRef}
+      ref={cardRef}
+      layout="position"
       initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
+      animate={{ opacity: dragging ? 0.35 : 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.96 }}
-      drag={canDrag}
-      dragMomentum={false}
-      dragElastic={0}
-      dragConstraints={board ? { left: 0, top: 0, right: board.maxX, bottom: board.maxY } : undefined}
-      onDragStart={() => setDragging(true)}
-      onDrag={() => board && onDragToSlot(task.id, x.get(), y.get())}
-      onDragEnd={() => { setDragging(false); onDropped(); }}
-      whileDrag={{ scale: 1.03 }}
-      className={`${PANEL} p-3 ${board ? 'absolute left-0 top-0' : 'relative w-full'} ${
-        canDrag ? 'cursor-grab active:cursor-grabbing' : ''
-      }`}
+      transition={{ duration: 0.18 }}
+      // The press starts on the card itself, but not on anything you could mean
+      // to click: a drag that begins on the delete button is a delete you never
+      // get to make.
+      onPointerDown={(e) => {
+        if (!canDrag || editing) return;
+        if (e.target.closest('button, a, input, select, textarea, [contenteditable]')) return;
+        onBeginDrag(task, e);
+      }}
+      className={`${PANEL} p-3 ${canDrag && !editing ? 'cursor-grab active:cursor-grabbing' : ''}`}
       style={{
-        width: board ? board.w : undefined,
-        x: board ? x : undefined,
-        y: board ? y : undefined,
-        zIndex: dragging ? 30 : 1,
         // Finished work stays legible but stops competing with the work that
         // isn't.
-        opacity: isDone && !editing ? 0.75 : 1,
-        boxShadow: dragging ? '0 18px 38px rgba(15, 20, 40, 0.28)' : undefined,
-        touchAction: canDrag ? 'none' : undefined,
+        opacity: isDone && !editing ? 0.75 : undefined,
+        touchAction: canDrag && !editing ? 'none' : undefined,
       }}
     >
       {editing ? (
@@ -510,7 +473,7 @@ function TaskCard({
               {isDone && task.completed_at ? `Done ${shortDate(task.completed_at)}` : task.created_by_name || 'Unknown'}
             </span>
             <div className="flex items-center gap-0.5 flex-shrink-0 text-ninja-muted">
-              {/* Arrows are on the card in both layouts: on a phone they are the
+              {/* Arrows are on the card in every layout: on a phone they are the
                   only way to move a card along, and on a desk they beat dragging
                   for a single step. */}
               {canReorder && !confirmDel && (
@@ -568,10 +531,11 @@ function TaskCard({
   );
 }
 
-// Sits at the bottom of its column. Collapsed it is one quiet line; open it is
-// a card the same shape as the ones above it, so adding work looks like the
-// work it becomes.
-function Composer({ lane, board, reportHeight, assignees, onCreated }) {
+/* ------------------------------------------------------------ composer -- */
+
+// Pinned under its column rather than at the end of the scroll, so adding to a
+// long column doesn't mean scrolling to the bottom of it first.
+function Composer({ lane, assignees, onCreated }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -582,7 +546,6 @@ function Composer({ lane, board, reportHeight, assignees, onCreated }) {
   const [studentName, setStudentName] = useState(null);
   const [invoice, setInvoice] = useState(EMPTY_INVOICE);
   const [busy, setBusy] = useState(false);
-  const measureRef = useReportedHeight(`add-${lane}`, reportHeight);
 
   const reset = () => {
     setTitle(''); setBody(''); setCategory('other'); setDue(''); setAssignee('');
@@ -605,40 +568,36 @@ function Composer({ lane, board, reportHeight, assignees, onCreated }) {
     } catch { /* ignore */ } finally { setBusy(false); }
   };
 
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="w-full flex items-center gap-2 font-ninja text-sm font-semibold text-ninja-muted hover:text-ninja-navy rounded-lg px-1.5 py-1.5 transition-colors"
+      >
+        <PlusIcon className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
+        Add a task
+      </button>
+    );
+  }
+
   return (
-    <div
-      ref={measureRef}
-      className={board ? 'absolute left-0 top-0' : 'relative w-full'}
-      style={board ? { width: board.w, transform: `translate(${board.x}px, ${board.y}px)` } : undefined}
-    >
-      {open ? (
-        <div className={`${PANEL} p-3`}>
-          <TaskEditor
-            title={title} setTitle={setTitle}
-            body={body} setBody={setBody}
-            category={category} setCategory={setCategory}
-            due={due} setDue={setDue}
-            assignee={assignee} setAssignee={setAssignee}
-            assignees={assignees}
-            studentId={studentId} studentName={studentName}
-            onStudent={(id, name) => { setStudentId(id); setStudentName(name); }}
-            invoice={invoice} setInvoice={setInvoice}
-            busy={busy}
-            saveLabel="Add"
-            onCancel={reset}
-            onSave={create}
-          />
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="w-full flex items-center gap-2 font-ninja text-sm font-semibold text-ninja-muted hover:text-ninja-navy rounded-lg px-1.5 py-1.5 transition-colors"
-        >
-          <PlusIcon className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
-          Add a task
-        </button>
-      )}
+    <div className={`${PANEL} p-3 max-h-[70vh] overflow-y-auto`}>
+      <TaskEditor
+        title={title} setTitle={setTitle}
+        body={body} setBody={setBody}
+        category={category} setCategory={setCategory}
+        due={due} setDue={setDue}
+        assignee={assignee} setAssignee={setAssignee}
+        assignees={assignees}
+        studentId={studentId} studentName={studentName}
+        onStudent={(id, name) => { setStudentId(id); setStudentName(name); }}
+        invoice={invoice} setInvoice={setInvoice}
+        busy={busy}
+        saveLabel="Add"
+        onCancel={reset}
+        onSave={create}
+      />
     </div>
   );
 }
@@ -652,17 +611,12 @@ function LaneHeading({ lane, count, id }) {
   );
 }
 
+/* --------------------------------------------------------------- board -- */
+
 export default function TaskBoard({
   tasks, assignees = [], width, isReadOnly, canManage, onSaved, onDeleted, onArrange,
   visibleIds = null,
 }) {
-  const [heights, setHeights] = useState({});
-
-  // Stable, or every render would tear down and rebuild each card's observer.
-  const reportHeight = useCallback((id, h) => {
-    setHeights((prev) => (prev[id] === h ? prev : { ...prev, [id]: h }));
-  }, []);
-
   const lanes = useMemo(() => splitLanes(tasks), [tasks]);
 
   // Filters hide cards from the screen, never from the record. The board draws
@@ -675,71 +629,20 @@ export default function TaskBoard({
     return out;
   }, [lanes, visibleIds]);
 
-  // Dragging is off while filtered. The drop position is an index into what you
-  // can see, and with half the column hidden that index means nothing in the
-  // list being saved. Arrows still work: a column is a column either way.
   const filtered = !!visibleIds;
   const boardOn = width >= LANES_MIN_W;
 
-  const layout = useMemo(() => {
-    if (!boardOn) return null;
-    const colW = Math.floor((width - (LANES.length - 1) * GAP) / LANES.length);
-    const geom = {};
-    let tallest = MIN_CANVAS_H;
-    for (const l of LANES) {
-      const { offsets, end } = stackOffsets(shown[l.key], heights);
-      const addH = heights[`add-${l.key}`] ?? EST_ADD_H;
-      geom[l.key] = { offsets, addY: end };
-      tallest = Math.max(tallest, end + addH + PAD);
-    }
-    return {
-      colW,
-      cardW: colW - PAD * 2,
-      height: tallest,
-      geom,
-      maxX: (LANES.length - 1) * (colW + GAP) + PAD,
-      maxY: Math.max(0, tallest - 60),
-    };
-  }, [lanes, heights, width, boardOn]);
-
-  // Lane comes from x, position from y. Crossing into another column and moving
-  // up your own are the same gesture, so they are one calculation.
-  const dragToSlot = useCallback((id, x, y) => {
-    onArrange((prev) => {
-      const colW = Math.floor((width - (LANES.length - 1) * GAP) / LANES.length);
-      const moving = prev.find((n) => n.id === id);
-      if (!moving) return prev;
-
-      const laneIdx = clamp(Math.round((x - PAD) / (colW + GAP)), 0, LANES.length - 1);
-      const status = LANES[laneIdx].key;
-      const rest = splitLanes(prev, id);
-      const row = insertIndex(rest[status], heights, y);
-
-      // Already where it would land: bail before rebuilding, or every frame of
-      // a stationary drag would hand React a brand new array.
-      if (moving.status === status) {
-        const current = prev.filter((n) => n.status === status).findIndex((n) => n.id === id);
-        if (current === row) return prev;
-      }
-
-      rest[status].splice(row, 0, moving.status === status ? moving : { ...moving, status });
-      return flattenLanes(rest);
-    });
-  }, [width, heights, onArrange]);
+  // Dragging is off while filtered. The drop position is an index into what you
+  // can see, and with half the column hidden that index means nothing in the
+  // list being saved. Arrows still work: a column is a column either way.
+  const canDrag = boardOn && !isReadOnly && !filtered;
 
   const persist = useCallback((current) => {
     const grouped = splitLanes(current);
     api.patch('/tasks/reorder', {
-      lanes: LANES.map((l) => ({ status: l.key, ids: grouped[l.key].map((n) => n.id) })),
+      lanes: LANES.map((l) => ({ status: l.key, ids: grouped[l.key].map((t) => t.id) })),
     }).catch(() => { /* arrangement is corrected on next load */ });
   }, []);
-
-  // Persist on release, not on every slot change during the drag. Column and
-  // position go up together: they are one move, so one request cannot
-  // half-apply them.
-  const persistOrder = useCallback(() => {
-    onArrange((current) => { persist(current); return current; });
-  }, [onArrange, persist]);
 
   // One step along, from the card. Optimistic: the card lands in the next
   // column and the arrangement is corrected on the next load if the write
@@ -762,6 +665,142 @@ export default function TaskBoard({
     });
   }, [onArrange, persist]);
 
+  /* ------------------------------------------------------------- drag -- */
+
+  // The columns scroll, which means a dragged card cannot simply be moved
+  // inside one: overflow clips it the moment it leaves. So the held card is
+  // drawn in an overlay over the page and the card in the list becomes its own
+  // placeholder, faded, already sitting where it would land.
+  const [drag, setDrag] = useState(null);
+  const gesture = useRef(null);
+  const pointer = useRef({ x: 0, y: 0 });
+  const colRefs = useRef({});
+  const cardRefs = useRef({});
+  const shownRef = useRef(shown);
+  shownRef.current = shown;
+
+  // Which column is under the pointer, and where in it the card would go.
+  // Measured off live rects, so a column that has been scrolled reports the
+  // positions it is actually showing.
+  const locate = useCallback((x, y, dragId) => {
+    for (const l of LANES) {
+      const el = colRefs.current[l.key];
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      if (x < r.left || x > r.right) continue;
+      const items = shownRef.current[l.key].filter((t) => t.id !== dragId);
+      let index = items.length;
+      for (let i = 0; i < items.length; i += 1) {
+        const c = cardRefs.current[items[i].id];
+        if (!c) continue;
+        const cr = c.getBoundingClientRect();
+        // Compared against the midpoint, so a card dropped on the top half of
+        // another goes above it.
+        if (y < cr.top + cr.height / 2) { index = i; break; }
+      }
+      return { status: l.key, index };
+    }
+    return null;
+  }, []);
+
+  const applyMove = useCallback((dragId, target) => {
+    if (!target) return;
+    onArrange((prev) => {
+      const moving = prev.find((t) => t.id === dragId);
+      if (!moving) return prev;
+      const rest = splitLanes(prev, dragId);
+      const current = prev.filter((t) => t.status === target.status).findIndex((t) => t.id === dragId);
+      // Already where it would land: bail before rebuilding, or every frame of
+      // a stationary drag would hand React a brand new array.
+      if (moving.status === target.status && current === target.index) return prev;
+      rest[target.status].splice(
+        target.index, 0,
+        moving.status === target.status ? moving : { ...moving, status: target.status },
+      );
+      return flattenLanes(rest);
+    });
+  }, [onArrange]);
+
+  const beginDrag = useCallback((task, e) => {
+    const el = cardRefs.current[task.id];
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    gesture.current = {
+      id: task.id,
+      task,
+      startX: e.clientX,
+      startY: e.clientY,
+      ox: e.clientX - r.left,
+      oy: e.clientY - r.top,
+      w: r.width,
+      active: false,
+    };
+    pointer.current = { x: e.clientX, y: e.clientY };
+  }, []);
+
+  // Everything below lives on the window rather than the card: a pointer that
+  // leaves the card mid-drag still has to be followed, and the release can land
+  // anywhere on the page.
+  useEffect(() => {
+    const onMove = (e) => {
+      const g = gesture.current;
+      if (!g) return;
+      pointer.current = { x: e.clientX, y: e.clientY };
+      if (!g.active) {
+        if (Math.hypot(e.clientX - g.startX, e.clientY - g.startY) < DRAG_THRESHOLD) return;
+        g.active = true;
+        // Stops the browser selecting text across the board while a card is
+        // being carried around.
+        document.body.style.userSelect = 'none';
+      }
+      e.preventDefault();
+      setDrag({ id: g.id, task: g.task, w: g.w, x: e.clientX - g.ox, y: e.clientY - g.oy });
+      applyMove(g.id, locate(e.clientX, e.clientY, g.id));
+    };
+
+    const onUp = () => {
+      const g = gesture.current;
+      gesture.current = null;
+      document.body.style.userSelect = '';
+      setDrag(null);
+      // A press that never became a drag changed nothing, so there is nothing
+      // to write.
+      if (g?.active) onArrange((current) => { persist(current); return current; });
+    };
+
+    window.addEventListener('pointermove', onMove, { passive: false });
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      document.body.style.userSelect = '';
+    };
+  }, [applyMove, locate, onArrange, persist]);
+
+  // A column scrolls under a held card when the pointer nears its edge. Without
+  // it, the bottom of a long column is somewhere you can see but never drop.
+  useEffect(() => {
+    if (!drag) return;
+    let raf;
+    const step = () => {
+      const { x, y } = pointer.current;
+      for (const l of LANES) {
+        const el = colRefs.current[l.key];
+        if (!el) continue;
+        const r = el.getBoundingClientRect();
+        if (x < r.left || x > r.right) continue;
+        if (y < r.top + EDGE) el.scrollTop -= EDGE_SPEED;
+        else if (y > r.bottom - EDGE) el.scrollTop += EDGE_SPEED;
+        break;
+      }
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [drag]);
+
   const cardProps = (task) => ({
     assignees,
     canManage: canManage(task),
@@ -769,107 +808,81 @@ export default function TaskBoard({
     // so it can't ride on canManage — but it is still a write, so it goes away
     // when the center isn't ours.
     canReorder: !isReadOnly,
-    canRearrange: !isReadOnly && !filtered,
-    reportHeight,
-    onDragToSlot: dragToSlot,
-    onDropped: persistOrder,
+    canDrag,
+    dragging: drag?.id === task.id,
+    onBeginDrag: beginDrag,
     onMoveLane: moveLane,
     onSaved,
     onDeleted,
   });
 
-  if (!boardOn) {
-    // Narrow: the columns become three stacked lists in normal flow. Same
-    // cards, no dragging, no measuring.
-    return (
-      <div className="space-y-5">
-        {LANES.map((l) => (
-          <section key={l.key} className={`${COLUMN_SURFACE} rounded-2xl p-3`} aria-labelledby={`lane-${l.key}`}>
-            <div className="mb-2 px-0.5">
-              <LaneHeading lane={l} count={shown[l.key].length} id={`lane-${l.key}`} />
-            </div>
-            <div className="space-y-2.5">
-              <AnimatePresence>
-                {shown[l.key].map((task) => (
-                  <TaskCard key={task.id} task={task} board={null} {...cardProps(task)} />
-                ))}
-              </AnimatePresence>
-              {!isReadOnly && (
-                <Composer
-                  lane={l.key}
-                  board={null}
-                  reportHeight={reportHeight}
-                  assignees={assignees}
-                  onCreated={(created) => onSaved(created, true)}
-                />
-              )}
-            </div>
-          </section>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      {/* Headings sit above the canvas rather than inside it: a heading in the
-          canvas is one more thing the drag maths would have to reason about. */}
-      <div className="flex gap-4 mb-2">
-        {LANES.map((l) => (
-          <div key={l.key} style={{ width: layout.colW }} className="px-3">
-            <LaneHeading lane={l} count={shown[l.key].length} />
-          </div>
-        ))}
+  const column = (l) => (
+    <section
+      key={l.key}
+      className={`${COLUMN_SURFACE} rounded-2xl p-3 flex flex-col min-h-0`}
+      style={boardOn ? { height: BOARD_H } : undefined}
+      aria-labelledby={`lane-${l.key}`}
+    >
+      <div className="mb-2 px-0.5 flex-shrink-0">
+        <LaneHeading lane={l} count={shown[l.key].length} id={`lane-${l.key}`} />
       </div>
 
-      <div className="relative" style={{ height: layout.height }}>
-        {/* Column chrome is drawn behind the cards rather than around them: the
-            cards live in one shared canvas so a drag can cross between
-            columns, which it cannot do out of a nested scroll container. */}
-        {LANES.map((l, i) => (
-          <div
-            key={`col-${l.key}`}
-            className={`absolute top-0 rounded-2xl pointer-events-none ${COLUMN_SURFACE}`}
-            style={{ left: i * (layout.colW + GAP), width: layout.colW, height: layout.height }}
-          />
-        ))}
-
-        <AnimatePresence>
-          {/* flatMap, not nested maps: AnimatePresence wants its children in one
-              flat keyed list to track exits. */}
-          {LANES.flatMap((l, laneIdx) =>
-            shown[l.key].map((task, row) => (
+      {/* The scroller. Cards sit in normal flow inside it, so a column is as
+          tall as the window gives it and never as tall as its contents. */}
+      <div
+        ref={(el) => { colRefs.current[l.key] = el; }}
+        className={`flex-1 min-h-0 space-y-2.5 ${boardOn ? 'overflow-y-auto' : ''} -mx-1 px-1`}
+      >
+        {shown[l.key].length === 0 ? (
+          <p className="font-ninja text-xs text-ninja-muted px-0.5 py-4 text-center">Nothing here.</p>
+        ) : (
+          <AnimatePresence initial={false}>
+            {shown[l.key].map((task) => (
               <TaskCard
                 key={task.id}
                 task={task}
-                board={{
-                  x: laneIdx * (layout.colW + GAP) + PAD,
-                  y: layout.geom[l.key].offsets[row],
-                  w: layout.cardW,
-                  maxX: layout.maxX,
-                  maxY: layout.maxY,
+                cardRef={(el) => {
+                  if (el) cardRefs.current[task.id] = el;
+                  else delete cardRefs.current[task.id];
                 }}
                 {...cardProps(task)}
               />
-            )),
-          )}
-        </AnimatePresence>
-
-        {!isReadOnly && LANES.map((l, i) => (
-          <Composer
-            key={`add-${l.key}`}
-            lane={l.key}
-            board={{
-              x: i * (layout.colW + GAP) + PAD,
-              y: layout.geom[l.key].addY,
-              w: layout.cardW,
-            }}
-            reportHeight={reportHeight}
-            assignees={assignees}
-            onCreated={(created) => onSaved(created, true)}
-          />
-        ))}
+            ))}
+          </AnimatePresence>
+        )}
       </div>
-    </div>
+
+      {!isReadOnly && (
+        <div className="flex-shrink-0 pt-2">
+          <Composer lane={l.key} assignees={assignees} onCreated={(created) => onSaved(created, true)} />
+        </div>
+      )}
+    </section>
+  );
+
+  return (
+    <>
+      <div
+        className={boardOn ? 'grid gap-4 items-stretch' : 'space-y-5'}
+        style={boardOn ? { gridTemplateColumns: `repeat(${LANES.length}, minmax(0, 1fr))` } : undefined}
+      >
+        {LANES.map(column)}
+      </div>
+
+      {/* The held card, drawn over the page so no column's overflow can clip
+          it. Pointer events off, or it would sit between the cursor and every
+          column it passes over. */}
+      {drag && createPortal(
+        <div
+          className="fixed z-[60] pointer-events-none"
+          style={{ left: drag.x, top: drag.y, width: drag.w, transform: 'rotate(1.5deg)' }}
+        >
+          <div className={`${PANEL} p-3 shadow-2xl`}>
+            <TaskFace task={drag.task} />
+          </div>
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }

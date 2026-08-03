@@ -1,13 +1,8 @@
-import { useRef, useLayoutEffect } from 'react';
 import { XIcon } from 'lucide-react';
 
 // The parts of the task board that aren't about how a card looks: the columns
-// it can sit in, how the flat list and the columns convert between each other,
-// and the measuring the drag maths runs on.
-
-export const GAP = 16;
-export const EASE = [0.23, 1, 0.32, 1];
-export const SPRING = { type: 'spring', stiffness: 520, damping: 42, mass: 0.7 };
+// it can sit in, and how the flat list and the columns convert between each
+// other.
 
 export const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 
@@ -89,24 +84,6 @@ export function DiscardButton({ onClick, label = 'Discard' }) {
       <XIcon className="w-4 h-4" strokeWidth={2.5} />
     </button>
   );
-}
-
-// The columns hold cards of whatever height their contents need, so the
-// board can't work off a constant. Each card reports its own measured height
-// and the lane stacks them from that. onHeight must be stable, or the observer
-// is torn down and rebuilt on every render.
-export function useReportedHeight(id, onHeight) {
-  const ref = useRef(null);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const report = () => onHeight(id, el.offsetHeight);
-    report();
-    const ro = new ResizeObserver(report);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [id, onHeight]);
-  return ref;
 }
 
 // The board is held as one flat list; the columns are a view of it. Rebuilding
