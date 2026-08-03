@@ -131,6 +131,17 @@ const bucketBy = (dayRows, bucket) =>
 //     current weekday as a dash on the week view.
 // A weekday with no open days in range gets open: 0 and the row says "closed"
 // rather than a number that isn't true.
+// Weekdays the center has ever opened, taken from the whole record rather than
+// the period on screen. The centers are closed Sundays, so a Sunday row sat at
+// the top of the list on every range with nothing in it. A weekday that is
+// normally worked stays listed even when the period on screen hasn't reached it
+// yet, so the list doesn't reshuffle as the week fills in.
+function openWeekdays(dayRows) {
+  const seen = new Set();
+  for (const row of dayRows) if (row.count > 0) seen.add(row.date.getDay());
+  return seen;
+}
+
 function byWeekday(dayRows) {
   const acc = Array.from({ length: 7 }, () => ({ total: 0, open: 0 }));
   for (const row of dayRows) {
@@ -446,6 +457,7 @@ function CheckInDetail({ dayRows }) {
     // a director opening the dashboard at nine in the morning would be told the
     // week had collapsed. Complete days only; if there aren't any yet, there is
     // no comparison to make and the tile says so.
+    const everOpen = openWeekdays(dayRows);
     const live = sameDay(s.end, now);
     const cmpSpan = live ? { start: s.start, end: addDays(s.end, -1) } : s;
     const cmp = summarize(
@@ -457,7 +469,7 @@ function CheckInDetail({ dayRows }) {
       span: s,
       inRange: rows,
       series: bucketBy(rows, range.bucket),
-      weekdays: byWeekday(rows),
+      weekdays: byWeekday(rows).filter((w) => everOpen.has(w.index)),
       stats: { ...summarize(rows), delta: cmp.delta },
     };
   }, [dayRows, range]);
@@ -579,15 +591,15 @@ function CheckInDetail({ dayRows }) {
                       transition={{ duration: 0.5, ease: 'easeOut', delay: 0.04 * w.index }}
                     />
                   </div>
-                  {/* A weekday the center was never open for in this period says
-                      so. It used to print an average of nothing as a dash that
-                      looked identical to a day with no ninjas. */}
+                  {/* Every row here is a day the center works, so a dash means
+                      this period hasn't got one on record yet, not a day that
+                      was quiet. Sundays never reach this list at all. */}
                   <span
-                    className={`font-ninja text-xs w-14 text-right flex-shrink-0 tabular-nums ${
+                    className={`font-ninja text-xs w-10 text-right flex-shrink-0 tabular-nums ${
                       w.open ? 'font-bold text-ninja-navy' : 'text-ninja-muted'
                     }`}
                   >
-                    {w.open ? w.avg.toFixed(1) : 'closed'}
+                    {w.open ? w.avg.toFixed(1) : '—'}
                   </span>
                 </div>
               ))}
