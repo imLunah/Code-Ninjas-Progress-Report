@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import ThemeToggle from '../ui/ThemeToggle';
 import { RocketIcon } from '../ui/icons';
 import { LogOutIcon } from 'lucide-react';
-import { LayoutGridIcon, BookOpenIcon, ClipboardListIcon } from 'lucide-react';
+import { LayoutGridIcon, BookOpenIcon } from 'lucide-react';
 
 const EXPANDED_W = 224; // matches w-56
 const COLLAPSED_W = 76; // icon rail
@@ -46,7 +46,6 @@ function BugIcon() {
 const managerLinks = [
   { to: '/manager/overview', label: 'Dashboard', Glyph: LayoutGridIcon },
   { to: '/manager/dashboard', label: "Today's Board", icon: 'today' },
-  { to: '/manager/tasks', label: 'Tasks', Glyph: ClipboardListIcon },
   { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
   { to: '/clubs', label: 'Clubs', icon: 'clubs' },
   { to: '/manager/staff', label: 'Staff', icon: 'senseis' },

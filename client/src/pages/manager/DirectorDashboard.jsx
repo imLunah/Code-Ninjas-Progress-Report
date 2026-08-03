@@ -6,7 +6,6 @@ import {
   ChartNoAxesColumnIncreasingIcon as ReportsIcon,
   GiftIcon,
   BookOpenIcon as CurriculumIcon,
-  ClipboardListIcon as TasksIcon,
 } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import { ChartContainer, ChartTooltip } from '../../components/ui/chart';
@@ -642,11 +641,7 @@ function CheckInDetail({ dayRows }) {
 // the accent on hover, chevron nudges. No tinted icon-chip squares — those
 // colored rounded tiles are the template/AI-dashboard tell.
 // Birthdays used to live here; they now show up on the calendar itself.
-// Tasks is the mobile entry point as well as a shortcut: the bottom nav is
-// five tabs and adding a sixth would mean re-cutting the whole thing, so on a
-// phone this row is how a director reaches the board.
 const QUICK_TILES = [
-  { label: 'Tasks',      to: '/manager/tasks',      Icon: TasksIcon },
   { label: 'Reports',    to: '/manager/reports',    Icon: ReportsIcon },
   { label: 'Curriculum', to: '/curriculum-roadmap', Icon: CurriculumIcon },
   { label: "What's New", to: '/changelog',          Icon: GiftIcon },
