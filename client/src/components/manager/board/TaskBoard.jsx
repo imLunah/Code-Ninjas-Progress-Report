@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import {
   PlusIcon, PencilIcon, Trash2Icon, ChevronLeftIcon, ChevronRightIcon,
-  CalendarDaysIcon, UserIcon,
+  CalendarDaysIcon, UserIcon, XIcon,
 } from 'lucide-react';
 import { api } from '../../../api/client';
 import LazyMarkdownEditor from '../../shared/LazyMarkdownEditor';
@@ -19,14 +20,46 @@ import {
 // for, a kind you can tell at a glance, and a stage, which is more than a blob
 // of text can carry.
 
-const CATEGORIES = [
-  { key: 'cancellation', label: 'Cancellation',  chip: 'bg-red-100 text-red-700' },
-  { key: 'reenrollment', label: 'Re-enrollment', chip: 'bg-green-100 text-green-700' },
-  { key: 'print',        label: 'Print request', chip: 'bg-indigo-100 text-indigo-700' },
+// The kinds, in the Operations Tracker's own words. Every tint is one of the
+// pairs index.css carries a dark override for.
+export const CATEGORIES = [
+  { key: 'follow_up',      label: 'Follow up',        chip: 'bg-blue-100 text-blue-700' },
+  { key: 'resume_hold',    label: 'Resume from hold', chip: 'bg-green-100 text-green-700' },
+  { key: 'cancel',         label: 'Cancel',           chip: 'bg-red-100 text-red-700' },
+  { key: 'submit_invoice', label: 'Submit invoice',   chip: 'bg-purple-100 text-purple-700' },
+  { key: 'print',          label: 'Print request',    chip: 'bg-indigo-100 text-indigo-700' },
   // No chip: most work is just work, and a card that says "Other" says nothing.
-  { key: 'other',        label: 'Other',         chip: null },
+  { key: 'other',          label: 'Other',            chip: null },
 ];
-const categoryOf = (key) => CATEGORIES.find((c) => c.key === key) || CATEGORIES[3];
+const categoryOf = (key) => CATEGORIES.find((c) => c.key === key) || CATEGORIES[CATEGORIES.length - 1];
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'];
+
+const money = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+// Everything the invoice block writes, in one place, so a blank one and a
+// cleared one are the same shape.
+const EMPTY_INVOICE = {
+  rc_name: '', payment_processor: '', service_coordinator: '', program: '',
+  service_month: '', service_year: '', order_received: '', amount: '',
+};
+
+const toInvoiceDraft = (invoice) => ({
+  ...EMPTY_INVOICE,
+  ...Object.fromEntries(Object.entries(invoice || {}).map(([k, v]) => [k, v ?? ''])),
+});
+
+// undefined leaves the claim alone, null deletes it. Changing a card's kind
+// away from Submit invoice does NOT throw the invoice away: a mis-click on a
+// dropdown should not destroy an amount somebody typed, and the block comes
+// back with its contents when the kind is set back. An invoice with nothing in
+// it is not an invoice, and clearing every field is how you drop one.
+const invoicePayload = (draft, category) => {
+  if (category !== 'submit_invoice') return undefined;
+  const filled = Object.values(draft).some((v) => String(v).trim() !== '');
+  return filled ? draft : null;
+};
 
 const COL_MIN_W = 264;
 const PAD = 12;        // column padding
@@ -110,22 +143,101 @@ function AssigneeChip({ name }) {
   );
 }
 
-function CategoryPicker({ value, onChange }) {
+// Searches rather than loading the roster: a center has hundreds of ninjas and
+// a task form has no business pulling all of them down to fill one field.
+function StudentPicker({ value, name, onChange, className }) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef(null);
+
+  useEffect(() => {
+    if (!query.trim()) { setResults([]); return; }
+    let alive = true;
+    const t = setTimeout(() => {
+      api.get(`/students?search=${encodeURIComponent(query.trim())}&limit=6`)
+        .then((data) => { if (alive) setResults(data?.students || []); })
+        .catch(() => { if (alive) setResults([]); });
+    }, 200);
+    return () => { alive = false; clearTimeout(t); };
+  }, [query]);
+
+  // Clicking a result blurs the input, so closing on blur alone would drop the
+  // click before it landed.
+  useEffect(() => {
+    const onDown = (e) => { if (!boxRef.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, []);
+
+  if (value) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="font-ninja text-xs font-bold text-ninja-navy bg-ninja-bg rounded-full px-2.5 py-1 truncate">
+          {name || `Ninja #${value}`}
+        </span>
+        <IconButton onClick={() => onChange(null, null)} label="Remove ninja">
+          <XIcon className="w-3.5 h-3.5" strokeWidth={2.5} />
+        </IconButton>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {CATEGORIES.map((c) => (
-        <button
-          key={c.key}
-          type="button"
-          onClick={() => onChange(c.key)}
-          aria-pressed={value === c.key}
-          className={`font-ninja text-[11px] font-bold px-2 py-1 rounded-full transition ${
-            value === c.key ? 'bg-ninja-blue text-white' : 'bg-ninja-bg text-ninja-muted hover:text-ninja-navy'
-          }`}
-        >
-          {c.label}
-        </button>
-      ))}
+    <div ref={boxRef} className="relative">
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        placeholder="Link a ninja"
+        aria-label="Link a ninja"
+        className={className}
+      />
+      {open && results.length > 0 && (
+        <ul className="absolute z-30 left-0 right-0 mt-1 rounded-lg border border-ninja-border bg-white shadow-lg overflow-hidden max-h-48 overflow-y-auto">
+          {results.map((s) => (
+            <li key={s.id}>
+              <button
+                type="button"
+                onClick={() => { onChange(s.id, s.full_name); setQuery(''); setOpen(false); }}
+                className="w-full text-left font-ninja text-xs px-2.5 py-1.5 text-ninja-navy hover:bg-ninja-bg transition"
+              >
+                {s.full_name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// Only for Submit invoice. Eight fields that exist for one kind of card is
+// exactly why this is a block that appears rather than eight inputs every card
+// carries empty.
+function InvoiceFields({ draft, set, field }) {
+  const put = (key) => (e) => set({ ...draft, [key]: e.target.value });
+  return (
+    <div className="rounded-lg bg-ninja-bg p-2.5 space-y-2">
+      <p className="font-ninja text-[11px] font-bold text-ninja-muted uppercase tracking-wide">Invoice</p>
+      <input type="text" value={draft.rc_name} onChange={put('rc_name')} placeholder="School / RC name" aria-label="School or RC name" className={`${field} w-full`} />
+      <div className="grid grid-cols-2 gap-2">
+        <input type="text" value={draft.payment_processor} onChange={put('payment_processor')} placeholder="Processor" aria-label="Payment processor" className={`${field} w-full`} />
+        <input type="text" value={draft.service_coordinator} onChange={put('service_coordinator')} placeholder="Coordinator" aria-label="Service coordinator" className={`${field} w-full`} />
+      </div>
+      <input type="text" value={draft.program} onChange={put('program')} placeholder="Program" aria-label="Program" className={`${field} w-full`} />
+      <div className="grid grid-cols-2 gap-2">
+        <select value={draft.service_month} onChange={put('service_month')} aria-label="Month of service" className={`${field} w-full`}>
+          <option value="">Month</option>
+          {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+        </select>
+        <input type="number" value={draft.service_year} onChange={put('service_year')} placeholder="Year" aria-label="Year of service" min="2000" max="2100" className={`${field} w-full`} />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <input type="date" value={draft.order_received} onChange={put('order_received')} aria-label="Order received" className={`${field} w-full`} />
+        <input type="number" step="0.01" min="0" value={draft.amount} onChange={put('amount')} placeholder="Amount" aria-label="Amount" className={`${field} w-full`} />
+      </div>
     </div>
   );
 }
@@ -152,10 +264,34 @@ export function TaskFace({ task }) {
           <ReactMarkdown components={MD} urlTransform={mdUrl}>{task.body}</ReactMarkdown>
         </div>
       )}
-      {(task.due_date || task.assignee_id) && (
+      {/* The claim in one line, in the order somebody chasing it reads: how
+          much, for when, from whom. The rest is in the editor. */}
+      {task.invoice && task.category === 'submit_invoice' && (
+        <p className="font-ninja text-[11px] text-ninja-muted mt-1.5 truncate">
+          {[
+            task.invoice.amount != null ? money(task.invoice.amount) : null,
+            task.invoice.service_month
+              ? `${MONTHS[task.invoice.service_month - 1].slice(0, 3)} ${task.invoice.service_year || ''}`.trim()
+              : null,
+            task.invoice.rc_name,
+          ].filter(Boolean).join(' · ')}
+        </p>
+      )}
+
+      {(task.due_date || task.assignee_id || task.student_id) && (
         <div className="flex flex-wrap items-center gap-1.5 mt-2">
           {task.due_date && <DueChip due={task.due_date} status={task.status} />}
           {task.assignee_id && <AssigneeChip name={task.assignee_name} />}
+          {task.student_id && (
+            // Straight to the record the task is about. A cancellation with the
+            // ninja one click away is the whole reason a task knows about them.
+            <Link
+              to={`/manager/students/${task.student_id}`}
+              className="font-ninja text-[10px] font-bold px-2 py-0.5 rounded-full bg-ninja-bg text-ninja-blue hover:underline underline-offset-2 truncate max-w-[10rem]"
+            >
+              {task.student_name || 'Ninja'}
+            </Link>
+          )}
         </div>
       )}
     </>
@@ -168,6 +304,8 @@ export function TaskFace({ task }) {
 function TaskEditor({
   title, setTitle, body, setBody, category, setCategory,
   due, setDue, assignee, setAssignee, assignees,
+  studentId, studentName, onStudent,
+  invoice, setInvoice,
   busy, onCancel, onSave, saveLabel,
 }) {
   const field = 'font-ninja text-xs rounded-lg border border-ninja-border bg-white px-2 py-1.5 text-ninja-navy';
@@ -189,12 +327,12 @@ function TaskEditor({
         aria-label="Task name"
         className="w-full font-ninja text-sm font-bold rounded-lg border border-ninja-border bg-white px-2.5 py-1.5 text-ninja-navy placeholder:text-ninja-muted placeholder:font-normal"
       />
-      <CategoryPicker value={category} onChange={setCategory} />
-
-      {/* Both optional. Most of what a center is carrying has no deadline and
-          no single owner, and a form that insists on them gets filled with
-          made-up ones. */}
+      {/* A select rather than chips: six kinds of work wrapped to three rows of
+          pills inside a 264px column and pushed everything else off the card. */}
       <div className="grid grid-cols-2 gap-2">
+        <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Kind of task" className={`${field} w-full`}>
+          {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+        </select>
         <input
           type="date"
           value={due}
@@ -202,18 +340,33 @@ function TaskEditor({
           aria-label="Due date"
           className={`${field} w-full`}
         />
-        <select
-          value={assignee}
-          onChange={(e) => setAssignee(e.target.value)}
-          aria-label="Assign to"
-          className={`${field} w-full`}
-        >
-          <option value="">Anyone</option>
-          {assignees.map((a) => (
-            <option key={a.id} value={a.id}>{a.display_name}</option>
-          ))}
-        </select>
       </div>
+
+      {/* All optional. Most of what a center is carrying has no deadline, no
+          single owner and no one ninja, and a form that insists on them gets
+          filled with made-up ones. */}
+      <select
+        value={assignee}
+        onChange={(e) => setAssignee(e.target.value)}
+        aria-label="Assign to"
+        className={`${field} w-full`}
+      >
+        <option value="">Anyone</option>
+        {assignees.map((a) => (
+          <option key={a.id} value={a.id}>{a.display_name}</option>
+        ))}
+      </select>
+
+      <StudentPicker
+        value={studentId}
+        name={studentName}
+        onChange={onStudent}
+        className={`${field} w-full`}
+      />
+
+      {category === 'submit_invoice' && (
+        <InvoiceFields draft={invoice} set={setInvoice} field={field} />
+      )}
       <div className="h-28 flex flex-col min-h-0 rounded-lg border border-ninja-border px-2 py-1.5 text-ninja-navy">
         <LazyMarkdownEditor variant="bare" value={body} onChange={setBody} placeholder="Any detail worth keeping…" />
       </div>
@@ -248,6 +401,9 @@ function TaskCard({
   const [category, setCategory] = useState(task.category || 'other');
   const [due, setDue] = useState(task.due_date || '');
   const [assignee, setAssignee] = useState(task.assignee_id ? String(task.assignee_id) : '');
+  const [studentId, setStudentId] = useState(task.student_id || null);
+  const [studentName, setStudentName] = useState(task.student_name || null);
+  const [invoice, setInvoice] = useState(() => toInvoiceDraft(task.invoice));
   const [confirmDel, setConfirmDel] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -286,6 +442,8 @@ function TaskCard({
         title, body, category,
         due_date: due || null,
         assignee_id: assignee || null,
+        student_id: studentId || null,
+        invoice: invoicePayload(invoice, category),
       });
       onSaved(updated);
       setEditing(false);
@@ -329,12 +487,17 @@ function TaskCard({
           due={due} setDue={setDue}
           assignee={assignee} setAssignee={setAssignee}
           assignees={assignees}
+          studentId={studentId} studentName={studentName}
+          onStudent={(id, name) => { setStudentId(id); setStudentName(name); }}
+          invoice={invoice} setInvoice={setInvoice}
           busy={busy}
           saveLabel="Save"
           onCancel={() => {
             setEditing(false);
             setTitle(task.title || ''); setBody(task.body || ''); setCategory(task.category || 'other');
             setDue(task.due_date || ''); setAssignee(task.assignee_id ? String(task.assignee_id) : '');
+            setStudentId(task.student_id || null); setStudentName(task.student_name || null);
+            setInvoice(toInvoiceDraft(task.invoice));
           }}
           onSave={save}
         />
@@ -415,11 +578,15 @@ function Composer({ lane, board, reportHeight, assignees, onCreated }) {
   const [category, setCategory] = useState('other');
   const [due, setDue] = useState('');
   const [assignee, setAssignee] = useState('');
+  const [studentId, setStudentId] = useState(null);
+  const [studentName, setStudentName] = useState(null);
+  const [invoice, setInvoice] = useState(EMPTY_INVOICE);
   const [busy, setBusy] = useState(false);
   const measureRef = useReportedHeight(`add-${lane}`, reportHeight);
 
   const reset = () => {
-    setTitle(''); setBody(''); setCategory('other'); setDue(''); setAssignee(''); setOpen(false);
+    setTitle(''); setBody(''); setCategory('other'); setDue(''); setAssignee('');
+    setStudentId(null); setStudentName(null); setInvoice(EMPTY_INVOICE); setOpen(false);
   };
 
   const create = async () => {
@@ -430,6 +597,8 @@ function Composer({ lane, board, reportHeight, assignees, onCreated }) {
         title, body, category, status: lane,
         due_date: due || null,
         assignee_id: assignee || null,
+        student_id: studentId || null,
+        invoice: invoicePayload(invoice, category),
       });
       onCreated(created);
       reset();
@@ -451,6 +620,9 @@ function Composer({ lane, board, reportHeight, assignees, onCreated }) {
             due={due} setDue={setDue}
             assignee={assignee} setAssignee={setAssignee}
             assignees={assignees}
+            studentId={studentId} studentName={studentName}
+            onStudent={(id, name) => { setStudentId(id); setStudentName(name); }}
+            invoice={invoice} setInvoice={setInvoice}
             busy={busy}
             saveLabel="Add"
             onCancel={reset}

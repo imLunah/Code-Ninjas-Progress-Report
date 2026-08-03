@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { SearchIcon, XIcon } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
-import TaskBoard from '../../components/manager/board/TaskBoard';
+import TaskBoard, { CATEGORIES } from '../../components/manager/board/TaskBoard';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -11,13 +11,9 @@ import { useAuth } from '../../context/AuthContext';
 // To do is three thousand pixels of a page whose job is a glance. The
 // dashboard keeps a preview; everything you can DO to the board happens here.
 
-const CATEGORY_FILTERS = [
-  { key: 'all',          label: 'Everything' },
-  { key: 'cancellation', label: 'Cancellations' },
-  { key: 'reenrollment', label: 'Re-enrollments' },
-  { key: 'print',        label: 'Print requests' },
-  { key: 'other',        label: 'Other' },
-];
+// Built from the board's own list, so a new kind of work shows up as a filter
+// without anyone remembering to add it in two places.
+const CATEGORY_FILTERS = [{ key: 'all', label: 'Everything' }, ...CATEGORIES];
 
 const Chip = ({ active, children, ...rest }) => (
   <button

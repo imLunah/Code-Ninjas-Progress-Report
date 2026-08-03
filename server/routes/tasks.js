@@ -11,8 +11,13 @@ const MAX_ORDER = 10000;
 // rather than surfacing as a constraint violation from the driver.
 const STATUSES = ['todo', 'doing', 'done'];
 
-// What kind of work a task is.
-const CATEGORIES = ['cancellation', 'reenrollment', 'print', 'other'];
+// What kind of work a task is. Taken from the Operations Tracker rather than
+// invented, because those are the words the work is already called.
+const CATEGORIES = ['follow_up', 'resume_hold', 'cancel', 'submit_invoice', 'print', 'other'];
+
+// The invoice payload, kept 1:1 in task_invoices. Text fields are capped by the
+// CHECKs on the columns; these are the ones this route writes.
+const INVOICE_TEXT = ['rc_name', 'payment_processor', 'service_coordinator', 'program'];
 
 // Center task board — center-scoped, visible to all CDs/admin at the location.
 // Not shown to senseis or parents (this route is manager-gated).
@@ -27,15 +32,31 @@ const CATEGORIES = ['cancellation', 'reenrollment', 'print', 'other'];
 // serialises to a UTC-midnight ISO string and lands on the previous day for
 // anyone west of Greenwich. A due date has no time in it, so it travels as the
 // string it is.
+// The invoice arrives as a nested object rather than eight more top-level
+// fields, so a follow-up card is never a row with eight nulls in it. NULL when
+// the task has no invoice attached.
 const SELECT = `
   SELECT n.id, n.title, n.body, n.status, n.category, n.sort_order,
          to_char(n.due_date, 'YYYY-MM-DD') AS due_date,
-         n.assignee_id, n.created_by, n.created_at, n.updated_at, n.completed_at,
+         n.assignee_id, n.student_id, n.created_by, n.created_at, n.updated_at, n.completed_at,
          u.display_name AS created_by_name,
-         a.display_name AS assignee_name
+         a.display_name AS assignee_name,
+         s.full_name    AS student_name,
+         CASE WHEN i.task_id IS NULL THEN NULL ELSE jsonb_build_object(
+           'rc_name', i.rc_name,
+           'payment_processor', i.payment_processor,
+           'service_coordinator', i.service_coordinator,
+           'program', i.program,
+           'service_month', i.service_month,
+           'service_year', i.service_year,
+           'order_received', to_char(i.order_received, 'YYYY-MM-DD'),
+           'amount', i.amount
+         ) END AS invoice
   FROM director_notes n
-  LEFT JOIN users u ON u.id = n.created_by
-  LEFT JOIN users a ON a.id = n.assignee_id
+  LEFT JOIN users u        ON u.id = n.created_by
+  LEFT JOIN users a        ON a.id = n.assignee_id
+  LEFT JOIN students s     ON s.id = n.student_id
+  LEFT JOIN task_invoices i ON i.task_id = n.id
 `;
 
 // Directors of this center, from membership rather than home center: a director
@@ -65,6 +86,89 @@ function readDueDate(raw) {
     return { error: 'That date does not exist' };
   }
   return { value: raw };
+}
+
+// Same shape as the assignee check, same reason: a task naming a ninja can
+// only name one enrolled at this center, or the board becomes a way to read
+// names off another location.
+async function readStudent(pool, raw, locationId) {
+  if (raw === undefined) return { skip: true };
+  if (raw === null || raw === '') return { value: null };
+  const id = Number(raw);
+  if (!Number.isInteger(id) || id < 1) return { error: 'Unknown ninja' };
+  const { rows } = await pool.query(
+    'SELECT 1 FROM students WHERE id = $1 AND location_id = $2',
+    [id, locationId],
+  );
+  if (!rows[0]) return { error: 'That ninja is not at this center' };
+  return { value: id };
+}
+
+// The invoice block. Absent means "leave it alone"; null means "this is not an
+// invoice any more, drop it". Every field inside is optional: a claim gets
+// filled in over days, and a form that refuses to save half of one is a form
+// people keep in a spreadsheet instead.
+function readInvoice(raw) {
+  if (raw === undefined) return { skip: true };
+  if (raw === null) return { value: null };
+  if (typeof raw !== 'object') return { error: 'Invoice details are not readable' };
+
+  const out = {};
+  for (const key of INVOICE_TEXT) {
+    const v = raw[key];
+    if (v === undefined || v === null || v === '') { out[key] = null; continue; }
+    if (typeof v !== 'string') return { error: 'Invoice details must be text' };
+    if (v.trim().length > 120) return { error: 'Invoice details are too long' };
+    out[key] = v.trim() || null;
+  }
+
+  const num = (v, min, max, label) => {
+    if (v === undefined || v === null || v === '') return null;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < min || n > max) throw new Error(label);
+    return n;
+  };
+  try {
+    out.service_month = num(raw.service_month, 1, 12, 'Month of service must be 1 to 12');
+    out.service_year = num(raw.service_year, 2000, 2100, 'Year of service looks wrong');
+    out.amount = num(raw.amount, 0, 10_000_000, 'Amount must be a positive number');
+  } catch (err) {
+    return { error: err.message };
+  }
+  if (out.service_month !== null) out.service_month = Math.trunc(out.service_month);
+  if (out.service_year !== null) out.service_year = Math.trunc(out.service_year);
+
+  const received = readDueDate(raw.order_received);
+  if (received.error) return { error: 'Order received must be a date' };
+  out.order_received = received.skip ? null : received.value;
+
+  return { value: out };
+}
+
+async function writeInvoice(client, taskId, invoice) {
+  if (invoice === null) {
+    await client.query('DELETE FROM task_invoices WHERE task_id = $1', [taskId]);
+    return;
+  }
+  await client.query(`
+    INSERT INTO task_invoices
+      (task_id, rc_name, payment_processor, service_coordinator, program,
+       service_month, service_year, order_received, amount)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    ON CONFLICT (task_id) DO UPDATE SET
+      rc_name = EXCLUDED.rc_name,
+      payment_processor = EXCLUDED.payment_processor,
+      service_coordinator = EXCLUDED.service_coordinator,
+      program = EXCLUDED.program,
+      service_month = EXCLUDED.service_month,
+      service_year = EXCLUDED.service_year,
+      order_received = EXCLUDED.order_received,
+      amount = EXCLUDED.amount
+  `, [
+    taskId, invoice.rc_name, invoice.payment_processor, invoice.service_coordinator,
+    invoice.program, invoice.service_month, invoice.service_year,
+    invoice.order_received, invoice.amount,
+  ]);
 }
 
 // A task can only be handed to a director of this center. Without the
@@ -161,24 +265,42 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
 
   const due = readDueDate(req.body?.due_date);
   if (due.error) return res.status(400).json({ error: due.error });
-  try {
-    const assignee = await readAssignee(pool, req.body?.assignee_id, req.session.activeLocationId);
-    if (assignee.error) return res.status(400).json({ error: assignee.error });
 
-    const { rows } = await pool.query(`
-      INSERT INTO director_notes (location_id, title, body, status, category, due_date, assignee_id, created_by)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+  const invoice = readInvoice(req.body?.invoice);
+  if (invoice.error) return res.status(400).json({ error: invoice.error });
+
+  const client = await pool.connect();
+  try {
+    const assignee = await readAssignee(client, req.body?.assignee_id, req.session.activeLocationId);
+    if (assignee.error) return res.status(400).json({ error: assignee.error });
+    const student = await readStudent(client, req.body?.student_id, req.session.activeLocationId);
+    if (student.error) return res.status(400).json({ error: student.error });
+
+    // The card and its invoice land together or not at all: a claim whose task
+    // failed to write is a row nothing can reach.
+    await client.query('BEGIN');
+    const { rows } = await client.query(`
+      INSERT INTO director_notes
+        (location_id, title, body, status, category, due_date, assignee_id, student_id, created_by)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id
     `, [
       req.session.activeLocationId, content.title, content.body,
       safeStatus, safeCategory, due.skip ? null : due.value,
-      assignee.skip ? null : assignee.value, req.session.userId,
+      assignee.skip ? null : assignee.value, student.skip ? null : student.value,
+      req.session.userId,
     ]);
-    const { rows: created } = await pool.query(`${SELECT} WHERE n.id = $1`, [rows[0].id]);
+    if (!invoice.skip && invoice.value) await writeInvoice(client, rows[0].id, invoice.value);
+    await client.query('COMMIT');
+
+    const { rows: created } = await client.query(`${SELECT} WHERE n.id = $1`, [rows[0].id]);
     res.status(201).json(created[0]);
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     console.error('Error creating task:', err);
     res.status(500).json({ error: 'Failed to create task' });
+  } finally {
+    client.release();
   }
 });
 
@@ -278,9 +400,15 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
   const due = readDueDate(req.body?.due_date);
   if (due.error) return res.status(400).json({ error: due.error });
 
+  const invoice = readInvoice(req.body?.invoice);
+  if (invoice.error) return res.status(400).json({ error: invoice.error });
+
+  const client = await pool.connect();
   try {
-    const assignee = await readAssignee(pool, req.body?.assignee_id, req.session.activeLocationId);
+    const assignee = await readAssignee(client, req.body?.assignee_id, req.session.activeLocationId);
     if (assignee.error) return res.status(400).json({ error: assignee.error });
+    const student = await readStudent(client, req.body?.student_id, req.session.activeLocationId);
+    if (student.error) return res.status(400).json({ error: student.error });
 
     const sets = [];
     const params = [];
@@ -293,9 +421,12 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
     if (req.body?.category !== undefined) set('category', req.body.category);
     if (!due.skip) set('due_date', due.value);
     if (!assignee.skip) set('assignee_id', assignee.value);
-    if (sets.length === 0) return res.status(400).json({ error: 'Nothing to update' });
+    if (!student.skip) set('student_id', student.value);
+    if (sets.length === 0 && invoice.skip) {
+      return res.status(400).json({ error: 'Nothing to update' });
+    }
 
-    const { rows } = await pool.query(
+    const { rows } = await client.query(
       'SELECT created_by FROM director_notes WHERE id = $1 AND location_id = $2',
       [req.params.id, req.session.activeLocationId]
     );
@@ -304,16 +435,25 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
       return res.status(403).json({ error: 'Only the author can edit this task' });
     }
 
-    params.push(req.params.id);
-    await pool.query(
-      `UPDATE director_notes SET ${sets.join(', ')}, updated_at = now() WHERE id = $${params.length}`,
-      params,
-    );
-    const { rows: updated } = await pool.query(`${SELECT} WHERE n.id = $1`, [req.params.id]);
+    await client.query('BEGIN');
+    if (sets.length > 0) {
+      params.push(req.params.id);
+      await client.query(
+        `UPDATE director_notes SET ${sets.join(', ')}, updated_at = now() WHERE id = $${params.length}`,
+        params,
+      );
+    }
+    if (!invoice.skip) await writeInvoice(client, Number(req.params.id), invoice.value);
+    await client.query('COMMIT');
+
+    const { rows: updated } = await client.query(`${SELECT} WHERE n.id = $1`, [req.params.id]);
     res.json(updated[0]);
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     console.error('Error updating task:', err);
     res.status(500).json({ error: 'Failed to update task' });
+  } finally {
+    client.release();
   }
 });
 
