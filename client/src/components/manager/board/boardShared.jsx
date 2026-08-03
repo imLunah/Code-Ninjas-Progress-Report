@@ -40,6 +40,18 @@ export const mdUrl = (url) => (/^(https?:|mailto:)/i.test(url) ? url : '');
 export const shortDate = (iso) =>
   new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
+// A due date is a calendar day, not an instant. Parsing 'YYYY-MM-DD' through
+// the Date constructor treats it as UTC midnight and prints the day before for
+// anyone west of Greenwich, so the parts are handed over separately.
+export const dayLabel = (ymd) => {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+// First name only. A column is 240px wide and "Christopher Alvarado" is the
+// whole card; whoever it is, the people reading this board know them.
+export const firstName = (name) => (name || '').trim().split(' ')[0] || 'Unknown';
+
 // Round icon buttons. Words in a card footer wrap onto a second line and push
 // the card apart; these carry their label in title + aria-label instead, so
 // nothing is hover-only for assistive tech.

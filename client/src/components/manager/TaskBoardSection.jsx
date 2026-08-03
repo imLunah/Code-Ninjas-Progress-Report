@@ -20,6 +20,7 @@ export default function TaskBoardSection() {
   // this the board would offer add/edit/delete/drag that only 403.
   const { user, isReadOnly } = useAuth();
   const [tasks, setTasks] = useState([]);
+  const [assignees, setAssignees] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Measured on a wrapper that outlives the board rather than inside it. A
@@ -41,6 +42,11 @@ export default function TaskBoardSection() {
     api.get('/tasks')
       .then((data) => { if (alive) { setTasks(data || []); setLoading(false); } })
       .catch(() => { if (alive) setLoading(false); });
+    // The directors a task can be handed to. Fetched alongside rather than when
+    // a form opens, so the assign dropdown is never a spinner.
+    api.get('/tasks/assignees')
+      .then((data) => { if (alive) setAssignees(data || []); })
+      .catch(() => { if (alive) setAssignees([]); });
     return () => { alive = false; };
   }, [user?.activeLocation?.id]);
 
@@ -83,6 +89,7 @@ export default function TaskBoardSection() {
         ) : (
           <TaskBoard
             tasks={tasks}
+            assignees={assignees}
             width={width}
             isReadOnly={isReadOnly}
             canManage={canManage}

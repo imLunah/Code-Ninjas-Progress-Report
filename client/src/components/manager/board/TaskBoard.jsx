@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
-import { PlusIcon, PencilIcon, Trash2Icon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
+import {
+  PlusIcon, PencilIcon, Trash2Icon, ChevronLeftIcon, ChevronRightIcon,
+  CalendarDaysIcon, UserIcon,
+} from 'lucide-react';
 import { api } from '../../../api/client';
 import LazyMarkdownEditor from '../../shared/LazyMarkdownEditor';
 import { PANEL } from '../../../lib/surfaces';
+import { today } from '../../../utils/dateUtils';
 import {
-  GAP, SPRING, clamp, MD, mdUrl, shortDate,
+  GAP, SPRING, clamp, MD, mdUrl, shortDate, dayLabel, firstName,
   LANES, LANE_INDEX, IconButton, DiscardButton,
   useReportedHeight, splitLanes, flattenLanes,
 } from './boardShared';
@@ -82,6 +86,36 @@ function CategoryChip({ category }) {
   );
 }
 
+// Both dates are plain YYYY-MM-DD, so a string compare is a calendar compare
+// and no timezone gets a say in whether something is late.
+function DueChip({ due, status }) {
+  const now = today();
+  const done = status === 'done';
+  const overdue = !done && due < now;
+  const dueToday = !done && due === now;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 font-ninja text-[10px] font-bold px-2 py-0.5 rounded-full ${
+        overdue ? 'bg-red-100 text-red-700'
+          : dueToday ? 'bg-yellow-100 text-yellow-700'
+            : 'bg-ninja-bg text-ninja-muted'
+      }`}
+    >
+      <CalendarDaysIcon className="w-3 h-3 flex-shrink-0" strokeWidth={2.25} />
+      {overdue ? `Late ${dayLabel(due)}` : dueToday ? 'Due today' : dayLabel(due)}
+    </span>
+  );
+}
+
+function AssigneeChip({ name }) {
+  return (
+    <span className="inline-flex items-center gap-1 font-ninja text-[10px] font-bold px-2 py-0.5 rounded-full bg-ninja-bg text-ninja-muted">
+      <UserIcon className="w-3 h-3 flex-shrink-0" strokeWidth={2.25} />
+      {firstName(name)}
+    </span>
+  );
+}
+
 function CategoryPicker({ value, onChange }) {
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -105,7 +139,12 @@ function CategoryPicker({ value, onChange }) {
 // Title is a single line, description is optional. The editor needs a resolved
 // height for its bare variant, so the wrapper gives it one rather than letting
 // it collapse to a toolbar and one line.
-function TaskEditor({ title, setTitle, body, setBody, category, setCategory, busy, onCancel, onSave, saveLabel }) {
+function TaskEditor({
+  title, setTitle, body, setBody, category, setCategory,
+  due, setDue, assignee, setAssignee, assignees,
+  busy, onCancel, onSave, saveLabel,
+}) {
+  const field = 'font-ninja text-xs rounded-lg border border-ninja-border bg-white px-2 py-1.5 text-ninja-navy';
   return (
     <div className="space-y-2">
       <input
@@ -120,6 +159,30 @@ function TaskEditor({ title, setTitle, body, setBody, category, setCategory, bus
         className="w-full font-ninja text-sm font-bold rounded-lg border border-ninja-border bg-white px-2.5 py-1.5 text-ninja-navy placeholder:text-ninja-muted placeholder:font-normal"
       />
       <CategoryPicker value={category} onChange={setCategory} />
+
+      {/* Both optional. Most of what a center is carrying has no deadline and
+          no single owner, and a form that insists on them gets filled with
+          made-up ones. */}
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          type="date"
+          value={due}
+          onChange={(e) => setDue(e.target.value)}
+          aria-label="Due date"
+          className={`${field} w-full`}
+        />
+        <select
+          value={assignee}
+          onChange={(e) => setAssignee(e.target.value)}
+          aria-label="Assign to"
+          className={`${field} w-full`}
+        >
+          <option value="">Anyone</option>
+          {assignees.map((a) => (
+            <option key={a.id} value={a.id}>{a.display_name}</option>
+          ))}
+        </select>
+      </div>
       <div className="h-28 flex flex-col min-h-0 rounded-lg border border-ninja-border px-2 py-1.5 text-ninja-navy">
         <LazyMarkdownEditor variant="bare" value={body} onChange={setBody} placeholder="Any detail worth keeping…" />
       </div>
@@ -145,13 +208,15 @@ function TaskEditor({ title, setTitle, body, setBody, category, setCategory, bus
 }
 
 function TaskCard({
-  task, canManage, canReorder, board, reportHeight,
+  task, canManage, canReorder, board, reportHeight, assignees,
   onDragToSlot, onDropped, onMoveLane, onSaved, onDeleted,
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title || '');
   const [body, setBody] = useState(task.body || '');
   const [category, setCategory] = useState(task.category || 'other');
+  const [due, setDue] = useState(task.due_date || '');
+  const [assignee, setAssignee] = useState(task.assignee_id ? String(task.assignee_id) : '');
   const [confirmDel, setConfirmDel] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -186,7 +251,11 @@ function TaskCard({
     if (!title.trim() || busy) return;
     setBusy(true);
     try {
-      const updated = await api.patch(`/tasks/${task.id}`, { title, body, category });
+      const updated = await api.patch(`/tasks/${task.id}`, {
+        title, body, category,
+        due_date: due || null,
+        assignee_id: assignee || null,
+      });
       onSaved(updated);
       setEditing(false);
     } catch { /* ignore */ } finally { setBusy(false); }
@@ -226,11 +295,15 @@ function TaskCard({
           title={title} setTitle={setTitle}
           body={body} setBody={setBody}
           category={category} setCategory={setCategory}
+          due={due} setDue={setDue}
+          assignee={assignee} setAssignee={setAssignee}
+          assignees={assignees}
           busy={busy}
           saveLabel="Save"
           onCancel={() => {
             setEditing(false);
             setTitle(task.title || ''); setBody(task.body || ''); setCategory(task.category || 'other');
+            setDue(task.due_date || ''); setAssignee(task.assignee_id ? String(task.assignee_id) : '');
           }}
           onSave={save}
         />
@@ -249,6 +322,13 @@ function TaskCard({
               style={{ maxHeight: '3.4rem' }}
             >
               <ReactMarkdown components={MD} urlTransform={mdUrl}>{task.body}</ReactMarkdown>
+            </div>
+          )}
+
+          {(task.due_date || task.assignee_id) && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              {task.due_date && <DueChip due={task.due_date} status={task.status} />}
+              {task.assignee_id && <AssigneeChip name={task.assignee_name} />}
             </div>
           )}
 
@@ -318,21 +398,29 @@ function TaskCard({
 // Sits at the bottom of its column. Collapsed it is one quiet line; open it is
 // a card the same shape as the ones above it, so adding work looks like the
 // work it becomes.
-function Composer({ lane, board, width, reportHeight, onCreated }) {
+function Composer({ lane, board, reportHeight, assignees, onCreated }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [category, setCategory] = useState('other');
+  const [due, setDue] = useState('');
+  const [assignee, setAssignee] = useState('');
   const [busy, setBusy] = useState(false);
   const measureRef = useReportedHeight(`add-${lane}`, reportHeight);
 
-  const reset = () => { setTitle(''); setBody(''); setCategory('other'); setOpen(false); };
+  const reset = () => {
+    setTitle(''); setBody(''); setCategory('other'); setDue(''); setAssignee(''); setOpen(false);
+  };
 
   const create = async () => {
     if (!title.trim() || busy) return;
     setBusy(true);
     try {
-      const created = await api.post('/tasks', { title, body, category, status: lane });
+      const created = await api.post('/tasks', {
+        title, body, category, status: lane,
+        due_date: due || null,
+        assignee_id: assignee || null,
+      });
       onCreated(created);
       reset();
     } catch { /* ignore */ } finally { setBusy(false); }
@@ -350,6 +438,9 @@ function Composer({ lane, board, width, reportHeight, onCreated }) {
             title={title} setTitle={setTitle}
             body={body} setBody={setBody}
             category={category} setCategory={setCategory}
+            due={due} setDue={setDue}
+            assignee={assignee} setAssignee={setAssignee}
+            assignees={assignees}
             busy={busy}
             saveLabel="Add"
             onCancel={reset}
@@ -379,7 +470,9 @@ function LaneHeading({ lane, count, id }) {
   );
 }
 
-export default function TaskBoard({ tasks, width, isReadOnly, canManage, onSaved, onDeleted, onArrange }) {
+export default function TaskBoard({
+  tasks, assignees = [], width, isReadOnly, canManage, onSaved, onDeleted, onArrange,
+}) {
   const [heights, setHeights] = useState({});
 
   // Stable, or every render would tear down and rebuild each card's observer.
@@ -472,6 +565,7 @@ export default function TaskBoard({ tasks, width, isReadOnly, canManage, onSaved
   }, [onArrange, persist]);
 
   const cardProps = (task) => ({
+    assignees,
     canManage: canManage(task),
     // Moving stays deliberately NOT author-gated (the arrangement is shared),
     // so it can't ride on canManage — but it is still a write, so it goes away
@@ -506,6 +600,7 @@ export default function TaskBoard({ tasks, width, isReadOnly, canManage, onSaved
                   lane={l.key}
                   board={null}
                   reportHeight={reportHeight}
+                  assignees={assignees}
                   onCreated={(created) => onSaved(created, true)}
                 />
               )}
@@ -571,6 +666,7 @@ export default function TaskBoard({ tasks, width, isReadOnly, canManage, onSaved
               w: layout.cardW,
             }}
             reportHeight={reportHeight}
+            assignees={assignees}
             onCreated={(created) => onSaved(created, true)}
           />
         ))}
