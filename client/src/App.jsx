@@ -27,6 +27,7 @@ const AddStudentPage = lazy(() => import('./pages/manager/AddStudentPage'));
 const StudentProfile = lazy(() => import('./pages/manager/StudentProfile'));
 const StaffPage = lazy(() => import('./pages/manager/StaffPage'));
 const ReportsPage = lazy(() => import('./pages/manager/ReportsPage'));
+const TasksPage = lazy(() => import('./pages/manager/TasksPage'));
 const AccountPage = lazy(() => import('./pages/AccountPage'));
 const SenseiDashboard = lazy(() => import('./pages/sensei/SenseiDashboard'));
 const LogProgressPage = lazy(() => import('./pages/sensei/LogProgressPage'));
@@ -70,6 +71,7 @@ export default function App() {
             <Route path="/manager/students"  element={<ProtectedRoute role="sensei"><StudentRoster /></ProtectedRoute>} />
             <Route path="/manager/staff"     element={<ProtectedRoute role="sensei"><StaffPage /></ProtectedRoute>} />
             <Route path="/manager/reports"  element={<ProtectedRoute role="manager"><ReportsPage /></ProtectedRoute>} />
+            <Route path="/manager/tasks"    element={<ProtectedRoute role="manager"><TasksPage /></ProtectedRoute>} />
             <Route path="/manager/students/new" element={<ProtectedRoute role="manager"><AddStudentPage /></ProtectedRoute>} />
             <Route path="/manager/students/:id" element={<ProtectedRoute role="sensei"><StudentProfile /></ProtectedRoute>} />
 
