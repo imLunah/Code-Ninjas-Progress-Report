@@ -10,7 +10,7 @@ import {
 import Layout from '../../components/layout/Layout';
 import { ChartContainer, ChartTooltip } from '../../components/ui/chart';
 import EventCalendar from '../../components/manager/EventCalendar';
-import DirectorStickyNotes from '../../components/manager/DirectorStickyNotes';
+import TaskBoardSection from '../../components/manager/TaskBoardSection';
 import Modal from '../../components/ui/Modal';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
@@ -722,9 +722,9 @@ export default function DirectorDashboard() {
           <div className="mt-6 border-t border-ninja-border" />
         </motion.header>
 
-        {/* Notes run the full width. Squeezed into two thirds they were three
-            cramped columns; this is a board, so give it the wall. */}
-        <DirectorStickyNotes />
+        {/* Full width. Three columns squeezed into two thirds of the page are
+            three cramped columns; this is a board, so give it the wall. */}
+        <TaskBoardSection />
 
         {/* Calendar earns its surface (it IS an object), check-ins rides the
             rail beside it. Asymmetric on purpose. */}

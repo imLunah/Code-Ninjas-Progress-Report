@@ -2,42 +2,38 @@ const express = require('express');
 const router = express.Router();
 const { requireManager, requireOwnLocation } = require('../middleware/auth');
 
-const COLORS = ['yellow', 'blue', 'green', 'pink', 'purple'];
 const MAX_BODY = 2000;
+const MAX_TITLE = 200;
 // Matches the CHECK on the column.
 const MAX_ORDER = 10000;
 
-// Lanes. Matches director_notes_status_check, so a bad value is refused here
+// Columns. Matches director_notes_status_check, so a bad value is refused here
 // rather than surfacing as a constraint violation from the driver.
 const STATUSES = ['todo', 'doing', 'done'];
 
-// Which of the two boards a note lives on. The plain wall, or the lanes.
-const BOARDS = ['notes', 'tasks'];
-
-// What kind of work a task is. Only meaningful on the task board; a sticky
-// keeps the default and never shows it.
+// What kind of work a task is.
 const CATEGORIES = ['cancellation', 'reenrollment', 'print', 'other'];
 
-const MAX_TITLE = 200;
-
-// Center Director board — center-scoped, visible to all CDs/admin at the
-// location. Not shown to senseis or parents (this route is manager-gated).
+// Center task board — center-scoped, visible to all CDs/admin at the location.
+// Not shown to senseis or parents (this route is manager-gated).
 //
-// One table, two boards. A sticky is a body and a colour. A task is a title, a
-// kind and a lane, with the body demoted to a description. They share a row
-// shape because they share a board, an author, a center and a lifetime; what
-// differs is which columns each one fills in.
+// The table is still called director_notes because it started life as the
+// sticky board and production is, right now, a deployment that still reads it
+// under that name. Renaming it would take the live site down mid-deploy. The
+// rename belongs in the same change that ships this to main, along with
+// dropping the `color` and `board` columns, which nothing here writes any more.
 
 const SELECT = `
-  SELECT n.id, n.title, n.body, n.color, n.status, n.board, n.category, n.sort_order,
+  SELECT n.id, n.title, n.body, n.status, n.category, n.sort_order,
          n.created_by, n.created_at, n.updated_at, n.completed_at,
          u.display_name AS created_by_name
   FROM director_notes n
   LEFT JOIN users u ON u.id = n.created_by
 `;
 
-// A sticky is its body, a task is its title, and neither board can hold a card
-// with nothing on it. Mirrors director_notes_has_content_check.
+// A card is its title, or its body if it came from the old sticky wall and
+// never had one. Neither board can hold a card with nothing on it at all.
+// Mirrors director_notes_has_content_check.
 function readContent(raw) {
   const title = typeof raw?.title === 'string' ? raw.title.trim() : '';
   const body = typeof raw?.body === 'string' ? raw.body.trim() : '';
@@ -47,7 +43,7 @@ function readContent(raw) {
   return { title: title || null, body: body || null };
 }
 
-// GET /api/director-notes — notes for the active location
+// GET /api/tasks — every task at the active location
 router.get('/', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   try {
@@ -58,49 +54,47 @@ router.get('/', requireManager, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error('Error fetching director notes:', err);
-    res.status(500).json({ error: 'Failed to fetch notes' });
+    console.error('Error fetching tasks:', err);
+    res.status(500).json({ error: 'Failed to fetch tasks' });
   }
 });
 
-// POST /api/director-notes — create a note at the active location
+// POST /api/tasks — add a task at the active location
 router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const content = readContent(req.body);
   if (content.error) return res.status(400).json({ error: content.error });
 
-  const safeColor = COLORS.includes(req.body?.color) ? req.body.color : 'yellow';
   const safeStatus = STATUSES.includes(req.body?.status) ? req.body.status : 'todo';
-  const safeBoard = BOARDS.includes(req.body?.board) ? req.body.board : 'notes';
   const safeCategory = CATEGORIES.includes(req.body?.category) ? req.body.category : 'other';
   try {
     const { rows } = await pool.query(`
-      INSERT INTO director_notes (location_id, title, body, color, status, board, category, created_by)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO director_notes (location_id, title, body, status, category, created_by)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING id
     `, [
       req.session.activeLocationId, content.title, content.body,
-      safeColor, safeStatus, safeBoard, safeCategory, req.session.userId,
+      safeStatus, safeCategory, req.session.userId,
     ]);
     const { rows: created } = await pool.query(`${SELECT} WHERE n.id = $1`, [rows[0].id]);
     res.status(201).json(created[0]);
   } catch (err) {
-    console.error('Error creating director note:', err);
-    res.status(500).json({ error: 'Failed to create note' });
+    console.error('Error creating task:', err);
+    res.status(500).json({ error: 'Failed to create task' });
   }
 });
 
-// PATCH /api/director-notes/reorder — store the board arrangement.
+// PATCH /api/tasks/reorder — store the board arrangement.
 // MUST stay above PATCH /:id or Express matches 'reorder' as an id.
 //
-// Takes the whole board as lanes: [{ status, ids }]. A note moving from To do
-// to Done is the same operation as a note moving up its own lane, so the board
-// sends one payload for both rather than a move endpoint and a sort endpoint
-// that could disagree with each other.
+// Takes the whole board as columns: [{ status, ids }]. A card moving from To do
+// to Done is the same operation as a card moving up its own column, so the
+// board sends one payload for both rather than a move endpoint and a sort
+// endpoint that could disagree with each other.
 //
 // Deliberately NOT author-gated like edit/delete: the board is shared, so any
 // director at the center can tidy it or move a card along. Only position and
-// lane are written, never text.
+// column are written, never text.
 router.patch('/reorder', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const lanes = req.body?.lanes;
@@ -112,26 +106,23 @@ router.patch('/reorder', requireManager, requireOwnLocation, async (req, res) =>
   const clean = [];
   const seen = new Set();
   for (const lane of lanes) {
-    // status is optional: the plain notes board has no lanes, so it sends one
-    // group and only its order is written. Writing a lane there would quietly
-    // give every sticky a stage it doesn't have.
-    if (lane?.status !== undefined && lane?.status !== null && !STATUSES.includes(lane.status)) {
-      return res.status(400).json({ error: 'Unknown lane' });
+    if (!STATUSES.includes(lane?.status)) {
+      return res.status(400).json({ error: 'Unknown column' });
     }
     const ids = Array.isArray(lane.ids) ? lane.ids.map(Number) : null;
     if (!ids || ids.length > MAX_ORDER) {
-      return res.status(400).json({ error: 'A list of note ids is required' });
+      return res.status(400).json({ error: 'A list of task ids is required' });
     }
     if (ids.some((n) => !Number.isInteger(n) || n < 1)) {
-      return res.status(400).json({ error: 'Note ids must be whole numbers' });
+      return res.status(400).json({ error: 'Task ids must be whole numbers' });
     }
-    // Across the whole board, not per lane: the same note appearing in two
-    // lanes would leave its final position down to which one was written last.
+    // Across the whole board, not per column: the same card appearing twice
+    // would leave its final position down to which group was written last.
     for (const id of ids) {
-      if (seen.has(id)) return res.status(400).json({ error: 'Note ids must be unique' });
+      if (seen.has(id)) return res.status(400).json({ error: 'Task ids must be unique' });
       seen.add(id);
     }
-    clean.push({ status: lane.status ?? null, ids });
+    clean.push({ status: lane.status, ids });
   }
 
   const client = await pool.connect();
@@ -143,14 +134,11 @@ router.patch('/reorder', requireManager, requireOwnLocation, async (req, res) =>
       await client.query(
         `UPDATE director_notes AS n
          SET sort_order = v.position,
-             status = COALESCE($3, n.status),
-             -- Finished-on is stamped by whatever puts the note in Done, and
+             status = $3,
+             -- Finished-on is stamped by whatever puts the card in Done, and
              -- cleared when it comes back out, so the date never outlives the
-             -- lane it belongs to. A group with no lane leaves both alone.
-             completed_at = CASE
-               WHEN $3 IS NULL THEN n.completed_at
-               WHEN $3 = 'done' THEN COALESCE(n.completed_at, now())
-             END
+             -- column it belongs to.
+             completed_at = CASE WHEN $3 = 'done' THEN COALESCE(n.completed_at, now()) END
          FROM unnest($1::int[]) WITH ORDINALITY AS v(id, position)
          WHERE n.id = v.id AND n.location_id = $2`,
         [lane.ids, req.session.activeLocationId, lane.status],
@@ -160,22 +148,19 @@ router.patch('/reorder', requireManager, requireOwnLocation, async (req, res) =>
     res.json({ ok: true });
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error reordering director notes:', err);
+    console.error('Error reordering tasks:', err);
     res.status(500).json({ error: 'Failed to save the arrangement' });
   } finally {
     client.release();
   }
 });
 
-// PATCH /api/director-notes/:id — edit (author or admin only)
+// PATCH /api/tasks/:id — edit (author or admin only)
 router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const content = readContent(req.body);
   if (content.error) return res.status(400).json({ error: content.error });
 
-  const safeColor = COLORS.includes(req.body?.color) ? req.body.color : 'yellow';
-  // Only sent by the task board. A sticky keeps whatever it had, which is the
-  // default nobody ever sees.
   const category = req.body?.category === undefined
     ? null
     : CATEGORIES.includes(req.body.category) ? req.body.category : null;
@@ -187,25 +172,25 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
       'SELECT created_by FROM director_notes WHERE id = $1 AND location_id = $2',
       [req.params.id, req.session.activeLocationId]
     );
-    if (!rows[0]) return res.status(404).json({ error: 'Note not found' });
+    if (!rows[0]) return res.status(404).json({ error: 'Task not found' });
     if (req.session.role !== 'admin' && rows[0].created_by !== req.session.userId) {
-      return res.status(403).json({ error: 'Only the author can edit this note' });
+      return res.status(403).json({ error: 'Only the author can edit this task' });
     }
     await pool.query(
       `UPDATE director_notes
-       SET title = $1, body = $2, color = $3, category = COALESCE($4, category), updated_at = now()
-       WHERE id = $5`,
-      [content.title, content.body, safeColor, category, req.params.id],
+       SET title = $1, body = $2, category = COALESCE($3, category), updated_at = now()
+       WHERE id = $4`,
+      [content.title, content.body, category, req.params.id],
     );
     const { rows: updated } = await pool.query(`${SELECT} WHERE n.id = $1`, [req.params.id]);
     res.json(updated[0]);
   } catch (err) {
-    console.error('Error updating director note:', err);
-    res.status(500).json({ error: 'Failed to update note' });
+    console.error('Error updating task:', err);
+    res.status(500).json({ error: 'Failed to update task' });
   }
 });
 
-// DELETE /api/director-notes/:id — remove (author or admin only)
+// DELETE /api/tasks/:id — remove (author or admin only)
 router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   try {
@@ -213,15 +198,15 @@ router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
       'SELECT created_by FROM director_notes WHERE id = $1 AND location_id = $2',
       [req.params.id, req.session.activeLocationId]
     );
-    if (!rows[0]) return res.status(404).json({ error: 'Note not found' });
+    if (!rows[0]) return res.status(404).json({ error: 'Task not found' });
     if (req.session.role !== 'admin' && rows[0].created_by !== req.session.userId) {
-      return res.status(403).json({ error: 'Only the author can delete this note' });
+      return res.status(403).json({ error: 'Only the author can delete this task' });
     }
     await pool.query('DELETE FROM director_notes WHERE id = $1', [req.params.id]);
     res.json({ ok: true });
   } catch (err) {
-    console.error('Error deleting director note:', err);
-    res.status(500).json({ error: 'Failed to delete note' });
+    console.error('Error deleting task:', err);
+    res.status(500).json({ error: 'Failed to delete task' });
   }
 });
 

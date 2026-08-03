@@ -11,10 +11,9 @@ import {
   useReportedHeight, splitLanes, flattenLanes,
 } from './boardShared';
 
-// The task side is not paper. A sticky is one blob of text, which is all a
-// reminder needs; work you are tracking wants a name you can scan a column for,
-// a kind you can tell at a glance, and a stage. So this board is columns of
-// cards, and the only thing it shares with the wall is the record underneath.
+// Columns of cards. Work you are tracking wants a name you can scan a column
+// for, a kind you can tell at a glance, and a stage, which is more than a blob
+// of text can carry.
 
 const CATEGORIES = [
   { key: 'cancellation', label: 'Cancellation',  chip: 'bg-red-100 text-red-700' },
@@ -42,8 +41,10 @@ const MIN_CANVAS_H = 220;
 const EST_CARD_H = 92;
 const EST_ADD_H = 36;
 
-// Three columns of cards is the least this can be. Narrower and the columns
-// stack as plain lists with dragging off, same reasoning as the wall.
+// Three columns of cards is the least this can be. Narrower and they stack as
+// plain lists with dragging off: the drag maths needs a stable canvas width,
+// and a drag surface on a phone fights both page scroll and the app's own
+// swipe navigation.
 export const LANES_MIN_W = LANES.length * COL_MIN_W + (LANES.length - 1) * GAP;
 
 // Where a card sits in a column, given what is above it. Cards are whatever
@@ -144,20 +145,20 @@ function TaskEditor({ title, setTitle, body, setBody, category, setCategory, bus
 }
 
 function TaskCard({
-  note, canManage, canReorder, board, reportHeight,
+  task, canManage, canReorder, board, reportHeight,
   onDragToSlot, onDropped, onMoveLane, onSaved, onDeleted,
 }) {
   const [editing, setEditing] = useState(false);
-  const [title, setTitle] = useState(note.title || '');
-  const [body, setBody] = useState(note.body || '');
-  const [category, setCategory] = useState(note.category || 'other');
+  const [title, setTitle] = useState(task.title || '');
+  const [body, setBody] = useState(task.body || '');
+  const [category, setCategory] = useState(task.category || 'other');
   const [confirmDel, setConfirmDel] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
 
-  const measureRef = useReportedHeight(note.id, reportHeight);
-  const lane = LANE_INDEX[note.status] ?? 0;
-  const isDone = note.status === 'done';
+  const measureRef = useReportedHeight(task.id, reportHeight);
+  const lane = LANE_INDEX[task.status] ?? 0;
+  const isDone = task.status === 'done';
 
   // Motion values, not state: a drag writes to them every frame and state would
   // re-render the whole board on each one.
@@ -185,7 +186,7 @@ function TaskCard({
     if (!title.trim() || busy) return;
     setBusy(true);
     try {
-      const updated = await api.patch(`/director-notes/${note.id}`, { title, body, category });
+      const updated = await api.patch(`/tasks/${task.id}`, { title, body, category });
       onSaved(updated);
       setEditing(false);
     } catch { /* ignore */ } finally { setBusy(false); }
@@ -202,7 +203,7 @@ function TaskCard({
       dragElastic={0}
       dragConstraints={board ? { left: 0, top: 0, right: board.maxX, bottom: board.maxY } : undefined}
       onDragStart={() => setDragging(true)}
-      onDrag={() => board && onDragToSlot(note.id, x.get(), y.get())}
+      onDrag={() => board && onDragToSlot(task.id, x.get(), y.get())}
       onDragEnd={() => { setDragging(false); onDropped(); }}
       whileDrag={{ scale: 1.03 }}
       className={`${PANEL} p-3 ${board ? 'absolute left-0 top-0' : 'relative w-full'} ${
@@ -229,17 +230,17 @@ function TaskCard({
           saveLabel="Save"
           onCancel={() => {
             setEditing(false);
-            setTitle(note.title || ''); setBody(note.body || ''); setCategory(note.category || 'other');
+            setTitle(task.title || ''); setBody(task.body || ''); setCategory(task.category || 'other');
           }}
           onSave={save}
         />
       ) : (
         <>
-          <CategoryChip category={note.category} />
-          <h4 className={`font-ninja font-bold text-ninja-navy text-sm leading-snug text-pretty ${note.category !== 'other' ? 'mt-1.5' : ''}`}>
-            {note.title || note.body}
+          <CategoryChip category={task.category} />
+          <h4 className={`font-ninja font-bold text-ninja-navy text-sm leading-snug text-pretty ${task.category !== 'other' ? 'mt-1.5' : ''}`}>
+            {task.title || task.body}
           </h4>
-          {note.title && note.body && (
+          {task.title && task.body && (
             // A preview, not the whole thing. Opening the card is what shows the
             // rest, and a column of full descriptions is a column you scroll
             // instead of scan.
@@ -247,13 +248,13 @@ function TaskCard({
               className="font-ninja text-xs text-ninja-muted mt-1.5 break-words overflow-hidden"
               style={{ maxHeight: '3.4rem' }}
             >
-              <ReactMarkdown components={MD} urlTransform={mdUrl}>{note.body}</ReactMarkdown>
+              <ReactMarkdown components={MD} urlTransform={mdUrl}>{task.body}</ReactMarkdown>
             </div>
           )}
 
           <div className="flex items-center justify-between gap-2 mt-2.5 pt-2 border-t border-ninja-border">
             <span className="font-ninja text-[11px] text-ninja-muted truncate">
-              {isDone && note.completed_at ? `Done ${shortDate(note.completed_at)}` : note.created_by_name || 'Unknown'}
+              {isDone && task.completed_at ? `Done ${shortDate(task.completed_at)}` : task.created_by_name || 'Unknown'}
             </span>
             <div className="flex items-center gap-0.5 flex-shrink-0 text-ninja-muted">
               {/* Arrows are on the card in both layouts: on a phone they are the
@@ -262,12 +263,12 @@ function TaskCard({
               {canReorder && !confirmDel && (
                 <>
                   {lane > 0 && (
-                    <IconButton subtle onClick={() => onMoveLane(note, -1)} label={`Move to ${LANES[lane - 1].label}`}>
+                    <IconButton subtle onClick={() => onMoveLane(task, -1)} label={`Move to ${LANES[lane - 1].label}`}>
                       <ChevronLeftIcon className="w-3.5 h-3.5" strokeWidth={2.25} />
                     </IconButton>
                   )}
                   {lane < LANES.length - 1 && (
-                    <IconButton subtle onClick={() => onMoveLane(note, 1)} label={`Move to ${LANES[lane + 1].label}`}>
+                    <IconButton subtle onClick={() => onMoveLane(task, 1)} label={`Move to ${LANES[lane + 1].label}`}>
                       <ChevronRightIcon className="w-3.5 h-3.5" strokeWidth={2.25} />
                     </IconButton>
                   )}
@@ -284,8 +285,8 @@ function TaskCard({
                       onClick={async () => {
                         setBusy(true);
                         try {
-                          await api.delete(`/director-notes/${note.id}`);
-                          onDeleted(note.id);
+                          await api.delete(`/tasks/${task.id}`);
+                          onDeleted(task.id);
                         } catch { setBusy(false); setConfirmDel(false); }
                       }}
                       disabled={busy}
@@ -331,7 +332,7 @@ function Composer({ lane, board, width, reportHeight, onCreated }) {
     if (!title.trim() || busy) return;
     setBusy(true);
     try {
-      const created = await api.post('/director-notes', { title, body, category, status: lane, board: 'tasks' });
+      const created = await api.post('/tasks', { title, body, category, status: lane });
       onCreated(created);
       reset();
     } catch { /* ignore */ } finally { setBusy(false); }
@@ -378,7 +379,7 @@ function LaneHeading({ lane, count, id }) {
   );
 }
 
-export default function TaskBoard({ notes, width, isReadOnly, canManage, onSaved, onDeleted, onArrange }) {
+export default function TaskBoard({ tasks, width, isReadOnly, canManage, onSaved, onDeleted, onArrange }) {
   const [heights, setHeights] = useState({});
 
   // Stable, or every render would tear down and rebuild each card's observer.
@@ -386,7 +387,7 @@ export default function TaskBoard({ notes, width, isReadOnly, canManage, onSaved
     setHeights((prev) => (prev[id] === h ? prev : { ...prev, [id]: h }));
   }, []);
 
-  const lanes = useMemo(() => splitLanes(notes), [notes]);
+  const lanes = useMemo(() => splitLanes(tasks), [tasks]);
   const boardOn = width >= LANES_MIN_W;
 
   const layout = useMemo(() => {
@@ -437,7 +438,7 @@ export default function TaskBoard({ notes, width, isReadOnly, canManage, onSaved
 
   const persist = useCallback((current) => {
     const grouped = splitLanes(current);
-    api.patch('/director-notes/reorder', {
+    api.patch('/tasks/reorder', {
       lanes: LANES.map((l) => ({ status: l.key, ids: grouped[l.key].map((n) => n.id) })),
     }).catch(() => { /* arrangement is corrected on next load */ });
   }, []);
@@ -452,17 +453,17 @@ export default function TaskBoard({ notes, width, isReadOnly, canManage, onSaved
   // One step along, from the card. Optimistic: the card lands in the next
   // column and the arrangement is corrected on the next load if the write
   // fails.
-  const moveLane = useCallback((note, delta) => {
-    const target = LANES[clamp((LANE_INDEX[note.status] ?? 0) + delta, 0, LANES.length - 1)].key;
-    if (target === note.status) return;
+  const moveLane = useCallback((task, delta) => {
+    const target = LANES[clamp((LANE_INDEX[task.status] ?? 0) + delta, 0, LANES.length - 1)].key;
+    if (target === task.status) return;
     onArrange((prev) => {
-      const rest = splitLanes(prev, note.id);
+      const rest = splitLanes(prev, task.id);
       rest[target].unshift({
-        ...note,
+        ...task,
         status: target,
         // The server stamps the real value; this is so the card doesn't sit in
         // Done with no date on it until the next fetch.
-        completed_at: target === 'done' ? (note.completed_at ?? new Date().toISOString()) : null,
+        completed_at: target === 'done' ? (task.completed_at ?? new Date().toISOString()) : null,
       });
       const next = flattenLanes(rest);
       persist(next);
@@ -470,8 +471,8 @@ export default function TaskBoard({ notes, width, isReadOnly, canManage, onSaved
     });
   }, [onArrange, persist]);
 
-  const cardProps = (note) => ({
-    canManage: canManage(note),
+  const cardProps = (task) => ({
+    canManage: canManage(task),
     // Moving stays deliberately NOT author-gated (the arrangement is shared),
     // so it can't ride on canManage — but it is still a write, so it goes away
     // when the center isn't ours.
@@ -496,8 +497,8 @@ export default function TaskBoard({ notes, width, isReadOnly, canManage, onSaved
             </div>
             <div className="space-y-2.5">
               <AnimatePresence>
-                {lanes[l.key].map((note) => (
-                  <TaskCard key={note.id} note={note} board={null} {...cardProps(note)} />
+                {lanes[l.key].map((task) => (
+                  <TaskCard key={task.id} task={task} board={null} {...cardProps(task)} />
                 ))}
               </AnimatePresence>
               {!isReadOnly && (
@@ -543,10 +544,10 @@ export default function TaskBoard({ notes, width, isReadOnly, canManage, onSaved
           {/* flatMap, not nested maps: AnimatePresence wants its children in one
               flat keyed list to track exits. */}
           {LANES.flatMap((l, laneIdx) =>
-            lanes[l.key].map((note, row) => (
+            lanes[l.key].map((task, row) => (
               <TaskCard
-                key={note.id}
-                note={note}
+                key={task.id}
+                task={task}
                 board={{
                   x: laneIdx * (layout.colW + GAP) + PAD,
                   y: layout.geom[l.key].offsets[row],
@@ -554,7 +555,7 @@ export default function TaskBoard({ notes, width, isReadOnly, canManage, onSaved
                   maxX: layout.maxX,
                   maxY: layout.maxY,
                 }}
-                {...cardProps(note)}
+                {...cardProps(task)}
               />
             )),
           )}
