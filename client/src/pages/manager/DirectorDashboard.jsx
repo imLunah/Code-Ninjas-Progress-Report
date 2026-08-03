@@ -57,6 +57,20 @@ const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const dayKey = (d) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+// Calendar maths. setDate() is DST safe in a way that adding milliseconds is
+// not, so every date shift goes through addDays rather than arithmetic on the
+// timestamp.
+const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const startOfWeek = (d) => { const x = startOfDay(d); return addDays(x, -x.getDay()); };
+const startOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
+const endOfMonth = (d) => new Date(d.getFullYear(), d.getMonth() + 1, 0);
+const daysBetween = (a, b) => Math.round((startOfDay(b) - startOfDay(a)) / 86400000);
+const sameDay = (a, b) => dayKey(a) === dayKey(b);
+
+const within = (rows, span) =>
+  span ? rows.filter((r) => r.date >= span.start && r.date <= span.end) : [];
+
 // The API only returns days that had a check-in. Expand to every day from the
 // first one on record through today, so the chart has an even x axis and quiet
 // days read as real zeroes. Ranges are then sliced off the tail of this.
@@ -107,35 +121,46 @@ function toMonths(dayRows) {
 const bucketBy = (dayRows, bucket) =>
   bucket === 'day' ? dayRows : bucket === 'month' ? toMonths(dayRows) : toWeeks(dayRows);
 
-// Average ninjas per occurrence of each weekday — a Tuesday-only center
-// shouldn't look "busiest" purely because there are more Tuesdays in range.
+// Average ninjas per occurrence of each weekday. Two things this deliberately
+// does NOT do:
+//   - divide by every calendar occurrence: a Tuesday-only center would look
+//     "busiest" purely because there are more Tuesdays in range;
+//   - count a day with no check-ins as a zero. No center opens Sunday, and
+//     today is still in progress, so those are days that didn't happen, not
+//     quiet days. Averaging them in dragged real weekdays down and printed the
+//     current weekday as a dash on the week view.
+// A weekday with no open days in range gets open: 0 and the row says "closed"
+// rather than a number that isn't true.
 function byWeekday(dayRows) {
-  const acc = Array.from({ length: 7 }, () => ({ total: 0, n: 0 }));
+  const acc = Array.from({ length: 7 }, () => ({ total: 0, open: 0 }));
   for (const row of dayRows) {
+    if (row.count === 0) continue;
     const w = row.date.getDay();
     acc[w].total += row.count;
-    acc[w].n += 1;
+    acc[w].open += 1;
   }
   return acc.map((a, i) => ({
     index: i,
     name: WEEKDAYS[i],
     short: WEEKDAYS_SHORT[i],
-    avg: a.n ? a.total / a.n : 0,
+    avg: a.open ? a.total / a.open : 0,
+    open: a.open,
     total: a.total,
   }));
 }
 
-// Peak day, weekly pace, and the change against the equally-long window before.
+// Peak day, weekly pace, and the change against the matching window before.
 // Shared by the card and the expanded view so the two can't drift apart.
-// `days` null means every day on record.
-function summarize(dayRows, days) {
-  const inRange = days ? dayRows.slice(-days) : dayRows;
+// The caller picks both windows, so a partial period (this week, two days in)
+// is compared against the same two days of the week before rather than against
+// a full seven that would read as a collapse.
+function summarize(inRange, prior = []) {
   const total = inRange.reduce((s, d) => s + d.count, 0);
   const peak = inRange.reduce((best, d) => (d.count > (best?.count ?? -1) ? d : best), null);
   const perWeek = inRange.length ? (total / inRange.length) * 7 : 0;
-  const prior = days ? dayRows.slice(-(days * 2), -days) : [];
   const priorTotal = prior.reduce((s, d) => s + d.count, 0);
-  // Needs a FULL prior window, else a half-empty one reads as a fake collapse.
+  // Needs an equally long prior window with something in it, else the number is
+  // measuring missing history rather than a real change.
   const hasPrior = prior.length === inRange.length && priorTotal > 0;
   return {
     total,
@@ -262,7 +287,10 @@ function StatRow({ label, sub, value, tone = 'text-ninja-navy' }) {
 function CheckInTrend({ dayRows, onExpand }) {
   const weeks = useMemo(() => toWeeks(dayRows, CARD_WEEKS), [dayRows]);
   // Same span the chart draws, so the numbers describe the curve above them.
-  const stats = useMemo(() => summarize(dayRows, CARD_WEEKS * 7), [dayRows]);
+  const stats = useMemo(() => {
+    const days = CARD_WEEKS * 7;
+    return summarize(dayRows.slice(-days), dayRows.slice(-(days * 2), -days));
+  }, [dayRows]);
 
   if (weeks.length === 0) {
     // Composed empty state rather than a bare line of grey text: a flat baseline
@@ -334,38 +362,121 @@ function CheckInTrend({ dayRows, onExpand }) {
   );
 }
 
+// Calendar periods, not rolling windows. "Week" used to mean the last seven
+// days, so on a Monday the range ran Tue to Mon: the only Monday in it was
+// today, still in progress, and the weekday breakdown printed a dash for it.
+// A director reading "this week" means the week they are standing in.
+//
+// span() returns the inclusive day range. prior() returns the window the period
+// is measured against: shifted a whole week for the week periods (so a partial
+// week meets the same partial week before it) and the previous calendar month
+// for the month one, clipped to the same number of days.
+// pace: the middle stat reads as ninjas a week rather than a period total,
+// which only says anything over a span longer than a few weeks.
 const RANGES = [
-  { key: 'week',  label: 'Week',     days: 7,    bucket: 'day',   tail: 'Today' },
-  { key: 'month', label: 'Month',    days: 30,   bucket: 'day',   tail: 'Today' },
-  { key: 'six',   label: '6 months', days: 182,  bucket: 'week',  tail: 'This week' },
-  { key: 'all',   label: 'All time', days: null, bucket: 'month', tail: 'This month' },
+  {
+    key: 'thisWeek',
+    label: 'This week',
+    bucket: 'day',
+    compare: 'vs the same days last week',
+    span: (now) => ({ start: startOfWeek(now), end: startOfDay(now) }),
+    prior: (s) => ({ start: addDays(s.start, -7), end: addDays(s.end, -7) }),
+  },
+  {
+    key: 'lastWeek',
+    label: 'Last week',
+    bucket: 'day',
+    compare: 'vs the week before',
+    span: (now) => ({ start: addDays(startOfWeek(now), -7), end: addDays(startOfWeek(now), -1) }),
+    prior: (s) => ({ start: addDays(s.start, -7), end: addDays(s.end, -7) }),
+  },
+  {
+    key: 'lastMonth',
+    label: 'Last month',
+    bucket: 'day',
+    compare: 'vs the month before',
+    span: (now) => {
+      const m = startOfMonth(addDays(startOfMonth(now), -1));
+      return { start: m, end: endOfMonth(m) };
+    },
+    prior: (s) => {
+      const p = startOfMonth(addDays(s.start, -1));
+      return { start: p, end: addDays(p, daysBetween(s.start, s.end)) };
+    },
+  },
+  {
+    key: 'six',
+    label: '6 months',
+    bucket: 'week',
+    pace: true,
+    compare: 'vs the 6 months before',
+    span: (now) => ({ start: addDays(startOfDay(now), -181), end: startOfDay(now) }),
+    prior: (s) => ({ start: addDays(s.start, -182), end: addDays(s.end, -182) }),
+  },
+  {
+    key: 'all',
+    label: 'All time',
+    bucket: 'month',
+    pace: true,
+    compare: null,
+    span: (now, first) => ({ start: first ?? startOfDay(now), end: startOfDay(now) }),
+    prior: null,
+  },
 ];
 
-function CheckInDetail({ dayRows }) {
-  const [rangeKey, setRangeKey] = useState('month');
-  const range = RANGES.find((r) => r.key === rangeKey) || RANGES[1];
+const TAIL_LABEL = { day: 'Today', week: 'This week', month: 'This month' };
 
-  const inRange = useMemo(
-    () => (range.days ? dayRows.slice(-range.days) : dayRows),
-    [dayRows, range.days],
-  );
-  const series = useMemo(() => bucketBy(inRange, range.bucket), [inRange, range.bucket]);
-  const weekdays = useMemo(() => byWeekday(inRange), [inRange]);
+function CheckInDetail({ dayRows }) {
+  // Opens on the week the director is standing in, unless it hasn't started
+  // yet. Monday before the first check-in, "this week" is a blank chart and a
+  // dead end, so the panel opens on the last finished week instead.
+  const [rangeKey, setRangeKey] = useState(() => {
+    const thisWeek = within(dayRows, RANGES[0].span(startOfDay(new Date())));
+    return thisWeek.some((d) => d.count > 0) ? 'thisWeek' : 'lastWeek';
+  });
+  const range = RANGES.find((r) => r.key === rangeKey) || RANGES[0];
+
+  const { inRange, series, weekdays, stats, span } = useMemo(() => {
+    const now = startOfDay(new Date());
+    const s = range.span(now, dayRows[0]?.date);
+    const rows = within(dayRows, s);
+
+    // The comparison drops today. A period still running would otherwise be
+    // measured with a few hours of check-ins against a whole finished day, and
+    // a director opening the dashboard at nine in the morning would be told the
+    // week had collapsed. Complete days only; if there aren't any yet, there is
+    // no comparison to make and the tile says so.
+    const live = sameDay(s.end, now);
+    const cmpSpan = live ? { start: s.start, end: addDays(s.end, -1) } : s;
+    const cmp = summarize(
+      live ? within(dayRows, cmpSpan) : rows,
+      range.prior ? within(dayRows, range.prior(cmpSpan)) : [],
+    );
+
+    return {
+      span: s,
+      inRange: rows,
+      series: bucketBy(rows, range.bucket),
+      weekdays: byWeekday(rows),
+      stats: { ...summarize(rows), delta: cmp.delta },
+    };
+  }, [dayRows, range]);
+
+  const { peak, perWeek, delta, total } = stats;
 
   const maxAvg = Math.max(0.001, ...weekdays.map((w) => w.avg));
-  const ranked = [...weekdays].filter((w) => w.total > 0).sort((a, b) => b.avg - a.avg);
+  const ranked = [...weekdays].filter((w) => w.open > 0).sort((a, b) => b.avg - a.avg);
   const busiest = ranked[0];
   const quietest = ranked[ranked.length - 1];
 
-  // Peak single day in range, weekly pace, and how the range compares to the
-  // equally-long window before it — the raw totals said nothing actionable.
-  // Same helper the card uses, so the two readouts can't disagree.
-  const { peak, perWeek, delta } = useMemo(
-    () => summarize(dayRows, range.days),
-    [dayRows, range.days],
-  );
-
   const axisLabel = (d) => (range.bucket === 'month' ? monthShort(d) : shortDate(d));
+  // The period runs to today for the live ranges and to a real date for the
+  // closed ones, so the last axis label says which.
+  const tailLabel = sameDay(span.end, startOfDay(new Date()))
+    ? TAIL_LABEL[range.bucket]
+    : series.length
+      ? axisLabel(series[series.length - 1].date)
+      : '';
 
   return (
     <div className="space-y-5">
@@ -387,92 +498,116 @@ function CheckInDetail({ dayRows }) {
         ))}
       </div>
 
-      {/* Trend */}
-      <div>
-        <AreaChart
-          key={rangeKey}
-          points={series}
-          height={170}
-          gradientId="checkInDetailFill"
-          formatLabel={TOOLTIP_LABEL[range.bucket]}
-        />
-        <div className="flex justify-between font-ninja text-[11px] text-ninja-muted mt-1">
-          <span>{series.length ? axisLabel(series[0].date) : ''}</span>
-          <span>{series.length > 2 ? axisLabel(series[Math.floor(series.length / 2)].date) : ''}</span>
-          <span>{range.tail}</span>
-        </div>
-      </div>
+      {/* A closed period with nothing in it is a real answer, not a blank
+          chart with three zeroes under it. */}
+      {total === 0 ? (
+        <p className="font-ninja text-sm text-ninja-muted py-6">
+          No check-ins on record for {range.label.toLowerCase()}.
+        </p>
+      ) : (
+        <>
+          {/* Trend */}
+          <div>
+            <AreaChart
+              key={rangeKey}
+              points={series}
+              height={170}
+              gradientId="checkInDetailFill"
+              formatLabel={TOOLTIP_LABEL[range.bucket]}
+            />
+            <div className="flex justify-between font-ninja text-[11px] text-ninja-muted mt-1">
+              <span>{axisLabel(series[0].date)}</span>
+              <span>{series.length > 2 ? axisLabel(series[Math.floor(series.length / 2)].date) : ''}</span>
+              <span>{tailLabel}</span>
+            </div>
+          </div>
 
-      {/* Headline stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-xl bg-ninja-bg p-3">
-          <span className="block text-xl font-black font-ninja text-ninja-navy leading-none tabular-nums">
-            {peak?.count ?? 0}
-          </span>
-          <span className="font-ninja text-xs text-ninja-muted">
-            busiest day{peak?.count ? ` · ${shortDate(peak.date)}` : ''}
-          </span>
-        </div>
-        <div className="rounded-xl bg-ninja-bg p-3">
-          <span className="block text-xl font-black font-ninja text-ninja-navy leading-none tabular-nums">
-            {Math.round(perWeek)}
-          </span>
-          <span className="font-ninja text-xs text-ninja-muted">ninjas a week</span>
-        </div>
-        <div className="rounded-xl bg-ninja-bg p-3">
-          {delta === null ? (
-            <>
-              <span className="block text-xl font-black font-ninja text-ninja-muted leading-none">—</span>
-              <span className="font-ninja text-xs text-ninja-muted">no earlier data</span>
-            </>
-          ) : (
-            <>
-              <span
-                className={`block text-xl font-black font-ninja leading-none tabular-nums ${
-                  delta > 0 ? 'text-emerald-500' : delta < 0 ? 'text-ninja-red' : 'text-ninja-navy'
-                }`}
-              >
-                {delta > 0 ? '+' : ''}{delta}%
+          {/* Headline stats */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-xl bg-ninja-bg p-3">
+              <span className="block text-xl font-black font-ninja text-ninja-navy leading-none tabular-nums">
+                {peak?.count ?? 0}
               </span>
-              <span className="font-ninja text-xs text-ninja-muted">vs previous {range.label.toLowerCase()}</span>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Busy days */}
-      <div>
-        <h3 className="font-ninja font-bold text-ninja-navy mb-2">Busiest days</h3>
-        <div className="space-y-1.5">
-          {weekdays.map((w) => (
-            <div key={w.index} className="flex items-center gap-3">
-              <span className="font-ninja text-xs text-ninja-muted w-9 flex-shrink-0">{w.short}</span>
-              <div className="flex-1 h-5 rounded-md bg-ninja-bg overflow-hidden">
-                <motion.div
-                  className={`h-full rounded-md ${w.index === busiest?.index ? 'bg-ninja-blue' : 'bg-ninja-blue/40'}`}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(w.avg / maxAvg) * 100}%` }}
-                  transition={{ duration: 0.5, ease: 'easeOut', delay: 0.04 * w.index }}
-                />
-              </div>
-              <span className="font-ninja text-xs font-bold text-ninja-navy w-10 text-right flex-shrink-0 tabular-nums">
-                {w.avg ? w.avg.toFixed(1) : '—'}
+              <span className="font-ninja text-xs text-ninja-muted">
+                busiest day{peak?.count ? ` · ${shortDate(peak.date)}` : ''}
               </span>
             </div>
-          ))}
-        </div>
-        <p className="font-ninja text-xs text-ninja-muted mt-2">Average ninjas per weekday.</p>
-      </div>
+            {/* Over a week or a month the pace figure was just the total wearing
+                a different hat, and on a part-finished week it extrapolated two
+                days into a full one. Short periods report what happened. */}
+            <div className="rounded-xl bg-ninja-bg p-3">
+              <span className="block text-xl font-black font-ninja text-ninja-navy leading-none tabular-nums">
+                {range.pace ? Math.round(perWeek) : total}
+              </span>
+              <span className="font-ninja text-xs text-ninja-muted">
+                {range.pace ? 'ninjas a week' : 'check-ins'}
+              </span>
+            </div>
+            <div className="rounded-xl bg-ninja-bg p-3">
+              {delta === null ? (
+                <>
+                  <span className="block text-xl font-black font-ninja text-ninja-muted leading-none">—</span>
+                  <span className="font-ninja text-xs text-ninja-muted">no earlier data</span>
+                </>
+              ) : (
+                <>
+                  <span
+                    className={`block text-xl font-black font-ninja leading-none tabular-nums ${
+                      delta > 0 ? 'text-emerald-500' : delta < 0 ? 'text-ninja-red' : 'text-ninja-navy'
+                    }`}
+                  >
+                    {delta > 0 ? '+' : ''}{delta}%
+                  </span>
+                  <span className="font-ninja text-xs text-ninja-muted">{range.compare}</span>
+                </>
+              )}
+            </div>
+          </div>
 
-      {busiest && (
-        <p className="font-ninja text-sm text-ninja-navy">
-          <span className="font-bold">{busiest.name}</span> is your busiest day at{' '}
-          {busiest.avg.toFixed(1)} ninjas on average
-          {quietest && quietest.index !== busiest.index && (
-            <>, <span className="font-bold">{quietest.name}</span> the quietest at {quietest.avg.toFixed(1)}</>
+          {/* Busy days */}
+          <div>
+            <h3 className="font-ninja font-bold text-ninja-navy mb-2">Busiest days</h3>
+            <div className="space-y-1.5">
+              {weekdays.map((w) => (
+                <div key={w.index} className="flex items-center gap-3">
+                  <span className="font-ninja text-xs text-ninja-muted w-9 flex-shrink-0">{w.short}</span>
+                  <div className="flex-1 h-5 rounded-md bg-ninja-bg overflow-hidden">
+                    <motion.div
+                      className={`h-full rounded-md ${w.index === busiest?.index ? 'bg-ninja-blue' : 'bg-ninja-blue/40'}`}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(w.avg / maxAvg) * 100}%` }}
+                      transition={{ duration: 0.5, ease: 'easeOut', delay: 0.04 * w.index }}
+                    />
+                  </div>
+                  {/* A weekday the center was never open for in this period says
+                      so. It used to print an average of nothing as a dash that
+                      looked identical to a day with no ninjas. */}
+                  <span
+                    className={`font-ninja text-xs w-14 text-right flex-shrink-0 tabular-nums ${
+                      w.open ? 'font-bold text-ninja-navy' : 'text-ninja-muted'
+                    }`}
+                  >
+                    {w.open ? w.avg.toFixed(1) : 'closed'}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="font-ninja text-xs text-ninja-muted mt-2">
+              Average ninjas on the days the center was open.
+            </p>
+          </div>
+
+          {busiest && (
+            <p className="font-ninja text-sm text-ninja-navy">
+              <span className="font-bold">{busiest.name}</span> is your busiest day at{' '}
+              {busiest.avg.toFixed(1)} ninjas on average
+              {quietest && quietest.index !== busiest.index && (
+                <>, <span className="font-bold">{quietest.name}</span> the quietest at {quietest.avg.toFixed(1)}</>
+              )}
+              .
+            </p>
           )}
-          .
-        </p>
+        </>
       )}
     </div>
   );
