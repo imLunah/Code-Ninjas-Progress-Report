@@ -18,6 +18,12 @@ export const LANES = [
 ];
 export const LANE_INDEX = Object.fromEntries(LANES.map((l, i) => [l.key, i]));
 
+// The page itself is painted in ninja-bg, so a column filled with that token
+// would be invisible in both themes. A tint of the opposite ink lifts off the
+// page either way, and opacity utilities deliberately escape the .dark bg
+// overrides, which is the one time that behaviour is wanted.
+export const COLUMN_SURFACE = 'bg-black/[0.035] dark:bg-white/[0.04]';
+
 // Description markdown. Everything inherits currentColor. Images dropped: CSP
 // allows wildcard Supabase for img-src, so a remote image in shared text is an
 // open-time beacon.

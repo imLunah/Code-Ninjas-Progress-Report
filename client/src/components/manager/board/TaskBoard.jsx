@@ -11,7 +11,7 @@ import { PANEL } from '../../../lib/surfaces';
 import { today } from '../../../utils/dateUtils';
 import {
   GAP, SPRING, clamp, MD, mdUrl, shortDate, dayLabel, firstName,
-  LANES, LANE_INDEX, IconButton, DiscardButton,
+  LANES, LANE_INDEX, COLUMN_SURFACE, IconButton, DiscardButton,
   useReportedHeight, splitLanes, flattenLanes,
 } from './boardShared';
 
@@ -27,12 +27,6 @@ const CATEGORIES = [
   { key: 'other',        label: 'Other',         chip: null },
 ];
 const categoryOf = (key) => CATEGORIES.find((c) => c.key === key) || CATEGORIES[3];
-
-// The page itself is painted in ninja-bg, so a column filled with that token
-// would be invisible in both themes. A tint of the opposite ink lifts off the
-// page either way, and opacity utilities deliberately escape the .dark bg
-// overrides, which is the one time that behaviour is wanted.
-const COLUMN_SURFACE = 'bg-black/[0.035] dark:bg-white/[0.04]';
 
 const COL_MIN_W = 264;
 const PAD = 12;        // column padding
@@ -133,6 +127,38 @@ function CategoryPicker({ value, onChange }) {
         </button>
       ))}
     </div>
+  );
+}
+
+// What a card looks like, with nothing you can do to it. Split out so the
+// dashboard preview shows the real card rather than a line of text pretending
+// to be one: two things claiming to be the same board should not be drawn by
+// two pieces of code that can drift apart.
+export function TaskFace({ task }) {
+  return (
+    <>
+      <CategoryChip category={task.category} />
+      <h4 className={`font-ninja font-bold text-ninja-navy text-sm leading-snug text-pretty ${task.category !== 'other' ? 'mt-1.5' : ''}`}>
+        {task.title || task.body}
+      </h4>
+      {task.title && task.body && (
+        // A preview, not the whole thing. Opening the card is what shows the
+        // rest, and a column of full descriptions is a column you scroll
+        // instead of scan.
+        <div
+          className="font-ninja text-xs text-ninja-muted mt-1.5 break-words overflow-hidden"
+          style={{ maxHeight: '3.4rem' }}
+        >
+          <ReactMarkdown components={MD} urlTransform={mdUrl}>{task.body}</ReactMarkdown>
+        </div>
+      )}
+      {(task.due_date || task.assignee_id) && (
+        <div className="flex flex-wrap items-center gap-1.5 mt-2">
+          {task.due_date && <DueChip due={task.due_date} status={task.status} />}
+          {task.assignee_id && <AssigneeChip name={task.assignee_name} />}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -314,28 +340,7 @@ function TaskCard({
         />
       ) : (
         <>
-          <CategoryChip category={task.category} />
-          <h4 className={`font-ninja font-bold text-ninja-navy text-sm leading-snug text-pretty ${task.category !== 'other' ? 'mt-1.5' : ''}`}>
-            {task.title || task.body}
-          </h4>
-          {task.title && task.body && (
-            // A preview, not the whole thing. Opening the card is what shows the
-            // rest, and a column of full descriptions is a column you scroll
-            // instead of scan.
-            <div
-              className="font-ninja text-xs text-ninja-muted mt-1.5 break-words overflow-hidden"
-              style={{ maxHeight: '3.4rem' }}
-            >
-              <ReactMarkdown components={MD} urlTransform={mdUrl}>{task.body}</ReactMarkdown>
-            </div>
-          )}
-
-          {(task.due_date || task.assignee_id) && (
-            <div className="flex flex-wrap items-center gap-1.5 mt-2">
-              {task.due_date && <DueChip due={task.due_date} status={task.status} />}
-              {task.assignee_id && <AssigneeChip name={task.assignee_name} />}
-            </div>
-          )}
+          <TaskFace task={task} />
 
           <div className="flex items-center justify-between gap-2 mt-2.5 pt-2 border-t border-ninja-border">
             <span className="font-ninja text-[11px] text-ninja-muted truncate">
