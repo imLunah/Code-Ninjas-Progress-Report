@@ -43,10 +43,18 @@ const COLORS = {
 };
 const ORDER = ['yellow', 'blue', 'green', 'pink', 'purple'];
 
-// Lanes. A note is a note whether it is a reminder or a cancellation to chase:
-// what a task adds is a stage, so the board grew lanes rather than the app
-// growing a second board with its own page, table and vocabulary. Colour stays
-// free-form, which is how a real wall of paper gets categorised anyway.
+// Two boards share this section. The wall is what it always was: paper in no
+// particular order beyond the one you put it in. The lanes are the center's
+// work moving along. A note lives on one board or the other, which is what lets
+// each own its ordering — a position in a lane and a position on a wall cannot
+// both be sort_order for the same row.
+const MODES = [
+  { key: 'notes', label: 'Notes' },
+  { key: 'tasks', label: 'Tasks' },
+];
+const MODE_INDEX = Object.fromEntries(MODES.map((m, i) => [m.key, i]));
+const MODE_STORAGE = 'notes-board-mode';
+
 const LANES = [
   { key: 'todo',  label: 'To do' },
   { key: 'doing', label: 'In progress' },
@@ -60,17 +68,20 @@ const LANE_INDEX = Object.fromEntries(LANES.map((l, i) => [l.key, i]));
 
 // Every note is the same piece of paper. Long text scrolls inside it rather than
 // stretching the note, so the board stays an even wall instead of a ragged one.
-const MIN_NOTE_W = 248;
+const NOTE_W = 248;
 const NOTE_H = 200;
 const GAP = 16;
 
-// Three lanes of paper is the least this can be. Below it the lanes stack as
-// plain lists and dragging is off: slot maths needs a stable canvas width, and
-// a drag surface on a phone fights both page scroll and the app's own swipe
-// navigation. Cards still move lane there, by the arrows on the card.
-const BOARD_MIN_W = LANES.length * MIN_NOTE_W + (LANES.length - 1) * GAP;
+// Below these widths the notes flow in a plain grid and dragging is off. Slot
+// maths needs a stable canvas width, and a drag surface on a phone fights both
+// page scroll and the app's own swipe navigation.
+const WALL_MIN_W = NOTE_W * 2 + GAP;
+const LANES_MIN_W = LANES.length * NOTE_W + (LANES.length - 1) * GAP;
+
+const GRID = 'grid grid-cols-1 sm:grid-cols-2 gap-4 items-start';
 
 const SPRING = { type: 'spring', stiffness: 520, damping: 42, mass: 0.7 };
+const EASE = [0.23, 1, 0.32, 1];
 
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 
@@ -78,22 +89,19 @@ const doneOn = (iso) =>
   new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
 // Notes occupy slots, never free coordinates: a note is always in exactly one
-// cell of one lane, so two can't end up stacked on each other and the board is
-// never taller than the rows it holds.
-const slotFor = (lane, row, laneW) => ({
-  x: lane * (laneW + GAP),
-  y: row * (NOTE_H + GAP),
-});
+// cell, so two can't end up stacked on each other and the board is never taller
+// than the rows it holds.
+const slotFor = (col, row, w) => ({ x: col * (w + GAP), y: row * (NOTE_H + GAP) });
 
-// Which lane and row is the dragged note sitting over. Pure maths against the
-// grid, not a hit-test against sibling rects, which would read positions
-// mid-animation and make the order flicker while the others are still sliding.
-const laneAt = (x, laneW) => clamp(Math.round(x / (laneW + GAP)), 0, LANES.length - 1);
-const rowAt = (y, count) => clamp(Math.round(y / (NOTE_H + GAP)), 0, count);
+// Which cell is the dragged note sitting over. Pure maths against the grid, not
+// a hit-test against sibling rects, which would read positions mid-animation
+// and make the order flicker while the others are still sliding.
+const colAt = (x, w, cols) => clamp(Math.round(x / (w + GAP)), 0, cols - 1);
+const rowAt = (y, max) => clamp(Math.round(y / (NOTE_H + GAP)), 0, max);
 
-// The board is held as one flat list; the lanes are a view of it. Rebuilding in
-// lane order after every move keeps the list and the board describing the same
-// thing, so what gets persisted is exactly what is on screen.
+// The lane board is held as one flat list; the lanes are a view of it.
+// Rebuilding in lane order after every move keeps the list and the board
+// describing the same thing, so what gets persisted is what is on screen.
 const split = (notes, skipId) => {
   const lanes = {};
   for (const l of LANES) lanes[l.key] = [];
@@ -104,6 +112,8 @@ const split = (notes, skipId) => {
   return lanes;
 };
 const flatten = (lanes) => LANES.flatMap((l) => lanes[l.key]);
+
+/* -------------------------------------------------------------- controls -- */
 
 function ColorDots({ value, onChange }) {
   return (
@@ -174,10 +184,44 @@ function ConfirmButton({ onClick, disabled, label }) {
   );
 }
 
+// The two boards are one control, not two links: a pill that slides between
+// them, the same shape as the login toggle. layoutId does the travel, so the
+// pill is the thing that moves rather than two states cross-fading.
+function BoardSwitch({ mode, onChange }) {
+  return (
+    <div className="inline-flex items-center rounded-full bg-ninja-bg p-1" role="tablist" aria-label="Board">
+      {MODES.map((m) => (
+        <button
+          key={m.key}
+          type="button"
+          role="tab"
+          aria-selected={mode === m.key}
+          onClick={() => onChange(m.key)}
+          className="relative px-3.5 py-1.5 rounded-full font-ninja text-sm font-bold"
+        >
+          {mode === m.key && (
+            <motion.span
+              layoutId="board-switch-pill"
+              className="absolute inset-0 rounded-full bg-white shadow-sm"
+              transition={{ type: 'spring', stiffness: 480, damping: 38 }}
+            />
+          )}
+          <span className={`relative z-10 transition-colors ${mode === m.key ? 'text-ninja-navy' : 'text-ninja-muted'}`}>
+            {m.label}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ card -- */
+
 function NoteCard({
   note,
   canManage,
   canReorder = true,
+  showLaneMove,
   onSaved,
   onDeleted,
   board,
@@ -202,7 +246,7 @@ function NoteCard({
   const settled = useRef(false);
 
   // Slide to the slot this note now owns: when the order changes around it,
-  // when the board reflows to a new lane width, and when a drag is released.
+  // when the board reflows to a new width, and when a drag is released.
   useEffect(() => {
     if (!board || dragging) return;
     if (!settled.current) {
@@ -220,6 +264,7 @@ function NoteCard({
   // Dragging is off while editing so selecting text inside a note doesn't drag
   // the paper out from under the cursor.
   const canDrag = !!board && !editing && canReorder;
+  const isDone = showLaneMove && note.status === 'done';
 
   return (
     <motion.div
@@ -249,7 +294,7 @@ function NoteCard({
         zIndex: dragging ? 30 : 1,
         // Finished work stays legible but stops competing with the work that
         // isn't. The paper fades, not the text on it.
-        opacity: note.status === 'done' && !editing ? 0.72 : 1,
+        opacity: isDone && !editing ? 0.72 : 1,
         // Tinted rather than black so the shadow belongs to the paper. It lifts
         // while the note is in hand.
         boxShadow: dragging
@@ -298,16 +343,13 @@ function NoteCard({
           </div>
           <div className="flex items-center justify-between mt-3 pt-2 border-t flex-shrink-0" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
             <span className="font-ninja text-[11px] font-semibold opacity-80 truncate">
-              {note.status === 'done' && note.completed_at
-                ? `Done ${doneOn(note.completed_at)}`
-                : note.created_by_name || 'Unknown'}
+              {isDone && note.completed_at ? `Done ${doneOn(note.completed_at)}` : note.created_by_name || 'Unknown'}
             </span>
             <div className="flex items-center gap-0.5 flex-shrink-0">
-              {/* Without a board there is no dragging, so the lane arrows are
-                  how a note moves along. They are on the card in both modes:
-                  on a phone they are the only way, and on a desk they beat
-                  dragging for a single step. */}
-              {canReorder && !confirmDel && (
+              {/* Lane arrows only on the task board, and there they are on the
+                  card in both layouts: on a phone they are the only way to move
+                  a note along, and on a desk they beat dragging for one step. */}
+              {showLaneMove && canReorder && !confirmDel && (
                 <>
                   {lane > 0 && (
                     <NoteAction onClick={() => onMoveLane(note, -1)} label={`Move to ${LANES[lane - 1].label}`}>
@@ -362,6 +404,124 @@ function NoteCard({
   );
 }
 
+/* ------------------------------------------------------- measured canvas -- */
+
+// Both boards need the same thing: the real pixel width of the space they were
+// given. Slot maths off a guessed width puts notes where the cursor isn't.
+function useMeasuredWidth(deps) {
+  const ref = useRef(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    setWidth(el.getBoundingClientRect().width);
+    const ro = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, deps);
+  return [ref, width];
+}
+
+/* ------------------------------------------------------------ notes wall -- */
+
+function NotesWall({ notes, cardProps, isReadOnly, onArrange, onAdd }) {
+  const [ref, boardW] = useMeasuredWidth([notes.length === 0]);
+
+  // Two notes side by side is the least that can be rearranged.
+  const boardOn = boardW >= WALL_MIN_W;
+
+  const layout = useMemo(() => {
+    if (!boardOn || notes.length === 0) return null;
+    const cols = Math.max(1, Math.floor((boardW + GAP) / (NOTE_W + GAP)));
+    const rows = Math.ceil(notes.length / cols);
+    return {
+      cols,
+      // Exactly the rows in use. No spare space at the bottom: there is nowhere
+      // to drop a note that isn't already a slot.
+      height: rows * (NOTE_H + GAP) - GAP,
+      maxX: Math.max(0, boardW - NOTE_W),
+      maxY: Math.max(0, (rows - 1) * (NOTE_H + GAP)),
+    };
+  }, [notes.length, boardW, boardOn]);
+
+  // Live reorder while a note is held: the others slide out of the way so the
+  // gap under the cursor is always the slot it will land in.
+  const dragToSlot = useCallback((id, x, y) => {
+    onArrange((prev) => {
+      const cols = Math.max(1, Math.floor((boardW + GAP) / (NOTE_W + GAP)));
+      const from = prev.findIndex((n) => n.id === id);
+      const to = clamp(
+        rowAt(y, Math.ceil(prev.length / cols)) * cols + colAt(x, NOTE_W, cols),
+        0,
+        prev.length - 1,
+      );
+      if (from === -1 || from === to) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }, [boardW, onArrange]);
+
+  // Persist on release, not on every slot change during the drag. One group,
+  // no lane: the wall has no stages, and sending one would quietly give every
+  // sticky on it a stage it doesn't have.
+  const persistOrder = useCallback(() => {
+    onArrange((current) => {
+      api.patch('/director-notes/reorder', { lanes: [{ ids: current.map((n) => n.id) }] })
+        .catch(() => { /* arrangement is corrected on next load */ });
+      return current;
+    });
+  }, [onArrange]);
+
+  if (notes.length === 0) {
+    return isReadOnly ? (
+      // Nothing to pin here, and no invitation to try.
+      <p className="font-ninja text-sm text-ninja-muted">No notes at this center.</p>
+    ) : (
+      // Shaped like the note it will become, so the empty board already shows
+      // you the size of the thing you are about to pin.
+      <button
+        type="button"
+        onClick={onAdd}
+        style={{ height: NOTE_H }}
+        className="group w-full sm:w-[248px] rounded-xl border border-dashed border-ninja-border p-3.5 flex flex-col items-start justify-center text-left transition-colors hover:border-ninja-blue/60"
+      >
+        <span className="w-9 h-9 rounded-full border border-dashed border-ninja-border group-hover:border-ninja-blue/60 flex items-center justify-center text-ninja-muted group-hover:text-ninja-blue transition-colors">
+          <PlusIcon className="w-4 h-4" />
+        </span>
+        <span className="block font-ninja text-sm font-bold text-ninja-navy mt-3">Pin the first note</span>
+        <span className="block font-ninja text-xs text-ninja-muted mt-1 text-pretty">
+          For yourself, or for the other directors here. Everyone at this center sees the same board.
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <div
+      ref={ref}
+      className={layout ? 'relative' : GRID}
+      style={layout ? { height: layout.height } : undefined}
+    >
+      <AnimatePresence>
+        {notes.map((note, i) => (
+          <NoteCard
+            key={note.id}
+            note={note}
+            board={layout ? { ...slotFor(i % layout.cols, Math.floor(i / layout.cols), NOTE_W), w: NOTE_W, maxX: layout.maxX, maxY: layout.maxY } : null}
+            onDragToSlot={dragToSlot}
+            onDropped={persistOrder}
+            {...cardProps(note)}
+          />
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------- task lanes -- */
+
 function LaneHeading({ lane, count, id }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
@@ -371,46 +531,10 @@ function LaneHeading({ lane, count, id }) {
   );
 }
 
-export default function DirectorStickyNotes() {
-  // isReadOnly: a director viewing a center they aren't assigned to. The server
-  // refuses every write here (all of /director-notes is requireOwnLocation), so
-  // without this the board would offer add/edit/delete/drag that only 403.
-  const { user, isReadOnly } = useAuth();
-  const [notes, setNotes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState('');
-  const [color, setColor] = useState('yellow');
-  const [busy, setBusy] = useState(false);
-  const [boardW, setBoardW] = useState(0);
-  const boardRef = useRef(null);
-
-  // Slot maths needs a measured canvas: the lane width, the drag limits and the
-  // board height all come off the real pixel width.
-  useEffect(() => {
-    const el = boardRef.current;
-    if (!el) return;
-    setBoardW(el.getBoundingClientRect().width);
-    const ro = new ResizeObserver(([entry]) => setBoardW(entry.contentRect.width));
-    ro.observe(el);
-    return () => ro.disconnect();
-    // The container only exists once there is something to show, so re-run when
-    // the board appears — otherwise pinning the first note leaves it unmeasured.
-  }, [loading, notes.length === 0]);
-
-  useEffect(() => {
-    let alive = true;
-    api.get('/director-notes')
-      .then((data) => { if (alive) { setNotes(data || []); setLoading(false); } })
-      .catch(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
-  }, [user?.activeLocation?.id]);
-
-  const canManage = (note) => !isReadOnly && (note.created_by === user?.id || user?.role === 'admin');
-
+function TaskLanes({ notes, cardProps, isReadOnly, onArrange, onAdd }) {
+  const [ref, boardW] = useMeasuredWidth([notes.length === 0]);
   const lanes = useMemo(() => split(notes), [notes]);
-
-  const boardOn = boardW >= BOARD_MIN_W;
+  const boardOn = boardW >= LANES_MIN_W;
 
   const layout = useMemo(() => {
     if (!boardOn) return null;
@@ -420,24 +544,22 @@ export default function DirectorStickyNotes() {
     const rows = Math.max(1, ...LANES.map((l) => lanes[l.key].length));
     return {
       laneW,
-      // Exactly the rows in use. No spare space at the bottom: there is nowhere
-      // to drop a note that isn't already a slot.
       height: rows * (NOTE_H + GAP) - GAP,
       maxX: (LANES.length - 1) * (laneW + GAP),
       maxY: Math.max(0, (rows - 1) * (NOTE_H + GAP)),
     };
   }, [lanes, boardW, boardOn]);
 
-  // Live reorder while a note is held: the others slide out of the way so the
-  // gap under the cursor is always the slot it will land in, whichever lane
-  // that turns out to be.
+  // Lane comes from x, position from y. Same slot maths as the wall, one axis
+  // further: crossing into another lane and moving up your own are the same
+  // gesture.
   const dragToSlot = useCallback((id, x, y) => {
-    setNotes((prev) => {
+    onArrange((prev) => {
       const laneW = Math.floor((boardW - (LANES.length - 1) * GAP) / LANES.length);
       const moving = prev.find((n) => n.id === id);
       if (!moving) return prev;
 
-      const status = LANES[laneAt(x, laneW)].key;
+      const status = LANES[colAt(x, laneW, LANES.length)].key;
       const rest = split(prev, id);
       const row = rowAt(y, rest[status].length);
 
@@ -451,27 +573,28 @@ export default function DirectorStickyNotes() {
       rest[status].splice(row, 0, moving.status === status ? moving : { ...moving, status });
       return flatten(rest);
     });
-  }, [boardW]);
+  }, [boardW, onArrange]);
+
+  const persist = useCallback((current) => {
+    const grouped = split(current);
+    api.patch('/director-notes/reorder', {
+      lanes: LANES.map((l) => ({ status: l.key, ids: grouped[l.key].map((n) => n.id) })),
+    }).catch(() => { /* arrangement is corrected on next load */ });
+  }, []);
 
   // Persist on release, not on every slot change during the drag. Lane and
-  // position go up together: a note changing lane and a note changing place in
-  // its lane are the same move as far as the board is concerned.
+  // position go up together: they are one move as far as the board is
+  // concerned, so one request cannot half-apply them.
   const persistOrder = useCallback(() => {
-    setNotes((current) => {
-      const grouped = split(current);
-      api.patch('/director-notes/reorder', {
-        lanes: LANES.map((l) => ({ status: l.key, ids: grouped[l.key].map((n) => n.id) })),
-      }).catch(() => { /* arrangement is corrected on next load */ });
-      return current;
-    });
-  }, []);
+    onArrange((current) => { persist(current); return current; });
+  }, [onArrange, persist]);
 
   // One step along, from the card. Optimistic: the note lands in the next lane
   // and the arrangement is corrected on the next load if the write fails.
   const moveLane = useCallback((note, delta) => {
     const target = LANES[clamp((LANE_INDEX[note.status] ?? 0) + delta, 0, LANES.length - 1)].key;
     if (target === note.status) return;
-    setNotes((prev) => {
+    onArrange((prev) => {
       const rest = split(prev, note.id);
       rest[target].unshift({
         ...note,
@@ -481,35 +604,228 @@ export default function DirectorStickyNotes() {
         completed_at: target === 'done' ? (note.completed_at ?? new Date().toISOString()) : null,
       });
       const next = flatten(rest);
-      api.patch('/director-notes/reorder', {
-        lanes: LANES.map((l) => ({
-          status: l.key,
-          ids: next.filter((n) => n.status === l.key).map((n) => n.id),
-        })),
-      }).catch(() => { /* arrangement is corrected on next load */ });
+      persist(next);
       return next;
     });
-  }, []);
+  }, [onArrange, persist]);
+
+  if (notes.length === 0) {
+    return isReadOnly ? (
+      <p className="font-ninja text-sm text-ninja-muted">Nothing on this center's task board.</p>
+    ) : (
+      <button
+        type="button"
+        onClick={onAdd}
+        style={{ height: NOTE_H }}
+        className="group w-full sm:w-[248px] rounded-xl border border-dashed border-ninja-border p-3.5 flex flex-col items-start justify-center text-left transition-colors hover:border-ninja-blue/60"
+      >
+        <span className="w-9 h-9 rounded-full border border-dashed border-ninja-border group-hover:border-ninja-blue/60 flex items-center justify-center text-ninja-muted group-hover:text-ninja-blue transition-colors">
+          <PlusIcon className="w-4 h-4" />
+        </span>
+        <span className="block font-ninja text-sm font-bold text-ninja-navy mt-3">Add the first task</span>
+        <span className="block font-ninja text-xs text-ninja-muted mt-1 text-pretty">
+          A cancellation to chase, a re-enrollment, something to print. Move it along as it gets picked up.
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <div ref={ref}>
+      {layout ? (
+        <>
+          {/* Headings sit above the drag canvas rather than inside it: a heading
+              in the canvas is one more thing the slot maths would have to
+              reason about. */}
+          <div className="flex gap-4 mb-2" aria-hidden="true">
+            {LANES.map((l) => (
+              <div key={l.key} style={{ width: layout.laneW }}>
+                <LaneHeading lane={l} count={lanes[l.key].length} />
+              </div>
+            ))}
+          </div>
+          <div className="relative" style={{ height: layout.height }}>
+            {/* An empty lane still needs to look like somewhere a note can be
+                dropped, so it keeps an outline in its first slot. */}
+            {LANES.map((l, i) => (
+              lanes[l.key].length === 0 ? (
+                <div
+                  key={`empty-${l.key}`}
+                  className="absolute rounded-xl border border-dashed border-ninja-border pointer-events-none"
+                  style={{ ...slotFor(i, 0, layout.laneW), width: layout.laneW, height: NOTE_H }}
+                />
+              ) : null
+            ))}
+            <AnimatePresence>
+              {/* flatMap, not nested maps: AnimatePresence wants its children in
+                  one flat keyed list to track exits. */}
+              {LANES.flatMap((l, laneIdx) =>
+                lanes[l.key].map((note, row) => (
+                  <NoteCard
+                    key={note.id}
+                    note={note}
+                    board={{ ...slotFor(laneIdx, row, layout.laneW), w: layout.laneW, maxX: layout.maxX, maxY: layout.maxY }}
+                    onDragToSlot={dragToSlot}
+                    onDropped={persistOrder}
+                    onMoveLane={moveLane}
+                    showLaneMove
+                    {...cardProps(note)}
+                  />
+                )),
+              )}
+            </AnimatePresence>
+          </div>
+        </>
+      ) : (
+        // Narrow: the lanes become three stacked lists. Same data, same cards,
+        // no drag.
+        <div className="space-y-6">
+          {LANES.map((l) => (
+            <section key={l.key} aria-labelledby={`lane-${l.key}`}>
+              <div className="mb-2">
+                <LaneHeading lane={l} count={lanes[l.key].length} id={`lane-${l.key}`} />
+              </div>
+              {lanes[l.key].length === 0 ? (
+                <p className="font-ninja text-sm text-ninja-muted border border-dashed border-ninja-border rounded-xl px-3.5 py-5 text-center">
+                  Nothing here.
+                </p>
+              ) : (
+                <div className={GRID}>
+                  <AnimatePresence>
+                    {lanes[l.key].map((note) => (
+                      <NoteCard
+                        key={note.id}
+                        note={note}
+                        board={null}
+                        onDragToSlot={() => {}}
+                        onDropped={() => {}}
+                        onMoveLane={moveLane}
+                        showLaneMove
+                        {...cardProps(note)}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------- section -- */
+
+const COPY = {
+  notes: 'Reminders for yourself and the other directors here. Everyone at this center sees the same board.',
+  tasks: 'The work this center is carrying. Move a card along as it gets picked up and finished.',
+};
+
+export default function DirectorStickyNotes() {
+  // isReadOnly: a director viewing a center they aren't assigned to. The server
+  // refuses every write here (all of /director-notes is requireOwnLocation), so
+  // without this the board would offer add/edit/delete/drag that only 403.
+  const { user, isReadOnly } = useAuth();
+  const [notes, setNotes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [color, setColor] = useState('yellow');
+  const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState(() => {
+    const saved = localStorage.getItem(MODE_STORAGE);
+    return MODE_INDEX[saved] !== undefined ? saved : 'notes';
+  });
+  // Which way the incoming board travels. Reading it off the two indexes means
+  // the slide always matches the direction of the switch.
+  const dir = useRef(1);
+
+  useEffect(() => {
+    let alive = true;
+    api.get('/director-notes')
+      .then((data) => { if (alive) { setNotes(data || []); setLoading(false); } })
+      .catch(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [user?.activeLocation?.id]);
+
+  const switchMode = (next) => {
+    if (next === mode) return;
+    dir.current = MODE_INDEX[next] > MODE_INDEX[mode] ? 1 : -1;
+    localStorage.setItem(MODE_STORAGE, next);
+    setAdding(false);
+    setDraft('');
+    setMode(next);
+  };
+
+  // Both boards come down in one fetch and are split here, so switching is
+  // instant. A request per board would put a loading state in the middle of the
+  // slide, which is the one moment it would be seen.
+  const forBoard = useMemo(
+    () => ({
+      notes: notes.filter((n) => (n.board || 'notes') === 'notes'),
+      tasks: notes.filter((n) => n.board === 'tasks'),
+    }),
+    [notes],
+  );
+
+  // Each board reorders its own notes. The two live in one list, so the other
+  // board's cards are carried through untouched — the order between the groups
+  // means nothing, only the order within one.
+  const arrange = useCallback((updater) => {
+    setNotes((prev) => {
+      const mine = prev.filter((n) => (n.board || 'notes') === mode);
+      const theirs = prev.filter((n) => (n.board || 'notes') !== mode);
+      return [...updater(mine), ...theirs];
+    });
+  }, [mode]);
+
+  const canManage = (note) => !isReadOnly && (note.created_by === user?.id || user?.role === 'admin');
+
+  const cardProps = useCallback((note) => ({
+    canManage: canManage(note),
+    // Moving stays deliberately NOT author-gated (the arrangement is shared),
+    // so it can't ride on canManage — but it is still a write, so it goes away
+    // when the center isn't ours.
+    canReorder: !isReadOnly,
+    onSaved: (u) => setNotes((prev) => prev.map((n) => (n.id === u.id ? { ...n, ...u } : n))),
+    onDeleted: (id) => setNotes((prev) => prev.filter((n) => n.id !== id)),
+  }), [isReadOnly, user?.id, user?.role]);
 
   const add = async () => {
     if (!draft.trim()) return;
     setBusy(true);
     try {
-      const created = await api.post('/director-notes', { body: draft, color });
+      const created = await api.post('/director-notes', { body: draft, color, board: mode });
       setNotes((prev) => [created, ...prev]);
       setDraft(''); setColor('yellow'); setAdding(false);
     } catch { /* ignore */ } finally { setBusy(false); }
   };
 
+  const Board = mode === 'tasks' ? TaskLanes : NotesWall;
+
   return (
     <section aria-labelledby="sticky-heading">
-      <div className="flex items-end justify-between gap-4 mb-4">
-        <div>
-          <h2 id="sticky-heading" className="font-ninja font-bold text-ninja-navy text-lg">Notes</h2>
-          <p className="font-ninja text-xs text-ninja-muted text-pretty">
-            Reminders, and the work this center is carrying. Move a note along as it gets picked up and finished.
-            Every director here sees the same board.
-          </p>
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3">
+            <h2 id="sticky-heading" className="font-ninja font-bold text-ninja-navy text-lg">Board</h2>
+            <BoardSwitch mode={mode} onChange={switchMode} />
+          </div>
+          {/* The line under the heading is what tells the two boards apart, so
+              it changes with them rather than describing both at once. */}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.p
+              key={mode}
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 4 }}
+              transition={{ duration: 0.16, ease: EASE }}
+              className="font-ninja text-xs text-ninja-muted mt-1.5 text-pretty"
+            >
+              {COPY[mode]}
+            </motion.p>
+          </AnimatePresence>
         </div>
         {!adding && !isReadOnly && (
           // One glyph beside the heading rather than a blue word: the heading is
@@ -518,8 +834,8 @@ export default function DirectorStickyNotes() {
           <button
             type="button"
             onClick={() => setAdding(true)}
-            title="Add note"
-            aria-label="Add note"
+            title={mode === 'tasks' ? 'Add task' : 'Add note'}
+            aria-label={mode === 'tasks' ? 'Add task' : 'Add note'}
             className="flex-shrink-0 w-9 h-9 rounded-full border border-ninja-border text-ninja-muted flex items-center justify-center transition-colors hover:border-ninja-blue/60 hover:text-ninja-blue"
           >
             <PlusIcon className="w-4 h-4" strokeWidth={2.5} />
@@ -536,7 +852,7 @@ export default function DirectorStickyNotes() {
             className="overflow-hidden mb-3"
           >
             {/* Same paper as a pinned note, so what you type looks like what
-                lands on the board. New notes start in To do. */}
+                lands on the board. On the task board it lands in To do. */}
             <div className="rounded-xl p-3.5 shadow-sm sm:w-[248px] flex flex-col" style={{ backgroundColor: COLORS[color].bg, color: COLORS[color].text, height: NOTE_H }}>
               <div className="flex-1 min-h-0">
                 <LazyMarkdownEditor
@@ -550,7 +866,7 @@ export default function DirectorStickyNotes() {
                 <ColorDots value={color} onChange={setColor} />
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <DiscardButton onClick={() => { setAdding(false); setDraft(''); }} />
-                  <ConfirmButton label="Pin note" disabled={busy || !draft.trim()} onClick={add} />
+                  <ConfirmButton label={mode === 'tasks' ? 'Add task' : 'Pin note'} disabled={busy || !draft.trim()} onClick={add} />
                 </div>
               </div>
             </div>
@@ -559,125 +875,33 @@ export default function DirectorStickyNotes() {
       </AnimatePresence>
 
       {loading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" aria-busy="true" aria-label="Loading notes">
-          {LANES.map((l) => (
-            <div key={l.key} className="animate-pulse rounded-xl bg-ninja-bg" style={{ height: NOTE_H }} />
+        <div className={GRID} aria-busy="true" aria-label="Loading board">
+          {[0, 1].map((i) => (
+            <div key={i} className="animate-pulse rounded-xl bg-ninja-bg" style={{ height: NOTE_H }} />
           ))}
         </div>
-      ) : notes.length === 0 && isReadOnly ? (
-        // Nothing to pin here, and no invitation to try.
-        <p className="font-ninja text-sm text-ninja-muted">No notes at this center.</p>
-      ) : notes.length === 0 && !adding ? (
-        // Shaped like the note it will become, so the empty board already shows
-        // you the size of the thing you are about to pin.
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          style={{ height: NOTE_H }}
-          className="group w-full sm:w-[248px] rounded-xl border border-dashed border-ninja-border p-3.5 flex flex-col items-start justify-center text-left transition-colors hover:border-ninja-blue/60"
-        >
-          <span className="w-9 h-9 rounded-full border border-dashed border-ninja-border group-hover:border-ninja-blue/60 flex items-center justify-center text-ninja-muted group-hover:text-ninja-blue transition-colors">
-            <PlusIcon className="w-4 h-4" />
-          </span>
-          <span className="block font-ninja text-sm font-bold text-ninja-navy mt-3">Pin the first note</span>
-          <span className="block font-ninja text-xs text-ninja-muted mt-1 text-pretty">
-            A reminder, or something this center needs to get done. Everyone here sees the same board.
-          </span>
-        </button>
       ) : (
-        <div ref={boardRef}>
-          {layout ? (
-            <>
-              {/* Headings sit above the drag canvas rather than inside it: a
-                  heading in the canvas is one more thing the slot maths would
-                  have to reason about. */}
-              <div className="flex gap-4 mb-2" aria-hidden="true">
-                {LANES.map((l) => (
-                  <div key={l.key} style={{ width: layout.laneW }}>
-                    <LaneHeading lane={l} count={lanes[l.key].length} />
-                  </div>
-                ))}
-              </div>
-              <div className="relative" style={{ height: layout.height }}>
-                {/* Empty lanes still need to look like somewhere a note can be
-                    dropped, so each keeps an outline in its first slot. */}
-                {LANES.map((l, i) => (
-                  lanes[l.key].length === 0 ? (
-                    <div
-                      key={`empty-${l.key}`}
-                      className="absolute rounded-xl border border-dashed border-ninja-border pointer-events-none"
-                      style={{ ...slotFor(i, 0, layout.laneW), width: layout.laneW, height: NOTE_H }}
-                    />
-                  ) : null
-                ))}
-                <AnimatePresence>
-                  {/* flatMap, not nested maps: AnimatePresence wants its
-                      children in one flat keyed list to track exits. */}
-                  {LANES.flatMap((l, laneIdx) =>
-                    lanes[l.key].map((note, row) => (
-                      <NoteCard
-                        key={note.id}
-                        note={note}
-                        canManage={canManage(note)}
-                        // Moving stays deliberately NOT author-gated (the
-                        // arrangement is shared), so it can't ride on
-                        // canManage — but it is still a write, so it goes away
-                        // when the center isn't ours.
-                        canReorder={!isReadOnly}
-                        board={{
-                          ...slotFor(laneIdx, row, layout.laneW),
-                          w: layout.laneW,
-                          maxX: layout.maxX,
-                          maxY: layout.maxY,
-                        }}
-                        onDragToSlot={dragToSlot}
-                        onDropped={persistOrder}
-                        onMoveLane={moveLane}
-                        onSaved={(u) => setNotes((prev) => prev.map((n) => (n.id === u.id ? { ...n, ...u } : n)))}
-                        onDeleted={(id) => setNotes((prev) => prev.filter((n) => n.id !== id))}
-                      />
-                    )),
-                  )}
-                </AnimatePresence>
-              </div>
-            </>
-          ) : (
-            // Narrow: the lanes become three stacked lists. Same data, same
-            // cards, no drag.
-            <div className="space-y-6">
-              {LANES.map((l) => (
-                <section key={l.key} aria-labelledby={`lane-${l.key}`}>
-                  <div className="mb-2">
-                    <LaneHeading lane={l} count={lanes[l.key].length} id={`lane-${l.key}`} />
-                  </div>
-                  {lanes[l.key].length === 0 ? (
-                    <p className="font-ninja text-sm text-ninja-muted border border-dashed border-ninja-border rounded-xl px-3.5 py-5 text-center">
-                      Nothing here.
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-                      <AnimatePresence>
-                        {lanes[l.key].map((note) => (
-                          <NoteCard
-                            key={note.id}
-                            note={note}
-                            canManage={canManage(note)}
-                            canReorder={!isReadOnly}
-                            board={null}
-                            onDragToSlot={() => {}}
-                            onDropped={() => {}}
-                            onMoveLane={moveLane}
-                            onSaved={(u) => setNotes((prev) => prev.map((n) => (n.id === u.id ? { ...n, ...u } : n)))}
-                            onDeleted={(id) => setNotes((prev) => prev.filter((n) => n.id !== id))}
-                          />
-                        ))}
-                      </AnimatePresence>
-                    </div>
-                  )}
-                </section>
-              ))}
-            </div>
-          )}
+        // The old board leaves the way the new one arrives. mode="wait" keeps
+        // one board on screen at a time, so the two never fight over the height
+        // of the section while they cross.
+        <div className="overflow-x-hidden">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={mode}
+              initial={{ x: dir.current * 56, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: dir.current * -56, opacity: 0 }}
+              transition={{ duration: 0.22, ease: EASE }}
+            >
+              <Board
+                notes={forBoard[mode]}
+                cardProps={cardProps}
+                isReadOnly={isReadOnly}
+                onArrange={arrange}
+                onAdd={() => setAdding(true)}
+              />
+            </motion.div>
+          </AnimatePresence>
         </div>
       )}
     </section>

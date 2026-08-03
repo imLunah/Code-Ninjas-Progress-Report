@@ -11,6 +11,9 @@ const MAX_ORDER = 10000;
 // rather than surfacing as a constraint violation from the driver.
 const STATUSES = ['todo', 'doing', 'done'];
 
+// Which of the two boards a note lives on. The plain wall, or the lanes.
+const BOARDS = ['notes', 'tasks'];
+
 // Sticky notes for Center Directors — center-scoped, visible to all CDs/admin at
 // the location. Not shown to senseis or parents (this route is manager-gated).
 //
@@ -19,7 +22,7 @@ const STATUSES = ['todo', 'doing', 'done'];
 // kind of record: the "task" is a note that happens to be sitting in To do.
 
 const SELECT = `
-  SELECT n.id, n.body, n.color, n.status, n.sort_order,
+  SELECT n.id, n.body, n.color, n.status, n.board, n.sort_order,
          n.created_by, n.created_at, n.updated_at, n.completed_at,
          u.display_name AS created_by_name
   FROM director_notes n
@@ -54,12 +57,13 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   }
   const safeColor = COLORS.includes(color) ? color : 'yellow';
   const safeStatus = STATUSES.includes(req.body?.status) ? req.body.status : 'todo';
+  const safeBoard = BOARDS.includes(req.body?.board) ? req.body.board : 'notes';
   try {
     const { rows } = await pool.query(`
-      INSERT INTO director_notes (location_id, body, color, status, created_by)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO director_notes (location_id, body, color, status, board, created_by)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING id
-    `, [req.session.activeLocationId, body.trim(), safeColor, safeStatus, req.session.userId]);
+    `, [req.session.activeLocationId, body.trim(), safeColor, safeStatus, safeBoard, req.session.userId]);
     const { rows: created } = await pool.query(`${SELECT} WHERE n.id = $1`, [rows[0].id]);
     res.status(201).json(created[0]);
   } catch (err) {
@@ -90,7 +94,10 @@ router.patch('/reorder', requireManager, requireOwnLocation, async (req, res) =>
   const clean = [];
   const seen = new Set();
   for (const lane of lanes) {
-    if (!STATUSES.includes(lane?.status)) {
+    // status is optional: the plain notes board has no lanes, so it sends one
+    // group and only its order is written. Writing a lane there would quietly
+    // give every sticky a stage it doesn't have.
+    if (lane?.status !== undefined && lane?.status !== null && !STATUSES.includes(lane.status)) {
       return res.status(400).json({ error: 'Unknown lane' });
     }
     const ids = Array.isArray(lane.ids) ? lane.ids.map(Number) : null;
@@ -106,7 +113,7 @@ router.patch('/reorder', requireManager, requireOwnLocation, async (req, res) =>
       if (seen.has(id)) return res.status(400).json({ error: 'Note ids must be unique' });
       seen.add(id);
     }
-    clean.push({ status: lane.status, ids });
+    clean.push({ status: lane.status ?? null, ids });
   }
 
   const client = await pool.connect();
@@ -118,11 +125,14 @@ router.patch('/reorder', requireManager, requireOwnLocation, async (req, res) =>
       await client.query(
         `UPDATE director_notes AS n
          SET sort_order = v.position,
-             status = $3,
+             status = COALESCE($3, n.status),
              -- Finished-on is stamped by whatever puts the note in Done, and
              -- cleared when it comes back out, so the date never outlives the
-             -- lane it belongs to.
-             completed_at = CASE WHEN $3 = 'done' THEN COALESCE(n.completed_at, now()) END
+             -- lane it belongs to. A group with no lane leaves both alone.
+             completed_at = CASE
+               WHEN $3 IS NULL THEN n.completed_at
+               WHEN $3 = 'done' THEN COALESCE(n.completed_at, now())
+             END
          FROM unnest($1::int[]) WITH ORDINALITY AS v(id, position)
          WHERE n.id = v.id AND n.location_id = $2`,
         [lane.ids, req.session.activeLocationId, lane.status],
