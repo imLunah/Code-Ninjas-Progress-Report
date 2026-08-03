@@ -213,7 +213,7 @@ function TaskEditor({
 }
 
 function TaskCard({
-  task, canManage, canReorder, board, reportHeight, assignees,
+  task, canManage, canReorder, canRearrange, board, reportHeight, assignees,
   onDragToSlot, onDropped, onMoveLane, onSaved, onDeleted,
 }) {
   const [editing, setEditing] = useState(false);
@@ -250,7 +250,7 @@ function TaskCard({
 
   // Dragging is off while editing so selecting text in a field doesn't drag the
   // card out from under the cursor.
-  const canDrag = !!board && !editing && canReorder;
+  const canDrag = !!board && !editing && canRearrange;
 
   const save = async () => {
     if ((!title.trim() && !body.trim()) || busy) return;
@@ -477,6 +477,7 @@ function LaneHeading({ lane, count, id }) {
 
 export default function TaskBoard({
   tasks, assignees = [], width, isReadOnly, canManage, onSaved, onDeleted, onArrange,
+  visibleIds = null,
 }) {
   const [heights, setHeights] = useState({});
 
@@ -486,6 +487,21 @@ export default function TaskBoard({
   }, []);
 
   const lanes = useMemo(() => splitLanes(tasks), [tasks]);
+
+  // Filters hide cards from the screen, never from the record. The board draws
+  // `shown` and saves `lanes`, so an arrangement written while a filter is on
+  // can't drop the cards the filter is hiding.
+  const shown = useMemo(() => {
+    if (!visibleIds) return lanes;
+    const out = {};
+    for (const l of LANES) out[l.key] = lanes[l.key].filter((t) => visibleIds.has(t.id));
+    return out;
+  }, [lanes, visibleIds]);
+
+  // Dragging is off while filtered. The drop position is an index into what you
+  // can see, and with half the column hidden that index means nothing in the
+  // list being saved. Arrows still work: a column is a column either way.
+  const filtered = !!visibleIds;
   const boardOn = width >= LANES_MIN_W;
 
   const layout = useMemo(() => {
@@ -494,7 +510,7 @@ export default function TaskBoard({
     const geom = {};
     let tallest = MIN_CANVAS_H;
     for (const l of LANES) {
-      const { offsets, end } = stackOffsets(lanes[l.key], heights);
+      const { offsets, end } = stackOffsets(shown[l.key], heights);
       const addH = heights[`add-${l.key}`] ?? EST_ADD_H;
       geom[l.key] = { offsets, addY: end };
       tallest = Math.max(tallest, end + addH + PAD);
@@ -576,6 +592,7 @@ export default function TaskBoard({
     // so it can't ride on canManage — but it is still a write, so it goes away
     // when the center isn't ours.
     canReorder: !isReadOnly,
+    canRearrange: !isReadOnly && !filtered,
     reportHeight,
     onDragToSlot: dragToSlot,
     onDropped: persistOrder,
@@ -592,11 +609,11 @@ export default function TaskBoard({
         {LANES.map((l) => (
           <section key={l.key} className={`${COLUMN_SURFACE} rounded-2xl p-3`} aria-labelledby={`lane-${l.key}`}>
             <div className="mb-2 px-0.5">
-              <LaneHeading lane={l} count={lanes[l.key].length} id={`lane-${l.key}`} />
+              <LaneHeading lane={l} count={shown[l.key].length} id={`lane-${l.key}`} />
             </div>
             <div className="space-y-2.5">
               <AnimatePresence>
-                {lanes[l.key].map((task) => (
+                {shown[l.key].map((task) => (
                   <TaskCard key={task.id} task={task} board={null} {...cardProps(task)} />
                 ))}
               </AnimatePresence>
@@ -623,7 +640,7 @@ export default function TaskBoard({
       <div className="flex gap-4 mb-2">
         {LANES.map((l) => (
           <div key={l.key} style={{ width: layout.colW }} className="px-3">
-            <LaneHeading lane={l} count={lanes[l.key].length} />
+            <LaneHeading lane={l} count={shown[l.key].length} />
           </div>
         ))}
       </div>
@@ -644,7 +661,7 @@ export default function TaskBoard({
           {/* flatMap, not nested maps: AnimatePresence wants its children in one
               flat keyed list to track exits. */}
           {LANES.flatMap((l, laneIdx) =>
-            lanes[l.key].map((task, row) => (
+            shown[l.key].map((task, row) => (
               <TaskCard
                 key={task.id}
                 task={task}

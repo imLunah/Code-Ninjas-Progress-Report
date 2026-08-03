@@ -110,16 +110,40 @@ router.get('/assignees', requireManager, async (req, res) => {
   }
 });
 
-// GET /api/tasks — every task at the active location
+// How much of Done a board carries before you have to ask for the rest.
+// Nothing ever leaves that column on its own, so without a cutoff the least
+// interesting third of the board is also the largest and it only grows.
+const DONE_WINDOW_DAYS = 14;
+
+// A finished card with no completed_at predates the column existing. Those are
+// the three that came over from the sticky wall; they are treated as recent so
+// they don't vanish from a board nobody has archived yet.
+const RECENT_DONE = `(
+  n.status <> 'done'
+  OR n.completed_at IS NULL
+  OR n.completed_at >= now() - ($2 || ' days')::interval
+)`;
+
+// GET /api/tasks — tasks at the active location.
+// ?done=all lifts the Done cutoff. The response carries how many were held
+// back, so the board can offer them rather than silently deciding for you.
 router.get('/', requireManager, async (req, res) => {
   const pool = req.app.get('db');
+  const all = req.query.done === 'all';
   try {
-    const { rows } = await pool.query(
-      `${SELECT} WHERE n.location_id = $1
-       ORDER BY n.sort_order ASC NULLS FIRST, n.created_at DESC`,
-      [req.session.activeLocationId],
-    );
-    res.json(rows);
+    const [{ rows }, { rows: counted }] = await Promise.all([
+      pool.query(
+        `${SELECT} WHERE n.location_id = $1 ${all ? '' : `AND ${RECENT_DONE}`}
+         ORDER BY n.sort_order ASC NULLS FIRST, n.created_at DESC`,
+        all ? [req.session.activeLocationId] : [req.session.activeLocationId, DONE_WINDOW_DAYS],
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS hidden FROM director_notes n
+         WHERE n.location_id = $1 AND NOT ${RECENT_DONE}`,
+        [req.session.activeLocationId, DONE_WINDOW_DAYS],
+      ),
+    ]);
+    res.json({ tasks: rows, hiddenDone: counted[0]?.hidden ?? 0, windowDays: DONE_WINDOW_DAYS });
   } catch (err) {
     console.error('Error fetching tasks:', err);
     res.status(500).json({ error: 'Failed to fetch tasks' });
