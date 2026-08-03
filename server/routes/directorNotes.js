@@ -14,20 +14,38 @@ const STATUSES = ['todo', 'doing', 'done'];
 // Which of the two boards a note lives on. The plain wall, or the lanes.
 const BOARDS = ['notes', 'tasks'];
 
-// Sticky notes for Center Directors — center-scoped, visible to all CDs/admin at
-// the location. Not shown to senseis or parents (this route is manager-gated).
+// What kind of work a task is. Only meaningful on the task board; a sticky
+// keeps the default and never shows it.
+const CATEGORIES = ['cancellation', 'reenrollment', 'print', 'other'];
+
+const MAX_TITLE = 200;
+
+// Center Director board — center-scoped, visible to all CDs/admin at the
+// location. Not shown to senseis or parents (this route is manager-gated).
 //
-// A note carries a lane as well as a colour, so this one board is both the
-// reminder wall and the center's task board. Nothing about that is a second
-// kind of record: the "task" is a note that happens to be sitting in To do.
+// One table, two boards. A sticky is a body and a colour. A task is a title, a
+// kind and a lane, with the body demoted to a description. They share a row
+// shape because they share a board, an author, a center and a lifetime; what
+// differs is which columns each one fills in.
 
 const SELECT = `
-  SELECT n.id, n.body, n.color, n.status, n.board, n.sort_order,
+  SELECT n.id, n.title, n.body, n.color, n.status, n.board, n.category, n.sort_order,
          n.created_by, n.created_at, n.updated_at, n.completed_at,
          u.display_name AS created_by_name
   FROM director_notes n
   LEFT JOIN users u ON u.id = n.created_by
 `;
+
+// A sticky is its body, a task is its title, and neither board can hold a card
+// with nothing on it. Mirrors director_notes_has_content_check.
+function readContent(raw) {
+  const title = typeof raw?.title === 'string' ? raw.title.trim() : '';
+  const body = typeof raw?.body === 'string' ? raw.body.trim() : '';
+  if (!title && !body) return { error: 'Give it a name or some text' };
+  if (title.length > MAX_TITLE) return { error: `Title max ${MAX_TITLE} characters` };
+  if (body.length > MAX_BODY) return { error: `Text max ${MAX_BODY} characters` };
+  return { title: title || null, body: body || null };
+}
 
 // GET /api/director-notes — notes for the active location
 router.get('/', requireManager, async (req, res) => {
@@ -48,22 +66,22 @@ router.get('/', requireManager, async (req, res) => {
 // POST /api/director-notes — create a note at the active location
 router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
-  const { body, color } = req.body;
-  if (typeof body !== 'string' || !body.trim()) {
-    return res.status(400).json({ error: 'Note text is required' });
-  }
-  if (body.length > MAX_BODY) {
-    return res.status(400).json({ error: `Note max ${MAX_BODY} characters` });
-  }
-  const safeColor = COLORS.includes(color) ? color : 'yellow';
+  const content = readContent(req.body);
+  if (content.error) return res.status(400).json({ error: content.error });
+
+  const safeColor = COLORS.includes(req.body?.color) ? req.body.color : 'yellow';
   const safeStatus = STATUSES.includes(req.body?.status) ? req.body.status : 'todo';
   const safeBoard = BOARDS.includes(req.body?.board) ? req.body.board : 'notes';
+  const safeCategory = CATEGORIES.includes(req.body?.category) ? req.body.category : 'other';
   try {
     const { rows } = await pool.query(`
-      INSERT INTO director_notes (location_id, body, color, status, board, created_by)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO director_notes (location_id, title, body, color, status, board, category, created_by)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING id
-    `, [req.session.activeLocationId, body.trim(), safeColor, safeStatus, safeBoard, req.session.userId]);
+    `, [
+      req.session.activeLocationId, content.title, content.body,
+      safeColor, safeStatus, safeBoard, safeCategory, req.session.userId,
+    ]);
     const { rows: created } = await pool.query(`${SELECT} WHERE n.id = $1`, [rows[0].id]);
     res.status(201).json(created[0]);
   } catch (err) {
@@ -152,14 +170,18 @@ router.patch('/reorder', requireManager, requireOwnLocation, async (req, res) =>
 // PATCH /api/director-notes/:id — edit (author or admin only)
 router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
-  const { body, color } = req.body;
-  if (typeof body !== 'string' || !body.trim()) {
-    return res.status(400).json({ error: 'Note text is required' });
+  const content = readContent(req.body);
+  if (content.error) return res.status(400).json({ error: content.error });
+
+  const safeColor = COLORS.includes(req.body?.color) ? req.body.color : 'yellow';
+  // Only sent by the task board. A sticky keeps whatever it had, which is the
+  // default nobody ever sees.
+  const category = req.body?.category === undefined
+    ? null
+    : CATEGORIES.includes(req.body.category) ? req.body.category : null;
+  if (req.body?.category !== undefined && category === null) {
+    return res.status(400).json({ error: 'Unknown category' });
   }
-  if (body.length > MAX_BODY) {
-    return res.status(400).json({ error: `Note max ${MAX_BODY} characters` });
-  }
-  const safeColor = COLORS.includes(color) ? color : 'yellow';
   try {
     const { rows } = await pool.query(
       'SELECT created_by FROM director_notes WHERE id = $1 AND location_id = $2',
@@ -170,8 +192,10 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
       return res.status(403).json({ error: 'Only the author can edit this note' });
     }
     await pool.query(
-      'UPDATE director_notes SET body = $1, color = $2, updated_at = now() WHERE id = $3',
-      [body.trim(), safeColor, req.params.id],
+      `UPDATE director_notes
+       SET title = $1, body = $2, color = $3, category = COALESCE($4, category), updated_at = now()
+       WHERE id = $5`,
+      [content.title, content.body, safeColor, category, req.params.id],
     );
     const { rows: updated } = await pool.query(`${SELECT} WHERE n.id = $1`, [req.params.id]);
     res.json(updated[0]);
