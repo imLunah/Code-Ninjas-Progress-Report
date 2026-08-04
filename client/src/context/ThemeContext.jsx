@@ -43,6 +43,12 @@ export function ThemeProvider({ children }) {
     const on = !!v;
     setExperimentalState(on);
     try { localStorage.setItem('dj-experimental', on ? '1' : '0'); } catch { /* ignore */ }
+    if (!on) {
+      // Turning the flag off resets everything it unlocked: the accent goes
+      // back to the stock theme, and the rev bump persists that to the account.
+      setAccentState('default');
+      setRev((r) => r + 1);
+    }
   }, []);
 
   // ── Mode (light/dark) ──────────────────────────────────────────────
