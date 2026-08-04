@@ -104,7 +104,6 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/curriculum', require('./routes/curriculum'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/announcements', require('./routes/announcements'));
-app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/releases', require('./routes/releases'));
 app.use('/api/storage', require('./routes/storage'));

@@ -10,7 +10,6 @@ import {
 import Layout from '../../components/layout/Layout';
 import { ChartContainer, ChartTooltip } from '../../components/ui/chart';
 import EventCalendar from '../../components/manager/EventCalendar';
-import TasksPreview from '../../components/manager/TasksPreview';
 import Modal from '../../components/ui/Modal';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
@@ -721,12 +720,6 @@ export default function DirectorDashboard() {
           </div>
           <div className="mt-6 border-t border-ninja-border" />
         </motion.header>
-
-        {/* A slice of the board, not the board. A column is as tall as the
-            cards in it, so thirty tasks in To do turned the dashboard into
-            three thousand pixels of somebody else's work. This reads; the
-            board itself lives at /manager/tasks. */}
-        <TasksPreview />
 
         {/* Calendar earns its surface (it IS an object), check-ins rides the
             rail beside it. Asymmetric on purpose. */}
