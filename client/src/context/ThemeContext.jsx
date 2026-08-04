@@ -50,19 +50,19 @@ export function ThemeProvider({ children }) {
     try { localStorage.setItem('dj-nav-horizontal', on ? '1' : '0'); } catch { /* ignore */ }
   }, []);
 
-  // Experimental: retro skin (cream/orange in light, green CRT in dark).
-  // Per-device, applied as a class on <html> so index.css owns the look.
-  const [retro, setRetroState] = useState(() => {
-    try { return localStorage.getItem('dj-retro') === '1'; } catch { return false; }
+  // Experimental: Halloween mode (pumpkin accent, cobwebs from HalloweenDecor).
+  // Per-device, applied as a class on <html> so index.css owns the palette.
+  const [halloween, setHalloweenState] = useState(() => {
+    try { return localStorage.getItem('dj-halloween') === '1'; } catch { return false; }
   });
-  const setRetro = useCallback((v) => {
+  const setHalloween = useCallback((v) => {
     const on = !!v;
-    setRetroState(on);
-    try { localStorage.setItem('dj-retro', on ? '1' : '0'); } catch { /* ignore */ }
+    setHalloweenState(on);
+    try { localStorage.setItem('dj-halloween', on ? '1' : '0'); } catch { /* ignore */ }
   }, []);
   useEffect(() => {
-    document.documentElement.classList.toggle('retro', retro);
-  }, [retro]);
+    document.documentElement.classList.toggle('halloween', halloween);
+  }, [halloween]);
 
   const setExperimental = useCallback((v) => {
     const on = !!v;
@@ -71,11 +71,11 @@ export function ThemeProvider({ children }) {
     if (!on) {
       // Turning the flag off resets everything it unlocked: the accent goes
       // back to the stock theme (the rev bump persists that to the account)
-      // and the retro skin comes off.
+      // and the Halloween decorations come down.
       setAccentState('default');
       setRev((r) => r + 1);
-      setRetroState(false);
-      try { localStorage.setItem('dj-retro', '0'); } catch { /* ignore */ }
+      setHalloweenState(false);
+      try { localStorage.setItem('dj-halloween', '0'); } catch { /* ignore */ }
     }
   }, []);
 
@@ -133,8 +133,8 @@ export function ThemeProvider({ children }) {
   );
 
   const value = useMemo(
-    () => ({ dark, toggle, setMode, accent, setAccent, previewAccent, settings, rev, hydrate, experimental, setExperimental, horizontalNav, setHorizontalNav, retro, setRetro }),
-    [dark, accent, settings, previewAccent, rev, hydrate, experimental, setExperimental, horizontalNav, setHorizontalNav, retro, setRetro]
+    () => ({ dark, toggle, setMode, accent, setAccent, previewAccent, settings, rev, hydrate, experimental, setExperimental, horizontalNav, setHorizontalNav, halloween, setHalloween }),
+    [dark, accent, settings, previewAccent, rev, hydrate, experimental, setExperimental, horizontalNav, setHorizontalNav, halloween, setHalloween]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
