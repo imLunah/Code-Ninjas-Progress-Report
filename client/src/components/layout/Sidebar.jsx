@@ -27,7 +27,7 @@ function NavIcon({ id, Glyph }) {
   );
 }
 
-function isLinkActive(link, pathname, search) {
+export function isLinkActive(link, pathname, search) {
   const linkPath = link.to.split('?')[0];
   const linkQuery = link.to.includes('?') ? link.to.split('?')[1] : null;
 
@@ -43,7 +43,7 @@ function BugIcon() {
   );
 }
 
-const managerLinks = [
+export const managerLinks = [
   { to: '/manager/overview', label: 'Dashboard', Glyph: LayoutGridIcon },
   { to: '/manager/dashboard', label: "Today's Board", icon: 'today' },
   { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
@@ -51,7 +51,7 @@ const managerLinks = [
   { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
 ];
 
-const senseiLinks = [
+export const senseiLinks = [
   { to: '/sensei/dashboard', label: "Today's Board", icon: 'today' },
   { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
   { to: '/clubs', label: 'Clubs', icon: 'clubs' },

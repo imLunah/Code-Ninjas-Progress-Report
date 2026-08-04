@@ -2,9 +2,11 @@ import { useState, useEffect, useRef, createContext, useContext, lazy, Suspense 
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from './Sidebar';
+import TopNav from './TopNav';
 import MobileNav from './MobileNav';
 import BugReportButton from '../ui/BugReportButton';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { api } from '../../api/client';
 import { getMobileNavTabs } from '../../lib/navTabs';
 import { ONBOARDING_ENABLED } from '../../lib/features';
@@ -103,6 +105,9 @@ function AdjacentPanel({ tab, panelRef, side }) {
 export default function Layout({ children }) {
   const isPreview = useContext(LayoutPreviewContext);
   const { user, viewAs } = useAuth();
+  const { experimental, horizontalNav } = useTheme();
+  // Experimental, desktop-only: nav runs along the top instead of the sidebar.
+  const useTopNav = experimental && horizontalNav;
   const [bugOpen, setBugOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -345,7 +350,7 @@ export default function Layout({ children }) {
   const enterX = fromSwipe ? 0 : (swipeDir === 'left' ? '100%' : swipeDir === 'right' ? '-100%' : 0);
 
   return (
-    <div className="fixed inset-0 overflow-hidden flex flex-col bg-ninja-bg lg:static lg:inset-auto lg:overflow-visible lg:min-h-[100dvh] lg:flex-row">
+    <div className={`fixed inset-0 overflow-hidden flex flex-col bg-ninja-bg lg:static lg:inset-auto lg:overflow-visible lg:min-h-[100dvh] ${useTopNav ? '' : 'lg:flex-row'}`}>
       {/* Liquid-glass refraction filter — displaces the backdrop so content warps through the glass.
           Renders in Chromium; iOS Safari ignores url() in backdrop-filter and falls back to blur. */}
       <svg aria-hidden="true" className="absolute w-0 h-0 pointer-events-none" focusable="false">
@@ -355,7 +360,9 @@ export default function Layout({ children }) {
           <feDisplacementMap in="SourceGraphic" in2="softNoise" scale="22" xChannelSelector="R" yChannelSelector="G" />
         </filter>
       </svg>
-      <Sidebar onOpenBug={() => setBugOpen(true)} />
+      {useTopNav
+        ? <TopNav onOpenBug={() => setBugOpen(true)} />
+        : <Sidebar onOpenBug={() => setBugOpen(true)} />}
       <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
         {user?.announcement && <AnnouncementBanner text={user.announcement} />}
         {!isPreview && <LocationAnnouncements />}

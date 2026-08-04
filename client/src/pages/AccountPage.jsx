@@ -17,6 +17,7 @@ import {
   PaletteIcon,
   ChevronRightIcon as Chevron,
   MapPinIcon,
+  PanelTopIcon,
 } from 'lucide-react';
 
 // Desktop gets a settings rail + pane; the phone keeps the single scroll.
@@ -40,7 +41,7 @@ const LABEL = 'block text-ninja-muted text-xs font-ninja font-semibold uppercase
 
 export default function AccountPage() {
   const { user, setUser, logout, switchLocation } = useAuth();
-  const { dark, toggle, experimental, setExperimental } = useTheme();
+  const { dark, toggle, experimental, setExperimental, horizontalNav, setHorizontalNav } = useTheme();
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
 
@@ -281,6 +282,26 @@ export default function AccountPage() {
               </div>
               <Chevron width="18" height="18" className="text-ninja-muted" />
             </button>
+
+            <div className="mt-3 flex items-center justify-between rounded-xl border border-ninja-border p-3">
+              <div className="flex items-center gap-3">
+                <span className={`w-9 h-9 rounded-xl flex items-center justify-center ${horizontalNav ? 'text-ninja-blue-ink bg-ninja-blue/10' : 'text-ninja-muted bg-ninja-bg'}`}>
+                  <PanelTopIcon width="17" height="17" />
+                </span>
+                <div>
+                  <p className="text-ninja-navy font-ninja font-semibold text-sm">Horizontal navigation</p>
+                  <p className="text-ninja-muted font-ninja text-xs">Desktop only. The nav moves to the top of the screen.</p>
+                </div>
+              </div>
+              <button
+                type="button" role="switch" aria-checked={horizontalNav} aria-label="Toggle horizontal navigation"
+                onClick={() => setHorizontalNav(!horizontalNav)}
+                className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${horizontalNav ? 'bg-ninja-blue' : 'bg-ninja-border'}`}
+              >
+                <motion.span layout transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+                  className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${horizontalNav ? 'right-1' : 'left-1'}`} />
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
