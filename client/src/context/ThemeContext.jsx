@@ -50,15 +50,32 @@ export function ThemeProvider({ children }) {
     try { localStorage.setItem('dj-nav-horizontal', on ? '1' : '0'); } catch { /* ignore */ }
   }, []);
 
+  // Experimental: retro skin (cream/orange in light, green CRT in dark).
+  // Per-device, applied as a class on <html> so index.css owns the look.
+  const [retro, setRetroState] = useState(() => {
+    try { return localStorage.getItem('dj-retro') === '1'; } catch { return false; }
+  });
+  const setRetro = useCallback((v) => {
+    const on = !!v;
+    setRetroState(on);
+    try { localStorage.setItem('dj-retro', on ? '1' : '0'); } catch { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    document.documentElement.classList.toggle('retro', retro);
+  }, [retro]);
+
   const setExperimental = useCallback((v) => {
     const on = !!v;
     setExperimentalState(on);
     try { localStorage.setItem('dj-experimental', on ? '1' : '0'); } catch { /* ignore */ }
     if (!on) {
       // Turning the flag off resets everything it unlocked: the accent goes
-      // back to the stock theme, and the rev bump persists that to the account.
+      // back to the stock theme (the rev bump persists that to the account)
+      // and the retro skin comes off.
       setAccentState('default');
       setRev((r) => r + 1);
+      setRetroState(false);
+      try { localStorage.setItem('dj-retro', '0'); } catch { /* ignore */ }
     }
   }, []);
 
@@ -116,8 +133,8 @@ export function ThemeProvider({ children }) {
   );
 
   const value = useMemo(
-    () => ({ dark, toggle, setMode, accent, setAccent, previewAccent, settings, rev, hydrate, experimental, setExperimental, horizontalNav, setHorizontalNav }),
-    [dark, accent, settings, previewAccent, rev, hydrate, experimental, setExperimental, horizontalNav, setHorizontalNav]
+    () => ({ dark, toggle, setMode, accent, setAccent, previewAccent, settings, rev, hydrate, experimental, setExperimental, horizontalNav, setHorizontalNav, retro, setRetro }),
+    [dark, accent, settings, previewAccent, rev, hydrate, experimental, setExperimental, horizontalNav, setHorizontalNav, retro, setRetro]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

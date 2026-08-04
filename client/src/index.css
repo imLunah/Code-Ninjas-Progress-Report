@@ -265,3 +265,53 @@ textarea:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .modal-backdrop, .modal-panel { animation-duration: 1ms; }
 }
+
+/* ── Retro theme (experimental) ──
+   Light is 70s paper: cream surfaces, burnt-orange accent, warm brown ink.
+   Dark is a green-phosphor CRT. Same Nunito, same layout — only tokens,
+   shadows and corner radii change. A user-picked accent (inline vars on
+   <html>) still beats the retro accent; retro reads best on Default.
+   Every dark rule is written as .dark.retro so it outranks the .dark
+   overrides above by specificity, not by source order. */
+.retro {
+  --ninja-bg:          244 237 221;  /* #f4eddd cream */
+  --ninja-border:      216 201 173;  /* #d8c9ad */
+  --ninja-blue:        226 96 4;     /* #e26004 burnt orange */
+  --ninja-blue-hover:  194 80 0;
+  --ninja-blue-ink:    173 71 0;     /* #ad4700 — AA on the tint */
+  --ninja-navy:        59 45 28;     /* #3b2d1c warm ink */
+  --ninja-muted:       133 110 82;   /* #856e52 */
+}
+.dark.retro {
+  --ninja-bg:          10 16 11;     /* #0a100b near-black green */
+  --ninja-border:      32 54 36;     /* #203624 */
+  --ninja-blue:        74 222 128;   /* #4ade80 phosphor green */
+  --ninja-blue-hover:  52 199 108;
+  --ninja-blue-ink:    110 231 149;  /* #6ee795 */
+  --ninja-navy:        205 232 208;  /* #cde8d0 pale green-white */
+  --ninja-muted:       123 160 128;  /* #7ba080 */
+}
+
+/* Card surfaces follow the palette's temperature. */
+.retro .bg-white      { background-color: #fdf8ec; }
+.dark.retro .bg-white { background-color: #101a12; }
+.dark.retro input,
+.dark.retro select,
+.dark.retro textarea  { background-color: #0d150f; }
+
+/* Chunky print-style shadows: hard offset, no blur. */
+.retro .shadow-sm  { box-shadow: 2px 2px 0 rgb(var(--ninja-border)); }
+.retro .shadow,
+.retro .shadow-md  { box-shadow: 3px 3px 0 rgb(var(--ninja-border)); }
+.retro .shadow-lg  { box-shadow: 5px 5px 0 rgb(var(--ninja-border)); }
+.dark.retro .shadow-sm  { box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6); }
+.dark.retro .shadow,
+.dark.retro .shadow-md  { box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.6); }
+.dark.retro .shadow-lg  { box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.65); }
+
+/* Squarer corners. rounded-full is left alone so avatars, dots and switch
+   knobs keep their shape. */
+.retro .rounded-3xl { border-radius: 0.75rem; }
+.retro .rounded-2xl { border-radius: 0.5rem; }
+.retro .rounded-xl  { border-radius: 0.375rem; }
+.retro .rounded-lg  { border-radius: 0.25rem; }
