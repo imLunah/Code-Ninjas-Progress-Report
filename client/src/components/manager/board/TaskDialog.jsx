@@ -1,16 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { XIcon } from 'lucide-react';
+import { XIcon, ChevronDownIcon } from 'lucide-react';
 import { api } from '../../../api/client';
 import LazyMarkdownEditor from '../../shared/LazyMarkdownEditor';
 import Modal from '../../ui/Modal';
 import {
   LANES, CATEGORIES, MONTHS, MD, mdUrl, shortDate, invoiceLine,
-  KindTag, IconButton, DiscardButton,
+  KindTag, OwnerBadge, IconButton, DiscardButton,
 } from './boardShared';
 
-// Creating and editing are the same dialog. A task is a record; it gets a
-// page-sized surface to be read and edited on.
+// Creating and editing are the same dialog, laid out as a property sheet: the
+// title, then the task's properties as label/value rows, then the description.
+// Values dress as chips sitting in the row, not as a form of boxed inputs;
+// a task is a record you read, and most opens of this dialog change nothing.
 //
 // Who can change what mirrors the server exactly. What a task SAYS — title,
 // description, kind, invoice — belongs to its author (or an admin). Who it is
@@ -39,9 +41,27 @@ const invoicePayload = (draft, category) => {
   return filled ? draft : null;
 };
 
+// The chip a value wears while it is really a native select underneath: the
+// menu, the keyboard and the screen reader all come free, and only the resting
+// look is ours.
+const CHIP = 'appearance-none font-ninja text-[13px] font-medium bg-ninja-bg rounded-md '
+  + 'pl-2.5 pr-7 py-1 text-ninja-navy border-0 cursor-pointer transition-colors '
+  + 'hover:bg-black/[0.06] dark:hover:bg-white/[0.08]';
+
+function ChipSelect({ id, value, onChange, label, children }) {
+  return (
+    <span className="relative inline-flex max-w-full">
+      <select id={id} value={value} onChange={onChange} aria-label={label} className={`${CHIP} truncate`}>
+        {children}
+      </select>
+      <ChevronDownIcon className="w-3.5 h-3.5 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-ninja-muted" />
+    </span>
+  );
+}
+
 // Searches rather than loading the roster: a center has hundreds of ninjas and
 // a task form has no business pulling all of them down to fill one field.
-function StudentPicker({ value, name, onChange, className }) {
+function StudentPicker({ value, name, onChange }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [open, setOpen] = useState(false);
@@ -68,8 +88,8 @@ function StudentPicker({ value, name, onChange, className }) {
 
   if (value) {
     return (
-      <div className="flex items-center gap-1.5">
-        <span className="font-ninja text-xs font-bold text-ninja-navy bg-ninja-bg rounded-md px-2.5 py-1 truncate">
+      <div className="flex items-center gap-1">
+        <span className="font-ninja text-[13px] font-medium text-ninja-navy bg-ninja-bg rounded-md px-2.5 py-1 truncate">
           {name || `Ninja #${value}`}
         </span>
         <IconButton onClick={() => onChange(null, null)} label="Remove ninja">
@@ -80,7 +100,7 @@ function StudentPicker({ value, name, onChange, className }) {
   }
 
   return (
-    <div ref={boxRef} className="relative">
+    <div ref={boxRef} className="relative inline-block">
       <input
         type="text"
         value={query}
@@ -88,7 +108,7 @@ function StudentPicker({ value, name, onChange, className }) {
         onFocus={() => setOpen(true)}
         placeholder="Link a ninja"
         aria-label="Link a ninja"
-        className={className}
+        className="font-ninja text-[13px] rounded-md border-0 bg-ninja-bg px-2.5 py-1 text-ninja-navy placeholder:text-ninja-muted w-44"
       />
       {open && results.length > 0 && (
         <ul className="absolute z-30 left-0 right-0 mt-1 rounded-lg border border-ninja-border bg-white shadow-lg overflow-hidden max-h-48 overflow-y-auto">
@@ -97,7 +117,7 @@ function StudentPicker({ value, name, onChange, className }) {
               <button
                 type="button"
                 onClick={() => { onChange(s.id, s.full_name); setQuery(''); setOpen(false); }}
-                className="w-full text-left font-ninja text-xs px-2.5 py-1.5 text-ninja-navy hover:bg-ninja-bg transition"
+                className="w-full text-left font-ninja text-[13px] px-2.5 py-1.5 text-ninja-navy hover:bg-ninja-bg transition"
               >
                 {s.full_name}
               </button>
@@ -112,11 +132,12 @@ function StudentPicker({ value, name, onChange, className }) {
 // Only for Submit invoice. Eight fields that exist for one kind of task is
 // exactly why this is a block that appears rather than eight inputs every task
 // carries empty.
-function InvoiceFields({ draft, set, field }) {
+function InvoiceFields({ draft, set }) {
   const put = (key) => (e) => set({ ...draft, [key]: e.target.value });
+  const field = 'font-ninja text-[13px] rounded-md border border-ninja-border bg-white px-2.5 py-1.5 text-ninja-navy placeholder:text-ninja-muted';
   return (
-    <div className="rounded-lg bg-ninja-bg p-2.5 space-y-2">
-      <p className="font-ninja text-[11px] font-bold text-ninja-muted uppercase tracking-wide">Invoice</p>
+    <div className="rounded-lg bg-ninja-bg p-3 space-y-2">
+      <p className="font-ninja text-[11px] font-semibold text-ninja-muted uppercase tracking-wide">Invoice</p>
       <input type="text" value={draft.rc_name} onChange={put('rc_name')} placeholder="School / RC name" aria-label="School or RC name" className={`${field} w-full`} />
       <div className="grid grid-cols-2 gap-2">
         <input type="text" value={draft.payment_processor} onChange={put('payment_processor')} placeholder="Processor" aria-label="Payment processor" className={`${field} w-full`} />
@@ -138,14 +159,12 @@ function InvoiceFields({ draft, set, field }) {
   );
 }
 
-// One row of the detail rail: what it is on the left, the control on the right.
-// A form of stacked labelled inputs makes every field look equally important;
-// this reads as a summary you can edit, which is what it is.
-function DetailRow({ label, htmlFor, children }) {
+// One property of the record: what it is on the left, its value on the right.
+function PropRow({ label, htmlFor, children }) {
   return (
-    <div className="grid grid-cols-[7rem_1fr] items-center gap-3">
-      <label htmlFor={htmlFor} className="font-ninja text-sm text-ninja-muted">{label}</label>
-      <div className="min-w-0">{children}</div>
+    <div className="grid grid-cols-[6.5rem_1fr] items-center gap-3 min-h-[2.1rem]">
+      <label htmlFor={htmlFor} className="font-ninja text-[13px] text-ninja-muted">{label}</label>
+      <div className="min-w-0 flex items-center">{children}</div>
     </div>
   );
 }
@@ -170,8 +189,6 @@ export default function TaskDialog({
   const [busy, setBusy] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const [error, setError] = useState(null);
-
-  const field = 'font-ninja text-sm rounded-lg border border-ninja-border bg-white px-2.5 py-1.5 text-ninja-navy';
 
   // A title OR a description, matching what the server will accept.
   const canSave = !canEditText || !!(title.trim() || body.trim());
@@ -226,14 +243,18 @@ export default function TaskDialog({
     }
   };
 
+  const ownerName = assignee
+    ? assignees.find((a) => String(a.id) === assignee)?.display_name
+    : null;
+
   return (
     <Modal
       isOpen={open}
       onClose={onClose}
       title={mode === 'edit' ? 'Task' : 'New task'}
-      width="max-w-3xl"
+      width="max-w-2xl"
     >
-      <div className="space-y-5">
+      <div className="space-y-4">
         {canEditText ? (
           <input
             type="text"
@@ -243,118 +264,120 @@ export default function TaskDialog({
             autoFocus
             placeholder="What needs doing?"
             aria-label="Task name"
-            // No box. The title IS the heading of this dialog, and a heading in
-            // a bordered input reads as one more field among six.
-            className="w-full font-ninja text-2xl font-black text-ninja-navy bg-transparent border-0 p-0 placeholder:text-ninja-muted placeholder:font-bold"
+            // No box. The title IS the heading of this dialog. The inline
+            // background outruns the global dark-mode input override, which
+            // would otherwise paint a band behind the heading.
+            style={{ background: 'transparent' }}
+            className="w-full font-ninja text-2xl font-bold tracking-tight text-ninja-navy border-0 p-0 placeholder:text-ninja-muted"
           />
         ) : (
-          <h3 className="font-ninja text-2xl font-black text-ninja-navy">{title || body}</h3>
+          <h3 className="font-ninja text-2xl font-bold tracking-tight text-ninja-navy">{title || body}</h3>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_20rem] gap-6">
-          <div className="space-y-4 min-w-0">
+        {/* The record's properties, read top to bottom. */}
+        <div className="space-y-0.5">
+          <PropRow label="Status" htmlFor="task-status">
+            <ChipSelect id="task-status" value={status} onChange={(e) => setStatus(e.target.value)} label="Status">
+              {LANES.map((l) => <option key={l.key} value={l.key}>{l.label}</option>)}
+            </ChipSelect>
+          </PropRow>
+
+          <PropRow label="Kind" htmlFor={canEditText ? 'task-kind' : undefined}>
             {canEditText ? (
-              <div className="h-56 flex flex-col min-h-0 rounded-xl border border-ninja-border px-3 py-2">
-                <LazyMarkdownEditor
-                  variant="bare"
-                  value={body}
-                  onChange={setBody}
-                  placeholder="Anything the next director needs to know…"
-                />
-              </div>
+              <ChipSelect id="task-kind" value={category} onChange={(e) => setCategory(e.target.value)} label="Kind">
+                {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+              </ChipSelect>
             ) : (
-              // Another director's words, readable but not editable: the server
-              // keeps a task's text with whoever wrote it.
-              <div className="font-ninja text-sm text-ninja-navy rounded-xl bg-ninja-bg px-3 py-2.5 min-h-[3rem]">
-                {title && body
-                  ? <ReactMarkdown components={MD} urlTransform={mdUrl}>{body}</ReactMarkdown>
-                  : <p className="text-ninja-muted">No description.</p>}
-              </div>
+              <KindTag category={category} />
             )}
+          </PropRow>
 
-            {/* Under the description rather than in the rail: eight fields do
-                not fit a 20rem column, and a claim is detail about the work,
-                not a property of it. */}
-            {canEditText && category === 'submit_invoice' && (
-              <InvoiceFields draft={invoice} set={setInvoice} field={field} />
-            )}
-            {!canEditText && task?.invoice && (
-              <div className="rounded-lg bg-ninja-bg p-2.5">
-                <p className="font-ninja text-[11px] font-bold text-ninja-muted uppercase tracking-wide">Invoice</p>
-                <p className="font-ninja text-sm text-ninja-navy mt-1">{invoiceLine(task.invoice) || 'No details yet.'}</p>
-              </div>
-            )}
-          </div>
+          {/* All optional. Most of what a center is carrying has no deadline,
+              no single owner and no one ninja, and a form that insists on them
+              gets filled with made-up ones. */}
+          <PropRow label="Due date" htmlFor="task-due">
+            <input
+              id="task-due"
+              type="date"
+              value={due}
+              onChange={(e) => setDue(e.target.value)}
+              className="font-ninja text-[13px] font-medium rounded-md border-0 bg-ninja-bg px-2.5 py-1 text-ninja-navy w-[9.5rem]"
+            />
+          </PropRow>
 
-          <div className="space-y-3 lg:border-l lg:border-ninja-border lg:pl-6">
-            <DetailRow label="Status" htmlFor="task-status">
-              <select id="task-status" value={status} onChange={(e) => setStatus(e.target.value)} className={`${field} w-full`}>
-                {LANES.map((l) => <option key={l.key} value={l.key}>{l.label}</option>)}
-              </select>
-            </DetailRow>
-
-            <DetailRow label="Kind" htmlFor={canEditText ? 'task-kind' : undefined}>
-              {canEditText ? (
-                <select id="task-kind" value={category} onChange={(e) => setCategory(e.target.value)} className={`${field} w-full`}>
-                  {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
-                </select>
-              ) : (
-                <KindTag category={category} />
-              )}
-            </DetailRow>
-
-            {/* All optional. Most of what a center is carrying has no deadline,
-                no single owner and no one ninja, and a form that insists on
-                them gets filled with made-up ones. */}
-            <DetailRow label="Due date" htmlFor="task-due">
-              <input id="task-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} className={`${field} w-full`} />
-            </DetailRow>
-
-            <DetailRow label="Assigned to" htmlFor="task-assignee">
-              <select id="task-assignee" value={assignee} onChange={(e) => setAssignee(e.target.value)} className={`${field} w-full`}>
+          <PropRow label="Assigned to" htmlFor="task-assignee">
+            <div className="flex items-center gap-1.5 min-w-0">
+              {assignee && <OwnerBadge id={Number(assignee)} name={ownerName} />}
+              <ChipSelect id="task-assignee" value={assignee} onChange={(e) => setAssignee(e.target.value)} label="Assigned to">
                 <option value="">Anyone</option>
                 {assignees.map((a) => <option key={a.id} value={a.id}>{a.display_name}</option>)}
-              </select>
-            </DetailRow>
+              </ChipSelect>
+            </div>
+          </PropRow>
 
-            <DetailRow label="Ninja">
-              <StudentPicker
-                value={studentId}
-                name={studentName}
-                onChange={(id, name) => { setStudentId(id); setStudentName(name); }}
-                className={`${field} w-full`}
-              />
-            </DetailRow>
+          <PropRow label="Ninja">
+            <StudentPicker
+              value={studentId}
+              name={studentName}
+              onChange={(id, name) => { setStudentId(id); setStudentName(name); }}
+            />
+          </PropRow>
 
-            {mode === 'edit' && (
-              <>
-                <DetailRow label="Added by">
-                  <span className="font-ninja text-sm text-ninja-navy">{task.created_by_name || 'Unknown'}</span>
-                </DetailRow>
+          {mode === 'edit' && (
+            <PropRow label="Added by">
+              <span className="font-ninja text-[13px] text-ninja-navy">
+                {task.created_by_name || 'Unknown'}
                 {task.completed_at && (
-                  <DetailRow label="Finished">
-                    <span className="font-ninja text-sm text-ninja-navy">{shortDate(task.completed_at)}</span>
-                  </DetailRow>
+                  <span className="text-ninja-muted"> · finished {shortDate(task.completed_at)}</span>
                 )}
-              </>
-            )}
-          </div>
+              </span>
+            </PropRow>
+          )}
         </div>
 
-        {error && <p className="font-ninja text-sm text-ninja-red">{error}</p>}
+        {canEditText ? (
+          <div className="h-44 flex flex-col min-h-0 rounded-lg bg-ninja-bg px-3 py-2.5">
+            <LazyMarkdownEditor
+              variant="bare"
+              value={body}
+              onChange={setBody}
+              placeholder="Anything the next director needs to know…"
+            />
+          </div>
+        ) : (
+          // Another director's words, readable but not editable: the server
+          // keeps a task's text with whoever wrote it.
+          <div className="font-ninja text-[13px] text-ninja-navy rounded-lg bg-ninja-bg px-3 py-2.5 min-h-[3rem]">
+            {title && body
+              ? <ReactMarkdown components={MD} urlTransform={mdUrl}>{body}</ReactMarkdown>
+              : <p className="text-ninja-muted">No description.</p>}
+          </div>
+        )}
 
-        <div className="flex items-center gap-2 pt-1 border-t border-ninja-border">
+        {canEditText && category === 'submit_invoice' && (
+          <InvoiceFields draft={invoice} set={setInvoice} />
+        )}
+        {!canEditText && task?.invoice && (
+          <div className="rounded-lg bg-ninja-bg p-3">
+            <p className="font-ninja text-[11px] font-semibold text-ninja-muted uppercase tracking-wide">Invoice</p>
+            <p className="font-ninja text-[13px] text-ninja-navy mt-1">{invoiceLine(task.invoice) || 'No details yet.'}</p>
+          </div>
+        )}
+
+        {error && <p className="font-ninja text-[13px] text-ninja-red">{error}</p>}
+
+        <div className="flex items-center gap-2 pt-3 border-t border-ninja-border">
           {/* The confirm keeps its word. Icons are fine for reversible actions;
               a destructive one should never rest on the reader recognising a
               glyph. */}
           {mode === 'edit' && canDelete && (
             confirmDel ? (
-              <div className="flex items-center gap-1 mt-3">
+              <div className="flex items-center gap-1">
                 <button
                   type="button"
                   onClick={destroy}
                   disabled={busy}
-                  className="font-ninja text-sm font-bold px-3 py-1.5 rounded-full bg-red-500 text-white hover:bg-red-600 disabled:opacity-60 transition"
+                  className="font-ninja text-[13px] font-semibold px-3 py-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-60 transition"
                 >
                   Delete
                 </button>
@@ -364,7 +387,7 @@ export default function TaskDialog({
               <button
                 type="button"
                 onClick={() => setConfirmDel(true)}
-                className="font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-red transition-colors mt-3"
+                className="font-ninja text-[13px] font-medium text-ninja-muted hover:text-ninja-red transition-colors"
               >
                 Delete
               </button>
@@ -374,7 +397,7 @@ export default function TaskDialog({
           <button
             type="button"
             onClick={onClose}
-            className="font-ninja text-sm font-bold px-4 py-2 rounded-full text-ninja-muted hover:text-ninja-navy transition mt-3"
+            className="font-ninja text-[13px] font-medium px-3 py-1.5 rounded-lg text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg transition"
           >
             Cancel
           </button>
@@ -382,7 +405,7 @@ export default function TaskDialog({
             type="button"
             onClick={submit}
             disabled={busy || !canSave}
-            className="font-ninja text-sm font-bold px-4 py-2 rounded-full bg-ninja-blue text-white hover:brightness-95 disabled:opacity-50 transition mt-3"
+            className="font-ninja text-[13px] font-semibold px-4 py-1.5 rounded-lg bg-ninja-blue text-white hover:brightness-95 disabled:opacity-50 transition"
           >
             {mode === 'edit' ? 'Save changes' : 'Add task'}
           </button>

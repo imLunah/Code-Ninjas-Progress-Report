@@ -130,6 +130,18 @@ textarea:focus-visible {
   background-color: #1e2538;
   color: rgb(var(--ninja-navy));
 }
+/* Fields that declare their own surface keep it in the dark too. Without
+   these, the blanket rule above paints boxes behind ghost fields (the band
+   behind the task dialog's title) and swaps chip fields off the page token. */
+/* :not(:hover) leaves the pointer state to the field's own hover classes. */
+.dark input.bg-transparent:not(:hover),
+.dark select.bg-transparent:not(:hover) {
+  background-color: transparent;
+}
+.dark input.bg-ninja-bg,
+.dark select.bg-ninja-bg {
+  background-color: rgb(var(--ninja-bg));
+}
 .dark input::placeholder,
 .dark textarea::placeholder {
   color: rgb(var(--ninja-muted));
