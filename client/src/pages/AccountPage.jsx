@@ -289,26 +289,87 @@ export default function AccountPage() {
   );
 
   // Desktop-only setting, so it only appears in the desktop layout's rail.
-  const displayCard = (
-    <div className={`${CARD} p-5`}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className={`w-9 h-9 rounded-xl flex items-center justify-center ${horizontalNav ? 'text-ninja-blue-ink bg-ninja-blue/10' : 'text-ninja-muted bg-ninja-bg'}`}>
-            <PanelTopIcon width="17" height="17" />
-          </span>
-          <div>
-            <p className="text-ninja-navy font-ninja font-semibold text-sm">Horizontal navigation</p>
-            <p className="text-ninja-muted font-ninja text-xs">The nav runs along the top of the screen instead of the sidebar.</p>
+  // Picked from little window previews rather than a switch, so you can see
+  // what each layout looks like before committing to it.
+  const navLayouts = [
+    {
+      value: false,
+      label: 'Sidebar',
+      preview: (
+        <div className="flex h-full">
+          <div className="w-[26%] border-r border-ninja-border bg-white p-1.5 space-y-1.5">
+            <div className="h-1.5 w-full rounded-full bg-ninja-blue/50" />
+            <div className="h-1.5 w-full rounded-full bg-ninja-border" />
+            <div className="h-1.5 w-3/4 rounded-full bg-ninja-border" />
+          </div>
+          <div className="flex-1 p-1.5 space-y-1.5">
+            <div className="h-2 w-1/2 rounded-full bg-ninja-border" />
+            <div className="h-6 w-full rounded-md bg-white border border-ninja-border" />
+            <div className="h-6 w-full rounded-md bg-white border border-ninja-border" />
           </div>
         </div>
-        <button
-          type="button" role="switch" aria-checked={horizontalNav} aria-label="Toggle horizontal navigation"
-          onClick={() => setHorizontalNav(!horizontalNav)}
-          className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${horizontalNav ? 'bg-ninja-blue' : 'bg-ninja-border'}`}
-        >
-          <motion.span layout transition={{ type: 'spring', stiffness: 500, damping: 32 }}
-            className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${horizontalNav ? 'right-1' : 'left-1'}`} />
-        </button>
+      ),
+    },
+    {
+      value: true,
+      label: 'Top bar',
+      preview: (
+        <div className="flex h-full flex-col">
+          <div className="flex items-center gap-1.5 border-b border-ninja-border bg-white px-1.5 py-1">
+            <div className="h-1.5 w-1/4 rounded-full bg-ninja-blue/50" />
+            <div className="h-1.5 w-1/5 rounded-full bg-ninja-border" />
+            <div className="h-1.5 w-1/5 rounded-full bg-ninja-border" />
+          </div>
+          <div className="flex-1 p-1.5 space-y-1.5">
+            <div className="h-2 w-1/2 rounded-full bg-ninja-border" />
+            <div className="h-6 w-full rounded-md bg-white border border-ninja-border" />
+            <div className="h-6 w-full rounded-md bg-white border border-ninja-border" />
+          </div>
+        </div>
+      ),
+    },
+  ];
+
+  const displayCard = (
+    <div className={`${CARD} p-5`}>
+      <div className="flex items-center gap-3 mb-4">
+        <span className="w-9 h-9 rounded-xl flex items-center justify-center text-ninja-blue-ink bg-ninja-blue/10">
+          <PanelTopIcon width="17" height="17" />
+        </span>
+        <div>
+          <p className="text-ninja-navy font-ninja font-semibold text-sm">Navigation layout</p>
+          <p className="text-ninja-muted font-ninja text-xs">Where the nav lives on desktop. Only follows this device.</p>
+        </div>
+      </div>
+      <div role="radiogroup" aria-label="Navigation layout" className="grid grid-cols-2 gap-4 max-w-md">
+        {navLayouts.map(({ value, label, preview }) => {
+          const selected = horizontalNav === value;
+          return (
+            <button
+              key={label}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => setHorizontalNav(value)}
+              className="group text-center"
+            >
+              <div
+                className={`aspect-[16/10] rounded-xl overflow-hidden border-2 bg-ninja-bg transition-all ${
+                  selected
+                    ? 'border-ninja-blue ring-2 ring-ninja-blue/30'
+                    : 'border-ninja-border group-hover:border-ninja-blue/50'
+                }`}
+              >
+                {preview}
+              </div>
+              <p className={`mt-2 font-ninja text-sm transition-colors ${
+                selected ? 'text-ninja-navy font-bold' : 'text-ninja-muted font-semibold group-hover:text-ninja-navy'
+              }`}>
+                {label}
+              </p>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
