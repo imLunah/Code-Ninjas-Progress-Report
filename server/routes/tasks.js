@@ -397,6 +397,12 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
     return res.status(400).json({ error: 'Unknown category' });
   }
 
+  // Status is arrangement, not authorship, so like /reorder it is NOT gated to
+  // the author: ticking a colleague's task off is the point of a shared list.
+  if (req.body?.status !== undefined && !STATUSES.includes(req.body.status)) {
+    return res.status(400).json({ error: 'Unknown status' });
+  }
+
   const due = readDueDate(req.body?.due_date);
   if (due.error) return res.status(400).json({ error: due.error });
 
@@ -419,6 +425,13 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
       set('body', content.body);
     }
     if (req.body?.category !== undefined) set('category', req.body.category);
+    if (req.body?.status !== undefined) {
+      params.push(req.body.status);
+      sets.push(`status = $${params.length}`);
+      // Same stamp-and-clear as /reorder: finished-on belongs to Done and
+      // never outlives it.
+      sets.push(`completed_at = CASE WHEN $${params.length} = 'done' THEN COALESCE(completed_at, now()) END`);
+    }
     if (!due.skip) set('due_date', due.value);
     if (!assignee.skip) set('assignee_id', assignee.value);
     if (!student.skip) set('student_id', student.value);

@@ -1,23 +1,45 @@
 import { XIcon } from 'lucide-react';
+import { today } from '../../../utils/dateUtils';
 
-// The parts of the task board that aren't about how a card looks: the columns
-// it can sit in, and how the flat list and the columns convert between each
-// other.
-
-export const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+// What every surface of the Operations Tracker shares: what a task can be, the
+// stages it moves through, and the small pieces of a row — tag, owner badge,
+// due date — drawn the same way on the tracker page and the dashboard preview.
 
 export const LANES = [
   { key: 'todo',  label: 'To do' },
   { key: 'doing', label: 'In progress' },
   { key: 'done',  label: 'Done' },
 ];
-export const LANE_INDEX = Object.fromEntries(LANES.map((l, i) => [l.key, i]));
 
-// The page itself is painted in ninja-bg, so a column filled with that token
-// would be invisible in both themes. A tint of the opposite ink lifts off the
-// page either way, and opacity utilities deliberately escape the .dark bg
-// overrides, which is the one time that behaviour is wanted.
-export const COLUMN_SURFACE = 'bg-black/[0.035] dark:bg-white/[0.04]';
+// The kinds, in the Operations Tracker's own words. Every tint is one of the
+// pairs index.css carries a dark override for.
+export const CATEGORIES = [
+  { key: 'follow_up',      label: 'Follow up',        chip: 'bg-blue-100 text-blue-700' },
+  { key: 'resume_hold',    label: 'Resume from hold', chip: 'bg-green-100 text-green-700' },
+  { key: 'cancel',         label: 'Cancel',           chip: 'bg-red-100 text-red-700' },
+  { key: 'submit_invoice', label: 'Submit invoice',   chip: 'bg-purple-100 text-purple-700' },
+  { key: 'print',          label: 'Print request',    chip: 'bg-indigo-100 text-indigo-700' },
+  // No chip: most work is just work, and a tag that says "Other" says nothing.
+  { key: 'other',          label: 'Other',            chip: null },
+];
+export const categoryOf = (key) =>
+  CATEGORIES.find((c) => c.key === key) || CATEGORIES[CATEGORIES.length - 1];
+
+export const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'];
+
+export const money = (n) =>
+  `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+// The claim in one line, in the order somebody chasing it reads: how much, for
+// when, from whom.
+export const invoiceLine = (invoice) => [
+  invoice.amount != null ? money(invoice.amount) : null,
+  invoice.service_month
+    ? `${MONTHS[invoice.service_month - 1].slice(0, 3)} ${invoice.service_year || ''}`.trim()
+    : null,
+  invoice.rc_name,
+].filter(Boolean).join(' · ');
 
 // Description markdown. Everything inherits currentColor. Images dropped: CSP
 // allows wildcard Supabase for img-src, so a remote image in shared text is an
@@ -49,13 +71,81 @@ export const dayLabel = (ymd) => {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
-// First name only. A column is 240px wide and "Christopher Alvarado" is the
-// whole card; whoever it is, the people reading this board know them.
 export const firstName = (name) => (name || '').trim().split(' ')[0] || 'Unknown';
 
-// Round icon buttons. Words in a card footer wrap onto a second line and push
-// the card apart; these carry their label in title + aria-label instead, so
-// nothing is hover-only for assistive tech.
+// What surfaces first inside a group. Late outranks everything, then today,
+// then dated work in date order, then the rest as the server sent them.
+export const urgency = (task) => {
+  const now = today();
+  if (task.status === 'done') return 9;
+  if (task.due_date && task.due_date < now) return 0;
+  if (task.due_date === now) return 1;
+  if (task.due_date) return 2;
+  return 3;
+};
+
+export const sortByUrgency = (tasks) => [...tasks].sort(
+  (a, b) => urgency(a) - urgency(b)
+    || (a.due_date || '9999').localeCompare(b.due_date || '9999'),
+);
+
+/* ------------------------------------------------------------- row atoms -- */
+
+export function KindTag({ category, className = '' }) {
+  const cat = categoryOf(category);
+  if (!cat.chip) return null;
+  return (
+    <span className={`inline-flex font-ninja text-[11px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap ${cat.chip} ${className}`}>
+      {cat.label}
+    </span>
+  );
+}
+
+// Not a photo. The people on this list are five directors who know each other;
+// a letter in a tinted circle is identity enough, and the tint pairs are the
+// ones the dark theme already knows how to flip.
+const OWNER_TINTS = [
+  'bg-blue-100 text-blue-700',
+  'bg-green-100 text-green-700',
+  'bg-purple-100 text-purple-700',
+  'bg-indigo-100 text-indigo-700',
+  'bg-yellow-100 text-yellow-700',
+];
+
+export function OwnerBadge({ id, name }) {
+  if (!id) return null;
+  const initial = (name || '').trim().charAt(0).toUpperCase() || '?';
+  return (
+    <span
+      aria-hidden="true"
+      className={`w-5 h-5 rounded-full inline-flex items-center justify-center font-ninja text-[10px] font-bold flex-shrink-0 ${OWNER_TINTS[id % OWNER_TINTS.length]}`}
+    >
+      {initial}
+    </span>
+  );
+}
+
+// Plain text, not a pill: a date is data, and the only dates that deserve ink
+// are the ones something is wrong or about to be wrong with.
+export function DueDate({ due, status }) {
+  if (!due) return null;
+  const done = status === 'done';
+  const now = today();
+  const overdue = !done && due < now;
+  const dueToday = !done && due === now;
+  return (
+    <span
+      className={`font-ninja text-xs whitespace-nowrap ${
+        overdue ? 'font-bold text-ninja-red' : dueToday ? 'font-bold text-yellow-700' : 'text-ninja-muted'
+      }`}
+    >
+      {overdue ? `Late ${dayLabel(due)}` : dueToday ? 'Today' : dayLabel(due)}
+    </span>
+  );
+}
+
+// Round icon buttons carrying their label in title + aria-label, so nothing is
+// hover-only for assistive tech.
 export function IconButton({ onClick, label, danger, subtle, className = '', children }) {
   return (
     <button
@@ -85,18 +175,3 @@ export function DiscardButton({ onClick, label = 'Discard' }) {
     </button>
   );
 }
-
-// The board is held as one flat list; the columns are a view of it. Rebuilding
-// in column order after every move keeps the list and the board describing the
-// same thing, so what gets persisted is what is on screen.
-export const splitLanes = (tasks, skipId) => {
-  const lanes = {};
-  for (const l of LANES) lanes[l.key] = [];
-  for (const t of tasks) {
-    if (t.id === skipId) continue;
-    (lanes[t.status] || lanes.todo).push(t);
-  }
-  return lanes;
-};
-
-export const flattenLanes = (lanes) => LANES.flatMap((l) => lanes[l.key]);
