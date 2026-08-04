@@ -282,29 +282,34 @@ export default function AccountPage() {
               </div>
               <Chevron width="18" height="18" className="text-ninja-muted" />
             </button>
-
-            <div className="mt-3 flex items-center justify-between rounded-xl border border-ninja-border p-3">
-              <div className="flex items-center gap-3">
-                <span className={`w-9 h-9 rounded-xl flex items-center justify-center ${horizontalNav ? 'text-ninja-blue-ink bg-ninja-blue/10' : 'text-ninja-muted bg-ninja-bg'}`}>
-                  <PanelTopIcon width="17" height="17" />
-                </span>
-                <div>
-                  <p className="text-ninja-navy font-ninja font-semibold text-sm">Horizontal navigation</p>
-                  <p className="text-ninja-muted font-ninja text-xs">Desktop only. The nav moves to the top of the screen.</p>
-                </div>
-              </div>
-              <button
-                type="button" role="switch" aria-checked={horizontalNav} aria-label="Toggle horizontal navigation"
-                onClick={() => setHorizontalNav(!horizontalNav)}
-                className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${horizontalNav ? 'bg-ninja-blue' : 'bg-ninja-border'}`}
-              >
-                <motion.span layout transition={{ type: 'spring', stiffness: 500, damping: 32 }}
-                  className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${horizontalNav ? 'right-1' : 'left-1'}`} />
-              </button>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+
+  // Desktop-only setting, so it only appears in the desktop layout's rail.
+  const displayCard = (
+    <div className={`${CARD} p-5`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className={`w-9 h-9 rounded-xl flex items-center justify-center ${horizontalNav ? 'text-ninja-blue-ink bg-ninja-blue/10' : 'text-ninja-muted bg-ninja-bg'}`}>
+            <PanelTopIcon width="17" height="17" />
+          </span>
+          <div>
+            <p className="text-ninja-navy font-ninja font-semibold text-sm">Horizontal navigation</p>
+            <p className="text-ninja-muted font-ninja text-xs">The nav runs along the top of the screen instead of the sidebar.</p>
+          </div>
+        </div>
+        <button
+          type="button" role="switch" aria-checked={horizontalNav} aria-label="Toggle horizontal navigation"
+          onClick={() => setHorizontalNav(!horizontalNav)}
+          className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${horizontalNav ? 'bg-ninja-blue' : 'bg-ninja-border'}`}
+        >
+          <motion.span layout transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+            className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${horizontalNav ? 'right-1' : 'left-1'}`} />
+        </button>
+      </div>
     </div>
   );
 
@@ -451,6 +456,7 @@ export default function AccountPage() {
         { key: 'password', label: 'Password', Icon: LockIcon },
       ] },
       { title: 'Preferences', items: [
+        { key: 'display', label: 'Display', Icon: PanelTopIcon },
         { key: 'preferences', label: 'Experimental', Icon: FlaskIcon },
         ...(ONBOARDING_ENABLED ? [{ key: 'help', label: 'Getting started', Icon: HelpIcon }] : []),
       ] },
@@ -459,6 +465,7 @@ export default function AccountPage() {
     const HEADINGS = {
       profile: 'Edit profile',
       password: 'Password',
+      display: 'Display',
       preferences: 'Preferences',
       help: 'Getting started',
     };
@@ -554,6 +561,7 @@ export default function AccountPage() {
                 </form>
               )}
 
+              {section === 'display' && displayCard}
               {section === 'preferences' && experimentalCard}
               {section === 'help' && gettingStarted}
             </motion.section>

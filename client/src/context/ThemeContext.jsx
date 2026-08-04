@@ -39,8 +39,8 @@ export function ThemeProvider({ children }) {
   const [experimental, setExperimentalState] = useState(() => {
     try { return localStorage.getItem('dj-experimental') === '1'; } catch { return false; }
   });
-  // Desktop-only: move the nav from the sidebar to a horizontal top bar.
-  // Per-device like the flag that unlocks it, so no account sync.
+  // Display setting, desktop-only: move the nav from the sidebar to a
+  // horizontal top bar. Per-device, so no account sync.
   const [horizontalNav, setHorizontalNavState] = useState(() => {
     try { return localStorage.getItem('dj-nav-horizontal') === '1'; } catch { return false; }
   });
@@ -56,12 +56,9 @@ export function ThemeProvider({ children }) {
     try { localStorage.setItem('dj-experimental', on ? '1' : '0'); } catch { /* ignore */ }
     if (!on) {
       // Turning the flag off resets everything it unlocked: the accent goes
-      // back to the stock theme (the rev bump persists that to the account)
-      // and the nav returns to the sidebar.
+      // back to the stock theme, and the rev bump persists that to the account.
       setAccentState('default');
       setRev((r) => r + 1);
-      setHorizontalNavState(false);
-      try { localStorage.setItem('dj-nav-horizontal', '0'); } catch { /* ignore */ }
     }
   }, []);
 

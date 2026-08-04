@@ -105,9 +105,8 @@ function AdjacentPanel({ tab, panelRef, side }) {
 export default function Layout({ children }) {
   const isPreview = useContext(LayoutPreviewContext);
   const { user, viewAs } = useAuth();
-  const { experimental, horizontalNav } = useTheme();
-  // Experimental, desktop-only: nav runs along the top instead of the sidebar.
-  const useTopNav = experimental && horizontalNav;
+  // Desktop-only display setting: nav runs along the top instead of the sidebar.
+  const { horizontalNav: useTopNav } = useTheme();
   const [bugOpen, setBugOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
