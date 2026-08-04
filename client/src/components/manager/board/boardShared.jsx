@@ -95,7 +95,7 @@ export function KindTag({ category, className = '' }) {
   const cat = categoryOf(category);
   if (!cat.chip) return null;
   return (
-    <span className={`inline-flex font-ninja text-[11px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap ${cat.chip} ${className}`}>
+    <span className={`inline-flex font-ninja text-[11px] font-medium px-1.5 py-[1px] rounded whitespace-nowrap ${cat.chip} ${className}`}>
       {cat.label}
     </span>
   );
@@ -118,7 +118,7 @@ export function OwnerBadge({ id, name }) {
   return (
     <span
       aria-hidden="true"
-      className={`w-5 h-5 rounded-full inline-flex items-center justify-center font-ninja text-[10px] font-bold flex-shrink-0 ${OWNER_TINTS[id % OWNER_TINTS.length]}`}
+      className={`w-5 h-5 rounded-full inline-flex items-center justify-center font-ninja text-[10px] font-semibold flex-shrink-0 ${OWNER_TINTS[id % OWNER_TINTS.length]}`}
     >
       {initial}
     </span>
@@ -136,7 +136,7 @@ export function DueDate({ due, status }) {
   return (
     <span
       className={`font-ninja text-xs whitespace-nowrap ${
-        overdue ? 'font-bold text-ninja-red' : dueToday ? 'font-bold text-yellow-700' : 'text-ninja-muted'
+        overdue ? 'font-semibold text-ninja-red' : dueToday ? 'font-semibold text-yellow-700' : 'text-ninja-muted'
       }`}
     >
       {overdue ? `Late ${dayLabel(due)}` : dueToday ? 'Today' : dayLabel(due)}

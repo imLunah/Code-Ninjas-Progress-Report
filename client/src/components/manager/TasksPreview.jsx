@@ -16,8 +16,8 @@ const PER_PREVIEW = 5;
 
 function PreviewRow({ task }) {
   return (
-    <li className="flex items-center gap-2.5 py-2 border-b border-ninja-border last:border-b-0">
-      <p className="font-ninja text-sm font-semibold text-ninja-navy truncate flex-1 min-w-0">
+    <li className="flex items-center gap-2.5 py-2 border-b border-ninja-border/70 last:border-b-0">
+      <p className="font-ninja text-[13px] font-medium text-ninja-navy truncate flex-1 min-w-0">
         {task.title || task.body}
       </p>
       <span className="hidden sm:block"><KindTag category={task.category} /></span>

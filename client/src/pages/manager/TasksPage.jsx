@@ -5,12 +5,17 @@ import TaskTable from '../../components/manager/board/TaskTable';
 import TaskDialog from '../../components/manager/board/TaskDialog';
 import { CATEGORIES, sortByUrgency } from '../../components/manager/board/boardShared';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { CARD } from '../../lib/surfaces';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
 // The Operations Tracker. One list, four ways of reading it: what is open,
 // what kind of work it is, whose it is, and what got finished. The tabs are
 // views of the same rows, not places a task can be moved between.
+//
+// Tabs, toolbar and table share one CARD window. Everything that answers "what
+// am I looking at" sits inside the same frame, and the page around it stays
+// quiet.
 
 const TABS = [
   { key: 'open',  label: 'To-do' },
@@ -19,7 +24,11 @@ const TABS = [
   { key: 'done',  label: 'Done' },
 ];
 
-const control = 'font-ninja text-sm rounded-lg border border-ninja-border bg-white px-2.5 py-1.5 text-ninja-navy';
+// Toolbar controls are ghosts: resting they are labels, and only get a surface
+// under the pointer or while they are actually narrowing the list.
+const ghost = (active) => 'font-ninja text-[13px] font-medium rounded-md px-2 py-1.5 border-0 '
+  + 'transition-colors cursor-pointer '
+  + (active ? 'bg-ninja-bg text-ninja-navy' : 'bg-transparent text-ninja-muted hover:bg-ninja-bg hover:text-ninja-navy');
 
 export default function TasksPage() {
   const { user, isReadOnly } = useAuth();
@@ -160,167 +169,171 @@ export default function TasksPage() {
   return (
     <Layout>
       <div className="space-y-4">
-        <header className="flex items-start justify-between gap-4">
+        <header className="flex items-end justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black font-ninja text-ninja-navy tracking-tight">Tasks</h1>
-            <p className="font-ninja text-sm text-ninja-muted mt-1 text-pretty">
-              The work this center is carrying. Tick things off as they get done;
-              every director here sees the same list.
+            <h1 className="text-xl sm:text-2xl font-bold font-ninja text-ninja-navy tracking-tight">Tasks</h1>
+            <p className="font-ninja text-[13px] text-ninja-muted mt-0.5 text-pretty">
+              The work this center is carrying. Every director here sees the same list.
             </p>
           </div>
           {!isReadOnly && (
             <button
               type="button"
               onClick={() => setDialog({ mode: 'new' })}
-              className="flex-shrink-0 inline-flex items-center gap-1.5 font-ninja text-sm font-bold px-4 py-2 rounded-full bg-ninja-blue text-white hover:brightness-95 transition"
+              className="flex-shrink-0 inline-flex items-center gap-1 font-ninja text-[13px] font-semibold px-3 py-1.5 rounded-lg bg-ninja-blue text-white hover:brightness-95 transition"
             >
-              <PlusIcon className="w-4 h-4" strokeWidth={2.5} />
+              <PlusIcon className="w-3.5 h-3.5" strokeWidth={2.5} />
               New task
             </button>
           )}
         </header>
 
-        {/* Views, not places: buttons with a pressed state rather than ARIA
-            tabs, which promise arrow-key panel wiring these don't have. */}
-        <div className="flex items-center gap-6 border-b border-ninja-border overflow-x-auto no-scrollbar" aria-label="Views of the tracker">
-          {TABS.map((t) => {
-            const active = tab === t.key;
-            const count = t.key === 'open' ? openCount : t.key === 'done' ? doneCount : null;
-            return (
-              <button
-                key={t.key}
-                type="button"
-                aria-pressed={active}
-                onClick={() => setTab(t.key)}
-                className={`flex-shrink-0 flex items-baseline gap-1.5 font-ninja text-sm font-semibold pt-1 pb-2.5 border-b-2 -mb-px transition-colors ${
-                  active
-                    ? 'border-current text-ninja-navy'
-                    : 'border-transparent text-ninja-muted hover:text-ninja-navy'
-                }`}
-              >
-                {t.label}
-                {count !== null && <span className="font-ninja text-xs text-ninja-muted tabular-nums">{count}</span>}
-              </button>
-            );
-          })}
-        </div>
+        <div className={`${CARD} overflow-hidden`}>
+          {/* Views, not places: buttons with a pressed state rather than ARIA
+              tabs, which promise arrow-key panel wiring these don't have. */}
+          <div className="flex items-center gap-5 px-4 pt-1.5 border-b border-ninja-border overflow-x-auto no-scrollbar" aria-label="Views of the tracker">
+            {TABS.map((t) => {
+              const active = tab === t.key;
+              const count = t.key === 'open' ? openCount : t.key === 'done' ? doneCount : null;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setTab(t.key)}
+                  className={`flex-shrink-0 flex items-baseline gap-1.5 font-ninja text-[13px] font-medium pt-2 pb-2 border-b-2 -mb-px transition-colors ${
+                    active
+                      ? 'border-current text-ninja-navy'
+                      : 'border-transparent text-ninja-muted hover:text-ninja-navy'
+                  }`}
+                >
+                  {t.label}
+                  {count !== null && <span className="font-ninja text-[11px] text-ninja-muted tabular-nums">{count}</span>}
+                </button>
+              );
+            })}
+          </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="relative flex-1 min-w-[180px] max-w-xs">
-            <span className="sr-only">Search tasks</span>
-            <SearchIcon className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-ninja-muted pointer-events-none" />
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search tasks"
-              className={`${control} w-full pl-8`}
-            />
-          </label>
+          <div className="flex flex-wrap items-center gap-1.5 px-2.5 py-2 border-b border-ninja-border">
+            <label className="relative flex-1 min-w-[160px] max-w-[240px]">
+              <span className="sr-only">Search tasks</span>
+              <SearchIcon className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-ninja-muted pointer-events-none" />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search"
+                className="w-full font-ninja text-[13px] rounded-md border-0 bg-ninja-bg pl-8 pr-2.5 py-1.5 text-ninja-navy placeholder:text-ninja-muted"
+              />
+            </label>
 
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            aria-label="Filter by kind"
-            className={control}
-          >
-            <option value="all">Any kind</option>
-            {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
-          </select>
-
-          <select
-            value={owner}
-            onChange={(e) => setOwner(e.target.value)}
-            aria-label="Filter by owner"
-            className={control}
-          >
-            <option value="all">Anyone</option>
-            <option value="mine">Mine</option>
-            <option value="none">Unassigned</option>
-            {assignees.filter((a) => a.id !== user?.id).map((a) => (
-              <option key={a.id} value={String(a.id)}>{a.display_name}</option>
-            ))}
-          </select>
-
-          {filterOn && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="inline-flex items-center gap-1 font-ninja text-sm font-semibold text-ninja-muted hover:text-ninja-navy transition-colors"
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              aria-label="Filter by kind"
+              className={ghost(category !== 'all')}
             >
-              <XIcon className="w-4 h-4" strokeWidth={2.5} />
-              Clear
-            </button>
-          )}
+              <option value="all">Any kind</option>
+              {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+            </select>
 
-          {filterOn && !loading && (
-            <span className="ml-auto font-ninja text-xs text-ninja-muted tabular-nums">
-              Showing {shownCount} of {tasks.length}
-            </span>
-          )}
-        </div>
+            <select
+              value={owner}
+              onChange={(e) => setOwner(e.target.value)}
+              aria-label="Filter by owner"
+              className={ghost(owner !== 'all')}
+            >
+              <option value="all">Anyone</option>
+              <option value="mine">Mine</option>
+              <option value="none">Unassigned</option>
+              {assignees.filter((a) => a.id !== user?.id).map((a) => (
+                <option key={a.id} value={String(a.id)}>{a.display_name}</option>
+              ))}
+            </select>
 
-        {loading ? (
-          <div className="space-y-2 pt-2" aria-busy="true" aria-label="Loading tasks">
-            {[0, 1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-9 w-full rounded-lg" />)}
-          </div>
-        ) : tasks.length === 0 && !filterOn ? (
-          <div className="rounded-2xl border border-dashed border-ninja-border px-4 py-10 text-center">
-            <p className="font-ninja text-sm font-bold text-ninja-navy">Nothing on the tracker yet</p>
-            <p className="font-ninja text-xs text-ninja-muted mt-1 text-pretty max-w-md mx-auto">
-              Cancellations, invoices, re-enrollments and print requests live here, and every
-              director at this center sees the same list.
-            </p>
-            {!isReadOnly && (
-              <button
-                type="button"
-                onClick={() => setDialog({ mode: 'new' })}
-                className="font-ninja text-sm font-bold text-ninja-blue hover:underline underline-offset-4 mt-3"
-              >
-                Add the first task
-              </button>
-            )}
-          </div>
-        ) : empty ? (
-          <div className="px-1 py-10 text-center">
-            <p className="font-ninja text-sm text-ninja-muted">
-              {filterOn ? 'Nothing matches these filters.'
-                : tab === 'done' ? 'Nothing finished yet.'
-                  : 'Nothing open right now.'}
-            </p>
             {filterOn && (
               <button
                 type="button"
                 onClick={clearFilters}
-                className="font-ninja text-sm font-bold text-ninja-blue hover:underline underline-offset-4 mt-2"
+                title="Clear filters"
+                aria-label="Clear filters"
+                className="w-6 h-6 rounded-md flex items-center justify-center text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg transition-colors"
               >
-                Clear the filters
+                <XIcon className="w-3.5 h-3.5" strokeWidth={2.5} />
               </button>
             )}
-          </div>
-        ) : (
-          <TaskTable
-            groups={groups}
-            isReadOnly={isReadOnly}
-            onOpen={(task) => setDialog({ mode: 'edit', task })}
-            onToggle={onToggle}
-            onAdd={(preset) => setDialog({ mode: 'new', preset })}
-          />
-        )}
 
-        {/* Done never empties itself, so the list carries the recent past and
-            offers the rest rather than pretending it doesn't exist. */}
-        {!loading && tab === 'done' && (hiddenDone > 0 || showAllDone) && (
-          <button
-            type="button"
-            onClick={() => setShowAllDone((v) => !v)}
-            className="font-ninja text-sm font-semibold text-ninja-muted hover:text-ninja-navy transition-colors"
-          >
-            {showAllDone
-              ? `Show only the last ${windowDays} days`
-              : `Show ${hiddenDone} older finished task${hiddenDone === 1 ? '' : 's'}`}
-          </button>
-        )}
+            {filterOn && !loading && (
+              <span className="ml-auto font-ninja text-[11px] text-ninja-muted tabular-nums pr-1.5">
+                {shownCount} of {tasks.length}
+              </span>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="px-4 py-4 space-y-2.5" aria-busy="true" aria-label="Loading tasks">
+              {[0, 1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-7 w-full rounded-md" />)}
+            </div>
+          ) : tasks.length === 0 && !filterOn ? (
+            <div className="px-4 py-14 text-center">
+              <p className="font-ninja text-sm font-semibold text-ninja-navy">Nothing on the tracker yet</p>
+              <p className="font-ninja text-xs text-ninja-muted mt-1 text-pretty max-w-md mx-auto">
+                Cancellations, invoices, re-enrollments and print requests live here, and every
+                director at this center sees the same list.
+              </p>
+              {!isReadOnly && (
+                <button
+                  type="button"
+                  onClick={() => setDialog({ mode: 'new' })}
+                  className="font-ninja text-[13px] font-semibold text-ninja-blue hover:underline underline-offset-4 mt-3"
+                >
+                  Add the first task
+                </button>
+              )}
+            </div>
+          ) : empty ? (
+            <div className="px-4 py-14 text-center">
+              <p className="font-ninja text-[13px] text-ninja-muted">
+                {filterOn ? 'Nothing matches these filters.'
+                  : tab === 'done' ? 'Nothing finished yet.'
+                    : 'Nothing open right now.'}
+              </p>
+              {filterOn && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="font-ninja text-[13px] font-semibold text-ninja-blue hover:underline underline-offset-4 mt-2"
+                >
+                  Clear the filters
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              <TaskTable
+                groups={groups}
+                isReadOnly={isReadOnly}
+                onOpen={(task) => setDialog({ mode: 'edit', task })}
+                onToggle={onToggle}
+                onAdd={(preset) => setDialog({ mode: 'new', preset })}
+              />
+
+              {/* Done never empties itself, so the list carries the recent past
+                  and offers the rest rather than pretending it doesn't exist. */}
+              {tab === 'done' && (hiddenDone > 0 || showAllDone) && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllDone((v) => !v)}
+                  className="w-full text-left px-4 py-2.5 border-t border-ninja-border font-ninja text-[13px] font-medium text-ninja-muted hover:text-ninja-navy transition-colors"
+                >
+                  {showAllDone
+                    ? `Show only the last ${windowDays} days`
+                    : `Show ${hiddenDone} older finished task${hiddenDone === 1 ? '' : 's'}`}
+                </button>
+              )}
+            </>
+          )}
+        </div>
 
         {dialog && (
           <TaskDialog
