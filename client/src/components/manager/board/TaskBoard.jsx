@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../../api/client';
 import LazyMarkdownEditor from '../../shared/LazyMarkdownEditor';
+import Modal from '../../ui/Modal';
 import { PANEL } from '../../../lib/surfaces';
 import { today } from '../../../utils/dateUtils';
 import {
@@ -286,137 +287,196 @@ function InvoiceFields({ draft, set, field }) {
   );
 }
 
-// Title is a single line, description is optional. The editor needs a resolved
-// height for its bare variant, so the wrapper gives it one rather than letting
-// it collapse to a toolbar and one line.
-function TaskEditor({
-  title, setTitle, body, setBody, category, setCategory,
-  due, setDue, assignee, setAssignee, assignees,
-  studentId, studentName, onStudent,
-  invoice, setInvoice,
-  busy, onCancel, onSave, saveLabel,
-}) {
-  const field = 'font-ninja text-xs rounded-lg border border-ninja-border bg-white px-2 py-1.5 text-ninja-navy';
+// One row of the detail rail: what it is on the left, the control on the right.
+// A form of stacked labelled inputs makes every field look equally important;
+// this reads as a summary you can edit, which is what it is.
+function DetailRow({ label, htmlFor, children }) {
+  return (
+    <div className="grid grid-cols-[7rem_1fr] items-center gap-3">
+      <label htmlFor={htmlFor} className="font-ninja text-sm text-ninja-muted">{label}</label>
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
+
+// Creating and editing are the same dialog. They were an inline form inside a
+// 264px column, which meant every field was as narrow as a card and the card
+// grew to the height of a form while you used it. A task is a record; it gets
+// a page-sized surface to be read and edited on.
+function TaskDialog({ open, mode, task, lane, assignees, onClose, onSaved }) {
+  const initial = mode === 'edit' ? task : null;
+  const [title, setTitle] = useState(initial?.title || '');
+  const [body, setBody] = useState(initial?.body || '');
+  const [category, setCategory] = useState(initial?.category || 'other');
+  const [status, setStatus] = useState(initial?.status || lane || 'todo');
+  const [due, setDue] = useState(initial?.due_date || '');
+  const [assignee, setAssignee] = useState(initial?.assignee_id ? String(initial.assignee_id) : '');
+  const [studentId, setStudentId] = useState(initial?.student_id || null);
+  const [studentName, setStudentName] = useState(initial?.student_name || null);
+  const [invoice, setInvoice] = useState(() => toInvoiceDraft(initial?.invoice));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  const field = 'font-ninja text-sm rounded-lg border border-ninja-border bg-white px-2.5 py-1.5 text-ninja-navy';
+
   // A title OR a description, matching what the server will accept. Requiring a
   // title stranded every card that came over from the old sticky wall: those
-  // have a body and no title, so Save was disabled the moment you opened one
-  // and there was no way to set a date on it.
+  // have a body and no title, so Save was disabled the moment you opened one.
   const canSave = !!(title.trim() || body.trim());
+
+  const submit = async () => {
+    if (!canSave || busy) return;
+    setBusy(true);
+    setError(null);
+    const payload = {
+      title,
+      body,
+      category,
+      due_date: due || null,
+      assignee_id: assignee || null,
+      student_id: studentId || null,
+      invoice: invoicePayload(invoice, category),
+    };
+    try {
+      const saved = mode === 'edit'
+        ? await api.patch(`/tasks/${task.id}`, payload)
+        : await api.post('/tasks', { ...payload, status });
+      onSaved(saved, mode !== 'edit');
+      onClose();
+    } catch (err) {
+      setError(err?.message || 'That did not save. Try again.');
+      setBusy(false);
+    }
+  };
+
   return (
-    <div className="space-y-2">
-      <input
-        type="text"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onSave(); } }}
-        maxLength={200}
-        autoFocus
-        placeholder="What needs doing?"
-        aria-label="Task name"
-        className="w-full font-ninja text-sm font-bold rounded-lg border border-ninja-border bg-white px-2.5 py-1.5 text-ninja-navy placeholder:text-ninja-muted placeholder:font-normal"
-      />
-
-      {/* A select rather than chips: six kinds of work wrapped to three rows of
-          pills inside a 264px column and pushed everything else off the card. */}
-      <div className="grid grid-cols-2 gap-2">
-        <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Kind of task" className={`${field} w-full`}>
-          {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
-        </select>
+    <Modal
+      isOpen={open}
+      onClose={onClose}
+      title={mode === 'edit' ? 'Task' : 'New task'}
+      width="max-w-3xl"
+    >
+      <div className="space-y-5">
         <input
-          type="date"
-          value={due}
-          onChange={(e) => setDue(e.target.value)}
-          aria-label="Due date"
-          className={`${field} w-full`}
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          maxLength={200}
+          autoFocus
+          placeholder="What needs doing?"
+          aria-label="Task name"
+          // No box. The title IS the heading of this dialog, and a heading in a
+          // bordered input reads as one more field among six.
+          className="w-full font-ninja text-2xl font-black text-ninja-navy bg-transparent border-0 p-0 placeholder:text-ninja-muted placeholder:font-bold"
         />
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_20rem] gap-6">
+          <div className="space-y-4 min-w-0">
+            <div className="h-56 flex flex-col min-h-0 rounded-xl border border-ninja-border px-3 py-2">
+              <LazyMarkdownEditor
+                variant="bare"
+                value={body}
+                onChange={setBody}
+                placeholder="Anything the next director needs to know…"
+              />
+            </div>
+
+            {/* Under the description rather than in the rail: eight fields do
+                not fit a 20rem column, and a claim is detail about the work,
+                not a property of it. */}
+            {category === 'submit_invoice' && (
+              <InvoiceFields draft={invoice} set={setInvoice} field={field} />
+            )}
+          </div>
+
+          <div className="space-y-3 lg:border-l lg:border-ninja-border lg:pl-6">
+            {mode !== 'edit' && (
+              <DetailRow label="Column" htmlFor="task-status">
+                <select id="task-status" value={status} onChange={(e) => setStatus(e.target.value)} className={`${field} w-full`}>
+                  {LANES.map((l) => <option key={l.key} value={l.key}>{l.label}</option>)}
+                </select>
+              </DetailRow>
+            )}
+
+            <DetailRow label="Kind" htmlFor="task-kind">
+              <select id="task-kind" value={category} onChange={(e) => setCategory(e.target.value)} className={`${field} w-full`}>
+                {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+              </select>
+            </DetailRow>
+
+            {/* All optional. Most of what a center is carrying has no deadline,
+                no single owner and no one ninja, and a form that insists on
+                them gets filled with made-up ones. */}
+            <DetailRow label="Due date" htmlFor="task-due">
+              <input id="task-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} className={`${field} w-full`} />
+            </DetailRow>
+
+            <DetailRow label="Assigned to" htmlFor="task-assignee">
+              <select id="task-assignee" value={assignee} onChange={(e) => setAssignee(e.target.value)} className={`${field} w-full`}>
+                <option value="">Anyone</option>
+                {assignees.map((a) => <option key={a.id} value={a.id}>{a.display_name}</option>)}
+              </select>
+            </DetailRow>
+
+            <DetailRow label="Ninja">
+              <StudentPicker
+                value={studentId}
+                name={studentName}
+                onChange={(id, name) => { setStudentId(id); setStudentName(name); }}
+                className={`${field} w-full`}
+              />
+            </DetailRow>
+
+            {mode === 'edit' && (
+              <>
+                <DetailRow label="Added by">
+                  <span className="font-ninja text-sm text-ninja-navy">{task.created_by_name || 'Unknown'}</span>
+                </DetailRow>
+                {task.completed_at && (
+                  <DetailRow label="Finished">
+                    <span className="font-ninja text-sm text-ninja-navy">{shortDate(task.completed_at)}</span>
+                  </DetailRow>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {error && <p className="font-ninja text-sm text-ninja-red">{error}</p>}
+
+        <div className="flex items-center justify-end gap-2 pt-1 border-t border-ninja-border">
+          <button
+            type="button"
+            onClick={onClose}
+            className="font-ninja text-sm font-bold px-4 py-2 rounded-full text-ninja-muted hover:text-ninja-navy transition mt-3"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={busy || !canSave}
+            className="font-ninja text-sm font-bold px-4 py-2 rounded-full bg-ninja-blue text-white hover:brightness-95 disabled:opacity-50 transition mt-3"
+          >
+            {mode === 'edit' ? 'Save changes' : 'Add task'}
+          </button>
+        </div>
       </div>
-
-      {/* All optional. Most of what a center is carrying has no deadline, no
-          single owner and no one ninja, and a form that insists on them gets
-          filled with made-up ones. */}
-      <select
-        value={assignee}
-        onChange={(e) => setAssignee(e.target.value)}
-        aria-label="Assign to"
-        className={`${field} w-full`}
-      >
-        <option value="">Anyone</option>
-        {assignees.map((a) => (
-          <option key={a.id} value={a.id}>{a.display_name}</option>
-        ))}
-      </select>
-
-      <StudentPicker
-        value={studentId}
-        name={studentName}
-        onChange={onStudent}
-        className={`${field} w-full`}
-      />
-
-      {category === 'submit_invoice' && (
-        <InvoiceFields draft={invoice} set={setInvoice} field={field} />
-      )}
-
-      <div className="h-28 flex flex-col min-h-0 rounded-lg border border-ninja-border px-2 py-1.5 text-ninja-navy">
-        <LazyMarkdownEditor variant="bare" value={body} onChange={setBody} placeholder="Any detail worth keeping…" />
-      </div>
-      <div className="flex items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="font-ninja text-xs font-bold px-2.5 py-1.5 rounded-full text-ninja-muted hover:text-ninja-navy transition"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={busy || !canSave}
-          className="font-ninja text-xs font-bold px-3 py-1.5 rounded-full bg-ninja-blue text-white hover:brightness-95 disabled:opacity-50 transition"
-        >
-          {saveLabel}
-        </button>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
 /* ---------------------------------------------------------------- card -- */
 
 function TaskCard({
-  task, canManage, canReorder, canDrag, assignees, dragging,
-  onBeginDrag, onMoveLane, onSaved, onDeleted, cardRef,
+  task, canManage, canReorder, canDrag, dragging,
+  onBeginDrag, onMoveLane, onOpen, onDeleted, cardRef,
 }) {
-  const [editing, setEditing] = useState(false);
-  const [title, setTitle] = useState(task.title || '');
-  const [body, setBody] = useState(task.body || '');
-  const [category, setCategory] = useState(task.category || 'other');
-  const [due, setDue] = useState(task.due_date || '');
-  const [assignee, setAssignee] = useState(task.assignee_id ? String(task.assignee_id) : '');
-  const [studentId, setStudentId] = useState(task.student_id || null);
-  const [studentName, setStudentName] = useState(task.student_name || null);
-  const [invoice, setInvoice] = useState(() => toInvoiceDraft(task.invoice));
   const [confirmDel, setConfirmDel] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const lane = LANE_INDEX[task.status] ?? 0;
   const isDone = task.status === 'done';
-
-  const save = async () => {
-    if ((!title.trim() && !body.trim()) || busy) return;
-    setBusy(true);
-    try {
-      const updated = await api.patch(`/tasks/${task.id}`, {
-        title, body, category,
-        due_date: due || null,
-        assignee_id: assignee || null,
-        student_id: studentId || null,
-        invoice: invoicePayload(invoice, category),
-      });
-      onSaved(updated);
-      setEditing(false);
-    } catch { /* ignore */ } finally { setBusy(false); }
-  };
 
   return (
     <motion.div
@@ -430,103 +490,77 @@ function TaskCard({
       // to click: a drag that begins on the delete button is a delete you never
       // get to make.
       onPointerDown={(e) => {
-        if (!canDrag || editing) return;
+        if (!canDrag) return;
         if (e.target.closest('button, a, input, select, textarea, [contenteditable]')) return;
         onBeginDrag(task, e);
       }}
-      className={`${PANEL} p-3 ${canDrag && !editing ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      className={`${PANEL} p-3 ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
       style={{
         // Finished work stays legible but stops competing with the work that
         // isn't.
-        opacity: isDone && !editing ? 0.75 : undefined,
-        touchAction: canDrag && !editing ? 'none' : undefined,
+        opacity: isDone ? 0.75 : undefined,
+        touchAction: canDrag ? 'none' : undefined,
       }}
     >
-      {editing ? (
-        <TaskEditor
-          title={title} setTitle={setTitle}
-          body={body} setBody={setBody}
-          category={category} setCategory={setCategory}
-          due={due} setDue={setDue}
-          assignee={assignee} setAssignee={setAssignee}
-          assignees={assignees}
-          studentId={studentId} studentName={studentName}
-          onStudent={(id, name) => { setStudentId(id); setStudentName(name); }}
-          invoice={invoice} setInvoice={setInvoice}
-          busy={busy}
-          saveLabel="Save"
-          onCancel={() => {
-            setEditing(false);
-            setTitle(task.title || ''); setBody(task.body || ''); setCategory(task.category || 'other');
-            setDue(task.due_date || ''); setAssignee(task.assignee_id ? String(task.assignee_id) : '');
-            setStudentId(task.student_id || null); setStudentName(task.student_name || null);
-            setInvoice(toInvoiceDraft(task.invoice));
-          }}
-          onSave={save}
-        />
-      ) : (
-        <>
-          <TaskFace task={task} />
+      <TaskFace task={task} />
 
-          <div className="flex items-center justify-between gap-2 mt-2.5 pt-2 border-t border-ninja-border">
-            <span className="font-ninja text-[11px] text-ninja-muted truncate">
-              {isDone && task.completed_at ? `Done ${shortDate(task.completed_at)}` : task.created_by_name || 'Unknown'}
-            </span>
-            <div className="flex items-center gap-0.5 flex-shrink-0 text-ninja-muted">
-              {/* Arrows are on the card in every layout: on a phone they are the
-                  only way to move a card along, and on a desk they beat dragging
-                  for a single step. */}
-              {canReorder && !confirmDel && (
-                <>
-                  {lane > 0 && (
-                    <IconButton subtle onClick={() => onMoveLane(task, -1)} label={`Move to ${LANES[lane - 1].label}`}>
-                      <ChevronLeftIcon className="w-3.5 h-3.5" strokeWidth={2.25} />
-                    </IconButton>
-                  )}
-                  {lane < LANES.length - 1 && (
-                    <IconButton subtle onClick={() => onMoveLane(task, 1)} label={`Move to ${LANES[lane + 1].label}`}>
-                      <ChevronRightIcon className="w-3.5 h-3.5" strokeWidth={2.25} />
-                    </IconButton>
-                  )}
-                </>
+      <div className="flex items-center justify-between gap-2 mt-2.5 pt-2 border-t border-ninja-border">
+        <span className="font-ninja text-[11px] text-ninja-muted truncate">
+          {isDone && task.completed_at ? `Done ${shortDate(task.completed_at)}` : task.created_by_name || 'Unknown'}
+        </span>
+        <div className="flex items-center gap-0.5 flex-shrink-0 text-ninja-muted">
+          {/* Arrows are on the card in every layout: on a phone they are the
+              only way to move a card along, and on a desk they beat dragging
+              for a single step. */}
+          {canReorder && !confirmDel && (
+            <>
+              {lane > 0 && (
+                <IconButton subtle onClick={() => onMoveLane(task, -1)} label={`Move to ${LANES[lane - 1].label}`}>
+                  <ChevronLeftIcon className="w-3.5 h-3.5" strokeWidth={2.25} />
+                </IconButton>
               )}
-              {canManage && (
-                confirmDel ? (
-                  // The confirm keeps its word. Icons are fine for reversible
-                  // actions; a destructive one should never rest on the reader
-                  // recognising a glyph.
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        setBusy(true);
-                        try {
-                          await api.delete(`/tasks/${task.id}`);
-                          onDeleted(task.id);
-                        } catch { setBusy(false); setConfirmDel(false); }
-                      }}
-                      disabled={busy}
-                      className="font-ninja text-[11px] font-bold px-2 py-1 rounded-full bg-red-500 text-white hover:bg-red-600 disabled:opacity-60 transition"
-                    >
-                      Delete
-                    </button>
-                    <DiscardButton onClick={() => setConfirmDel(false)} label="Keep task" />
-                  </div>
-                ) : (
-                  <>
-                    <IconButton subtle onClick={() => setEditing(true)} label="Edit task">
-                      <PencilIcon className="w-3.5 h-3.5" strokeWidth={2.25} />
-                    </IconButton>
-                    <IconButton subtle danger onClick={() => setConfirmDel(true)} label="Delete task">
-                      <Trash2Icon className="w-3.5 h-3.5" strokeWidth={2.25} />
-                    </IconButton>
-                  </>
-                )
+              {lane < LANES.length - 1 && (
+                <IconButton subtle onClick={() => onMoveLane(task, 1)} label={`Move to ${LANES[lane + 1].label}`}>
+                  <ChevronRightIcon className="w-3.5 h-3.5" strokeWidth={2.25} />
+                </IconButton>
               )}
-            </div>
-          </div>
-        </>
-      )}
+            </>
+          )}
+          {canManage && (
+            confirmDel ? (
+              // The confirm keeps its word. Icons are fine for reversible
+              // actions; a destructive one should never rest on the reader
+              // recognising a glyph.
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      await api.delete(`/tasks/${task.id}`);
+                      onDeleted(task.id);
+                    } catch { setBusy(false); setConfirmDel(false); }
+                  }}
+                  disabled={busy}
+                  className="font-ninja text-[11px] font-bold px-2 py-1 rounded-full bg-red-500 text-white hover:bg-red-600 disabled:opacity-60 transition"
+                >
+                  Delete
+                </button>
+                <DiscardButton onClick={() => setConfirmDel(false)} label="Keep task" />
+              </div>
+            ) : (
+              <>
+                <IconButton subtle onClick={() => onOpen(task)} label="Open task">
+                  <PencilIcon className="w-3.5 h-3.5" strokeWidth={2.25} />
+                </IconButton>
+                <IconButton subtle danger onClick={() => setConfirmDel(true)} label="Delete task">
+                  <Trash2Icon className="w-3.5 h-3.5" strokeWidth={2.25} />
+                </IconButton>
+              </>
+            )
+          )}
+        </div>
+      </div>
     </motion.div>
   );
 }
@@ -534,71 +568,19 @@ function TaskCard({
 /* ------------------------------------------------------------ composer -- */
 
 // Pinned under its column rather than at the end of the scroll, so adding to a
-// long column doesn't mean scrolling to the bottom of it first.
-function Composer({ lane, assignees, onCreated }) {
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
-  const [category, setCategory] = useState('other');
-  const [due, setDue] = useState('');
-  const [assignee, setAssignee] = useState('');
-  const [studentId, setStudentId] = useState(null);
-  const [studentName, setStudentName] = useState(null);
-  const [invoice, setInvoice] = useState(EMPTY_INVOICE);
-  const [busy, setBusy] = useState(false);
-
-  const reset = () => {
-    setTitle(''); setBody(''); setCategory('other'); setDue(''); setAssignee('');
-    setStudentId(null); setStudentName(null); setInvoice(EMPTY_INVOICE); setOpen(false);
-  };
-
-  const create = async () => {
-    if ((!title.trim() && !body.trim()) || busy) return;
-    setBusy(true);
-    try {
-      const created = await api.post('/tasks', {
-        title, body, category, status: lane,
-        due_date: due || null,
-        assignee_id: assignee || null,
-        student_id: studentId || null,
-        invoice: invoicePayload(invoice, category),
-      });
-      onCreated(created);
-      reset();
-    } catch { /* ignore */ } finally { setBusy(false); }
-  };
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="w-full flex items-center gap-2 font-ninja text-sm font-semibold text-ninja-muted hover:text-ninja-navy rounded-lg px-1.5 py-1.5 transition-colors"
-      >
-        <PlusIcon className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
-        Add a task
-      </button>
-    );
-  }
-
+// long column doesn't mean scrolling to the bottom of it first. It opens the
+// dialog on that column: a form in a 264px slot made every field as narrow as
+// a card, and the card grew to the height of a form while you used it.
+function AddTaskButton({ onClick }) {
   return (
-    <div className={`${PANEL} p-3 max-h-[70vh] overflow-y-auto`}>
-      <TaskEditor
-        title={title} setTitle={setTitle}
-        body={body} setBody={setBody}
-        category={category} setCategory={setCategory}
-        due={due} setDue={setDue}
-        assignee={assignee} setAssignee={setAssignee}
-        assignees={assignees}
-        studentId={studentId} studentName={studentName}
-        onStudent={(id, name) => { setStudentId(id); setStudentName(name); }}
-        invoice={invoice} setInvoice={setInvoice}
-        busy={busy}
-        saveLabel="Add"
-        onCancel={reset}
-        onSave={create}
-      />
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full flex items-center gap-2 font-ninja text-sm font-semibold text-ninja-muted hover:text-ninja-navy rounded-lg px-1.5 py-1.5 transition-colors"
+    >
+      <PlusIcon className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
+      Add a task
+    </button>
   );
 }
 
@@ -801,8 +783,12 @@ export default function TaskBoard({
     return () => cancelAnimationFrame(raf);
   }, [drag]);
 
+  // One dialog for the whole board, not one per card. Keyed on what it is
+  // showing so opening a different task rebuilds its fields instead of reusing
+  // the last one's draft.
+  const [dialog, setDialog] = useState(null);
+
   const cardProps = (task) => ({
-    assignees,
     canManage: canManage(task),
     // Moving stays deliberately NOT author-gated (the arrangement is shared),
     // so it can't ride on canManage — but it is still a write, so it goes away
@@ -812,7 +798,7 @@ export default function TaskBoard({
     dragging: drag?.id === task.id,
     onBeginDrag: beginDrag,
     onMoveLane: moveLane,
-    onSaved,
+    onOpen: (t) => setDialog({ mode: 'edit', task: t }),
     onDeleted,
   });
 
@@ -854,7 +840,7 @@ export default function TaskBoard({
 
       {!isReadOnly && (
         <div className="flex-shrink-0 pt-2">
-          <Composer lane={l.key} assignees={assignees} onCreated={(created) => onSaved(created, true)} />
+          <AddTaskButton onClick={() => setDialog({ mode: 'new', lane: l.key })} />
         </div>
       )}
     </section>
@@ -868,6 +854,19 @@ export default function TaskBoard({
       >
         {LANES.map(column)}
       </div>
+
+      {dialog && (
+        <TaskDialog
+          key={dialog.mode === 'edit' ? dialog.task.id : `new-${dialog.lane}`}
+          open
+          mode={dialog.mode}
+          task={dialog.task}
+          lane={dialog.lane}
+          assignees={assignees}
+          onClose={() => setDialog(null)}
+          onSaved={onSaved}
+        />
+      )}
 
       {/* The held card, drawn over the page so no column's overflow can clip
           it. Pointer events off, or it would sit between the cursor and every
