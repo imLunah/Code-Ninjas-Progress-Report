@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import ThemeToggle from '../ui/ThemeToggle';
 import { RocketIcon } from '../ui/icons';
 import { LogOutIcon } from 'lucide-react';
-import { LayoutGridIcon, BookOpenIcon, ListTodoIcon } from 'lucide-react';
+import { LayoutGridIcon, BookOpenIcon } from 'lucide-react';
 
 const EXPANDED_W = 224; // matches w-56
 const COLLAPSED_W = 76; // icon rail
@@ -49,10 +49,9 @@ export const managerLinks = [
   { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
   { to: '/clubs', label: 'Clubs', icon: 'clubs' },
   { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
-  // The dashboard card is the board's other entry point, but a page worked in
-  // daily shouldn't cost a trip through the dashboard every time. Managers
-  // only — the routes are requireManager, so it would 403 for anyone else.
-  { to: '/manager/tasks', label: 'Tasks', Glyph: ListTodoIcon },
+  // Tasks is deliberately NOT here. The dashboard preview is the way in, and a
+  // nav entry beside it makes the board look like two features. Both navs read
+  // this list, so adding it back puts it in the sidebar and the top bar at once.
 ];
 
 export const senseiLinks = [

@@ -2,17 +2,14 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { PlusIcon, PencilIcon, Trash2Icon, ArrowRightIcon } from 'lucide-react';
 import ActionMenu, { MenuItem } from '../ui/ActionMenu';
+import TaskCardFace from './TaskCardFace';
 import { CARD } from '../../lib/surfaces';
 import {
   COLUMNS,
   COLUMN_KEYS,
   COLUMN_LABEL,
-  COLOR_HEX,
-  DUE_TONE,
   groupByColumn,
   moveTask,
-  dueMeta,
-  plainPreview,
 } from '../../lib/taskBoard';
 
 const EASE = [0.23, 1, 0.32, 1];
@@ -43,9 +40,6 @@ function useDragEnabled() {
 function TaskCard({ task, canManage, dragEnabled, onEdit, onDelete, onMoveTo, cardRef, onDragStart, onDrag, onDragEnd, dragging }) {
   const [confirming, setConfirming] = useState(false);
   const reduce = useReducedMotion();
-  const due = dueMeta(task.due_date);
-  const preview = plainPreview(task.body);
-  const dot = COLOR_HEX[task.color];
 
   return (
     <motion.div
@@ -72,23 +66,16 @@ function TaskCard({ task, canManage, dragEnabled, onEdit, onDelete, onMoveTo, ca
       // card while offering no drag in exchange.
       style={{ touchAction: canManage && dragEnabled ? 'none' : 'auto' }}
     >
-      <div className="flex items-start gap-2">
-        {dot && (
-          <span
-            aria-hidden="true"
-            className="w-2 h-2 rounded-full flex-shrink-0 mt-[7px]"
-            style={{ backgroundColor: dot }}
-          />
-        )}
-        <button
-          type="button"
-          onClick={() => onEdit(task)}
-          className="flex-1 min-w-0 text-left font-ninja text-sm font-bold text-ninja-navy leading-snug text-pretty rounded"
-        >
-          {task.title}
-        </button>
-
-        {canManage && (
+      <TaskCardFace
+        task={task}
+        title={
+          // Typography comes from the shared face; this only adds the press.
+          <button type="button" onClick={() => onEdit(task)} className="w-full text-left rounded">
+            {task.title}
+          </button>
+        }
+        actions={
+          canManage && (
           <ActionMenu
             label="Task actions"
             className="-mr-1 -mt-1 flex-shrink-0"
@@ -142,18 +129,9 @@ function TaskCard({ task, canManage, dragEnabled, onEdit, onDelete, onMoveTo, ca
               )
             }
           </ActionMenu>
-        )}
-      </div>
-
-      {preview && (
-        <p className="mt-1.5 font-ninja text-xs text-ninja-muted leading-relaxed line-clamp-2">
-          {preview}
-        </p>
-      )}
-
-      {due && (
-        <p className={`mt-2 font-ninja text-xs ${DUE_TONE[due.tone]}`}>{due.text}</p>
-      )}
+          )
+        }
+      />
     </motion.div>
   );
 }

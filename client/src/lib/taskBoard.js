@@ -124,30 +124,29 @@ export function plainPreview(md) {
     .trim();
 }
 
-/* ------------------------------------------------------------- summary -- */
+/* ------------------------------------------------------------- preview -- */
 
-// What the dashboard card reports. Open work only: "done" is the column you
-// stop looking at, so counting it would make a finished board look busy.
-export function summarizeBoard(tasks) {
-  const todo = tasks.filter((t) => t.column_key === 'todo');
-  const doing = tasks.filter((t) => t.column_key === 'doing');
-  const todayStr = dayKey(new Date());
-  const open = [...doing, ...todo];
+// How many cards a preview column shows before it just reports the rest.
+export const PREVIEW_PER_COLUMN = 2;
 
-  return {
-    todo: todo.length,
-    doing: doing.length,
-    done: tasks.filter((t) => t.column_key === 'done').length,
-    overdue: open.filter((t) => t.due_date && t.due_date < todayStr).length,
-    // Dated work first, soonest first, then undated in board order. In progress
-    // outranks to-do at equal urgency, which is why `open` is built that way.
-    upNext: [...open]
-      .sort((a, b) => {
-        if (a.due_date && b.due_date) return a.due_date < b.due_date ? -1 : a.due_date > b.due_date ? 1 : 0;
-        if (a.due_date) return -1;
-        if (b.due_date) return 1;
-        return 0;
-      })
-      .slice(0, 3),
-  };
+export const todayKey = () => dayKey(new Date());
+
+// What surfaces first in a preview column: late, then due today, then dated
+// work in date order, then undated in board order.
+//
+// The dashboard has room for two cards a column, so which two it picks is the
+// whole value of the preview. An undated card that is nobody's deadline is
+// exactly what should lose that space. Array.sort is stable, so the undated
+// tail keeps the order the directors themselves arranged.
+export function previewOrder(items, todayStr = todayKey()) {
+  const rank = (t) =>
+    !t.due_date ? 3 : t.due_date < todayStr ? 0 : t.due_date === todayStr ? 1 : 2;
+
+  return [...items].sort((a, b) => {
+    const ra = rank(a);
+    const rb = rank(b);
+    if (ra !== rb) return ra - rb;
+    if (ra === 3) return 0;
+    return a.due_date < b.due_date ? -1 : a.due_date > b.due_date ? 1 : 0;
+  });
 }

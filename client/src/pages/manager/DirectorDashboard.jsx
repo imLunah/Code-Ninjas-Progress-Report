@@ -10,7 +10,7 @@ import {
 import Layout from '../../components/layout/Layout';
 import { ChartContainer, ChartTooltip } from '../../components/ui/chart';
 import EventCalendar from '../../components/manager/EventCalendar';
-import TasksCard from '../../components/manager/TasksCard';
+import TasksPreview from '../../components/manager/TasksPreview';
 import Modal from '../../components/ui/Modal';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
@@ -733,46 +733,46 @@ export default function DirectorDashboard() {
             <EventCalendar canManage={!isReadOnly} />
           </div>
 
-          {/* The rail stacks two cards. Enrollment used to sit here; that
-              breakdown lives on Reports, so it isn't duplicated on the
-              dashboard. What replaced it is the half of the day a chart can't
-              show: the trend a director reads, then the work they act on. */}
-          <div className="space-y-6">
-            <section className={`${CARD} p-5`} aria-labelledby="checkins-heading">
-              {/* No Reports link here: there is already one in the row under the
-                  greeting, and two on one screen is one too many. */}
-              <h2 id="checkins-heading" className="font-ninja font-bold text-ninja-navy text-lg mb-3">Check-ins</h2>
-              {loading ? (
-                // Same shape and height as the loaded card, so nothing shifts
-                // when the data lands.
-                <div aria-busy="true" aria-label="Loading check-ins">
-                  <div className="flex items-baseline justify-between mb-2">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-12" />
-                  </div>
-                  <Skeleton className="w-full rounded-lg" style={{ height: CARD_CHART_H }} />
-                  <div className="flex justify-between mt-2">
-                    <Skeleton className="h-2.5 w-10" />
-                    <Skeleton className="h-2.5 w-10" />
-                    <Skeleton className="h-2.5 w-14" />
-                  </div>
-                  <div className="mt-4 pt-4 border-t border-ninja-border space-y-3">
-                    {[28, 24, 32].map((w, i) => (
-                      <div key={i} className="flex items-baseline justify-between">
-                        <Skeleton className="h-4" style={{ width: `${w}%` }} />
-                        <Skeleton className="h-5 w-10" />
-                      </div>
-                    ))}
-                  </div>
+          {/* Enrollment used to sit here; that breakdown lives on Reports, so
+              it isn't duplicated on the dashboard. */}
+          <section className={`${CARD} p-5`} aria-labelledby="checkins-heading">
+            {/* No Reports link here: there is already one in the row under the
+                greeting, and two on one screen is one too many. */}
+            <h2 id="checkins-heading" className="font-ninja font-bold text-ninja-navy text-lg mb-3">Check-ins</h2>
+            {loading ? (
+              // Same shape and height as the loaded card, so nothing shifts
+              // when the data lands.
+              <div aria-busy="true" aria-label="Loading check-ins">
+                <div className="flex items-baseline justify-between mb-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-12" />
                 </div>
-              ) : (
-                <CheckInTrend dayRows={dayRows} onExpand={() => setTrendOpen(true)} />
-              )}
-            </section>
-
-            <TasksCard />
-          </div>
+                <Skeleton className="w-full rounded-lg" style={{ height: CARD_CHART_H }} />
+                <div className="flex justify-between mt-2">
+                  <Skeleton className="h-2.5 w-10" />
+                  <Skeleton className="h-2.5 w-10" />
+                  <Skeleton className="h-2.5 w-14" />
+                </div>
+                <div className="mt-4 pt-4 border-t border-ninja-border space-y-3">
+                  {[28, 24, 32].map((w, i) => (
+                    <div key={i} className="flex items-baseline justify-between">
+                      <Skeleton className="h-4" style={{ width: `${w}%` }} />
+                      <Skeleton className="h-5 w-10" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <CheckInTrend dayRows={dayRows} onExpand={() => setTrendOpen(true)} />
+            )}
+          </section>
         </div>
+
+        {/* Full width, below the grid. The preview is three columns, and three
+            columns in the 320px rail beside the calendar is something you can
+            neither read nor recognise — which would defeat the only thing a
+            preview is for. */}
+        <TasksPreview />
       </div>
 
       <Modal
