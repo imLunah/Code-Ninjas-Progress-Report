@@ -420,7 +420,7 @@ export default function TaskBoard({ tasks, canManage, onEdit, onDelete, onReorde
         >
           {/* The card under the pointer keeps its colour while it travels. */}
           <div
-            className={`${CARD} ${taskTint(held.task.color).className} p-3.5 shadow-xl -rotate-1`}
+            className={`${CARD} ${taskTint(held.task.color).className} task-lensed p-3.5 shadow-xl -rotate-1`}
             style={taskTint(held.task.color).style}
           >
             <TaskCardFace task={held.task} />
