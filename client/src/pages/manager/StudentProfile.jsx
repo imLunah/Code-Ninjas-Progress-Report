@@ -487,6 +487,16 @@ export default function StudentProfile() {
     return () => controller.abort();
   }, [id, user?.activeLocation?.id]);
 
+  // Arriving from a board card's "Edit log": the history sits well down a long
+  // profile, so land on it. Both layouts are in the DOM at once (CSS decides
+  // which shows), so the visible one is picked rather than a duplicated id.
+  useEffect(() => {
+    if (loading || window.location.hash !== '#progress') return;
+    const section = [...document.querySelectorAll('[data-progress-section]')]
+      .find((el) => el.offsetParent !== null);
+    section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [loading]);
+
   const handleSaved = (updated) => setStudent((prev) => ({ ...prev, ...updated }));
 
   const handleLogUpdated = (logId, patch) =>
@@ -650,10 +660,10 @@ export default function StudentProfile() {
 
           {/* Recent Progress */}
           {displayLogs.length > 0 && (
-            <motion.div variants={fadeUp} className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
+            <motion.div data-progress-section variants={fadeUp} className="bg-white rounded-2xl p-4 shadow-sm border border-ninja-border">
               <h2 className="font-ninja font-bold text-ninja-navy mb-3">Recent Progress</h2>
               <div className="max-h-80 overflow-y-auto no-scrollbar">
-                <ProgressHistory logs={displayLogs} onLogUpdated={handleLogUpdated} onLogDeleted={handleLogDeleted} />
+                <ProgressHistory logs={displayLogs} enrolledPrograms={programs.map((p) => p.program)} onLogUpdated={handleLogUpdated} onLogDeleted={handleLogDeleted} />
               </div>
             </motion.div>
           )}
@@ -764,10 +774,10 @@ export default function StudentProfile() {
 
               {/* Recent Progress */}
               {displayLogs.length > 0 && (
-                <motion.div variants={fadeUp} className="bg-white rounded-2xl p-5 border border-ninja-border shadow-sm">
+                <motion.div data-progress-section variants={fadeUp} className="bg-white rounded-2xl p-5 border border-ninja-border shadow-sm">
                   <h2 className="font-ninja font-bold text-ninja-navy mb-3">Recent Progress</h2>
                   <div className="max-h-[32rem] overflow-y-auto no-scrollbar">
-                    <ProgressHistory logs={displayLogs} onLogUpdated={handleLogUpdated} onLogDeleted={handleLogDeleted} />
+                    <ProgressHistory logs={displayLogs} enrolledPrograms={programs.map((p) => p.program)} onLogUpdated={handleLogUpdated} onLogDeleted={handleLogDeleted} />
                   </div>
                 </motion.div>
               )}

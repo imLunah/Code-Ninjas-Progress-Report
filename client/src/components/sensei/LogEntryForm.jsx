@@ -25,7 +25,10 @@ function getSectionLabel(index, total) {
   return index % 2 === 0 ? `Build ${num}` : `Solve ${num}`;
 }
 
-function CreateProjectRow({ entry, index, total, beltLevel, beltSublevel, beltProjects, onChange, onRemove }) {
+// The projects a belt/level offers, from the live curriculum where it has the
+// belt and the static ladder otherwise. Exported because the log editor has to
+// tell a standard project from a custom one to know which field to open in.
+export function createProjectOptions({ beltLevel, beltSublevel, beltProjects }) {
   const isUpperBelt = UPPER_BELTS.includes(beltLevel);
   const dynBelt = beltProjects?.[beltLevel];
   const dynLevel = dynBelt ? Object.fromEntries(
@@ -39,10 +42,17 @@ function CreateProjectRow({ entry, index, total, beltLevel, beltSublevel, beltPr
     ? Object.values(BELT_LEVEL_PROJECTS[beltLevel]).flat()
     : null);
 
-  const projectOptions = isUpperBelt ? (allUpperBeltProjects ?? PROJECTS) : (levelProjects ?? PROJECTS);
   const hasBeltProjects = beltLevel && !!(dynBelt || BELT_LEVEL_PROJECTS[beltLevel]);
-  const needsSublevel = !isUpperBelt && hasBeltProjects && (!beltSublevel || parseInt(beltSublevel) < 1);
-  const showLabels = levelProjects && !isUpperBelt;
+  return {
+    options: isUpperBelt ? (allUpperBeltProjects ?? PROJECTS) : (levelProjects ?? PROJECTS),
+    needsSublevel: !isUpperBelt && hasBeltProjects && (!beltSublevel || parseInt(beltSublevel) < 1),
+    showLabels: !!levelProjects && !isUpperBelt,
+  };
+}
+
+export function CreateProjectRow({ entry, index, total, beltLevel, beltSublevel, beltProjects, onChange, onRemove }) {
+  const { options: projectOptions, needsSublevel, showLabels } =
+    createProjectOptions({ beltLevel, beltSublevel, beltProjects });
 
   return (
     <div className="relative border border-ninja-border rounded-xl p-4 bg-ninja-bg space-y-3">
@@ -134,7 +144,7 @@ function CreateProjectRow({ entry, index, total, beltLevel, beltSublevel, beltPr
   );
 }
 
-function LessonEntryRow({ entry, index, total, program, onChange, onRemove, subPrograms, curriculum: curriculumData }) {
+export function LessonEntryRow({ entry, index, total, program, onChange, onRemove, subPrograms, curriculum: curriculumData }) {
   const subProgramOptions = subPrograms[program] || null;
   const curriculum = (entry.subProgram ? curriculumData[entry.subProgram] : curriculumData[program]) || [];
   const moduleOptions = curriculum;

@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PencilIcon, ReplyIcon } from 'lucide-react';
-import { formatDate } from '../../utils/dateUtils';
+import { formatDate, today } from '../../utils/dateUtils';
 import { STATUSES } from '../../utils/beltConfig';
 import { useAuth } from '../../context/AuthContext';
+import { useCurriculum } from '../../context/CurriculumContext';
+import BeltProgressFields from '../sensei/BeltProgressFields';
+import { CreateProjectRow, LessonEntryRow, createProjectOptions } from '../sensei/LogEntryForm';
 import { api } from '../../api/client';
 import BeltBadge from '../ui/BeltBadge';
 import ProgramBadge from '../ui/ProgramBadge';
@@ -98,6 +101,219 @@ function CurriculumPath({ log }) {
   );
 }
 
+const FIELD =
+  'w-full bg-white border border-ninja-border text-ninja-navy rounded-lg px-3 py-1.5 font-ninja text-sm focus:outline-none focus:border-ninja-blue transition-colors';
+
+const FIELD_LABEL = 'block text-ninja-muted text-xs font-ninja font-semibold mb-1 uppercase tracking-wide';
+
+// A saved log read back into the shape the log form's own field rows expect, so
+// a correction is made with the same dropdowns the entry was made with. A value
+// the curriculum doesn't have — a custom project, a one-off module — opens in
+// the free-text field instead of vanishing into a select that can't show it.
+function createEntryFromLog(log, { beltLevel, beltSublevel, beltProjects }) {
+  const { options } = createProjectOptions({ beltLevel, beltSublevel, beltProjects });
+  const custom = !!log.project_at && !options.includes(log.project_at);
+  return {
+    project: custom ? '' : (log.project_at || ''),
+    isCustom: custom,
+    customProject: custom ? log.project_at : '',
+    status: log.status_at || '',
+  };
+}
+
+function lessonEntryFromLog(log, curriculum) {
+  const modules = curriculum[log.sub_program || log.program] || [];
+  const known = modules.find((m) => m.module === log.module_name);
+  const lessonKnown = !log.lesson_name || (known?.lessons || []).includes(log.lesson_name);
+  const standard = !!known && lessonKnown;
+  return {
+    subProgram: log.sub_program || '',
+    moduleName: standard ? log.module_name : ((log.module_name || log.lesson_name) ? '__custom__' : ''),
+    lessonName: standard ? (log.lesson_name || '') : '',
+    customModule: standard ? '' : (log.module_name || ''),
+    customLesson: standard ? '' : (log.lesson_name || ''),
+    status: log.status_at || '',
+  };
+}
+
+function draftFromLog(log, { beltProjects, curriculum }) {
+  const program = log.program || '';
+  const beltLevel = log.belt_level_at || '';
+  const beltSublevel = log.belt_sublevel_at ? String(log.belt_sublevel_at) : '';
+  return {
+    program,
+    session_date: String(log.session_date || '').split('T')[0],
+    notes: log.notes || '',
+    beltLevel,
+    beltSublevel,
+    entry: program === 'CREATE'
+      ? createEntryFromLog(log, { beltLevel, beltSublevel, beltProjects })
+      : lessonEntryFromLog(log, curriculum),
+  };
+}
+
+// Selecting a course or module invalidates what sat under it, same as the log form.
+function applyEntryChange(entry, field, value) {
+  const next = { ...entry, [field]: value };
+  if (field === 'subProgram') { next.moduleName = ''; next.lessonName = ''; next.customModule = ''; next.customLesson = ''; }
+  if (field === 'moduleName') { next.lessonName = ''; next.customModule = ''; next.customLesson = ''; }
+  return next;
+}
+
+// The draft back into the columns the API writes. A CREATE log carries a belt
+// snapshot and no curriculum path; every other program is the reverse — the
+// same split the log form posts — so moving a log to another program clears the
+// fields that don't belong to it rather than leaving them behind as orphans.
+function payloadFromDraft(draft) {
+  const { entry } = draft;
+  const isCreate = draft.program === 'CREATE';
+  const custom = entry.moduleName === '__custom__';
+  return {
+    program: draft.program,
+    session_date: draft.session_date,
+    notes: draft.notes.trim(),
+    status_at: entry.status || null,
+    belt_level_at: isCreate ? (draft.beltLevel || null) : null,
+    belt_sublevel_at: isCreate && draft.beltSublevel ? parseInt(draft.beltSublevel) : null,
+    project_at: isCreate ? (entry.isCustom ? (entry.customProject || null) : (entry.project || null)) : null,
+    sub_program: isCreate ? null : (entry.subProgram || null),
+    module_name: isCreate ? null : (custom ? (entry.customModule || null) : (entry.moduleName || null)),
+    lesson_name: isCreate ? null : (custom ? (entry.customLesson || null) : (entry.lessonName || null)),
+  };
+}
+
+// Every field the row displays, editable. Mounted per row rather than lifted
+// into the list so the draft is seeded from the log it belongs to and thrown
+// away with it — closing the editor can't leak a half-edit onto the next log.
+function LogEditor({ log, programs, saving, error, onSave, onCancel }) {
+  const { subPrograms, curriculum, beltProjects } = useCurriculum();
+  const [draft, setDraft] = useState(() => draftFromLog(log, { beltProjects, curriculum }));
+  const [dirty, setDirty] = useState(false);
+
+  // The curriculum loads on its own clock. If it lands after the editor opened,
+  // re-read the log against it — otherwise a standard module that looked
+  // unknown a moment ago stays stuck in the custom field.
+  useEffect(() => {
+    if (dirty) return;
+    setDraft(draftFromLog(log, { beltProjects, curriculum }));
+  }, [curriculum, beltProjects]);
+
+  const isCreate = draft.program === 'CREATE';
+  const update = (patch) => { setDirty(true); setDraft((d) => ({ ...d, ...patch })); };
+  const updateEntry = (field, value) => {
+    setDirty(true);
+    setDraft((d) => ({ ...d, entry: applyEntryChange(d.entry, field, value) }));
+  };
+  const clearProject = () => {
+    setDirty(true);
+    setDraft((d) => ({ ...d, entry: { ...d.entry, project: '', isCustom: false, customProject: '' } }));
+  };
+
+  // Moving a log between programs swaps which fields exist, so the entry starts
+  // clean in the new shape; the status is the one thing both shapes share.
+  const changeProgram = (program) => {
+    const status = draft.entry.status || '';
+    update({
+      program,
+      beltLevel: program === 'CREATE' ? draft.beltLevel : '',
+      beltSublevel: program === 'CREATE' ? draft.beltSublevel : '',
+      entry: program === 'CREATE'
+        ? { project: '', isCustom: false, customProject: '', status }
+        : { subProgram: '', moduleName: '', lessonName: '', customModule: '', customLesson: '', status },
+    });
+  };
+
+  const programOptions = [...new Set([log.program, ...(programs || [])].filter(Boolean))];
+  // The lesson row grows its own status buttons once a lesson is named. Without
+  // one — a program with no curriculum, or a log that only ever had a status —
+  // the picker is the only way to reach the field.
+  const rowHasStatus = isCreate || !!(
+    draft.entry.lessonName ||
+    (draft.entry.moduleName === '__custom__' && (draft.entry.customModule || draft.entry.customLesson))
+  );
+
+  return (
+    <div className="space-y-3 mt-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className={FIELD_LABEL} htmlFor={`program-${log.id}`}>Program</label>
+          <select
+            id={`program-${log.id}`}
+            value={draft.program}
+            onChange={(e) => changeProgram(e.target.value)}
+            className={FIELD}
+          >
+            {programOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className={FIELD_LABEL} htmlFor={`date-${log.id}`}>Session Date</label>
+          <input
+            id={`date-${log.id}`}
+            type="date"
+            value={draft.session_date}
+            max={today()}
+            onChange={(e) => update({ session_date: e.target.value })}
+            className={FIELD}
+          />
+        </div>
+      </div>
+
+      {isCreate ? (
+        <>
+          <BeltProgressFields
+            beltLevel={draft.beltLevel}
+            setBeltLevel={(v) => update({ beltLevel: v })}
+            beltSublevel={draft.beltSublevel}
+            setBeltSublevel={(v) => update({ beltSublevel: v })}
+            setProject={clearProject}
+          />
+          <CreateProjectRow
+            entry={draft.entry}
+            index={0}
+            total={1}
+            beltLevel={draft.beltLevel}
+            beltSublevel={draft.beltSublevel}
+            beltProjects={beltProjects}
+            onChange={updateEntry}
+          />
+        </>
+      ) : (
+        <LessonEntryRow
+          entry={draft.entry}
+          index={0}
+          total={1}
+          program={draft.program}
+          onChange={updateEntry}
+          subPrograms={subPrograms}
+          curriculum={curriculum}
+        />
+      )}
+
+      {!rowHasStatus && (
+        <StatusPicker value={draft.entry.status} onChange={(v) => updateEntry('status', v)} disabled={saving} />
+      )}
+
+      <div>
+        <label className={FIELD_LABEL}>Session Notes</label>
+        <LazyMarkdownEditor value={draft.notes} onChange={(v) => update({ notes: v })} placeholder="Update the session notes…" />
+      </div>
+
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          onClick={() => onSave(payloadFromDraft(draft))}
+          disabled={saving || !draft.notes.trim() || !draft.program || !draft.session_date}
+        >
+          {saving ? 'Saving...' : 'Save'}
+        </Button>
+        <Button size="sm" variant="secondary" onClick={onCancel}>Cancel</Button>
+      </div>
+      {error && <p className="text-ninja-red font-ninja text-xs">{error}</p>}
+    </div>
+  );
+}
+
 // Opened from the row's reply button rather than parked under every entry. A
 // permanently mounted box asks a question of every log you scroll past; most of
 // them do not need an answer.
@@ -146,7 +362,9 @@ function CommentBox({ logId, onAdded, onClose }) {
   );
 }
 
-export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted }) {
+// `enrolledPrograms` (names) lets a log be moved to another of the ninja's
+// programs; without it the editor offers only the program the log already has.
+export default function ProgressHistory({ logs = [], enrolledPrograms, onLogUpdated, onLogDeleted }) {
   const { user, isReadOnly } = useAuth();
   const isManager = ['manager', 'admin'].includes(user?.role);
 
@@ -156,8 +374,6 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
   const [localComments, setLocalComments] = useState({});
 
   const [editingId, setEditingId] = useState(null);
-  const [editDraft, setEditDraft] = useState('');
-  const [editStatus, setEditStatus] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -194,17 +410,16 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
 
   const startEdit = (log) => {
     setEditingId(log.id);
-    setEditDraft(log.notes || '');
-    setEditStatus(log.status_at || '');
     setEditError('');
     setConfirmDeleteId(null);
   };
 
-  const saveEdit = async (logId) => {
-    if (!editDraft.trim()) return;
+  // The payload's keys are the log's own columns, so the same object is both
+  // what the server writes and what the row shows without waiting for a refetch.
+  const saveEdit = async (logId, patch) => {
+    if (!patch.notes) return;
     setSavingEdit(true);
     setEditError('');
-    const patch = { notes: editDraft.trim(), status_at: editStatus || null };
     try {
       await api.patch(`/progress/${logId}`, patch);
       onLogUpdated && onLogUpdated(logId, patch);
@@ -269,9 +484,11 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
       )}
 
       {(() => {
-        // Group logs by session_date
+        // Group logs by session_date. Keyed on the calendar day alone: a log
+        // whose date was just edited carries a bare YYYY-MM-DD while the rest
+        // arrived as timestamps, and the two would head their own days.
         const groups = visible.reduce((acc, log) => {
-          const key = log.session_date;
+          const key = String(log.session_date || '').split('T')[0];
           if (!acc[key]) acc[key] = [];
           acc[key].push(log);
           return acc;
@@ -321,14 +538,22 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                             are pinned to the program. Everything that was merely
                             a word in a coloured box is a word again. */}
                         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 min-w-0">
-                          {log.program && <ProgramBadge program={log.program} size="xs" />}
-                          {log.belt_level_at && <BeltBadge belt={log.belt_level_at} sublevel={log.belt_sublevel_at} size="xs" />}
-                          {log.project_at && (
-                            <span className="font-ninja text-xs text-ninja-muted">{log.project_at}</span>
+                          {/* The saved values step aside mid-edit: every one of
+                              them is a field in the editor below, and two of
+                              them on screen disagreeing reads as a bug. */}
+                          {!isEditing && (
+                            <>
+                              {log.program && <ProgramBadge program={log.program} size="xs" />}
+                              {log.belt_level_at && <BeltBadge belt={log.belt_level_at} sublevel={log.belt_sublevel_at} size="xs" />}
+                              {log.project_at && (
+                                <span className="font-ninja text-xs text-ninja-muted">{log.project_at}</span>
+                              )}
+                              {log.status_at && <StatusMark status={log.status_at} />}
+                            </>
                           )}
-                          {/* Hidden mid-edit: the picker below is the draft, and
-                              two statuses on screen disagreeing reads as a bug. */}
-                          {!isEditing && log.status_at && <StatusMark status={log.status_at} />}
+                          {isEditing && (
+                            <span className="font-ninja text-xs font-semibold text-ninja-blue">Editing</span>
+                          )}
                           {!sharedSensei && (
                             <span className="text-ninja-muted text-xs font-ninja">by {authorName(log.sensei_name)}</span>
                           )}
@@ -384,20 +609,17 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                         )}
                       </div>
 
-                      <CurriculumPath log={log} />
+                      {!isEditing && <CurriculumPath log={log} />}
 
                       {isEditing ? (
-                        <div className="space-y-2 mt-1">
-                          <StatusPicker value={editStatus} onChange={setEditStatus} disabled={savingEdit} />
-                          <LazyMarkdownEditor value={editDraft} onChange={setEditDraft} placeholder="Update the session notes…" />
-                          <div className="flex gap-2">
-                            <Button size="sm" onClick={() => saveEdit(log.id)} disabled={savingEdit || !editDraft.trim()}>
-                              {savingEdit ? 'Saving...' : 'Save'}
-                            </Button>
-                            <Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>Cancel</Button>
-                          </div>
-                          {editError && <p className="text-ninja-red font-ninja text-xs mt-1">{editError}</p>}
-                        </div>
+                        <LogEditor
+                          log={log}
+                          programs={enrolledPrograms}
+                          saving={savingEdit}
+                          error={editError}
+                          onSave={(patch) => saveEdit(log.id, patch)}
+                          onCancel={() => setEditingId(null)}
+                        />
                       ) : (
                         log.notes && <MarkdownView className="text-ninja-navy font-ninja text-sm leading-relaxed">{log.notes}</MarkdownView>
                       )}

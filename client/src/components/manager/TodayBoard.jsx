@@ -354,14 +354,24 @@ export default function TodayBoard({
                     Sensei: {group.assignments[0].sensei_name}
                   </p>
                 )}
-                {!isReadOnly && !allDone && (
+                {!isReadOnly && (allDone ? (
+                  // A logged ninja still needs a way back into what was written
+                  // — a wrong status or lesson is easiest to notice right here,
+                  // and the board was a dead end for it.
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigate(`/manager/students/${group.student_id}#progress`); }}
+                    className="mt-3 w-full text-sm font-ninja font-bold text-ninja-muted border-2 border-ninja-border rounded-xl py-2 hover:border-ninja-blue hover:text-ninja-blue transition-colors"
+                  >
+                    Edit Log
+                  </button>
+                ) : (
                   <button
                     onClick={(e) => { e.stopPropagation(); navigate(buildLogUrl(group)); }}
                     className="mt-3 w-full text-sm font-ninja font-bold text-ninja-blue border-2 border-ninja-blue rounded-xl py-2 hover:bg-ninja-blue hover:text-white transition-colors"
                   >
                     Log Progress
                   </button>
-                )}
+                ))}
               </motion.div>
             );
           })}
@@ -466,14 +476,21 @@ export default function TodayBoard({
               ) : (
                 <p className="text-yellow-700 font-ninja font-semibold text-xs">Not logged yet</p>
               )}
-              {!isReadOnly && !allDone && (
+              {!isReadOnly && (allDone ? (
+                <button
+                  onClick={() => navigate(`/manager/students/${group.student_id}#progress`)}
+                  className="mt-auto w-full text-sm font-ninja font-bold text-ninja-muted border-2 border-ninja-border rounded-xl py-2 hover:border-ninja-blue hover:text-ninja-blue transition-colors"
+                >
+                  Edit Log
+                </button>
+              ) : (
                 <button
                   onClick={() => navigate(buildLogUrl(group))}
                   className="mt-auto w-full text-sm font-ninja font-bold text-ninja-blue border-2 border-ninja-blue rounded-xl py-2 hover:bg-ninja-blue hover:text-white transition-colors"
                 >
                   Log Progress
                 </button>
-              )}
+              ))}
             </motion.div>
           );
         })}

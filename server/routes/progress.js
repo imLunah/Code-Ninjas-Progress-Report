@@ -263,19 +263,58 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
   }
 });
 
+// Every column of a log the editor may rewrite, paired with the enrollment
+// column it mirrors onto when the log is the ninja's most recent for a program.
+// A key absent from the body is left alone, so a caller sending only notes
+// still behaves as it always did. `keepWhenNull` marks the columns the write
+// path only ever fills in, never blanks (a CREATE log carries no lesson, and
+// posting one shouldn't erase the last lesson the ninja did) — an edit mirrors
+// on the same terms.
+const EDITABLE_FIELDS = {
+  program: {},
+  session_date: {},
+  belt_level_at: { column: 'belt_level' },
+  belt_sublevel_at: { column: 'belt_sublevel' },
+  project_at: { column: 'current_project' },
+  status_at: { column: 'project_status' },
+  sub_program: { column: 'last_sub_program', keepWhenNull: true },
+  module_name: { column: 'last_module_name', keepWhenNull: true },
+  lesson_name: { column: 'last_lesson_name', keepWhenNull: true },
+};
+
 // PATCH /api/progress/:id — managers edit any log; senseis edit only their own.
-// Accepts notes, and optionally status_at (omit it to leave the status alone;
-// null clears it). A status edit carries the same two side effects a fresh log
-// does, so correcting one doesn't leave the ninja's tracked progress behind.
+// Takes notes plus any of EDITABLE_FIELDS. An edit carries the same side effects
+// the original write did (the tracked enrollment, percent_complete), so
+// correcting a log doesn't leave the rest of the ninja's record contradicting it.
 router.patch('/:id', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
-  const { notes, status_at } = req.body;
+  const { notes, program, session_date, belt_level_at, belt_sublevel_at, status_at } = req.body;
   if (!notes?.trim()) return res.status(400).json({ error: 'Notes are required' });
   if (notes.length > 2000) return res.status(400).json({ error: 'Notes too long (max 2000 chars)' });
 
-  const editsStatus = status_at !== undefined;
-  if (editsStatus && status_at !== null && !STATUSES.includes(status_at)) {
+  const given = (field) => req.body[field] !== undefined;
+
+  if (status_at !== undefined && status_at !== null && !STATUSES.includes(status_at)) {
     return res.status(400).json({ error: 'Invalid status' });
+  }
+  // Same whitelist the write path applies — a log's belt is a snapshot, not free text.
+  if (given('belt_level_at') && !isValidBelt(belt_level_at)) {
+    return res.status(400).json({ error: 'Invalid belt level' });
+  }
+  if (given('program') && (typeof program !== 'string' || !program)) {
+    return res.status(400).json({ error: 'Invalid program' });
+  }
+  const pacificToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+  if (given('session_date')) {
+    const validFormat = /^\d{4}-\d{2}-\d{2}$/.test(session_date || '') && !Number.isNaN(Date.parse(session_date));
+    if (!validFormat || session_date > pacificToday || session_date < '2020-01-01') {
+      return res.status(400).json({ error: 'Invalid session date' });
+    }
+  }
+  const capped = ['project_at', 'status_at', 'sub_program', 'module_name', 'lesson_name']
+    .map((f) => req.body[f]);
+  if (capped.some((v) => typeof v === 'string' && v.length > MAX_FIELD)) {
+    return res.status(400).json({ error: `Field too long (max ${MAX_FIELD} chars)` });
   }
 
   const isManager = ['manager', 'admin'].includes(req.session.role);
@@ -283,55 +322,107 @@ router.patch('/:id', requireSensei, requireOwnLocation, async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    const params = [notes.trim(), req.params.id, req.session.activeLocationId];
-    if (!isManager) params.push(req.session.userId);
-    const ownershipClause = isManager ? '' : `AND progress_logs.sensei_id = $${params.length}`;
-    let statusSet = '';
-    if (editsStatus) {
-      params.push(status_at);
-      statusSet = `, status_at = $${params.length}`;
-    }
-
-    const { rows } = await client.query(
-      `UPDATE progress_logs SET notes = $1${statusSet}
-       FROM students s
-       WHERE progress_logs.id = $2 AND progress_logs.student_id = s.id AND s.location_id = $3
-       ${ownershipClause}
-       RETURNING progress_logs.id, progress_logs.student_id, progress_logs.program,
-                 progress_logs.sub_program, progress_logs.module_name, progress_logs.lesson_name`,
-      params
+    // Read the row under its lock first: the old program/module decide which
+    // enrollment a move has to leave behind, and the ownership + location scope
+    // is the same gate the update itself would have carried.
+    const lookup = [req.params.id, req.session.activeLocationId];
+    if (!isManager) lookup.push(req.session.userId);
+    const { rows: before } = await client.query(
+      `SELECT pl.* FROM progress_logs pl
+       JOIN students s ON pl.student_id = s.id
+       WHERE pl.id = $1 AND s.location_id = $2
+       ${isManager ? '' : 'AND pl.sensei_id = $3'}
+       FOR UPDATE OF pl`,
+      lookup
     );
-    const log = rows[0];
-    if (!log) {
+    const old = before[0];
+    if (!old) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Log not found or not yours' });
     }
 
-    if (editsStatus) {
-      // The tracked status follows only when this is the newest log for the
-      // program — fixing a session from two weeks ago shouldn't rewind the
-      // ninja to where they were then.
-      const { rows: newest } = await client.query(
-        `SELECT id FROM progress_logs
-         WHERE student_id = $1 AND program = $2
-         ORDER BY session_date DESC, created_at DESC, id DESC LIMIT 1`,
-        [log.student_id, log.program]
+    const nextProgram = given('program') ? program : old.program;
+    // A log may only sit on a program the ninja is actually enrolled in — the
+    // same rule the write path enforces, which is what keeps junk out of the
+    // TodayBoard filter and the program CHECK constraints.
+    if (given('program') && program !== old.program) {
+      const { rows: enrolled } = await client.query(
+        'SELECT 1 FROM student_programs WHERE student_id = $1 AND program = $2',
+        [old.student_id, program]
       );
-      if (newest[0]?.id === log.id) {
+      if (!enrolled[0]) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Student not enrolled in this program' });
+      }
+    }
+    if (given('belt_sublevel_at')) {
+      const subError = await validateSublevel(
+        client,
+        given('belt_level_at') ? (belt_level_at ?? null) : (old.belt_level_at ?? null),
+        belt_sublevel_at ?? null
+      );
+      if (subError) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: subError });
+      }
+    }
+
+    const sets = ['notes = $1'];
+    const params = [notes.trim()];
+    for (const field of Object.keys(EDITABLE_FIELDS)) {
+      if (!given(field)) continue;
+      params.push(req.body[field]);
+      sets.push(`${field} = $${params.length}`);
+    }
+    params.push(req.params.id);
+    await client.query(
+      `UPDATE progress_logs SET ${sets.join(', ')} WHERE id = $${params.length}`,
+      params
+    );
+
+    // The enrollment follows only when this is the newest log for the program —
+    // fixing a session from two weeks ago shouldn't rewind the ninja to where
+    // they were then.
+    const { rows: newest } = await client.query(
+      `SELECT id FROM progress_logs
+       WHERE student_id = $1 AND program = $2
+       ORDER BY session_date DESC, created_at DESC, id DESC LIMIT 1`,
+      [old.student_id, nextProgram]
+    );
+    if (newest[0]?.id === old.id) {
+      const mirrorSets = [];
+      const mirrorParams = [];
+      for (const [field, { column, keepWhenNull }] of Object.entries(EDITABLE_FIELDS)) {
+        if (!column || !given(field)) continue;
+        if (keepWhenNull && req.body[field] == null) continue;
+        mirrorParams.push(req.body[field]);
+        mirrorSets.push(`${column} = $${mirrorParams.length}`);
+      }
+      if (mirrorSets.length) {
+        mirrorParams.push(old.student_id, nextProgram);
         await client.query(
-          'UPDATE student_programs SET project_status = $1 WHERE student_id = $2 AND program = $3',
-          [status_at, log.student_id, log.program]
+          `UPDATE student_programs SET ${mirrorSets.join(', ')}
+           WHERE student_id = $${mirrorParams.length - 1} AND program = $${mirrorParams.length}`,
+          mirrorParams
         );
       }
-      // Flipping a lesson to (or off) Completed changes the module's tally.
-      if (log.lesson_name) {
-        await recomputePercentComplete(client, {
-          student_id: log.student_id,
-          program: log.program,
-          module_name: log.module_name,
-          sub_program: log.sub_program,
-        });
-      }
+    }
+
+    // Which lessons count as done can change on both sides of a move, so the
+    // program the log left is recomputed alongside the one it landed on.
+    const after = {
+      program: nextProgram,
+      module_name: given('module_name') ? req.body.module_name : old.module_name,
+      sub_program: given('sub_program') ? req.body.sub_program : old.sub_program,
+    };
+    await recomputePercentComplete(client, { student_id: old.student_id, ...after });
+    if (after.program !== old.program || after.module_name !== old.module_name) {
+      await recomputePercentComplete(client, {
+        student_id: old.student_id,
+        program: old.program,
+        module_name: old.module_name,
+        sub_program: old.sub_program,
+      });
     }
 
     await client.query('COMMIT');
