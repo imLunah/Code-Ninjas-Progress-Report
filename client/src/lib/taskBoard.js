@@ -15,23 +15,40 @@ export const COLUMN_KEYS = COLUMNS.map((c) => c.key);
 
 export const COLUMN_LABEL = Object.fromEntries(COLUMNS.map((c) => [c.key, c.label]));
 
-// Inline hex, not a `bg-*` utility. These dots sit on a card surface that the
+// Inline hex, not a `bg-*` utility. The swatches sit on a card surface that the
 // `.dark` overrides rewrite, and an opacity variant like `bg-amber-500/40`
 // escapes those overrides and renders light on a dark card. A literal colour
 // composites the same either way.
 //
-// `none` is the default and draws no dot at all: a board where every card is
-// tagged is a board where the tag has stopped meaning anything.
+// `rgb` is the same colour as bare channels, which is what lets a card tint
+// itself: `rgb(var(--task-rgb) / 0.1)` is an alpha over whatever the card sits
+// on, so one value reads correctly on white and on deep slate. A fixed tint hex
+// per theme would need two of everything and still be wrong on a hovered card.
+//
+// `none` is the default and leaves the card plain: a board where every card is
+// coloured is a board where the colour has stopped meaning anything.
 export const COLORS = [
-  { key: 'none', label: 'No tag', hex: null },
-  { key: 'blue', label: 'Blue', hex: '#3b82f6' },
-  { key: 'amber', label: 'Amber', hex: '#f59e0b' },
-  { key: 'green', label: 'Green', hex: '#10b981' },
-  { key: 'purple', label: 'Purple', hex: '#a855f7' },
-  { key: 'red', label: 'Red', hex: '#ef4444' },
+  { key: 'none', label: 'No colour', hex: null, rgb: null },
+  { key: 'blue', label: 'Blue', hex: '#3b82f6', rgb: '59 130 246' },
+  { key: 'amber', label: 'Amber', hex: '#f59e0b', rgb: '245 158 11' },
+  { key: 'green', label: 'Green', hex: '#10b981', rgb: '16 185 129' },
+  { key: 'purple', label: 'Purple', hex: '#a855f7', rgb: '168 85 247' },
+  { key: 'red', label: 'Red', hex: '#ef4444', rgb: '239 68 68' },
 ];
 
 export const COLOR_HEX = Object.fromEntries(COLORS.map((c) => [c.key, c.hex]));
+export const COLOR_RGB = Object.fromEntries(COLORS.map((c) => [c.key, c.rgb]));
+
+// What a card wears to carry its colour: the class that tints it and the
+// channels that class reads. Returned together so no surface can take one and
+// forget the other, and so an untagged card gets exactly nothing.
+export function taskTint(color) {
+  const rgb = COLOR_RGB[color];
+  return {
+    className: rgb ? 'task-card task-tinted' : 'task-card',
+    style: rgb ? { '--task-rgb': rgb } : undefined,
+  };
+}
 
 /* ------------------------------------------------------------ grouping -- */
 

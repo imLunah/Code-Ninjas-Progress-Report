@@ -123,6 +123,25 @@ textarea:focus-visible {
   background-color: #252c3e;
 }
 
+/* ── Task cards: the colour tints the whole card ──
+   A tagged task used to carry a small coloured bar in its footer. The colour
+   now washes the card it belongs to, which is the thing you are actually
+   scanning for. Both values are an alpha over whatever is behind the card, so
+   one channel triple works in either theme; dark takes a little more of it,
+   since the same wash over deep slate lands quieter than over white.
+
+   Two class names deep on purpose: a single class ties with the Tailwind
+   utility it has to beat, and `.dark .bg-white` above would otherwise win in
+   dark mode and paint every tagged card the same grey. */
+.task-card.task-tinted {
+  background-color: rgb(var(--task-rgb) / 0.09);
+  border-color: rgb(var(--task-rgb) / 0.38);
+}
+.dark .task-card.task-tinted {
+  background-color: rgb(var(--task-rgb) / 0.17);
+  border-color: rgb(var(--task-rgb) / 0.42);
+}
+
 /* ── Dark mode: input / select fields ── */
 .dark input,
 .dark select,

@@ -6,7 +6,7 @@ import TaskCardFace from './TaskCardFace';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { PANEL } from '../../lib/surfaces';
-import { COLUMNS, groupByColumn, previewOrder, todayKey } from '../../lib/taskBoard';
+import { COLUMNS, groupByColumn, previewOrder, taskTint, todayKey } from '../../lib/taskBoard';
 
 const POPOVER_WIDTH = 320; // matches the w-80 the panel is sized to
 const PREVIEW_ROWS = 3;
@@ -126,7 +126,11 @@ export default function TasksQuickLink({ className = '' }) {
                 {/* Same face the board draws, so what you glance at here is
                     what you'll recognise when you open it. */}
                 {rows.map((t) => (
-                  <div key={t.id} className={`${PANEL} p-2.5`}>
+                  <div
+                    key={t.id}
+                    className={`${PANEL} ${taskTint(t.color).className} p-2.5`}
+                    style={taskTint(t.color).style}
+                  >
                     <TaskCardFace task={t} />
                   </div>
                 ))}

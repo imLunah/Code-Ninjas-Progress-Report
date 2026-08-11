@@ -1,4 +1,4 @@
-import { COLOR_HEX, DUE_TONE, dueMeta, plainPreview } from '../../lib/taskBoard';
+import { DUE_TONE, dueMeta, plainPreview } from '../../lib/taskBoard';
 
 // What a task card looks like, in one place.
 //
@@ -16,7 +16,6 @@ import { COLOR_HEX, DUE_TONE, dueMeta, plainPreview } from '../../lib/taskBoard'
 // tag on the right.
 export default function TaskCardFace({ task, onOpen, actions }) {
   const due = dueMeta(task.due_date);
-  const tag = COLOR_HEX[task.color];
   const body = plainPreview(task.body);
 
   // A card is allowed to be a note. Everything carried over from the sticky
@@ -54,25 +53,12 @@ export default function TaskCardFace({ task, onOpen, actions }) {
         </p>
       )}
 
-      {(due || tag) && (
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <span className={`font-ninja text-xs truncate ${due ? DUE_TONE[due.tone] : ''}`}>
-            {due?.text}
-          </span>
-          {tag && (
-            // The tag bar. This is NOT the left-edge active stripe the project
-            // banned — that one was a position marker glued to the leading edge
-            // of a nav item. This sits in the card's footer, on the trailing
-            // side, and carries the one thing the card can't say in words.
-            //
-            // Inline hex: a bg-* utility would be rewritten by the dark
-            // overrides and stop matching the swatch that chose it.
-            <span
-              aria-hidden="true"
-              className="h-1.5 w-9 rounded-full flex-shrink-0"
-              style={{ backgroundColor: tag }}
-            />
-          )}
+      {/* The colour is the card's own surface now, not a bar in its footer,
+          so the footer is left to the date. `taskTint` is what puts it there,
+          on whichever surface is drawing this face. */}
+      {due && (
+        <div className="mt-3">
+          <span className={`font-ninja text-xs truncate ${DUE_TONE[due.tone]}`}>{due.text}</span>
         </div>
       )}
     </>

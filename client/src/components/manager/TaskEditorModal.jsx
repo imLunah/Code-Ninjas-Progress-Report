@@ -132,10 +132,10 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
         </div>
 
         <div>
-          <span className="block font-ninja text-sm font-bold text-ninja-navy mb-2">Tag</span>
+          <span className="block font-ninja text-sm font-bold text-ninja-navy mb-2">Colour</span>
           {/* radiogroup rather than buttons: these are one exclusive choice, and
               a screen reader should hear it as such. */}
-          <div role="radiogroup" aria-label="Tag colour" className="flex items-center gap-2">
+          <div role="radiogroup" aria-label="Card colour" className="flex items-center gap-2">
             {COLORS.map((c) => {
               const active = color === c.key;
               return (
@@ -152,13 +152,14 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
                   }`}
                 >
                   {c.hex ? (
-                    // The same bar the card footer draws, so the swatch looks
-                    // like the thing it is choosing. Inline hex: a `bg-*`
-                    // utility would be rewritten by the dark overrides and the
-                    // two would stop matching.
-                    <span className="h-1.5 w-9 rounded-full block" style={{ backgroundColor: c.hex }} />
+                    // A filled chip, not the card's own wash: at this size the
+                    // wash is too faint to tell one colour from another, and a
+                    // picker has to be readable before it is representative.
+                    // Inline hex, since a `bg-*` utility would be rewritten by
+                    // the dark overrides and stop matching the card it sets.
+                    <span className="h-5 w-5 rounded-md block" style={{ backgroundColor: c.hex }} />
                   ) : (
-                    <span className="h-1.5 w-9 rounded-full block border border-dashed border-ninja-muted" />
+                    <span className="h-5 w-5 rounded-md block border border-dashed border-ninja-muted" />
                   )}
                 </button>
               );

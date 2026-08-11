@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { PlusIcon, PencilIcon, Trash2Icon, ArrowRightIcon } from 'lucide-react';
+import { PlusIcon, PencilIcon, Trash2Icon, ArrowRightIcon, ArrowLeftIcon } from 'lucide-react';
 import ActionMenu, { MenuItem } from '../ui/ActionMenu';
 import TaskCardFace from './TaskCardFace';
 import { CARD } from '../../lib/surfaces';
@@ -11,6 +11,7 @@ import {
   COLUMN_LABEL,
   groupByColumn,
   moveTask,
+  taskTint,
 } from '../../lib/taskBoard';
 
 const EASE = [0.23, 1, 0.32, 1];
@@ -49,17 +50,19 @@ function useDragEnabled() {
 function TaskCard({ task, canManage, grabbable, onOpen, onDelete, onMoveTo, cardRef, onPointerDown }) {
   const [confirming, setConfirming] = useState(false);
   const reduce = useReducedMotion();
+  const tint = taskTint(task.color);
 
   return (
     <motion.div
       ref={cardRef}
+      style={tint.style}
       // The cards that aren't being held animate to their new places as the
       // gap opens and closes under the held one. That reflow IS the feedback —
       // it's what tells you where the card will land before you let go.
       layout={reduce ? false : 'position'}
       transition={{ duration: 0.2, ease: EASE }}
       onPointerDown={onPointerDown}
-      className={`${CARD} p-3.5 relative ${grabbable ? 'cursor-grab' : ''}`}
+      className={`${CARD} ${tint.className} p-3.5 relative ${grabbable ? 'cursor-grab' : ''}`}
     >
       <TaskCardFace
         task={task}
@@ -105,16 +108,22 @@ function TaskCard({ task, canManage, grabbable, onOpen, onDelete, onMoveTo, card
                       <MenuItem icon={PencilIcon} onSelect={() => { close(); onOpen(); }}>
                         Edit
                       </MenuItem>
-                      {/* The keyboard and touch route between columns. */}
-                      {COLUMN_KEYS.filter((k) => k !== task.column_key).map((k) => (
-                        <MenuItem
-                          key={k}
-                          icon={ArrowRightIcon}
-                          onSelect={() => { close(); onMoveTo(task, k); }}
-                        >
-                          Move to {COLUMN_LABEL[k]}
-                        </MenuItem>
-                      ))}
+                      {/* The keyboard and touch route between columns. The
+                          arrow points the way the card will actually travel:
+                          from the middle column one of these goes back to To
+                          do, and two arrows pointing right would say otherwise. */}
+                      {COLUMN_KEYS.filter((k) => k !== task.column_key).map((k) => {
+                        const back = COLUMN_KEYS.indexOf(k) < COLUMN_KEYS.indexOf(task.column_key);
+                        return (
+                          <MenuItem
+                            key={k}
+                            icon={back ? ArrowLeftIcon : ArrowRightIcon}
+                            onSelect={() => { close(); onMoveTo(task, k); }}
+                          >
+                            Move to {COLUMN_LABEL[k]}
+                          </MenuItem>
+                        );
+                      })}
                       <MenuItem icon={Trash2Icon} danger onSelect={() => setConfirming(true)}>
                         Delete
                       </MenuItem>
@@ -409,7 +418,11 @@ export default function TaskBoard({ tasks, canManage, onEdit, onDelete, onReorde
           className="fixed top-0 left-0 z-[60] pointer-events-none"
           style={{ width: held.w, transform: `translate3d(${held.x}px, ${held.y}px, 0)` }}
         >
-          <div className={`${CARD} p-3.5 shadow-xl -rotate-1`}>
+          {/* The card under the pointer keeps its colour while it travels. */}
+          <div
+            className={`${CARD} ${taskTint(held.task.color).className} p-3.5 shadow-xl -rotate-1`}
+            style={taskTint(held.task.color).style}
+          >
             <TaskCardFace task={held.task} />
           </div>
         </div>,
