@@ -34,10 +34,16 @@ export default function LogProgressPage() {
   const countsParam = searchParams.get('counts');
   const todayPrograms = programsParam ? programsParam.split(',') : null;
 
-  // Programs logged during this visit, and how many sessions each. The board's
-  // ?done= list is a snapshot from before we got here, so the two are merged.
+  // Programs logged during this visit, and how many sessions each.
   const [loggedHere, setLoggedHere] = useState({});
-  const donePrograms = new Set([...(doneParam ? doneParam.split(',') : []), ...Object.keys(loggedHere)]);
+  // Set to a program name when the sensei asks for a second session on a class
+  // that is already logged, instead of the edit the page opens on.
+  const [logAnotherFor, setLogAnotherFor] = useState(null);
+  // Logged before we got here, kept apart from what gets logged during the
+  // visit: arriving on a logged class means the sensei came back to fix it,
+  // while one written here is a fresh session that should stand as it is.
+  const loggedOnArrival = new Set(doneParam ? doneParam.split(',') : []);
+  const donePrograms = new Set([...loggedOnArrival, ...Object.keys(loggedHere)]);
 
   // Parse per-program session date and pending count from URL (set by dashboard)
   const programDates = datesParam
@@ -79,6 +85,8 @@ export default function LogProgressPage() {
   const handleLogged = () => {
     const program = selectedProgram;
     setLoggedHere((prev) => ({ ...prev, [program]: (prev[program] || 0) + 1 }));
+    // The extra session is written; the page goes back to editing the latest.
+    setLogAnotherFor(null);
     // Refresh belt / project / last lesson so the header reflects what was just logged
     api.get(`/students/${id}`).then(setStudent).catch(() => {});
   };
@@ -94,6 +102,13 @@ export default function LogProgressPage() {
       ...prev,
       progress_logs: (prev.progress_logs || []).filter((l) => l.id !== logId),
     }));
+
+  const handleSavedEdit = (logId, patch) => {
+    handleLogUpdated(logId, patch);
+    // The belt and project in the header come off the enrollment, which the
+    // server moves with the edit when this is the ninja's latest session.
+    api.get(`/students/${id}`).then(setStudent).catch(() => {});
+  };
 
   if (loading) {
     return (
@@ -127,6 +142,13 @@ export default function LogProgressPage() {
     .slice()
     .sort((a, b) => new Date(b.session_date) - new Date(a.session_date))
     .slice(0, 10);
+
+  // Coming back to a class that is already logged means fixing what was
+  // written, not writing it again — so the form opens on that session with its
+  // own values in it. A genuine second session is one click away.
+  const isLogged = !!selectedProgram && loggedOnArrival.has(selectedProgram);
+  const editLog = isLogged && logAnotherFor !== selectedProgram ? loggedSessions[0] : null;
+  const otherSessions = loggedSessions.filter((l) => l.id !== editLog?.id);
 
   const isStudentBirthday = isBirthdayToday(student.birthday);
 
@@ -243,10 +265,28 @@ export default function LogProgressPage() {
               </div>
             ) : selectedProgram ? (
               <div className="bg-white border border-ninja-border rounded-xl p-6 shadow-sm">
-                <h2 className="text-xl font-bold font-ninja text-ninja-navy mb-4">
-                  Log Today's <span className="text-ninja-blue">Session</span>
-                </h2>
-                {pendingCount(selectedProgram) > 1 && (
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                  <h2 className="text-xl font-bold font-ninja text-ninja-navy">
+                    {editLog
+                      ? <>Edit This <span className="text-ninja-blue">Session</span></>
+                      : <>Log Today's <span className="text-ninja-blue">Session</span></>}
+                  </h2>
+                  {isLogged && (
+                    <button
+                      type="button"
+                      onClick={() => setLogAnotherFor(editLog ? selectedProgram : null)}
+                      className="text-ninja-muted hover:text-ninja-blue font-ninja text-sm font-semibold transition-colors"
+                    >
+                      {editLog ? 'Log another session' : 'Edit the logged session'}
+                    </button>
+                  )}
+                </div>
+                {editLog && (
+                  <p className="text-ninja-muted font-ninja text-sm mb-4">
+                    Saving overwrites what was logged on {formatDate(String(editLog.session_date).split('T')[0])}.
+                  </p>
+                )}
+                {!editLog && pendingCount(selectedProgram) > 1 && (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-sm font-ninja text-amber-700">
                     <strong>{pendingCount(selectedProgram)} sessions to log.</strong> Starting with the oldest
                     {sessionDateFor(selectedProgram) ? ` (${formatDate(sessionDateFor(selectedProgram))})` : ''}. They'll still show up for today after.
@@ -256,7 +296,9 @@ export default function LogProgressPage() {
                   student={student}
                   program={selectedProgram}
                   enrollment={enrollment}
+                  editLog={editLog}
                   onLogged={handleLogged}
+                  onSaved={handleSavedEdit}
                   sessionDate={sessionDateFor(selectedProgram)}
                 />
               </div>
@@ -266,17 +308,17 @@ export default function LogProgressPage() {
               </div>
             )}
 
-            {/* What has already been written for this ninja, editable in place.
-                This is where "Edit Log" on the board lands: the page they
-                logged from, rather than a detour through the profile. */}
-            {loggedSessions.length > 0 && (
+            {/* The earlier sessions, editable in place. The one the form above
+                is already holding is left out — the same log with two editors
+                open on it is how a correction turns into a duplicate. */}
+            {otherSessions.length > 0 && (
               <div className="bg-white border border-ninja-border rounded-xl p-6 shadow-sm">
                 <h2 className="text-xl font-bold font-ninja text-ninja-navy mb-4">
-                  Already <span className="text-ninja-blue">Logged</span>
+                  {editLog ? <>Earlier <span className="text-ninja-blue">Sessions</span></> : <>Already <span className="text-ninja-blue">Logged</span></>}
                 </h2>
                 <div className="max-h-[28rem] overflow-y-auto no-scrollbar">
                   <ProgressHistory
-                    logs={loggedSessions}
+                    logs={otherSessions}
                     enrolledPrograms={(student.programs || []).map((p) => p.program)}
                     onLogUpdated={handleLogUpdated}
                     onLogDeleted={handleLogDeleted}

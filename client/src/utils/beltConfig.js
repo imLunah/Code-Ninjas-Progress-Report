@@ -175,3 +175,32 @@ export function getLevelProjects(beltName, sublevel) {
   if (!beltName || !sublevel) return null;
   return BELT_LEVEL_PROJECTS[beltName]?.[parseInt(sublevel)] ?? null;
 }
+
+// Flat-project-list belts (no level / Build-Solve labels): Black capstone + bonus tracks.
+export const UPPER_BELTS = ['Black', 'Bronze', 'Silver', 'Platinum'];
+
+// The projects a belt/level offers, from the live curriculum where it has the
+// belt and this static ladder otherwise. Both the log form and the log editor
+// read it: the form to fill its dropdown, the editor to tell a standard project
+// from a custom one and so know which field to open a saved log in.
+export function createProjectOptions({ beltLevel, beltSublevel, beltProjects }) {
+  const isUpperBelt = UPPER_BELTS.includes(beltLevel);
+  const dynBelt = beltProjects?.[beltLevel];
+  const dynLevel = dynBelt ? Object.fromEntries(
+    Object.entries(dynBelt).map(([sub, projs]) => [sub, projs.map((p) => p.project_name)])
+  ) : null;
+  const dynLevelProjects = dynLevel?.[beltSublevel] ?? null;
+  const dynAllUpper = isUpperBelt && dynBelt ? Object.values(dynBelt).flat().map((p) => p.project_name) : null;
+
+  const levelProjects = dynLevelProjects ?? getLevelProjects(beltLevel, beltSublevel);
+  const allUpperBeltProjects = dynAllUpper ?? (isUpperBelt && BELT_LEVEL_PROJECTS[beltLevel]
+    ? Object.values(BELT_LEVEL_PROJECTS[beltLevel]).flat()
+    : null);
+
+  const hasBeltProjects = beltLevel && !!(dynBelt || BELT_LEVEL_PROJECTS[beltLevel]);
+  return {
+    options: isUpperBelt ? (allUpperBeltProjects ?? PROJECTS) : (levelProjects ?? PROJECTS),
+    needsSublevel: !isUpperBelt && hasBeltProjects && (!beltSublevel || parseInt(beltSublevel) < 1),
+    showLabels: !!levelProjects && !isUpperBelt,
+  };
+}

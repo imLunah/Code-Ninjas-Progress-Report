@@ -5,7 +5,8 @@ import { STATUSES } from '../../utils/beltConfig';
 import { useAuth } from '../../context/AuthContext';
 import { useCurriculum } from '../../context/CurriculumContext';
 import BeltProgressFields from '../sensei/BeltProgressFields';
-import { CreateProjectRow, LessonEntryRow, createProjectOptions } from '../sensei/LogEntryForm';
+import { CreateProjectRow, LessonEntryRow } from '../sensei/LogEntryForm';
+import { createEntryFromLog, lessonEntryFromLog, applyEntryChange, logPayload } from '../../lib/logDraft';
 import { api } from '../../api/client';
 import BeltBadge from '../ui/BeltBadge';
 import ProgramBadge from '../ui/ProgramBadge';
@@ -107,35 +108,7 @@ const FIELD =
 const FIELD_LABEL = 'block text-ninja-muted text-xs font-ninja font-semibold mb-1 uppercase tracking-wide';
 
 // A saved log read back into the shape the log form's own field rows expect, so
-// a correction is made with the same dropdowns the entry was made with. A value
-// the curriculum doesn't have — a custom project, a one-off module — opens in
-// the free-text field instead of vanishing into a select that can't show it.
-function createEntryFromLog(log, { beltLevel, beltSublevel, beltProjects }) {
-  const { options } = createProjectOptions({ beltLevel, beltSublevel, beltProjects });
-  const custom = !!log.project_at && !options.includes(log.project_at);
-  return {
-    project: custom ? '' : (log.project_at || ''),
-    isCustom: custom,
-    customProject: custom ? log.project_at : '',
-    status: log.status_at || '',
-  };
-}
-
-function lessonEntryFromLog(log, curriculum) {
-  const modules = curriculum[log.sub_program || log.program] || [];
-  const known = modules.find((m) => m.module === log.module_name);
-  const lessonKnown = !log.lesson_name || (known?.lessons || []).includes(log.lesson_name);
-  const standard = !!known && lessonKnown;
-  return {
-    subProgram: log.sub_program || '',
-    moduleName: standard ? log.module_name : ((log.module_name || log.lesson_name) ? '__custom__' : ''),
-    lessonName: standard ? (log.lesson_name || '') : '',
-    customModule: standard ? '' : (log.module_name || ''),
-    customLesson: standard ? '' : (log.lesson_name || ''),
-    status: log.status_at || '',
-  };
-}
-
+// a correction is made with the same dropdowns the entry was made with.
 function draftFromLog(log, { beltProjects, curriculum }) {
   const program = log.program || '';
   const beltLevel = log.belt_level_at || '';
@@ -147,40 +120,19 @@ function draftFromLog(log, { beltProjects, curriculum }) {
     beltLevel,
     beltSublevel,
     entry: program === 'CREATE'
-      ? createEntryFromLog(log, { beltLevel, beltSublevel, beltProjects })
+      ? createEntryFromLog(log, { beltProjects })
       : lessonEntryFromLog(log, curriculum),
   };
 }
 
-// Selecting a course or module invalidates what sat under it, same as the log form.
-function applyEntryChange(entry, field, value) {
-  const next = { ...entry, [field]: value };
-  if (field === 'subProgram') { next.moduleName = ''; next.lessonName = ''; next.customModule = ''; next.customLesson = ''; }
-  if (field === 'moduleName') { next.lessonName = ''; next.customModule = ''; next.customLesson = ''; }
-  return next;
-}
-
-// The draft back into the columns the API writes. A CREATE log carries a belt
-// snapshot and no curriculum path; every other program is the reverse — the
-// same split the log form posts — so moving a log to another program clears the
-// fields that don't belong to it rather than leaving them behind as orphans.
-function payloadFromDraft(draft) {
-  const { entry } = draft;
-  const isCreate = draft.program === 'CREATE';
-  const custom = entry.moduleName === '__custom__';
-  return {
-    program: draft.program,
-    session_date: draft.session_date,
-    notes: draft.notes.trim(),
-    status_at: entry.status || null,
-    belt_level_at: isCreate ? (draft.beltLevel || null) : null,
-    belt_sublevel_at: isCreate && draft.beltSublevel ? parseInt(draft.beltSublevel) : null,
-    project_at: isCreate ? (entry.isCustom ? (entry.customProject || null) : (entry.project || null)) : null,
-    sub_program: isCreate ? null : (entry.subProgram || null),
-    module_name: isCreate ? null : (custom ? (entry.customModule || null) : (entry.moduleName || null)),
-    lesson_name: isCreate ? null : (custom ? (entry.customLesson || null) : (entry.lessonName || null)),
-  };
-}
+const payloadFromDraft = (draft) => logPayload({
+  program: draft.program,
+  sessionDate: draft.session_date,
+  notes: draft.notes,
+  beltLevel: draft.beltLevel,
+  beltSublevel: draft.beltSublevel,
+  entry: draft.entry,
+});
 
 // Every field the row displays, editable. Mounted per row rather than lifted
 // into the list so the draft is seeded from the log it belongs to and thrown

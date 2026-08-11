@@ -5,10 +5,8 @@ import Button from '../ui/Button';
 import LazyMarkdownEditor from '../shared/LazyMarkdownEditor';
 import BeltProgressFields from './BeltProgressFields';
 import { useCurriculum } from '../../context/CurriculumContext';
-import { PROJECTS, STATUSES, BELT_LEVEL_PROJECTS, getLevelProjects } from '../../utils/beltConfig';
-
-// Flat-project-list belts (no level / Build-Solve labels): Black capstone + bonus tracks.
-const UPPER_BELTS = ['Black', 'Bronze', 'Silver', 'Platinum'];
+import { STATUSES, createProjectOptions } from '../../utils/beltConfig';
+import { createEntryFromLog, lessonEntryFromLog, logPayload } from '../../lib/logDraft';
 
 const emptyCreateEntry = { project: '', status: '', isCustom: false, customProject: '' };
 const emptyEntry = { subProgram: '', moduleName: '', lessonName: '', customModule: '', customLesson: '', status: '' };
@@ -23,31 +21,6 @@ function getSectionLabel(index, total) {
   if (index === total - 1) return 'Adventure';
   const num = Math.floor(index / 2) + 1;
   return index % 2 === 0 ? `Build ${num}` : `Solve ${num}`;
-}
-
-// The projects a belt/level offers, from the live curriculum where it has the
-// belt and the static ladder otherwise. Exported because the log editor has to
-// tell a standard project from a custom one to know which field to open in.
-export function createProjectOptions({ beltLevel, beltSublevel, beltProjects }) {
-  const isUpperBelt = UPPER_BELTS.includes(beltLevel);
-  const dynBelt = beltProjects?.[beltLevel];
-  const dynLevel = dynBelt ? Object.fromEntries(
-    Object.entries(dynBelt).map(([sub, projs]) => [sub, projs.map(p => p.project_name)])
-  ) : null;
-  const dynLevelProjects = dynLevel?.[beltSublevel] ?? null;
-  const dynAllUpper = isUpperBelt && dynBelt ? Object.values(dynBelt).flat().map(p => p.project_name) : null;
-
-  const levelProjects = dynLevelProjects ?? getLevelProjects(beltLevel, beltSublevel);
-  const allUpperBeltProjects = dynAllUpper ?? (isUpperBelt && BELT_LEVEL_PROJECTS[beltLevel]
-    ? Object.values(BELT_LEVEL_PROJECTS[beltLevel]).flat()
-    : null);
-
-  const hasBeltProjects = beltLevel && !!(dynBelt || BELT_LEVEL_PROJECTS[beltLevel]);
-  return {
-    options: isUpperBelt ? (allUpperBeltProjects ?? PROJECTS) : (levelProjects ?? PROJECTS),
-    needsSublevel: !isUpperBelt && hasBeltProjects && (!beltSublevel || parseInt(beltSublevel) < 1),
-    showLabels: !!levelProjects && !isUpperBelt,
-  };
 }
 
 export function CreateProjectRow({ entry, index, total, beltLevel, beltSublevel, beltProjects, onChange, onRemove }) {
@@ -296,37 +269,64 @@ export function LessonEntryRow({ entry, index, total, program, onChange, onRemov
   );
 }
 
-export default function LogEntryForm({ student, program, enrollment, onLogged, sessionDate: sessionDateProp }) {
+// `editLog` turns the form into an edit of that session: every field starts on
+// what was saved, and submitting rewrites that log instead of adding a second
+// one beside it. Without it the form is the blank new-session form it has
+// always been.
+export default function LogEntryForm({ student, program, enrollment, onLogged, onSaved, sessionDate: sessionDateProp, editLog }) {
   const { subPrograms, curriculum, beltProjects } = useCurriculum();
-  const [notes, setNotes] = useState('');
-  const [beltLevel, setBeltLevel] = useState(enrollment?.belt_level || '');
-  const [beltSublevel, setBeltSublevel] = useState(enrollment?.belt_sublevel || '');
+  const isEditing = !!editLog;
 
-  const [createEntries, setCreateEntries] = useState([newCreateEntry({
-    project: enrollment?.current_project || '',
-    status: enrollment?.project_status || '',
-  })]);
+  // One place decides what every field starts on, so opening an edit and
+  // switching programs can't drift apart.
+  const seed = () => (editLog ? {
+    notes: editLog.notes || '',
+    beltLevel: editLog.belt_level_at || '',
+    beltSublevel: editLog.belt_sublevel_at ? String(editLog.belt_sublevel_at) : '',
+    createEntries: [newCreateEntry(createEntryFromLog(editLog, { beltProjects }))],
+    lessonEntries: [{ ...lessonEntryFromLog(editLog, curriculum), _uid: rowUid() }],
+  } : {
+    notes: '',
+    beltLevel: enrollment?.belt_level || '',
+    beltSublevel: enrollment?.belt_sublevel || '',
+    createEntries: [newCreateEntry({
+      project: enrollment?.current_project || '',
+      status: enrollment?.project_status || '',
+    })],
+    lessonEntries: [newLessonEntry()],
+  });
 
-  const [lessonEntries, setLessonEntries] = useState([newLessonEntry()]);
+  const [initial] = useState(seed);
+  const [notes, setNotes] = useState(initial.notes);
+  const [beltLevel, setBeltLevel] = useState(initial.beltLevel);
+  const [beltSublevel, setBeltSublevel] = useState(initial.beltSublevel);
+  const [createEntries, setCreateEntries] = useState(initial.createEntries);
+  const [lessonEntries, setLessonEntries] = useState(initial.lessonEntries);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
   const isCreate = program === 'CREATE';
-  const sessionDate = sessionDateProp || today();
+  // An edit stays on the day it was logged; only a new session takes the
+  // pending check-in's date.
+  const sessionDate = isEditing
+    ? String(editLog.session_date || '').split('T')[0]
+    : (sessionDateProp || today());
   const hasLessonFields = !!(subPrograms[program] || curriculum[program]?.length);
 
+  // Switching class, or switching which log is being edited, starts over.
   useEffect(() => {
-    setLessonEntries([newLessonEntry()]);
-    setCreateEntries([newCreateEntry({
-      project: enrollment?.current_project || '',
-      status: enrollment?.project_status || '',
-    })]);
+    const next = seed();
+    setNotes(next.notes);
+    setBeltLevel(next.beltLevel);
+    setBeltSublevel(next.beltSublevel);
+    setCreateEntries(next.createEntries);
+    setLessonEntries(next.lessonEntries);
     // A leftover success banner from the previous program would hide this form
     setSuccess(false);
     setError('');
-  }, [program]);
+  }, [program, editLog?.id]);
 
   const updateEntry = (index, field, value) => {
     setLessonEntries((prev) =>
@@ -370,6 +370,25 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
     setSuccess(false);
 
     try {
+      // Editing rewrites the session in place — the point of coming back to it
+      // is that the old project or status was wrong, not that another one
+      // happened. Multi-entry rows are hidden in this mode for the same reason:
+      // one form, one log.
+      if (isEditing) {
+        const patch = logPayload({
+          program,
+          sessionDate,
+          notes,
+          beltLevel,
+          beltSublevel,
+          entry: isCreate ? createEntries[0] : lessonEntries[0],
+        });
+        await api.patch(`/progress/${editLog.id}`, patch);
+        setSuccess(true);
+        onSaved && onSaved(editLog.id, patch);
+        return;
+      }
+
       let payload;
 
       if (isCreate) {
@@ -452,13 +471,13 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
       )}
       {success && (
         <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg p-3 text-sm font-ninja flex items-center justify-between gap-3">
-          <span>Progress logged successfully!</span>
+          <span>{isEditing ? 'Session updated.' : 'Progress logged successfully!'}</span>
           <button
             type="button"
             onClick={() => setSuccess(false)}
             className="text-green-700 border border-green-400 hover:bg-green-100 font-ninja font-semibold text-xs px-3 py-1 rounded-lg transition-colors whitespace-nowrap"
           >
-            + Log Another
+            {isEditing ? 'Keep editing' : '+ Log Another'}
           </button>
         </div>
       )}
@@ -500,13 +519,15 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
               curriculum={curriculum}
             />
           ))}
-          <button
-            type="button"
-            onClick={addEntry}
-            className="w-full py-2 rounded-xl border-2 border-dashed border-ninja-border text-ninja-muted hover:border-ninja-blue hover:text-ninja-blue font-ninja font-semibold text-sm transition-colors"
-          >
-            + Add Another Lesson
-          </button>
+          {!isEditing && (
+            <button
+              type="button"
+              onClick={addEntry}
+              className="w-full py-2 rounded-xl border-2 border-dashed border-ninja-border text-ninja-muted hover:border-ninja-blue hover:text-ninja-blue font-ninja font-semibold text-sm transition-colors"
+            >
+              + Add Another Lesson
+            </button>
+          )}
         </div>
       )}
 
@@ -547,19 +568,23 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
                 onRemove={() => removeCreateEntry(i)}
               />
             ))}
-            <button
-              type="button"
-              onClick={addCreateEntry}
-              className="w-full py-2 rounded-xl border-2 border-dashed border-ninja-border text-ninja-muted hover:border-ninja-blue hover:text-ninja-blue font-ninja font-semibold text-sm transition-colors"
-            >
-              + Add Another Project
-            </button>
+            {!isEditing && (
+              <button
+                type="button"
+                onClick={addCreateEntry}
+                className="w-full py-2 rounded-xl border-2 border-dashed border-ninja-border text-ninja-muted hover:border-ninja-blue hover:text-ninja-blue font-ninja font-semibold text-sm transition-colors"
+              >
+                + Add Another Project
+              </button>
+            )}
           </div>
         </div>
       )}
 
       <Button type="submit" disabled={loading} className="w-full">
-        {loading ? 'Saving...' : filledCreateCount > 1
+        {loading ? 'Saving...' : isEditing
+          ? 'Save Changes'
+          : filledCreateCount > 1
           ? `Log ${filledCreateCount} Projects`
           : lessonEntries.length > 1
           ? `Log ${lessonEntries.length} Lessons`
