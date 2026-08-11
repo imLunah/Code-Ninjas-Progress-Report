@@ -123,23 +123,46 @@ textarea:focus-visible {
   background-color: #252c3e;
 }
 
-/* ── Task cards: the colour tints the whole card ──
-   A tagged task used to carry a small coloured bar in its footer. The colour
-   now washes the card it belongs to, which is the thing you are actually
-   scanning for. Both values are an alpha over whatever is behind the card, so
-   one channel triple works in either theme; dark takes a little more of it,
-   since the same wash over deep slate lands quieter than over white.
+/* ── Task cards: the colour is the card, and the card is glass ──
+   A coloured task used to carry a small filled bar in its footer. The colour
+   is the whole card now, in the same liquid-glass language as the mobile nav:
+   a pane lit from above, tinted rather than painted.
+
+   The stack, bottom up. A white veil does the lifting, NOT the colour: laying
+   colour straight onto the surface only ever darkens it, which is what made
+   the first attempt read as a muddy card instead of a lit one. Over that, the
+   hue arrives as a diagonal wash that thins out across the pane, then a
+   vertical sheen catches the top edge. The inset highlight is the lip of the
+   glass and the coloured drop shadow is the light it throws.
+
+   Alpha throughout, so one channel triple composites correctly on white and on
+   deep slate. backdrop-filter earns its keep on the card being dragged, which
+   floats over the board and really does have something behind it to refract.
 
    Two class names deep on purpose: a single class ties with the Tailwind
    utility it has to beat, and `.dark .bg-white` above would otherwise win in
-   dark mode and paint every tagged card the same grey. */
+   dark mode and paint every coloured card the same grey. */
 .task-card.task-tinted {
-  background-color: rgb(var(--task-rgb) / 0.09);
-  border-color: rgb(var(--task-rgb) / 0.38);
+  background-color: rgb(255 255 255 / 0.72);
+  background-image:
+    linear-gradient(155deg, rgb(var(--task-rgb) / 0.20), rgb(var(--task-rgb) / 0.06) 62%),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0) 45%);
+  border-color: rgb(var(--task-rgb) / 0.30);
+  backdrop-filter: blur(8px) saturate(1.5);
+  -webkit-backdrop-filter: blur(8px) saturate(1.5);
+  box-shadow:
+    inset 0 1px 0.5px rgb(255 255 255 / 0.8),
+    0 4px 14px rgb(var(--task-rgb) / 0.14);
 }
 .dark .task-card.task-tinted {
-  background-color: rgb(var(--task-rgb) / 0.17);
+  background-color: rgb(255 255 255 / 0.09);
+  background-image:
+    linear-gradient(155deg, rgb(var(--task-rgb) / 0.22), rgb(var(--task-rgb) / 0.07) 62%),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.10), rgb(255 255 255 / 0) 45%);
   border-color: rgb(var(--task-rgb) / 0.42);
+  box-shadow:
+    inset 0 1px 0.5px rgb(255 255 255 / 0.18),
+    0 10px 30px rgb(0 0 0 / 0.28);
 }
 
 /* ── Dark mode: input / select fields ── */
