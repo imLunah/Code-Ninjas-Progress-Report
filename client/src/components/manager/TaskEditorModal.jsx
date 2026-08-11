@@ -4,7 +4,7 @@ import Button from '../ui/Button';
 import LazyMarkdownEditor from '../shared/LazyMarkdownEditor';
 import { COLORS, COLUMNS } from '../../lib/taskBoard';
 
-const TITLE_MAX = 120;
+const TITLE_MAX = 200;
 
 // Create and edit are the same form. `task` null means create; `column` is the
 // column a new card lands in.
@@ -30,14 +30,21 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
     setSaving(false);
   }, [isOpen, task, column]);
 
+  // A card must say something, but it chooses whether that is a title or a
+  // note. The server has always been the authority on this (has_content); the
+  // editor agrees with it, so the titleless cards that came over from the
+  // sticky wall can be opened, edited and saved instead of trapping their
+  // author with a Save that never enables.
+  const trimmed = title.trim();
+  const hasContent = Boolean(trimmed || body.trim());
+
   const submit = async () => {
-    const trimmed = title.trim();
-    if (!trimmed) { setError('Give the task a title.'); return; }
+    if (!hasContent) { setError('Give the task a title or a note.'); return; }
     setSaving(true);
     setError('');
     try {
       await onSave({
-        title: trimmed,
+        title: trimmed || null,
         body: body.trim() || null,
         color,
         due_date: due || null,
@@ -61,6 +68,9 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
         <div>
           <label htmlFor="task-title" className="block font-ninja text-sm font-bold text-ninja-navy mb-1.5">
             Title
+            {/* Named as optional, because it is. A card that is just a note is
+                a normal card here, not a half-finished one. */}
+            <span className="ml-1.5 font-normal text-ninja-muted">optional</span>
           </label>
           <input
             id="task-title"
@@ -162,7 +172,7 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
           <Button variant="secondary" size="sm" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button size="sm" onClick={submit} disabled={saving || !title.trim()}>
+          <Button size="sm" onClick={submit} disabled={saving || !hasContent}>
             {saving ? 'Saving…' : task ? 'Save changes' : 'Add task'}
           </Button>
         </div>

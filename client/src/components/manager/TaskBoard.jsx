@@ -68,12 +68,7 @@ function TaskCard({ task, canManage, dragEnabled, onEdit, onDelete, onMoveTo, ca
     >
       <TaskCardFace
         task={task}
-        title={
-          // Typography comes from the shared face; this only adds the press.
-          <button type="button" onClick={() => onEdit(task)} className="w-full text-left rounded">
-            {task.title}
-          </button>
-        }
+        onOpen={() => onEdit(task)}
         actions={
           canManage && (
           <ActionMenu

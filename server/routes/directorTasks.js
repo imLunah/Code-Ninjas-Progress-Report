@@ -10,7 +10,7 @@ const { requireManager, requireOwnLocation } = require('../middleware/auth');
 const COLUMNS = ['todo', 'doing', 'done'];
 const COLORS = ['none', 'blue', 'amber', 'green', 'purple', 'red'];
 
-const TITLE_MAX = 120;
+const TITLE_MAX = 200;
 // Bodies are freeform markdown. The cap is a denial-of-service guard, not a
 // content rule — same reasoning as the 2000-char cap on pinned notes.
 const BODY_MAX = 4000;
@@ -30,12 +30,17 @@ const SELECT = `
 
 function validate(body) {
   const title = typeof body.title === 'string' ? body.title.trim() : '';
-  if (!title) return { error: 'Title is required' };
   if (title.length > TITLE_MAX) return { error: `Title max ${TITLE_MAX} characters` };
 
   const note = body.body;
   if (note != null && typeof note !== 'string') return { error: 'Invalid note' };
   if (note && note.length > BODY_MAX) return { error: `Note max ${BODY_MAX} characters` };
+
+  // A card must say something, but it chooses whether that is a title or a
+  // body. Everything carried over from the sticky wall is a paragraph with no
+  // title, and demanding one would have made those cards unsaveable the moment
+  // anyone opened them. Mirrors the has_content CHECK on the table.
+  if (!title && !note?.trim()) return { error: 'Give the task a title or a note' };
 
   const column_key = body.column_key ?? 'todo';
   if (!COLUMNS.includes(column_key)) return { error: 'Invalid column' };
@@ -51,7 +56,7 @@ function validate(body) {
   }
 
   return {
-    title,
+    title: title || null,
     body: note?.trim() || null,
     column_key,
     color,
