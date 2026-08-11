@@ -6,7 +6,7 @@ import TaskCardFace from './TaskCardFace';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { PANEL } from '../../lib/surfaces';
-import { COLUMNS, groupByColumn, previewOrder, taskTint, todayKey } from '../../lib/taskBoard';
+import { COLUMNS, groupByColumn, previewOrder, todayKey } from '../../lib/taskBoard';
 
 const POPOVER_WIDTH = 320; // matches the w-80 the panel is sized to
 const PREVIEW_ROWS = 3;
@@ -124,13 +124,12 @@ export default function TasksQuickLink({ className = '' }) {
             <>
               <div className="space-y-2">
                 {/* Same face the board draws, so what you glance at here is
-                    what you'll recognise when you open it. */}
+                    what you'll recognise when you open it. Solid, though, not
+                    the board's glass: these rows sit on a white panel, and a
+                    clear pane over a white surface has nothing behind it to be
+                    clear about. */}
                 {rows.map((t) => (
-                  <div
-                    key={t.id}
-                    className={`${PANEL} ${taskTint(t.color).className} p-2.5`}
-                    style={taskTint(t.color).style}
-                  >
+                  <div key={t.id} className={`${PANEL} p-2.5`}>
                     <TaskCardFace task={t} />
                   </div>
                 ))}

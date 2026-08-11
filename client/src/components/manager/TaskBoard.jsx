@@ -11,7 +11,7 @@ import {
   COLUMN_LABEL,
   groupByColumn,
   moveTask,
-  taskTint,
+  TASK_SURFACE,
 } from '../../lib/taskBoard';
 
 const EASE = [0.23, 1, 0.32, 1];
@@ -50,19 +50,17 @@ function useDragEnabled() {
 function TaskCard({ task, canManage, grabbable, onOpen, onDelete, onMoveTo, cardRef, onPointerDown }) {
   const [confirming, setConfirming] = useState(false);
   const reduce = useReducedMotion();
-  const tint = taskTint(task.color);
 
   return (
     <motion.div
       ref={cardRef}
-      style={tint.style}
       // The cards that aren't being held animate to their new places as the
       // gap opens and closes under the held one. That reflow IS the feedback —
       // it's what tells you where the card will land before you let go.
       layout={reduce ? false : 'position'}
       transition={{ duration: 0.2, ease: EASE }}
       onPointerDown={onPointerDown}
-      className={`${CARD} ${tint.className} p-3.5 relative ${grabbable ? 'cursor-grab' : ''}`}
+      className={`${CARD} ${TASK_SURFACE} p-3.5 relative ${grabbable ? 'cursor-grab' : ''}`}
     >
       <TaskCardFace
         task={task}
@@ -419,10 +417,7 @@ export default function TaskBoard({ tasks, canManage, onEdit, onDelete, onReorde
           style={{ width: held.w, transform: `translate3d(${held.x}px, ${held.y}px, 0)` }}
         >
           {/* The card under the pointer keeps its colour while it travels. */}
-          <div
-            className={`${CARD} ${taskTint(held.task.color).className} task-lensed p-3.5 shadow-xl -rotate-1`}
-            style={taskTint(held.task.color).style}
-          >
+          <div className={`${CARD} ${TASK_SURFACE} task-lensed p-3.5 shadow-xl -rotate-1`}>
             <TaskCardFace task={held.task} />
           </div>
         </div>,

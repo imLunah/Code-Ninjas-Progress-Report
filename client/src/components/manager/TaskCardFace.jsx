@@ -53,9 +53,9 @@ export default function TaskCardFace({ task, onOpen, actions }) {
         </p>
       )}
 
-      {/* The colour is the card's own surface now, not a bar in its footer,
-          so the footer is left to the date. `taskTint` is what puts it there,
-          on whichever surface is drawing this face. */}
+      {/* The footer is the date's alone. The coloured bar that used to sit
+          beside it is gone: the card is one pane of glass now, and a task's
+          colour is not drawn anywhere. */}
       {due && (
         <div className="mt-3">
           <span className={`font-ninja text-xs truncate ${DUE_TONE[due.tone]}`}>{due.text}</span>

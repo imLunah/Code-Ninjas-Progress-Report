@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import LazyMarkdownEditor from '../shared/LazyMarkdownEditor';
-import { COLORS, COLUMNS } from '../../lib/taskBoard';
+import { COLUMNS } from '../../lib/taskBoard';
 
 const TITLE_MAX = 200;
 
@@ -11,6 +11,9 @@ const TITLE_MAX = 200;
 export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose, onSave }) {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  // Kept, not chosen: a task's colour is no longer drawn on the board, so
+  // there is nothing to pick. Carrying the stored value through an edit means
+  // saving a card doesn't quietly wipe what is in the column.
   const [color, setColor] = useState('none');
   const [due, setDue] = useState('');
   const [columnKey, setColumnKey] = useState(column);
@@ -128,42 +131,6 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
                 <option key={c.key} value={c.key}>{c.label}</option>
               ))}
             </select>
-          </div>
-        </div>
-
-        <div>
-          <span className="block font-ninja text-sm font-bold text-ninja-navy mb-2">Colour</span>
-          {/* radiogroup rather than buttons: these are one exclusive choice, and
-              a screen reader should hear it as such. */}
-          <div role="radiogroup" aria-label="Card colour" className="flex items-center gap-2">
-            {COLORS.map((c) => {
-              const active = color === c.key;
-              return (
-                <button
-                  key={c.key}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  aria-label={c.label}
-                  title={c.label}
-                  onClick={() => setColor(c.key)}
-                  className={`h-8 px-1.5 rounded-lg flex items-center justify-center transition-transform duration-150 ease-[var(--ease-out)] active:scale-90 ${
-                    active ? 'ring-2 ring-ninja-blue' : ''
-                  }`}
-                >
-                  {c.hex ? (
-                    // A filled chip, not the card's own wash: at this size the
-                    // wash is too faint to tell one colour from another, and a
-                    // picker has to be readable before it is representative.
-                    // Inline hex, since a `bg-*` utility would be rewritten by
-                    // the dark overrides and stop matching the card it sets.
-                    <span className="h-5 w-5 rounded-md block" style={{ backgroundColor: c.hex }} />
-                  ) : (
-                    <span className="h-5 w-5 rounded-md block border border-dashed border-ninja-muted" />
-                  )}
-                </button>
-              );
-            })}
           </div>
         </div>
 

@@ -123,71 +123,66 @@ textarea:focus-visible {
   background-color: #252c3e;
 }
 
-/* ── Task cards: a pane of glass, coloured at its edge ──
-   Two attempts got this wrong the same way. A wash of colour over the card
-   darkened it; a veil of white under the colour frosted it. Both were paint on
-   a surface, and neither is what Apple's Liquid Glass does: that material is
-   CLEAR. It bends what is behind it instead of scattering it, and you read the
-   material off its edges, where a real lens is thickest.
+/* ── Task cards: a pane of glass ──
+   Apple's Liquid Glass is clear. It bends what is behind it rather than
+   scattering it, and you read the material off its edges, where a real lens is
+   thickest. Three attempts at putting colour on this card all failed the same
+   way, because every one of them was paint on a surface: a wash darkened it, a
+   white veil frosted it, a tinted rim and glow still asked the card to be a
+   colour first. The card is just glass now, the same for every task.
 
-   So there is no fill here beyond the little needed to hold the card apart
-   from the column, and no colour laid across the face. The three layers Apple
-   names are what does the work:
+   The layers Apple names:
 
-   illumination — a nearly clear pane. `url(#liquidGlass)` is the same
-     displacement filter the mobile nav wears, so the board warps through a
-     card rather than blurring into milk behind it. Saturation is lifted, which
-     is what makes glass look lit instead of grey.
-   highlight — a white lip along the top edge and a faint rim all the way
-     round: light catching the bevel. The colour joins here, glowing in from
-     the bottom edge the way light does through the thick part of a lens.
-   shadow — separation from the column, tinted with the task's colour, so the
-     card looks like it is throwing that light rather than sitting on it.
+   illumination — a nearly clear pane with its saturation lifted, which is what
+     makes glass look lit rather than grey. Two pixels of blur, not twenty: the
+     heavy blur is exactly what turns glass into frost.
+   highlight — a white lip along the top edge and a faint rim around the rest,
+     light catching the bevel.
+   shadow — separation from the column, since a pane this clear cannot rely on
+     a stroke to say where it ends.
 
-   Alpha throughout, so one channel triple composites on white and on deep
-   slate. Two class names deep on purpose: a single class ties with the
-   Tailwind utility it has to beat, and `.dark .bg-white` above would otherwise
-   win in dark mode and paint every coloured card the same grey. */
-.task-card.task-tinted {
-  background-color: rgb(255 255 255 / 0.45);
+   Two class names deep on purpose. `.dark .bg-white` above and `.dark
+   .shadow-sm` below are both two deep, and a single class would tie with them
+   and lose on source order, repainting every card grey and flattening its
+   shadow. */
+.task-card.task-glass {
+  background-color: rgb(255 255 255 / 0.55);
   backdrop-filter: blur(2px) saturate(1.8);
   -webkit-backdrop-filter: blur(2px) saturate(1.8);
-  border-color: rgb(var(--task-rgb) / 0.5);
+  border-color: rgb(255 255 255 / 0.6);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.85),
-    inset 0 0 0 1px rgb(255 255 255 / 0.3),
-    inset 0 -12px 16px -14px rgb(var(--task-rgb) / 0.75),
-    0 8px 20px -8px rgb(var(--task-rgb) / 0.3),
-    0 1px 2px rgb(0 0 0 / 0.05);
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    inset 0 0 0 1px rgb(255 255 255 / 0.35),
+    0 8px 20px -10px rgb(15 23 42 / 0.22),
+    0 1px 2px rgb(15 23 42 / 0.06);
 }
-.dark .task-card.task-tinted {
-  background-color: rgb(255 255 255 / 0.06);
-  border-color: rgb(var(--task-rgb) / 0.55);
+.dark .task-card.task-glass {
+  background-color: rgb(255 255 255 / 0.07);
+  border-color: rgb(255 255 255 / 0.12);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.22),
-    inset 0 0 0 1px rgb(255 255 255 / 0.07),
-    inset 0 -12px 18px -14px rgb(var(--task-rgb) / 0.8),
-    0 10px 26px -10px rgb(var(--task-rgb) / 0.28),
-    0 2px 10px rgb(0 0 0 / 0.35);
+    inset 0 1px 0 rgb(255 255 255 / 0.2),
+    inset 0 0 0 1px rgb(255 255 255 / 0.06),
+    0 12px 28px -12px rgb(0 0 0 / 0.55),
+    0 2px 8px rgb(0 0 0 / 0.3);
 }
 
 /* The refraction is spent where it can be seen. A resting card sits on a flat
    column, so displacing that backdrop costs rasterisation and shows nothing;
    the card under the pointer travels over the other cards and the columns, and
-   there the warp is the whole point. */
+   there the warp is the whole point. Same filter the mobile nav wears. */
 .task-card.task-lensed {
   backdrop-filter: url(#liquidGlass) blur(2px) saturate(1.8);
 }
 
 /* Glass is a preference, not a requirement. Someone who has asked their system
-   for less transparency gets a plain card that still carries its colour. */
+   for less transparency gets a plain card. */
 @media (prefers-reduced-transparency: reduce) {
-  .task-card.task-tinted {
+  .task-card.task-glass {
     background-color: #fff;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
-  .dark .task-card.task-tinted { background-color: #252c3e; }
+  .dark .task-card.task-glass { background-color: #252c3e; }
 }
 
 /* ── Dark mode: input / select fields ── */
