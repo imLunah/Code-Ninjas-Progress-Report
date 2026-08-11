@@ -5,6 +5,7 @@ import Layout from '../../components/layout/Layout';
 import BeltBadge from '../../components/ui/BeltBadge';
 import Card from '../../components/ui/Card';
 import LogEntryForm from '../../components/sensei/LogEntryForm';
+import ProgressHistory from '../../components/shared/ProgressHistory';
 import PinnedNote from '../../components/shared/PinnedNote';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -82,6 +83,18 @@ export default function LogProgressPage() {
     api.get(`/students/${id}`).then(setStudent).catch(() => {});
   };
 
+  const handleLogUpdated = (logId, patch) =>
+    setStudent((prev) => ({
+      ...prev,
+      progress_logs: (prev.progress_logs || []).map((l) => (l.id === logId ? { ...l, ...patch } : l)),
+    }));
+
+  const handleLogDeleted = (logId) =>
+    setStudent((prev) => ({
+      ...prev,
+      progress_logs: (prev.progress_logs || []).filter((l) => l.id !== logId),
+    }));
+
   if (loading) {
     return (
       <Layout>
@@ -104,6 +117,16 @@ export default function LogProgressPage() {
     : (student.programs || []);
 
   const enrollment = availablePrograms.find((p) => p.program === selectedProgram);
+
+  // The sessions already written for this ninja, newest first, narrowed to the
+  // class being logged. Capped: this is the log page, not the profile — enough
+  // to reach today's entry and the last few, not the whole history.
+  const loggedSessions = (student.progress_logs || [])
+    .filter((l) => l.notes !== 'Marked complete from roadmap')
+    .filter((l) => !selectedProgram || l.program === selectedProgram)
+    .slice()
+    .sort((a, b) => new Date(b.session_date) - new Date(a.session_date))
+    .slice(0, 10);
 
   const isStudentBirthday = isBirthdayToday(student.birthday);
 
@@ -210,8 +233,8 @@ export default function LogProgressPage() {
             />
           </div>
 
-          {/* Right panel: log form */}
-          <div className="lg:flex-1 min-w-0">
+          {/* Right panel: log form + what has already been logged */}
+          <div className="lg:flex-1 min-w-0 space-y-6">
             {isReadOnly ? (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 shadow-sm text-center">
                 <p className="text-amber-700 font-ninja font-semibold">
@@ -240,6 +263,25 @@ export default function LogProgressPage() {
             ) : (
               <div className="bg-white border border-ninja-border rounded-xl p-6 shadow-sm text-center">
                 <p className="text-ninja-muted font-ninja">Select a program above to log a session.</p>
+              </div>
+            )}
+
+            {/* What has already been written for this ninja, editable in place.
+                This is where "Edit Log" on the board lands: the page they
+                logged from, rather than a detour through the profile. */}
+            {loggedSessions.length > 0 && (
+              <div className="bg-white border border-ninja-border rounded-xl p-6 shadow-sm">
+                <h2 className="text-xl font-bold font-ninja text-ninja-navy mb-4">
+                  Already <span className="text-ninja-blue">Logged</span>
+                </h2>
+                <div className="max-h-[28rem] overflow-y-auto no-scrollbar">
+                  <ProgressHistory
+                    logs={loggedSessions}
+                    enrolledPrograms={(student.programs || []).map((p) => p.program)}
+                    onLogUpdated={handleLogUpdated}
+                    onLogDeleted={handleLogDeleted}
+                  />
+                </div>
               </div>
             )}
           </div>
