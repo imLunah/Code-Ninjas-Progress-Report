@@ -463,8 +463,11 @@ export default function ProgressHistory({ logs = [], enrolledPrograms, onLogUpda
                 {sharedSensei && <span className="text-ninja-muted text-sm font-ninja">by {sharedSensei}</span>}
               </div>
 
-              {/* Individual log entries */}
-              <div className="space-y-3">
+              {/* Individual log entries. The gap between them is the entries'
+                  own padding rather than a margin, so the hover tint covers the
+                  whole band an entry occupies; -my-3 gives back the padding at
+                  the ends, leaving the card spaced exactly as before. */}
+              <div className="-my-3">
                 {dayLogs.map((log, i) => {
                   const allComments = [...(log.comments || []), ...(localComments[log.id] || [])];
                   const isEditing = editingId === log.id;
@@ -474,14 +477,15 @@ export default function ProgressHistory({ logs = [], enrolledPrograms, onLogUpda
                   const canEdit = !isReadOnly && (isManager || log.sensei_id === user?.id);
 
                   return (
-                    // The tint bleeds past the text so the entry reads as one
-                    // object under the pointer, and is an alpha over whatever is
+                    // The tint runs the full width of the card and the full
+                    // height of the entry, so the whole session lights up as one
+                    // object under the pointer. It is an alpha over whatever is
                     // behind it rather than a bg-* swap that the dark overrides
                     // would fight.
                     <div
                       key={log.id}
-                      className={`group -mx-2 px-2 rounded-lg transition-colors duration-150 hover:bg-ninja-navy/[0.04] dark:hover:bg-white/[0.05] ${
-                        i > 0 ? 'border-t border-ninja-border/60 pt-3' : ''
+                      className={`group -mx-4 px-4 py-3 rounded-lg transition-colors duration-150 hover:bg-ninja-navy/[0.04] dark:hover:bg-white/[0.05] ${
+                        i > 0 ? 'border-t border-ninja-border/60' : ''
                       }`}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2 mb-1.5">
