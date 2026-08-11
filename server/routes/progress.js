@@ -14,6 +14,38 @@ const MAX_FIELD = 200;
 // Log comments are prose, so they get the same ceiling as notes rather than MAX_FIELD.
 const MAX_COMMENT = 2000;
 
+// The status a session can carry. Freeform on the write path (a sensei may log a
+// custom project), but the edit path offers a fixed set of buttons, so anything
+// outside this list on a PATCH is junk rather than a sensei's own wording.
+const STATUSES = ['Started', 'Working On', 'Completed'];
+
+// percent_complete = distinct lessons marked Completed in a module / lessons in
+// that module. Called after any write that can change which lessons are done —
+// a new log, or an edit that flips a lesson's status.
+async function recomputePercentComplete(client, { student_id, program, module_name, sub_program }) {
+  if (program === 'CREATE' || !module_name) return;
+  const { rows: doneRows } = await client.query(
+    "SELECT COUNT(DISTINCT lesson_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name = $3 AND lesson_name IS NOT NULL AND status_at = 'Completed'",
+    [student_id, program, module_name]
+  );
+  const { rows: totalRows } = await client.query(
+    `SELECT COUNT(cl.id) AS total
+     FROM curriculum_lessons cl
+     JOIN curriculum_modules cm ON cl.module_id = cm.id
+     WHERE cm.program = $1 AND cm.module_name = $2
+       AND (cm.sub_program = $3 OR (cm.sub_program IS NULL AND $3::text IS NULL))`,
+    [program, module_name, sub_program || null]
+  );
+  const totalLessons = parseInt(totalRows[0].total);
+  if (totalLessons > 0) {
+    const pct = Math.min(100, Math.round((parseInt(doneRows[0].cnt) / totalLessons) * 100));
+    await client.query(
+      'UPDATE student_programs SET percent_complete = $1 WHERE student_id = $2 AND program = $3',
+      [pct, student_id, program]
+    );
+  }
+}
+
 // POST /api/progress
 // Accepts either single-lesson fields OR lesson_entries array for multi-lesson sessions.
 router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
@@ -200,30 +232,13 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     }
 
     // Auto-compute percent_complete: lessons done in current module / total lessons in that module
-    const lastModuleName = lastEntry.module_name;
-    const lastSubProgram = lastEntry.sub_program;
-
-    if (program !== 'CREATE' && lastModuleName && lastEntry.lesson_name) {
-      const { rows: doneRows } = await client.query(
-        "SELECT COUNT(DISTINCT lesson_name) AS cnt FROM progress_logs WHERE student_id = $1 AND program = $2 AND module_name = $3 AND lesson_name IS NOT NULL AND status_at = 'Completed'",
-        [student_id, program, lastModuleName]
-      );
-      const { rows: totalRows } = await client.query(
-        `SELECT COUNT(cl.id) AS total
-         FROM curriculum_lessons cl
-         JOIN curriculum_modules cm ON cl.module_id = cm.id
-         WHERE cm.program = $1 AND cm.module_name = $2
-           AND (cm.sub_program = $3 OR (cm.sub_program IS NULL AND $3::text IS NULL))`,
-        [program, lastModuleName, lastSubProgram || null]
-      );
-      const totalLessons = parseInt(totalRows[0].total);
-      if (totalLessons > 0) {
-        const pct = Math.min(100, Math.round((parseInt(doneRows[0].cnt) / totalLessons) * 100));
-        await client.query(
-          'UPDATE student_programs SET percent_complete = $1 WHERE student_id = $2 AND program = $3',
-          [pct, student_id, program]
-        );
-      }
+    if (lastEntry.lesson_name) {
+      await recomputePercentComplete(client, {
+        student_id,
+        program,
+        module_name: lastEntry.module_name,
+        sub_program: lastEntry.sub_program,
+      });
     }
 
     await client.query('COMMIT');
@@ -248,32 +263,85 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
   }
 });
 
-// PATCH /api/progress/:id — managers edit any log; senseis edit only their own
+// PATCH /api/progress/:id — managers edit any log; senseis edit only their own.
+// Accepts notes, and optionally status_at (omit it to leave the status alone;
+// null clears it). A status edit carries the same two side effects a fresh log
+// does, so correcting one doesn't leave the ninja's tracked progress behind.
 router.patch('/:id', requireSensei, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
-  const { notes } = req.body;
+  const { notes, status_at } = req.body;
   if (!notes?.trim()) return res.status(400).json({ error: 'Notes are required' });
+  if (notes.length > 2000) return res.status(400).json({ error: 'Notes too long (max 2000 chars)' });
+
+  const editsStatus = status_at !== undefined;
+  if (editsStatus && status_at !== null && !STATUSES.includes(status_at)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
 
   const isManager = ['manager', 'admin'].includes(req.session.role);
+  const client = await pool.connect();
   try {
-    const ownershipClause = isManager ? '' : 'AND progress_logs.sensei_id = $4';
-    const params = isManager
-      ? [notes.trim(), req.params.id, req.session.activeLocationId]
-      : [notes.trim(), req.params.id, req.session.activeLocationId, req.session.userId];
+    await client.query('BEGIN');
 
-    const { rows } = await pool.query(
-      `UPDATE progress_logs SET notes = $1
+    const params = [notes.trim(), req.params.id, req.session.activeLocationId];
+    if (!isManager) params.push(req.session.userId);
+    const ownershipClause = isManager ? '' : `AND progress_logs.sensei_id = $${params.length}`;
+    let statusSet = '';
+    if (editsStatus) {
+      params.push(status_at);
+      statusSet = `, status_at = $${params.length}`;
+    }
+
+    const { rows } = await client.query(
+      `UPDATE progress_logs SET notes = $1${statusSet}
        FROM students s
        WHERE progress_logs.id = $2 AND progress_logs.student_id = s.id AND s.location_id = $3
        ${ownershipClause}
-       RETURNING progress_logs.id`,
+       RETURNING progress_logs.id, progress_logs.student_id, progress_logs.program,
+                 progress_logs.sub_program, progress_logs.module_name, progress_logs.lesson_name`,
       params
     );
-    if (!rows[0]) return res.status(404).json({ error: 'Log not found or not yours' });
+    const log = rows[0];
+    if (!log) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Log not found or not yours' });
+    }
+
+    if (editsStatus) {
+      // The tracked status follows only when this is the newest log for the
+      // program — fixing a session from two weeks ago shouldn't rewind the
+      // ninja to where they were then.
+      const { rows: newest } = await client.query(
+        `SELECT id FROM progress_logs
+         WHERE student_id = $1 AND program = $2
+         ORDER BY session_date DESC, created_at DESC, id DESC LIMIT 1`,
+        [log.student_id, log.program]
+      );
+      if (newest[0]?.id === log.id) {
+        await client.query(
+          'UPDATE student_programs SET project_status = $1 WHERE student_id = $2 AND program = $3',
+          [status_at, log.student_id, log.program]
+        );
+      }
+      // Flipping a lesson to (or off) Completed changes the module's tally.
+      if (log.lesson_name) {
+        await recomputePercentComplete(client, {
+          student_id: log.student_id,
+          program: log.program,
+          module_name: log.module_name,
+          sub_program: log.sub_program,
+        });
+      }
+    }
+
+    await client.query('COMMIT');
     res.json({ ok: true });
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     console.error('Progress log update error:', err);
     res.status(500).json({ error: 'Failed to update log' });
+  } finally {
+    client.release();
   }
 });
 

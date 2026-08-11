@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PencilIcon, ReplyIcon } from 'lucide-react';
 import { formatDate } from '../../utils/dateUtils';
+import { STATUSES } from '../../utils/beltConfig';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import BeltBadge from '../ui/BeltBadge';
@@ -41,6 +42,40 @@ function StatusMark({ status }) {
       <span className="w-1.5 h-1.5 rounded-full bg-current" aria-hidden="true" />
       {status}
     </span>
+  );
+}
+
+// The same buttons the log form uses, so a correction is made the way the
+// original entry was. Clicking the current status clears it — a log that never
+// carried one shouldn't be forced to gain one just by opening the editor.
+function StatusPicker({ value, onChange, disabled }) {
+  return (
+    <div>
+      <label className="block text-ninja-muted text-xs font-ninja font-semibold mb-1.5 uppercase tracking-wide">
+        Status
+      </label>
+      <div className="flex flex-wrap gap-2">
+        {STATUSES.map((s) => {
+          const selected = value === s;
+          return (
+            <button
+              key={s}
+              type="button"
+              disabled={disabled}
+              aria-pressed={selected}
+              onClick={() => onChange(selected ? '' : s)}
+              className={`px-3 py-1 rounded-lg text-sm font-ninja font-semibold transition-colors disabled:opacity-50 ${
+                selected
+                  ? s === 'Completed' ? 'bg-emerald-500 text-white' : 'bg-ninja-blue text-white'
+                  : 'bg-white border border-ninja-border text-ninja-navy hover:border-ninja-blue'
+              }`}
+            >
+              {s}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -122,6 +157,7 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
 
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState('');
+  const [editStatus, setEditStatus] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -159,6 +195,8 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
   const startEdit = (log) => {
     setEditingId(log.id);
     setEditDraft(log.notes || '');
+    setEditStatus(log.status_at || '');
+    setEditError('');
     setConfirmDeleteId(null);
   };
 
@@ -166,9 +204,10 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
     if (!editDraft.trim()) return;
     setSavingEdit(true);
     setEditError('');
+    const patch = { notes: editDraft.trim(), status_at: editStatus || null };
     try {
-      await api.patch(`/progress/${logId}`, { notes: editDraft.trim() });
-      onLogUpdated && onLogUpdated(logId, { notes: editDraft.trim() });
+      await api.patch(`/progress/${logId}`, patch);
+      onLogUpdated && onLogUpdated(logId, patch);
       setEditingId(null);
     } catch (err) {
       setEditError(err.message || 'Failed to save. Try again.');
@@ -287,7 +326,9 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
                           {log.project_at && (
                             <span className="font-ninja text-xs text-ninja-muted">{log.project_at}</span>
                           )}
-                          {log.status_at && <StatusMark status={log.status_at} />}
+                          {/* Hidden mid-edit: the picker below is the draft, and
+                              two statuses on screen disagreeing reads as a bug. */}
+                          {!isEditing && log.status_at && <StatusMark status={log.status_at} />}
                           {!sharedSensei && (
                             <span className="text-ninja-muted text-xs font-ninja">by {authorName(log.sensei_name)}</span>
                           )}
@@ -347,6 +388,7 @@ export default function ProgressHistory({ logs = [], onLogUpdated, onLogDeleted 
 
                       {isEditing ? (
                         <div className="space-y-2 mt-1">
+                          <StatusPicker value={editStatus} onChange={setEditStatus} disabled={savingEdit} />
                           <LazyMarkdownEditor value={editDraft} onChange={setEditDraft} placeholder="Update the session notes…" />
                           <div className="flex gap-2">
                             <Button size="sm" onClick={() => saveEdit(log.id)} disabled={savingEdit || !editDraft.trim()}>
