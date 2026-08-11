@@ -127,7 +127,7 @@ export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
             </div>
             {role === 'manager' && (
               <p className="text-ninja-muted font-ninja text-xs mt-1.5">
-                Center Directors have full access — student management, staff, and settings.
+                Center Directors have full access to student management, staff, and settings.
               </p>
             )}
           </div>
@@ -186,7 +186,7 @@ export default function AddSenseiModal({ isOpen, onClose, onAdded }) {
                 ))}
               </div>
               <p className="text-ninja-muted font-ninja text-xs mt-1.5">
-                Assign this person to one or more centers — they get full access at each.
+                Assign this person to one or more centers. They get full access at each.
               </p>
             </div>
           )}

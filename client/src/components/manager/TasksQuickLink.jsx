@@ -64,7 +64,7 @@ export default function TasksQuickLink({ className = '' }) {
 
   const label = !tasks
     ? 'Tasks'
-    : `Tasks — ${grouped.todo.length} to do, ${grouped.doing.length} in progress` +
+    : `Tasks: ${grouped.todo.length} to do, ${grouped.doing.length} in progress` +
       (overdue ? `, ${overdue} overdue` : '');
 
   return (
@@ -118,7 +118,7 @@ export default function TasksQuickLink({ className = '' }) {
 
           {rows.length === 0 ? (
             <p className="font-ninja text-xs text-ninja-muted py-1">
-              {tasks.length === 0 ? 'Nothing on the board yet.' : 'Nothing open — all caught up.'}
+              {tasks.length === 0 ? 'Nothing on the board yet.' : 'Nothing open. All caught up.'}
             </p>
           ) : (
             <>

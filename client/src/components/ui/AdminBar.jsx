@@ -63,7 +63,7 @@ export default function AdminBar() {
         <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
         <button
           onClick={() => go('/manager/overview', 'manager')}
-          title="UI preview — server permissions unchanged"
+          title="UI preview only. Server permissions unchanged"
           className="px-3 py-1 rounded-xl transition-colors"
           style={{ background: isManager ? 'rgb(56,161,255)' : 'transparent', color: isManager ? '#fff' : 'rgba(255,255,255,0.5)' }}
         >
@@ -71,7 +71,7 @@ export default function AdminBar() {
         </button>
         <button
           onClick={() => go('/sensei/dashboard', 'sensei')}
-          title="UI preview — server permissions unchanged"
+          title="UI preview only. Server permissions unchanged"
           className="px-3 py-1 rounded-xl transition-colors"
           style={{ background: isSensei ? 'rgb(56,161,255)' : 'transparent', color: isSensei ? '#fff' : 'rgba(255,255,255,0.5)' }}
         >

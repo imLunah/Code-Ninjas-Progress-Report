@@ -58,7 +58,7 @@ function TempPasswordModal({ data, onClose }) {
           <h2 className="text-ninja-navy font-ninja font-bold text-lg">Location Created!</h2>
         </div>
         <p className="text-ninja-muted font-ninja text-xs mb-5">
-          Save these credentials — the password will not be shown again.
+          Save these credentials. The password will not be shown again.
         </p>
 
         <div className="bg-ninja-bg rounded-xl p-4 space-y-2 font-mono text-sm mb-5">

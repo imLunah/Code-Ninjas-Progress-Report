@@ -182,7 +182,7 @@ export default function LogProgressPage() {
                       )}
                       {enrollment.current_project && (
                         <span className="text-ninja-muted font-ninja text-sm">
-                          {enrollment.current_project}{enrollment.project_status ? ` — ${enrollment.project_status}` : ''}
+                          {enrollment.current_project}{enrollment.project_status ? `, ${enrollment.project_status}` : ''}
                         </span>
                       )}
                     </div>

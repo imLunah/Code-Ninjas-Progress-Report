@@ -121,7 +121,7 @@ function TempPasswordModal({ data, onClose }) {
         className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
       >
         <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-1">Temporary Password</h2>
-        <p className="text-ninja-muted font-ninja text-xs mb-4">Save these — the password will not be shown again.</p>
+        <p className="text-ninja-muted font-ninja text-xs mb-4">Save these. The password will not be shown again.</p>
         <div className="bg-ninja-bg rounded-xl p-4 space-y-2 font-mono text-sm mb-5">
           <div><span className="text-ninja-muted">Username:</span> <span className="text-ninja-navy font-semibold">{data.username}</span></div>
           <div><span className="text-ninja-muted">Password:</span> <span className="text-ninja-red font-bold">{data.temp_password}</span></div>

@@ -404,7 +404,7 @@ function DesktopBeltJourney({ enrollment }) {
           <div className="flex items-center justify-between mt-2">
             <span className="text-ninja-muted font-ninja text-sm">
               {current_project
-                ? `Current project: ${current_project}${project_status ? ` — ${project_status}` : ''}`
+                ? `Current project: ${current_project}${project_status ? `, ${project_status}` : ''}`
                 : ''}
             </span>
             <span className="font-ninja font-bold text-sm text-ninja-navy">{progress}% to next belt</span>

@@ -482,7 +482,7 @@ function BeltEditor() {
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5 flex items-center justify-between gap-4">
           <div>
             <p className="text-ninja-navy font-ninja font-semibold text-sm">Viewing built-in defaults</p>
-            <p className="text-ninja-muted font-ninja text-xs mt-0.5">Initialize to enable editing — belt projects will be saved to the database.</p>
+            <p className="text-ninja-muted font-ninja text-xs mt-0.5">Initialize to enable editing. Belt projects will be saved to the database.</p>
             {seedError && <p className="text-ninja-red font-ninja text-xs mt-1">{seedError}</p>}
           </div>
           <button
@@ -673,7 +673,7 @@ export default function CurriculumPage() {
               <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5 flex items-center justify-between gap-4">
                 <div>
                   <p className="text-ninja-navy font-ninja font-semibold text-sm">Viewing built-in defaults</p>
-                  <p className="text-ninja-muted font-ninja text-xs mt-0.5">Initialize to enable editing — modules and lessons will be saved to the database.</p>
+                  <p className="text-ninja-muted font-ninja text-xs mt-0.5">Initialize to enable editing. Modules and lessons will be saved to the database.</p>
                   {seedError && <p className="text-ninja-red font-ninja text-xs mt-1">{seedError}</p>}
                 </div>
                 <button

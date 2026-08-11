@@ -143,7 +143,7 @@ export default function ParentStudentProfile() {
                 <LazyMarkdownEditor
                   value={draft}
                   onChange={setDraft}
-                  placeholder="Allergies, pickup notes, learning style — anything the senseis should know."
+                  placeholder="Allergies, pickup notes, learning style, or anything else the senseis should know."
                 />
                 <div className="flex items-center gap-1">
                   <button

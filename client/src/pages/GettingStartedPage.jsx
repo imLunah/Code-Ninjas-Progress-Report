@@ -31,7 +31,7 @@ const ICONS = {
 
 // Each screen: media is tried first; falls back to the icon if the asset is missing.
 // Drop real clips/animations in client/public/onboarding/ and fill `src` (e.g. media:{type:'video',src:'/onboarding/checkin.webm'}).
-const WELCOME = { icon: 'wave', media: { type: 'lottie', src: '/onboarding/welcome.json' }, title: 'Welcome to DojoLink', body: 'A quick tour of the basics — swipe through, takes about a minute.' };
+const WELCOME = { icon: 'wave', media: { type: 'lottie', src: '/onboarding/welcome.json' }, title: 'Welcome to DojoLink', body: 'A quick tour of the basics. Swipe through, takes about a minute.' };
 const FINISH = { icon: 'rocket', media: { type: 'lottie', src: '/onboarding/celebrate.json' }, title: 'You’re all set 🥷', body: 'You can reopen this anytime from your Account page. Let’s go!' };
 
 const SENSEI = [
@@ -42,7 +42,7 @@ const SENSEI = [
 ];
 
 const MANAGER = [
-  { icon: 'roster', media: { type: 'video', src: '/onboarding/roster.webm' }, title: 'Manage the roster', body: 'In Ninjas, search, add, or import students from CSV — and edit or archive any profile.' },
+  { icon: 'roster', media: { type: 'video', src: '/onboarding/roster.webm' }, title: 'Manage the roster', body: 'In Ninjas, search, add, or import students from CSV, and edit or archive any profile.' },
   { icon: 'reports', media: { type: 'video', src: '/onboarding/reports.webm' }, title: 'See the big picture', body: 'Reports shows enrollment, belt distribution, inactive students, and belt advancements.' },
   { icon: 'staff', media: { type: 'video', src: '/onboarding/staff.webm' }, title: 'Manage your team', body: 'Use Staff to add or remove senseis, reset credentials, and set profile photos.' },
 ];

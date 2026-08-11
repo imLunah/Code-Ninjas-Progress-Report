@@ -67,7 +67,7 @@ function EditCredentialsModal({ sensei, onClose }) {
   return (
     <ModalPortal><div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
-        <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-1">Edit Login — {sensei.display_name}</h2>
+        <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-1">Edit Login for {sensei.display_name}</h2>
         <p className="text-ninja-muted font-ninja text-xs mb-4">Passwords are never shown. Leave blank to keep current.</p>
 
         <form onSubmit={handleSave} className="space-y-4">
@@ -163,7 +163,7 @@ function ManageCentersModal({ sensei, centers, onClose, onSaved }) {
   return (
     <ModalPortal><div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
-        <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-1">Manage Centers — {sensei.display_name}</h2>
+        <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-1">Manage Centers for {sensei.display_name}</h2>
         <p className="text-ninja-muted font-ninja text-xs mb-4">This staff member gets full access at every selected center.</p>
         <div className="space-y-1.5 mb-4">
           {centers.map((c) => (

@@ -35,7 +35,7 @@ const COPY = {
     submit: 'Send Report',
     sending: 'Sending…',
     doneTitle: 'Report sent!',
-    doneBody: "Thanks — we'll look into it soon.",
+    doneBody: "Thanks! We'll look into it soon.",
     footer: "We'll automatically include your current page, browser, screen size, and account info.",
   },
   feature: {
@@ -47,7 +47,7 @@ const COPY = {
     submit: 'Send Suggestion',
     sending: 'Sending…',
     doneTitle: 'Suggestion sent!',
-    doneBody: "Thanks — we'll take a look.",
+    doneBody: "Thanks! We'll take a look.",
     footer: "We'll automatically include your current page and account info.",
   },
 };

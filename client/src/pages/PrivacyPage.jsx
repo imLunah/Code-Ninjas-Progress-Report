@@ -152,8 +152,8 @@ export default function PrivacyPage() {
               DojoLink stores a small amount of data in your browser's local storage and session storage for functional purposes only:
             </p>
             <div className="text-sm text-ninja-muted leading-relaxed space-y-1 mb-2">
-              <p><strong>Theme preference</strong> (localStorage) — remembers whether you selected light or dark mode.</p>
-              <p><strong>Announcement dismissal</strong> (sessionStorage) — remembers that you dismissed a system announcement banner during your current session. This data is cleared when you close your browser tab.</p>
+              <p><strong>Theme preference</strong> (localStorage): remembers whether you selected light or dark mode.</p>
+              <p><strong>Announcement dismissal</strong> (sessionStorage): remembers that you dismissed a system announcement banner during your current session. This data is cleared when you close your browser tab.</p>
             </div>
             <p className="text-sm text-ninja-muted leading-relaxed">
               No advertising cookies or cross-site tracking technologies are used.
@@ -163,7 +163,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-bold mb-2">Children's Privacy (COPPA)</h2>
             <p className="text-sm text-ninja-muted leading-relaxed mb-2">
-              DojoLink stores information <em>about</em> children enrolled at participating franchise locations (such as names, belt levels, and attendance records). This information is entered and managed exclusively by authorized center staff — children do not create accounts, submit personal information, or directly interact with the platform.
+              DojoLink stores information <em>about</em> children enrolled at participating franchise locations (such as names, belt levels, and attendance records). This information is entered and managed exclusively by authorized center staff. Children do not create accounts, submit personal information, or directly interact with the platform.
             </p>
             <p className="text-sm text-ninja-muted leading-relaxed mb-2">
               Student records are collected for internal educational and operational purposes only, consistent with the Children's Online Privacy Protection Act (COPPA). We do not use or disclose children's information for any commercial, advertising, or marketing purpose.

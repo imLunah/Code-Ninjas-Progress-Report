@@ -771,7 +771,7 @@ export default function StudentRoster() {
                     {importResult.conflicts?.length > 0 && `${importResult.conflicts.length} belt change${importResult.conflicts.length !== 1 ? 's' : ''}`}
                     {importResult.conflicts?.length > 0 && importResult.missing?.length > 0 && ' and '}
                     {importResult.missing?.length > 0 && `${importResult.missing.length} roster ninja${importResult.missing.length !== 1 ? 's' : ''} not in this CSV`}
-                    {' '}— you'll review these after confirming.
+                    {' '}to review after confirming.
                   </p>
                 )}
               </div>
