@@ -54,7 +54,7 @@ function TaskCard({ task, canManage, dragEnabled, onEdit, onDelete, onMoveTo, ca
       onDrag={onDrag}
       onDragEnd={onDragEnd}
       whileDrag={{ scale: 1.03, rotate: -1.2, zIndex: 40 }}
-      className={`${CARD} p-3 relative ${
+      className={`${CARD} p-3.5 relative ${
         canManage && dragEnabled ? 'cursor-grab active:cursor-grabbing' : ''
       } ${dragging ? 'shadow-lg' : ''}`}
       // Framer owns the CSS transform on this element, so the lift comes from
@@ -257,31 +257,33 @@ export default function TaskBoard({ tasks, canManage, onEdit, onDelete, onReorde
             key={col.key}
             ref={(el) => { colRefs.current[col.key] = el; }}
             aria-labelledby={`col-${col.key}`}
-            className={`rounded-2xl p-3 transition-colors duration-150 ${
+            className={`rounded-2xl p-4 transition-colors duration-150 ${
               isTarget ? 'bg-ninja-blue/[0.07]' : 'bg-ninja-bg'
             }`}
           >
-            <div className="flex items-center justify-between px-1 pb-2.5">
-              <h3 id={`col-${col.key}`} className="font-ninja text-sm font-bold text-ninja-navy">
+            {/* Title, then the count in a lighter weight, then the add glyph —
+                the reference's column header. */}
+            <div className="flex items-center justify-between gap-2 px-0.5 pb-3">
+              <h3 id={`col-${col.key}`} className="font-ninja text-[15px] font-bold text-ninja-navy">
                 {col.label}
-                <span className="ml-2 font-normal text-ninja-muted tabular-nums">{items.length}</span>
+                <span className="ml-2 text-sm font-normal text-ninja-muted tabular-nums">{items.length}</span>
               </h3>
-              {canManage && col.key === 'todo' && (
+              {canManage && (
                 <button
                   type="button"
                   onClick={() => onAdd(col.key)}
-                  aria-label="Add task"
-                  title="Add task"
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-ninja-muted hover:text-ninja-blue hover:bg-white dark:hover:bg-white/5 transition-colors"
+                  aria-label={`Add task to ${col.label}`}
+                  title={`Add task to ${col.label}`}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-ninja-muted hover:text-ninja-blue hover:bg-white dark:hover:bg-white/5 transition-colors flex-shrink-0"
                 >
-                  <PlusIcon size={16} strokeWidth={2.25} />
+                  <PlusIcon size={17} strokeWidth={2.25} />
                 </button>
               )}
             </div>
 
             <div
               ref={(el) => { listRefs.current[col.key] = el; }}
-              className="relative space-y-2.5 min-h-[3.5rem]"
+              className="relative space-y-3 min-h-[2rem]"
             >
               {isTarget && top !== null && (
                 <div
@@ -311,16 +313,27 @@ export default function TaskBoard({ tasks, canManage, onEdit, onDelete, onReorde
                 />
               ))}
 
-              {items.length === 0 && (
+              {/* No empty-state sentence under an empty column: the Add task
+                  row below already says the column is empty and offers the one
+                  thing to do about it. A read-only board keeps the sentence,
+                  because there it has nothing else to say. */}
+              {items.length === 0 && !canManage && (
                 <p className="font-ninja text-xs text-ninja-muted px-1 py-3">
-                  {col.key === 'todo'
-                    ? 'Nothing here yet.'
-                    : col.key === 'doing'
-                      ? 'Nothing in progress.'
-                      : 'Nothing finished yet.'}
+                  {col.key === 'done' ? 'Nothing finished yet.' : 'Nothing here.'}
                 </p>
               )}
             </div>
+
+            {canManage && (
+              <button
+                type="button"
+                onClick={() => onAdd(col.key)}
+                className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-blue hover:bg-white dark:hover:bg-white/5 transition-colors duration-150 ease-[var(--ease-out)] active:scale-[0.98]"
+              >
+                <PlusIcon size={16} strokeWidth={2.5} />
+                Add task
+              </button>
+            )}
           </section>
         );
       })}

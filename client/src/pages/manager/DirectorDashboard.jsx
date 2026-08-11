@@ -10,7 +10,7 @@ import {
 import Layout from '../../components/layout/Layout';
 import { ChartContainer, ChartTooltip } from '../../components/ui/chart';
 import EventCalendar from '../../components/manager/EventCalendar';
-import TasksPreview from '../../components/manager/TasksPreview';
+import TasksQuickLink from '../../components/manager/TasksQuickLink';
 import Modal from '../../components/ui/Modal';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
@@ -647,23 +647,34 @@ const QUICK_TILES = [
   { label: "What's New", to: '/changelog',          Icon: GiftIcon },
 ];
 
+// One definition of a quick link's appearance, shared with the Tasks chip so
+// the one link in this row that isn't a plain Link still sits in it flush.
+const QUICK_LINK_CLASS =
+  'group inline-flex items-center gap-2 font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-navy underline-offset-[6px] hover:underline decoration-ninja-blue/40 transition-colors rounded';
+
 // These were three equal icon-and-chevron cards in the rail, which is the most
 // recognisable generated-dashboard shape there is. They are links, so they read
 // as links now: one inline row under the masthead, no surface of their own.
+//
+// Tasks leads the row and previews the board on hover. It is first because it
+// is the only one of these that changes day to day and the only one carrying
+// something that can be late.
 function QuickLinks() {
+  const item = (i) => ({
+    initial: { opacity: 0, y: 6 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.35, ease: EASE, delay: 0.1 + 0.05 * i },
+  });
+
   return (
     <nav aria-label="Quick links" className="flex flex-wrap items-center gap-x-6 gap-y-3">
+      <motion.span {...item(0)}>
+        <TasksQuickLink className={QUICK_LINK_CLASS} />
+      </motion.span>
+
       {QUICK_TILES.map((t, i) => (
-        <motion.span
-          key={t.label}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: EASE, delay: 0.1 + 0.05 * i }}
-        >
-          <Link
-            to={t.to}
-            className="group inline-flex items-center gap-2 font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-navy underline-offset-[6px] hover:underline decoration-ninja-blue/40 transition-colors rounded"
-          >
+        <motion.span key={t.label} {...item(i + 1)}>
+          <Link to={t.to} className={QUICK_LINK_CLASS}>
             <t.Icon className="w-4 h-4 flex-shrink-0 text-ninja-muted group-hover:text-ninja-blue transition-colors" />
             {t.label}
           </Link>
@@ -767,12 +778,6 @@ export default function DirectorDashboard() {
             )}
           </section>
         </div>
-
-        {/* Full width, below the grid. The preview is three columns, and three
-            columns in the 320px rail beside the calendar is something you can
-            neither read nor recognise — which would defeat the only thing a
-            preview is for. */}
-        <TasksPreview />
       </div>
 
       <Modal

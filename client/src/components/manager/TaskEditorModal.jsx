@@ -137,17 +137,18 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
                   aria-label={c.label}
                   title={c.label}
                   onClick={() => setColor(c.key)}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform duration-150 ease-[var(--ease-out)] active:scale-90 ${
-                    active ? 'ring-2 ring-offset-2 ring-ninja-blue ring-offset-ninja-bg' : ''
+                  className={`h-8 px-1.5 rounded-lg flex items-center justify-center transition-transform duration-150 ease-[var(--ease-out)] active:scale-90 ${
+                    active ? 'ring-2 ring-ninja-blue' : ''
                   }`}
                 >
                   {c.hex ? (
-                    // Inline hex: a `bg-*` utility here would be rewritten by the
-                    // dark overrides and the swatch would stop matching the dot
-                    // it is choosing.
-                    <span className="w-5 h-5 rounded-full block" style={{ backgroundColor: c.hex }} />
+                    // The same bar the card footer draws, so the swatch looks
+                    // like the thing it is choosing. Inline hex: a `bg-*`
+                    // utility would be rewritten by the dark overrides and the
+                    // two would stop matching.
+                    <span className="h-1.5 w-9 rounded-full block" style={{ backgroundColor: c.hex }} />
                   ) : (
-                    <span className="w-5 h-5 rounded-full block border-2 border-dashed border-ninja-muted" />
+                    <span className="h-1.5 w-9 rounded-full block border border-dashed border-ninja-muted" />
                   )}
                 </button>
               );
