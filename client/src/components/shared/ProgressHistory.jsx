@@ -456,18 +456,21 @@ export default function ProgressHistory({ logs = [], enrolledPrograms, onLogUpda
           const sharedSensei = names.every((n) => n === names[0]) ? names[0] : null;
 
           return (
-            <div key={date} className="bg-ninja-bg border border-ninja-border rounded-xl p-4">
+            // No padding on the card itself: the entries own it, so an entry's
+            // hover tint reaches the card's edges. Bleeding out of a padded
+            // card with negative margins can't do that here — the history sits
+            // in an overflow-y-auto box, which clips whatever hangs outside it.
+            <div key={date} className="bg-ninja-bg border border-ninja-border rounded-xl">
               {/* Day header */}
-              <div className="flex flex-wrap items-center gap-3 mb-3">
+              <div className="flex flex-wrap items-center gap-3 px-4 pt-4 pb-3">
                 <span className="text-ninja-blue font-ninja font-semibold text-sm">{formatDate(date)}</span>
                 {sharedSensei && <span className="text-ninja-muted text-sm font-ninja">by {sharedSensei}</span>}
               </div>
 
               {/* Individual log entries. The gap between them is the entries'
-                  own padding rather than a margin, so the hover tint covers the
-                  whole band an entry occupies; -my-3 gives back the padding at
-                  the ends, leaving the card spaced exactly as before. */}
-              <div className="-my-3">
+                  own padding rather than a margin, so the tint covers the whole
+                  band an entry occupies rather than stopping at its text. */}
+              <div className="pb-1">
                 {dayLogs.map((log, i) => {
                   const allComments = [...(log.comments || []), ...(localComments[log.id] || [])];
                   const isEditing = editingId === log.id;
@@ -484,7 +487,7 @@ export default function ProgressHistory({ logs = [], enrolledPrograms, onLogUpda
                     // would fight.
                     <div
                       key={log.id}
-                      className={`group -mx-4 px-4 py-3 rounded-lg transition-colors duration-150 hover:bg-ninja-navy/[0.04] dark:hover:bg-white/[0.05] ${
+                      className={`group px-4 py-3 rounded-lg transition-colors duration-150 hover:bg-ninja-navy/[0.04] dark:hover:bg-white/[0.05] ${
                         i > 0 ? 'border-t border-ninja-border/60' : ''
                       }`}
                     >
