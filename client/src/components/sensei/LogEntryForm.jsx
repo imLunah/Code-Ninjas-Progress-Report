@@ -313,6 +313,9 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, s
       project: enrollment?.current_project || '',
       status: enrollment?.project_status || '',
     })]);
+    // A leftover success banner from the previous program would hide this form
+    setSuccess(false);
+    setError('');
   }, [program]);
 
   const updateEntry = (index, field, value) => {

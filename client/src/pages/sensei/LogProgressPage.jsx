@@ -32,7 +32,11 @@ export default function LogProgressPage() {
   const datesParam = searchParams.get('dates');
   const countsParam = searchParams.get('counts');
   const todayPrograms = programsParam ? programsParam.split(',') : null;
-  const donePrograms = new Set(doneParam ? doneParam.split(',') : []);
+
+  // Programs logged during this visit, and how many sessions each. The board's
+  // ?done= list is a snapshot from before we got here, so the two are merged.
+  const [loggedHere, setLoggedHere] = useState({});
+  const donePrograms = new Set([...(doneParam ? doneParam.split(',') : []), ...Object.keys(loggedHere)]);
 
   // Parse per-program session date and pending count from URL (set by dashboard)
   const programDates = datesParam
@@ -41,6 +45,13 @@ export default function LogProgressPage() {
   const programCounts = countsParam
     ? Object.fromEntries(countsParam.split(',').map(s => { const i = s.lastIndexOf(':'); return [s.slice(0, i), parseInt(s.slice(i + 1))]; }))
     : {};
+
+  // Sessions still waiting on a program, after the ones logged in this visit
+  const pendingCount = (p) => Math.max((programCounts[p] || 0) - (loggedHere[p] || 0), 0);
+  // The board's date is the OLDEST pending check-in for that program, so it is
+  // spent once we log it — after that the refetched student carries the next one.
+  const sessionDateFor = (p) =>
+    (loggedHere[p] ? null : programDates[p]) || student?.pending_checkin_date || undefined;
 
   useEffect(() => {
     api.get(`/students/${id}`)
@@ -62,8 +73,13 @@ export default function LogProgressPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const handleLogged = (newLog) => {
-    navigate(dashboardPath, { replace: true });
+  // Stay on the ninja after logging — going back to the board means clicking
+  // through to the same kid again to log a second program or fix a mistake.
+  const handleLogged = () => {
+    const program = selectedProgram;
+    setLoggedHere((prev) => ({ ...prev, [program]: (prev[program] || 0) + 1 }));
+    // Refresh belt / project / last lesson so the header reflects what was just logged
+    api.get(`/students/${id}`).then(setStudent).catch(() => {});
   };
 
   if (loading) {
@@ -207,10 +223,10 @@ export default function LogProgressPage() {
                 <h2 className="text-xl font-bold font-ninja text-ninja-navy mb-4">
                   Log Today's <span className="text-ninja-blue">Session</span>
                 </h2>
-                {(programCounts[selectedProgram] || 0) > 1 && (
+                {pendingCount(selectedProgram) > 1 && (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-sm font-ninja text-amber-700">
-                    <strong>{programCounts[selectedProgram]} sessions to log.</strong> Starting with the oldest
-                    {programDates[selectedProgram] ? ` (${formatDate(programDates[selectedProgram])})` : ''}. They'll still show up for today after.
+                    <strong>{pendingCount(selectedProgram)} sessions to log.</strong> Starting with the oldest
+                    {sessionDateFor(selectedProgram) ? ` (${formatDate(sessionDateFor(selectedProgram))})` : ''}. They'll still show up for today after.
                   </div>
                 )}
                 <LogEntryForm
@@ -218,7 +234,7 @@ export default function LogProgressPage() {
                   program={selectedProgram}
                   enrollment={enrollment}
                   onLogged={handleLogged}
-                  sessionDate={programDates[selectedProgram] || student.pending_checkin_date || undefined}
+                  sessionDate={sessionDateFor(selectedProgram)}
                 />
               </div>
             ) : (
