@@ -93,6 +93,10 @@ export default function Sidebar({ onOpenBug }) {
       initial={false}
       animate={{ width: collapsed ? COLLAPSED_W : EXPANDED_W }}
       transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+      // The desktop task board reads this rect: a card dragged onto the nav is
+      // a card dragged off the board, and that deletes it. Marked here rather
+      // than found by tag name so the top-bar layout can offer the same thing.
+      data-nav-root
       className="hidden lg:flex flex-col bg-white border-r border-ninja-border flex-shrink-0 sticky top-0 h-screen z-40"
     >
       {/* Collapse toggle — floats on the sidebar edge */}

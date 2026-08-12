@@ -1,13 +1,14 @@
 import { useState, useRef, useCallback, useEffect, useMemo, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { PlusIcon, Trash2Icon } from 'lucide-react';
+import { ArrowRightIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import TaskCardFace from './TaskCardFace';
 import TaskActionsMenu from './TaskActionsMenu';
 import { CARD } from '../../lib/surfaces';
 import {
   COLUMNS,
   COLUMN_KEYS,
+  COLUMN_LABEL,
   groupByColumn,
   moveTask,
   TASK_SURFACE,
@@ -55,19 +56,24 @@ function useDragEnabled() {
 
 /* --------------------------------------------------------- swipe away -- */
 
-// A card can be pushed off the board with the pointer, and pushing it off
-// DELETES it, by the user's call. The card travels a hundred pixels before the
-// gesture counts and the word Delete is under it in red the whole way, so it is
-// not a thing that happens on the way past — but there is no undo behind it,
-// which is why the same action in the card's menu still asks first.
+// A card can be pushed sideways with the pointer, and which way decides what
+// happens to it: right moves it on to the next stage, left deletes it. The two
+// directions are the two things you do to a card that is finished with, and
+// putting them on the same gesture means the common one costs nothing.
+//
+// Right is the forgiving direction and left is the one that cannot be undone,
+// which is the way round it has to be: the hand that overshoots is the hand
+// going forward. The card travels a hundred pixels before either counts, the
+// word under it names what is about to happen, and Delete is red the whole way.
+// The card's menu still asks before deleting; the gesture does not.
 //
 // Offered only where the reorder drag is not — below xl, or while a filter is
 // on. Both gestures read a horizontal pull, and on a board whose four columns
 // sit side by side that pull already means "move this to In progress". One axis,
 // one meaning, decided by which mode the board is in. Which leaves the gesture
 // exactly where it is worth most: the phone, where dragging is off and the
-// card's menu was the only way to clear anything.
-const DISMISS_AT = 100;  // px of travel past which release throws the card away
+// card's menu was the only way to move or clear anything.
+const DISMISS_AT = 100;  // px of travel past which release acts on the card
 const SWIPE_START = 8;   // px before a press counts as a swipe rather than a tap
 const MAX_TILT = 7;      // deg at the far end of the pull
 const FLING_MS = 240;
@@ -80,11 +86,17 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onOpen, onDelete, onArchive, onRestore, onMoveTo, cardRef, onPointerDown, onSwipeStart }) {
   const reduce = useReducedMotion();
   const faceRef = useRef(null);
-  const hintRef = useRef(null);
+  const aheadRef = useRef(null);   // revealed by a pull to the right
+  const binRef = useRef(null);     // revealed by a pull to the left
   const flung = useRef(false);
   const timer = useRef(null);
 
   useEffect(() => () => clearTimeout(timer.current), []);
+
+  // Where right goes. The last column has nowhere to go, so a card in it takes
+  // the pull and gives it back rather than inventing a stage.
+  const nextKey = COLUMN_KEYS[COLUMN_KEYS.indexOf(task.column_key) + 1];
+  const canAdvance = Boolean(swipeable && nextKey);
 
   // Written straight to the node. A setState per pointermove would re-render
   // every card in the column for the length of the gesture, which is the same
@@ -97,24 +109,37 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
     face.style.transform = `translate3d(${dx}px, 0, 0)${tilt}`;
     face.style.opacity = String(1 - Math.min(Math.abs(dx) / 340, 0.55));
 
-    // The hint reaches full strength exactly at the threshold, so "I can read
-    // it" and "letting go archives this" are the same moment. Nothing else
-    // marks the line, and a line you cannot see is a line you cross by accident.
-    const hint = hintRef.current;
-    if (hint) {
-      const p = Math.min(Math.abs(dx) / DISMISS_AT, 1);
-      hint.style.transition = 'none';
-      hint.style.opacity = String(p);
-      hint.style.transform = `scale(${0.97 + p * 0.03})`;
+    // Only the side being pulled towards is lit, so the card is never offering
+    // two answers at once. The lit one reaches full strength exactly at the
+    // threshold: "I can read it" and "letting go does this" are the same moment,
+    // and nothing else marks a line that is otherwise crossed by accident.
+    const p = Math.min(Math.abs(dx) / DISMISS_AT, 1);
+    const fade = (el, lit) => {
+      if (!el) return;
+      el.style.transition = 'none';
+      el.style.opacity = lit ? String(p) : '0';
+      el.style.transform = `scale(${0.97 + (lit ? p : 0) * 0.03})`;
+    };
+    fade(aheadRef.current, dx > 0);
+    fade(binRef.current, dx < 0);
+  };
+
+  const hide = (ms) => {
+    for (const el of [aheadRef.current, binRef.current]) {
+      if (el) { el.style.transition = `opacity ${ms}ms ease-out`; el.style.opacity = '0'; }
     }
   };
 
   const settle = (dx) => {
     const face = faceRef.current;
-    const hint = hintRef.current;
     if (!face) return;
 
-    if (Math.abs(dx) >= DISMISS_AT) {
+    const right = dx > 0;
+    // A pull to the right on the last column has nothing to act on, so it is
+    // treated as a pull that never got there.
+    const acts = Math.abs(dx) >= DISMISS_AT && (right ? canAdvance : true);
+
+    if (acts) {
       flung.current = true;
       const away = Math.sign(dx) * (window.innerWidth + 240);
       face.style.pointerEvents = 'none';
@@ -123,17 +148,21 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
         : `transform ${FLING_MS}ms var(--ease-out), opacity ${FLING_MS}ms linear`;
       if (!reduce) face.style.transform = `translate3d(${away}px, 0, 0) rotate(${Math.sign(dx) * MAX_TILT}deg)`;
       face.style.opacity = '0';
-      if (hint) { hint.style.transition = 'opacity 160ms linear'; hint.style.opacity = '0'; }
-      // The card is gone from the screen before it is gone from the board, so
-      // the columns close the gap behind something that has already left.
-      timer.current = setTimeout(() => onDelete(task), reduce ? 150 : FLING_MS - 40);
+      hide(160);
+      // The card is gone from the screen before it is gone from the column, so
+      // the board closes the gap behind something that has already left. What it
+      // does next is the only difference between the two directions.
+      timer.current = setTimeout(
+        () => (right ? onMoveTo(task, nextKey) : onDelete(task)),
+        reduce ? 150 : FLING_MS - 40
+      );
       return;
     }
 
     face.style.transition = `transform 420ms ${SETTLE}, opacity 200ms ease-out`;
     face.style.transform = 'translate3d(0, 0, 0)';
     face.style.opacity = '1';
-    if (hint) { hint.style.transition = 'opacity 220ms ease-out'; hint.style.opacity = '0'; }
+    hide(220);
     // Handed back once it has landed. A card left holding a transform is a
     // containing block for anything positioned inside it, and this one is
     // holding a menu.
@@ -211,25 +240,34 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
       data-no-swipe
       className="relative"
     >
+      {/* Each label sits on the side the card uncovers as it goes the other
+          way, which is where a hand pushing right is already looking. */}
+      {canAdvance && (
+        <div
+          ref={aheadRef}
+          aria-hidden="true"
+          className="absolute inset-0 rounded-2xl bg-ninja-blue/10 flex items-center justify-start px-5 opacity-0 pointer-events-none"
+        >
+          <span className="flex items-center gap-1.5 font-ninja text-xs font-bold text-ninja-blue-ink">
+            <ArrowRightIcon size={14} strokeWidth={2.25} />
+            {COLUMN_LABEL[nextKey]}
+          </span>
+        </div>
+      )}
+
       {swipeable && (
         <div
-          ref={hintRef}
+          ref={binRef}
           aria-hidden="true"
           // The brand red at a tenth, not `bg-red-50`: index.css overrides the
           // stock red backgrounds in dark with `!important`, and this one would
           // have come out plum on the one surface that has to read as danger.
-          className="absolute inset-0 rounded-2xl bg-ninja-red/10 flex items-center justify-between px-5 opacity-0 pointer-events-none"
+          className="absolute inset-0 rounded-2xl bg-ninja-red/10 flex items-center justify-end px-5 opacity-0 pointer-events-none"
         >
-          {/* Named on both edges: the card goes the way you push it, and a
-              label on one side would be a rule nobody was told. Red, and
-              reaching full strength at the threshold, because the word arriving
-              is the only warning there is. */}
-          {[0, 1].map((i) => (
-            <span key={i} className="flex items-center gap-1.5 font-ninja text-xs font-bold text-ninja-red">
-              <Trash2Icon size={14} strokeWidth={2.25} />
-              Delete
-            </span>
-          ))}
+          <span className="flex items-center gap-1.5 font-ninja text-xs font-bold text-ninja-red">
+            <Trash2Icon size={14} strokeWidth={2.25} />
+            Delete
+          </span>
         </div>
       )}
 
@@ -328,14 +366,22 @@ export default function TaskBoard({
 
   const setTargetIfChanged = (next) => {
     const prev = targetRef.current;
-    if (prev && prev.key === next.key && prev.index === next.index) return;
+    if (prev && prev.trash === next.trash && prev.key === next.key && prev.index === next.index) return;
     targetRef.current = next;
     setTarget(next);
   };
 
+  const inRect = (r, x, y) => r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+
   const readTarget = (x, y) => {
     const s = snap.current;
     if (!s) return;
+
+    // Off the board first. The nav is the one thing on screen that is not the
+    // board, so dragging a card onto it is the plainest way to say this card
+    // is not on the board any more — and it is checked before the columns
+    // because the nearest-column fallback below would otherwise claim it.
+    if (inRect(s.trash, x, y)) { setTargetIfChanged({ trash: true }); return; }
 
     // Inside a column outright, else the nearest one horizontally — dragging
     // above or below the columns should still have an answer rather than
@@ -354,7 +400,7 @@ export default function TaskBoard({
       }
     }
     if (!key) return;
-    setTargetIfChanged({ key, index: s[key].mids.filter((m) => m < y).length });
+    setTargetIfChanged({ trash: false, key, index: s[key].mids.filter((m) => m < y).length });
   };
 
   const beginDrag = (task, rect, startX, startY) => {
@@ -381,10 +427,15 @@ export default function TaskBoard({
       s[key] = { col: colEl.getBoundingClientRect(), mids };
     }
 
+    // Measured once with everything else. The sidebar can be mid-collapse when
+    // a drag starts, and a rect read per pointermove would be chasing it.
+    const navEl = document.querySelector('[data-nav-root]');
+    s.trash = navEl ? navEl.getBoundingClientRect() : null;
+
     snap.current = s;
     info.current = { id: task.id, dx: startX - rect.left, dy: startY - rect.top, w: rect.width, h: rect.height };
     document.body.style.userSelect = 'none';
-    setHeld({ task, w: rect.width, h: rect.height, x: rect.left, y: rect.top });
+    setHeld({ task, w: rect.width, h: rect.height, x: rect.left, y: rect.top, trash: s.trash });
     readTarget(startX, startY);
   };
 
@@ -432,6 +483,10 @@ export default function TaskBoard({
       const from = (grouped[task.column_key] || []).findIndex((x) => x.id === task.id);
       clearDrag();
       if (!t) return;
+      // Dropped off the board. No confirm, by the same call as the swipe: the
+      // card was carried the whole width of the page onto a target that has
+      // been red since the drag began.
+      if (t.trash) { onDelete(task); return; }
       // Indices are in dragged-card-removed space, so landing back on `from` in
       // the same column is the no-op.
       if (t.key === task.column_key && t.index === from) return;
@@ -452,7 +507,13 @@ export default function TaskBoard({
     onEdit(task);
   };
 
+  // The menu's Move to, and the swipe's next stage. Both land the card in its
+  // new column with the same settle a dropped card gets, so a card that arrives
+  // without having been dragged still arrives rather than appearing.
   const handleMoveTo = useCallback((task, key) => {
+    setLanding(task.id);
+    clearTimeout(landTimer.current);
+    landTimer.current = setTimeout(() => setLanding(null), SETTLE_MS + 60);
     onReorder(moveTask(tasks, task.id, key, (grouped[key] || []).length));
   }, [tasks, grouped, onReorder]);
 
@@ -598,6 +659,36 @@ export default function TaskBoard({
         );
       })}
 
+      {/* Where a card goes to be got rid of. It appears the moment a drag
+          starts rather than waiting to be discovered, because a drop target
+          nobody knows about is not one, and it is red from the outset so that
+          arriving there is a confirmation of something already said. */}
+      {held?.trash && createPortal(
+        <motion.div
+          aria-hidden="true"
+          initial={reduce ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.15, ease: EASE }}
+          className={`fixed z-[59] pointer-events-none flex items-center justify-center border-2 border-dashed transition-colors duration-150 ${
+            target?.trash
+              ? 'border-ninja-red bg-ninja-red/20'
+              : 'border-ninja-red/40 bg-ninja-red/[0.07]'
+          }`}
+          style={{
+            left: held.trash.left, top: held.trash.top,
+            width: held.trash.width, height: held.trash.height,
+          }}
+        >
+          <span className={`flex flex-col items-center gap-2 font-ninja text-sm font-bold text-ninja-red transition-transform duration-150 ${
+            target?.trash ? 'scale-110' : ''
+          }`}>
+            <Trash2Icon size={22} strokeWidth={2.25} />
+            {target?.trash ? 'Let go to delete' : 'Drag here to delete'}
+          </span>
+        </motion.div>,
+        document.body
+      )}
+
       {/* The held card, drawn over the page. It has to escape the column: a
           column is a scroll-and-overflow context, and a card dragged out of one
           would be clipped at its edge. */}
@@ -608,8 +699,16 @@ export default function TaskBoard({
           className="fixed top-0 left-0 z-[60] pointer-events-none"
           style={{ width: held.w, transform: `translate3d(${held.x}px, ${held.y}px, 0)` }}
         >
-          {/* The card under the pointer keeps its colour while it travels. */}
-          <div className={`${CARD} ${TASK_SURFACE} task-lensed p-3.5 shadow-xl -rotate-1`}>
+          {/* The card under the pointer keeps its colour while it travels —
+              until it is over the bin, where it goes red and shrinks, so the
+              card itself says what will happen to it and not just the thing
+              underneath it. */}
+          <div className={`${CARD} ${TASK_SURFACE} task-lensed p-3.5 shadow-xl relative transition-transform duration-150 ${
+            target?.trash ? 'ring-2 ring-ninja-red -rotate-3 scale-95' : '-rotate-1'
+          }`}>
+            {target?.trash && (
+              <span aria-hidden="true" className="absolute inset-0 rounded-2xl bg-ninja-red/15 pointer-events-none" />
+            )}
             <TaskCardFace task={held.task} />
           </div>
         </div>,
