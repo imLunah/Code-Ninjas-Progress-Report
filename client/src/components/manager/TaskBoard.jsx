@@ -2,7 +2,8 @@ import { useState, useRef, useCallback, useEffect, useMemo, Fragment } from 'rea
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  ArchiveRestoreIcon, ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon, Trash2Icon,
+  ArchiveRestoreIcon, ArrowLeftIcon, ArrowRightIcon,
+  ChevronLeftIcon, ChevronRightIcon, PlusIcon, Trash2Icon,
 } from 'lucide-react';
 import TaskCardFace from './TaskCardFace';
 import { CARD } from '../../lib/surfaces';
@@ -58,16 +59,18 @@ function useDragEnabled() {
 
 /* --------------------------------------------------------- swipe away -- */
 
-// A card can be pushed sideways with the pointer, and which way decides what
-// happens to it: right moves it on to the next stage, left deletes it. The two
-// directions are the two things you do to a card that is finished with, and
-// putting them on the same gesture means the common one costs nothing.
+// A card can be pushed sideways with the pointer: right moves it on to the next
+// stage, left moves it back to the one before. The stage a card is at is the
+// only thing about it that changes daily, so the gesture nearest to hand is the
+// one that changes it, and it is symmetrical because moving a card on and
+// moving it back are the same mistake in opposite directions.
 //
-// Right is the forgiving direction and left is the one that cannot be undone,
-// which is the way round it has to be: the hand that overshoots is the hand
-// going forward. The card travels a hundred pixels before either counts, the
-// word under it names what is about to happen, and Delete is red the whole way.
-// The Delete in the card's dialog still asks first; the gesture does not.
+// Deleting is behind a hold. Press and wait and the card arms: both sides turn
+// red and read Delete, and the same push then throws it away instead of moving
+// it. It costs half a second on purpose — the gesture that empties the board
+// should not be the gesture that organises it, one pixel apart. The card is
+// deleted into Recently deleted either way, so a hold nobody meant is a card
+// that comes back.
 //
 // Offered only where the reorder drag is not — below xl, or while a filter is
 // on. Both gestures read a horizontal pull, and on a board whose four columns
@@ -76,6 +79,7 @@ function useDragEnabled() {
 // exactly where it is worth most: the phone, where dragging is off.
 const DISMISS_AT = 100;  // px of travel past which release acts on the card
 const SWIPE_START = 8;   // px before a press counts as a swipe rather than a tap
+const HOLD_MS = 450;     // press held still for this long arms the card for deletion
 const MAX_TILT = 7;      // deg at the far end of the pull
 const FLING_MS = 240;
 const SETTLE = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
@@ -111,11 +115,19 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
   const reduce = useReducedMotion();
   const faceRef = useRef(null);
   const aheadRef = useRef(null);   // revealed by a pull to the right
-  const binRef = useRef(null);     // revealed by a pull to the left
+  const backRef = useRef(null);    // revealed by a pull to the left
   const flung = useRef(false);
   const timer = useRef(null);
+  const holdTimer = useRef(null);
+  // Armed by a held press: the sides go red and the push deletes. State rather
+  // than a written class, because the labels change with it and rendering that
+  // twice by hand is how the two get to disagree. It changes once per gesture,
+  // not once per frame.
+  const [armed, setArmed] = useState(false);
+  const armedRef = useRef(false);
+  const arm = (on) => { armedRef.current = on; setArmed(on); };
 
-  useEffect(() => () => clearTimeout(timer.current), []);
+  useEffect(() => () => { clearTimeout(timer.current); clearTimeout(holdTimer.current); }, []);
 
   // The stage before and the stage after, which is the whole of what the arrows
   // and the swipe can do. The last column has nowhere to go, so a card in it
@@ -124,7 +136,10 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
   const prevKey = at > 0 ? COLUMN_KEYS[at - 1] : null;
   const nextKey = COLUMN_KEYS[at + 1] || null;
   const archived = Boolean(task.archived_at);
-  const canAdvance = Boolean(swipeable && nextKey);
+  // Armed, both directions are the same direction, so a card at either end of
+  // the board can still be thrown away whichever way the hand goes.
+  const canRight = Boolean(swipeable && (armed || nextKey));
+  const canLeft = Boolean(swipeable && (armed || prevKey));
 
   // Written straight to the node. A setState per pointermove would re-render
   // every card in the column for the length of the gesture, which is the same
@@ -149,11 +164,11 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
       el.style.transform = `scale(${0.97 + (lit ? p : 0) * 0.03})`;
     };
     fade(aheadRef.current, dx > 0);
-    fade(binRef.current, dx < 0);
+    fade(backRef.current, dx < 0);
   };
 
   const hide = (ms) => {
-    for (const el of [aheadRef.current, binRef.current]) {
+    for (const el of [aheadRef.current, backRef.current]) {
       if (el) { el.style.transition = `opacity ${ms}ms ease-out`; el.style.opacity = '0'; }
     }
   };
@@ -163,9 +178,9 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
     if (!face) return;
 
     const right = dx > 0;
-    // A pull to the right on the last column has nothing to act on, so it is
-    // treated as a pull that never got there.
-    const acts = Math.abs(dx) >= DISMISS_AT && (right ? canAdvance : true);
+    // A pull towards a stage that isn't there has nothing to act on, so it is
+    // treated as a pull that never got far enough.
+    const acts = Math.abs(dx) >= DISMISS_AT && (right ? canRight : canLeft);
 
     if (acts) {
       flung.current = true;
@@ -178,12 +193,11 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
       face.style.opacity = '0';
       hide(160);
       // The card is gone from the screen before it is gone from the column, so
-      // the board closes the gap behind something that has already left. What it
-      // does next is the only difference between the two directions.
-      timer.current = setTimeout(
-        () => (right ? onMoveTo(task, nextKey) : onDelete(task)),
-        reduce ? 150 : FLING_MS - 40
-      );
+      // the board closes the gap behind something that has already left.
+      const act = armedRef.current
+        ? () => onDelete(task)
+        : () => onMoveTo(task, right ? nextKey : prevKey);
+      timer.current = setTimeout(act, reduce ? 150 : FLING_MS - 40);
       return;
     }
 
@@ -211,10 +225,23 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
     const startY = e.clientY;
     let live = false;
 
+    // Held still for half a second and the card arms for deletion. Cancelled by
+    // the first sign of a swipe below, so the two never race: a press that
+    // moves is somebody sorting the board, and a press that waits is somebody
+    // asking for the other thing.
+    clearTimeout(holdTimer.current);
+    holdTimer.current = setTimeout(() => {
+      arm(true);
+      // The one moment on this board worth a tap on the wrist, since the card
+      // has not moved and there is nothing else to say it changed meaning.
+      if (navigator.vibrate) navigator.vibrate(12);
+    }, HOLD_MS);
+
     // On the document rather than the card: a pointer that leaves the card
     // mid-swipe is still swiping, and a card that unmounts under a capture
     // would strand the gesture.
     const detach = () => {
+      clearTimeout(holdTimer.current);
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
       document.removeEventListener('pointercancel', cancel);
@@ -226,13 +253,16 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
       const dx = ev.clientX - startX;
       const dy = ev.clientY - startY;
       if (!live) {
+        // Any real movement is a swipe and not a hold, so the hold stops
+        // counting the moment the hand does anything.
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) clearTimeout(holdTimer.current);
         // Whichever axis commits first wins the gesture. A pull that goes down
         // the page is the page scrolling and must be handed straight back.
         if (Math.abs(dx) < SWIPE_START) {
-          if (Math.abs(dy) > SWIPE_START) detach();
+          if (Math.abs(dy) > SWIPE_START) { detach(); arm(false); }
           return;
         }
-        if (Math.abs(dx) < Math.abs(dy)) { detach(); return; }
+        if (Math.abs(dx) < Math.abs(dy)) { detach(); arm(false); return; }
         live = true;
         onSwipeStart?.();
         document.body.style.userSelect = 'none';
@@ -241,8 +271,14 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
       paint(dx);
     };
 
-    const up = (ev) => { detach(); if (live) settle(ev.clientX - startX); };
-    const cancel = () => { detach(); if (live) settle(0); };
+    // Armed only for as long as the finger is down. A card left red after a
+    // press would be a card that deletes itself the next time it is nudged.
+    const up = (ev) => {
+      detach();
+      if (live) settle(ev.clientX - startX);
+      arm(false);
+    };
+    const cancel = () => { detach(); if (live) settle(0); arm(false); };
 
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', up);
@@ -269,46 +305,65 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
       className="relative"
     >
       {/* Each label sits on the side the card uncovers as it goes the other
-          way, which is where a hand pushing right is already looking. */}
-      {canAdvance && (
+          way, which is where a hand pushing right is already looking. Armed,
+          both of them say the same thing, because armed there is only one
+          thing either direction can do.
+
+          The tint is the brand red at a tenth, not `bg-red-50`: index.css
+          overrides the stock red backgrounds in dark with `!important`, and it
+          would have come out plum on the one surface that has to read as
+          danger. */}
+      {canRight && (
         <div
           ref={aheadRef}
           aria-hidden="true"
-          className="absolute inset-0 rounded-2xl bg-ninja-blue/10 flex items-center justify-start px-5 opacity-0 pointer-events-none"
+          className={`absolute inset-0 rounded-2xl flex items-center justify-start px-5 opacity-0 pointer-events-none ${
+            armed ? 'bg-ninja-red/10' : 'bg-ninja-blue/10'
+          }`}
         >
-          <span className="flex items-center gap-1.5 font-ninja text-xs font-bold text-ninja-blue-ink">
-            <ArrowRightIcon size={14} strokeWidth={2.25} />
-            {COLUMN_LABEL[nextKey]}
+          <span className={`flex items-center gap-1.5 font-ninja text-xs font-bold ${
+            armed ? 'text-ninja-red' : 'text-ninja-blue-ink'
+          }`}>
+            {armed ? <Trash2Icon size={14} strokeWidth={2.25} /> : <ArrowRightIcon size={14} strokeWidth={2.25} />}
+            {armed ? 'Delete' : COLUMN_LABEL[nextKey]}
           </span>
         </div>
       )}
 
-      {swipeable && (
+      {canLeft && (
         <div
-          ref={binRef}
+          ref={backRef}
           aria-hidden="true"
-          // The brand red at a tenth, not `bg-red-50`: index.css overrides the
-          // stock red backgrounds in dark with `!important`, and this one would
-          // have come out plum on the one surface that has to read as danger.
-          className="absolute inset-0 rounded-2xl bg-ninja-red/10 flex items-center justify-end px-5 opacity-0 pointer-events-none"
+          className={`absolute inset-0 rounded-2xl flex items-center justify-end px-5 opacity-0 pointer-events-none ${
+            armed ? 'bg-ninja-red/10' : 'bg-ninja-blue/10'
+          }`}
         >
-          <span className="flex items-center gap-1.5 font-ninja text-xs font-bold text-ninja-red">
-            <Trash2Icon size={14} strokeWidth={2.25} />
-            Delete
+          <span className={`flex items-center gap-1.5 font-ninja text-xs font-bold ${
+            armed ? 'text-ninja-red' : 'text-ninja-blue-ink'
+          }`}>
+            {armed ? <Trash2Icon size={14} strokeWidth={2.25} /> : <ArrowLeftIcon size={14} strokeWidth={2.25} />}
+            {armed ? 'Delete' : COLUMN_LABEL[prevKey]}
           </span>
         </div>
       )}
 
       <div
         ref={faceRef}
-        style={swipeable ? { touchAction: 'pan-y' } : undefined}
+        // `pan-y` keeps the page scrolling vertically while the horizontal axis
+        // is ours. `select-none` is for the hold: half a second on a phone is
+        // also the browser's own idea of "select this text".
+        style={swipeable ? { touchAction: 'pan-y', WebkitTouchCallout: 'none' } : undefined}
         // The dropped card is a fresh mount — it left the list the moment it was
         // lifted — so there is no position for it to animate from and it would
         // otherwise appear in its new slot fully formed while the board settles
         // around it. A keyframe rather than an inline transform: this card
         // re-renders on the same tick it lands, and a class survives that where
         // a written style would be overwritten by it.
-        className={`${CARD} ${TASK_SURFACE} p-3.5 relative ${grabbable ? 'cursor-grab' : ''} ${landed && !reduce ? 'task-landing' : ''}`}
+        className={`${CARD} ${TASK_SURFACE} p-3.5 relative transition-shadow duration-150 ${
+          grabbable ? 'cursor-grab' : ''
+        } ${swipeable ? 'select-none' : ''} ${
+          armed ? 'ring-2 ring-ninja-red' : ''
+        } ${landed && !reduce ? 'task-landing' : ''}`}
       >
         <TaskCardFace
           task={task}

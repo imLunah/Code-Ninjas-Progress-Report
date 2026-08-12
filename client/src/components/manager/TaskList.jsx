@@ -59,7 +59,7 @@ function SortHeader({ label, sortKey, sort, onSort, className = '' }) {
   );
 }
 
-export default function TaskList({ tasks, canManage, directors = [], centerName, onEdit, onDelete, onArchive, onRestore, onPatch }) {
+export default function TaskList({ tasks, canManage, directors = [], centerName, onEdit, onDelete, onPurge, onRestore, onPatch }) {
   const [sort, setSort] = useState({ key: 'due', dir: 'asc' });
 
   const toggleSort = (key) =>
@@ -191,7 +191,7 @@ export default function TaskList({ tasks, canManage, directors = [], centerName,
             task={task}
             onOpen={() => onEdit(task)}
             onDelete={onDelete}
-            onArchive={onArchive}
+            onPurge={onPurge}
             onRestore={onRestore}
             onMoveTo={(t, key) => onPatch(t, { column_key: key })}
           />

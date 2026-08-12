@@ -1,28 +1,33 @@
 import { useState } from 'react';
-import { PencilIcon, Trash2Icon, ArrowLeftIcon, ArrowRightIcon, ArchiveIcon, ArchiveRestoreIcon } from 'lucide-react';
+import { PencilIcon, Trash2Icon, ArrowLeftIcon, ArrowRightIcon, ArchiveRestoreIcon } from 'lucide-react';
 import ActionMenu, { MenuItem } from '../ui/ActionMenu';
 import { COLUMN_KEYS, COLUMN_LABEL } from '../../lib/taskBoard';
 
-// Everything a card can have done to it, in one menu, so the board and the list
-// offer the same actions rather than each growing its own set.
-export default function TaskActionsMenu({ task, onOpen, onDelete, onArchive, onRestore, onMoveTo, className = '' }) {
+// Everything a card can have done to it, in one menu. The list view uses it:
+// working through twenty rows at once wants every action in one place, where
+// the board puts the common ones on the card and the rest in its dialog.
+export default function TaskActionsMenu({ task, onOpen, onDelete, onPurge, onRestore, onMoveTo, className = '' }) {
   const [confirming, setConfirming] = useState(false);
-  const archived = Boolean(task.archived_at);
+  // `archived_at` is the day the card was deleted; the column is older than the
+  // name. A card here is in Recently deleted, waiting out its fortnight.
+  const deleted = Boolean(task.archived_at);
 
   return (
     <ActionMenu label="Task actions" className={className} onClosed={() => setConfirming(false)}>
       {({ close }) =>
         confirming ? (
           // A destructive confirm keeps its word. Everything else here is a
-          // glyph; nothing irreversible rests on recognising one.
+          // glyph; nothing irreversible rests on recognising one. This is the
+          // only irreversible thing left in the menu — the plain Delete puts
+          // the card in Recently deleted, where it can be fetched back.
           <div className="p-1.5 w-44">
             <p className="font-ninja text-xs text-ninja-muted px-1 pb-2 leading-snug">
-              Delete this task? This can't be undone.
+              Delete this task for good? This can't be undone.
             </p>
             <div className="flex gap-1.5">
               <button
                 type="button"
-                onClick={() => { onDelete(task); close({ restoreFocus: false }); }}
+                onClick={() => { onPurge(task); close({ restoreFocus: false }); }}
                 className="flex-1 py-1.5 rounded-lg bg-ninja-red text-white font-ninja text-xs font-bold transition-transform duration-150 ease-[var(--ease-out)] active:scale-95"
               >
                 Delete
@@ -36,10 +41,15 @@ export default function TaskActionsMenu({ task, onOpen, onDelete, onArchive, onR
               </button>
             </div>
           </div>
-        ) : archived ? (
-          <MenuItem icon={ArchiveRestoreIcon} onSelect={() => { close(); onRestore(task); }}>
-            Put back on the board
-          </MenuItem>
+        ) : deleted ? (
+          <>
+            <MenuItem icon={ArchiveRestoreIcon} onSelect={() => { close(); onRestore(task); }}>
+              Put back on the board
+            </MenuItem>
+            <MenuItem icon={Trash2Icon} danger onSelect={() => setConfirming(true)}>
+              Delete now
+            </MenuItem>
+          </>
         ) : (
           <>
             <MenuItem icon={PencilIcon} onSelect={() => { close(); onOpen(); }}>
@@ -62,12 +72,11 @@ export default function TaskActionsMenu({ task, onOpen, onDelete, onArchive, onR
                 </MenuItem>
               );
             })}
-            {/* Archive sits above Delete, and is the one people should reach
-                for: the work happened either way. */}
-            <MenuItem icon={ArchiveIcon} onSelect={() => { close(); onArchive(task); }}>
-              Archive
-            </MenuItem>
-            <MenuItem icon={Trash2Icon} danger onSelect={() => setConfirming(true)}>
+            {/* One Delete, and it is the recoverable one: the card goes to
+                Recently deleted and sits there for a fortnight. Nothing on a
+                live card is irreversible any more, which is why nothing here
+                stops to ask. */}
+            <MenuItem icon={Trash2Icon} danger onSelect={() => { close(); onDelete(task); }}>
               Delete
             </MenuItem>
           </>

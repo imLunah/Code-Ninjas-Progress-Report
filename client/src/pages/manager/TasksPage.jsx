@@ -122,14 +122,19 @@ export default function TasksPage() {
       .catch((err) => setError(err.message || 'Could not add the task.'));
   }, []);
 
-  const archive = useCallback(async (task) => {
+  // Deleting a card puts it in Recently deleted, where it sits for a fortnight
+  // and is then gone for good. Every route off the board goes through here —
+  // the swipe, the drop on the nav, the dialog, the list's menu — so there is
+  // one meaning of delete and it is the recoverable one. `purge` below is the
+  // other one, and it is only reachable from inside Recently deleted.
+  const softDelete = useCallback(async (task) => {
     const previous = tasks;
     setTasks((ts) => ts.filter((t) => t.id !== task.id));
     try {
       await api.post(`/director-tasks/${task.id}/archive`);
     } catch (err) {
       setTasks(previous);
-      setError(err.message || 'Could not archive the task.');
+      setError(err.message || 'Could not delete the task.');
     }
   }, [tasks]);
 
@@ -172,14 +177,16 @@ export default function TasksPage() {
     }
   }, [tasks]);
 
-  const remove = useCallback(async (task) => {
+  // The one that does not come back, and the only one the fortnight's wait is
+  // there to make unnecessary.
+  const purge = useCallback(async (task) => {
     const previous = tasks;
     setTasks((ts) => ts.filter((t) => t.id !== task.id));
     try {
       await api.delete(`/director-tasks/${task.id}`);
     } catch (err) {
       setTasks(previous);
-      setError(err.message || 'Could not delete the task.');
+      setError(err.message || 'Could not delete the task for good.');
     }
   }, [tasks]);
 
@@ -259,8 +266,8 @@ export default function TasksPage() {
             directors={directors}
             centerName={user?.activeLocation?.name}
             onEdit={(task) => setEditor({ task })}
-            onDelete={remove}
-            onArchive={archive}
+            onDelete={softDelete}
+            onPurge={purge}
             onRestore={restore}
             onPatch={patchTask}
           />
@@ -272,7 +279,7 @@ export default function TasksPage() {
             canManage={canManage}
             onAdd={(column) => setEditor({ column })}
             onEdit={(task) => setEditor({ task })}
-            onDelete={remove}
+            onDelete={softDelete}
             onRestore={restore}
             onReorder={reorder}
             onQuickAdd={quickAdd}
@@ -288,8 +295,9 @@ export default function TasksPage() {
         column={editor?.column ?? 'todo'}
         onClose={() => setEditor(null)}
         onSave={save}
-        onDelete={canManage ? remove : undefined}
-        onArchive={canManage ? archive : undefined}
+        onDelete={canManage ? softDelete : undefined}
+        onPurge={canManage ? purge : undefined}
+        onRestore={canManage ? restore : undefined}
       />
     </Layout>
   );

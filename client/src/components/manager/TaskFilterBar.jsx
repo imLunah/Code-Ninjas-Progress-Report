@@ -77,9 +77,10 @@ export default function TaskFilterBar({
         </button>
       )}
 
-      {/* Archived is a different fetch, not a different filter: those cards are
-          not in the board's hands until they are asked for. It sits apart from
-          the filters for that reason, and because it is not a daily question. */}
+      {/* Recently deleted is a different fetch, not a different filter: those
+          cards are not in the board's hands until they are asked for. It sits
+          apart from the filters for that reason, and because it is not a daily
+          question. */}
       <button
         type="button"
         aria-pressed={showArchived}
@@ -90,8 +91,16 @@ export default function TaskFilterBar({
             : 'bg-transparent text-ninja-muted border-transparent hover:text-ninja-navy hover:border-ninja-border'
         }`}
       >
-        {showArchived ? 'Viewing archived' : 'Archived'}
+        Recently deleted
       </button>
+
+      {/* The rule, where the cards it applies to are. A bin that quietly empties
+          itself has to say so before it does, not after. */}
+      {showArchived && (
+        <p className="basis-full font-ninja text-xs text-ninja-muted">
+          Deleted tasks are kept here for 14 days, then removed for good.
+        </p>
+      )}
 
       {/* Said once, where the filter is set, rather than leaving somebody to
           discover a board that has quietly stopped responding to a drag. */}

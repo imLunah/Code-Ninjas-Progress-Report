@@ -142,14 +142,43 @@ router.get('/assignees', requireManager, async (req, res) => {
   }
 });
 
+// How long a deleted card is kept before the database forgets it. `archived_at`
+// is the day it was deleted; the column predates the name and is left alone
+// rather than migrated, since renaming it would rewrite every query here to say
+// the same thing.
+const KEEP_DELETED_DAYS = 14;
+
+// The retention sweep, run when the board is asked for rather than on a
+// schedule. This app has no scheduler — it is serverless functions and nothing
+// else — and a Vercel cron would be a second moving part to keep alive for a
+// query that costs nothing here: it touches only rows that are already two
+// weeks past being deleted, on a table holding a few dozen per center. Being
+// late by however long nobody opens the board is the correct amount of late,
+// because nobody is looking at what it would have removed.
+async function purgeExpired(pool) {
+  try {
+    await pool.query(
+      `DELETE FROM director_tasks
+       WHERE archived_at IS NOT NULL
+         AND archived_at < now() - ($1 || ' days')::interval`,
+      [KEEP_DELETED_DAYS]
+    );
+  } catch (err) {
+    // A failed sweep must not take the board down with it. The rows simply
+    // stay another few minutes.
+    console.error('Error purging deleted tasks:', err);
+  }
+}
+
 // GET /api/director-tasks — the whole live board for the active location.
-// ?archived=true returns what has been cleared off it instead, newest first,
-// which is a different question and a different order: an archived card has no
-// place on a board, only a date it left one.
+// ?archived=true returns what has been deleted instead, newest first, which is
+// a different question and a different order: a deleted card has no place on a
+// board, only a date it left one.
 router.get('/', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const archived = req.query.archived === 'true';
   try {
+    await purgeExpired(pool);
     const { rows } = await pool.query(
       `${SELECT} WHERE t.location_id = $1 AND t.archived_at IS ${archived ? 'NOT NULL' : 'NULL'}
        ORDER BY ${archived ? 't.archived_at DESC' : 't.position ASC'}, t.id ASC`,

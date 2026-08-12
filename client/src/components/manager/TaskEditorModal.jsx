@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArchiveIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
+import { ArchiveRestoreIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import LazyMarkdownEditor from '../shared/LazyMarkdownEditor';
@@ -10,9 +10,12 @@ const TITLE_MAX = 200;
 
 // Create and edit are the same form. `task` null means create; `column` is the
 // column a new card lands in.
-export default function TaskEditorModal({ isOpen, task, directors = [], column = 'todo', onClose, onSave, onDelete, onArchive }) {
+export default function TaskEditorModal({ isOpen, task, directors = [], column = 'todo', onClose, onSave, onDelete, onPurge, onRestore }) {
   const { user } = useAuth();
   const [confirming, setConfirming] = useState(false);
+  // `archived_at` is the day the card was deleted. The column is older than the
+  // name; see the note in the tasks route.
+  const deleted = Boolean(task?.archived_at);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   // Kept, not chosen: a task's colour is no longer drawn on the board, so
@@ -273,56 +276,72 @@ export default function TaskEditorModal({ isOpen, task, directors = [], column =
 
         {error && <p className="font-ninja text-sm text-ninja-red">{error}</p>}
 
-        {/* Archive and Delete live here now. The board's cards carry two arrows
-            where a menu holding both used to be, and a card's own dialog is the
-            place to look for what else can be done to it — it is also the route
-            that does not need a pointer, which the board's gestures do. */}
+        {/* What can be done to the card, other than editing it. The board's
+            cards carry two arrows where a menu holding all of this used to be,
+            and a card's own dialog is where the rest went — it is also the
+            route that does not need a pointer, which the board's gestures do.
+            A card already in Recently deleted is offered the two things left:
+            back to the board, or gone now rather than in a fortnight. */}
         <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-          {task && (onArchive || onDelete) && (
+          {task && (
             <div className="flex items-center gap-1 mr-auto">
-              {onArchive && !confirming && (
-                <button
-                  type="button"
-                  onClick={() => { onArchive(task); onClose(); }}
-                  disabled={saving}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-ninja text-xs font-bold text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg transition-colors"
-                >
-                  <ArchiveIcon size={14} strokeWidth={2.25} />
-                  Archive
-                </button>
-              )}
-              {onDelete && (confirming ? (
-                // The word, not a glyph, and asked before it happens. The board
-                // deletes on a gesture that takes a hundred pixels of intent;
-                // a button under a pointer has no such distance in it.
+              {deleted ? (
                 <>
-                  <span className="font-ninja text-xs text-ninja-muted">Delete for good?</span>
-                  <button
-                    type="button"
-                    onClick={() => { onDelete(task); onClose(); }}
-                    className="px-2.5 py-1.5 rounded-lg bg-ninja-red text-white font-ninja text-xs font-bold transition-transform duration-150 ease-[var(--ease-out)] active:scale-95"
-                  >
-                    Delete
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirming(false)}
-                    className="px-2.5 py-1.5 rounded-lg bg-ninja-bg text-ninja-navy font-ninja text-xs font-bold transition-transform duration-150 ease-[var(--ease-out)] active:scale-95"
-                  >
-                    Keep
-                  </button>
+                  {onRestore && !confirming && (
+                    <button
+                      type="button"
+                      onClick={() => { onRestore(task); onClose(); }}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-ninja text-xs font-bold text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg transition-colors"
+                    >
+                      <ArchiveRestoreIcon size={14} strokeWidth={2.25} />
+                      Put back on the board
+                    </button>
+                  )}
+                  {onPurge && (confirming ? (
+                    // The word, not a glyph, and asked before it happens. This
+                    // is the one action here with nothing behind it.
+                    <>
+                      <span className="font-ninja text-xs text-ninja-muted">Delete for good?</span>
+                      <button
+                        type="button"
+                        onClick={() => { onPurge(task); onClose(); }}
+                        className="px-2.5 py-1.5 rounded-lg bg-ninja-red text-white font-ninja text-xs font-bold transition-transform duration-150 ease-[var(--ease-out)] active:scale-95"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirming(false)}
+                        className="px-2.5 py-1.5 rounded-lg bg-ninja-bg text-ninja-navy font-ninja text-xs font-bold transition-transform duration-150 ease-[var(--ease-out)] active:scale-95"
+                      >
+                        Keep
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirming(true)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-ninja text-xs font-bold text-ninja-red hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                    >
+                      <Trash2Icon size={14} strokeWidth={2.25} />
+                      Delete now
+                    </button>
+                  ))}
                 </>
-              ) : (
+              ) : onDelete && (
+                // No confirm on this one. It is not a question worth asking
+                // when the answer is undoable for the next fortnight, and the
+                // button says where the card is going.
                 <button
                   type="button"
-                  onClick={() => setConfirming(true)}
+                  onClick={() => { onDelete(task); onClose(); }}
                   disabled={saving}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-ninja text-xs font-bold text-ninja-red hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                 >
                   <Trash2Icon size={14} strokeWidth={2.25} />
                   Delete
                 </button>
-              ))}
+              )}
             </div>
           )}
           <Button variant="secondary" size="sm" onClick={onClose} disabled={saving}>
