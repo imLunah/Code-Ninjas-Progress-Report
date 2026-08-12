@@ -312,39 +312,53 @@ export default function AccountPage() {
   // Desktop-only setting, so it only appears in the desktop layout's rail.
   // Picked from little window previews rather than a switch, so you can see
   // what each layout looks like before committing to it.
+  // The two layouts are named rather than described so the picker reads as a
+  // choice between places, not a pair of settings. The nav region is tinted in
+  // both previews so the shape you are choosing (a left column or a top strip)
+  // is the first thing you see.
   const navLayouts = [
     {
       value: false,
-      label: 'Sidebar',
+      label: 'Rail',
+      hint: 'Nav down the left',
       preview: (
         <div className="flex h-full">
-          <div className="w-[26%] border-r border-ninja-border bg-white p-1.5 space-y-1.5">
-            <div className="h-1.5 w-full rounded-full bg-ninja-blue/50" />
-            <div className="h-1.5 w-full rounded-full bg-ninja-border" />
-            <div className="h-1.5 w-3/4 rounded-full bg-ninja-border" />
+          <div className="w-[34%] h-full border-r border-ninja-border bg-ninja-blue/10 p-1.5 flex flex-col gap-1.5">
+            <div className="h-2.5 w-2.5 rounded-md bg-ninja-blue" />
+            <div className="h-1.5 w-full rounded-full bg-ninja-blue" />
+            <div className="h-1.5 w-full rounded-full bg-ninja-blue/25" />
+            <div className="h-1.5 w-4/5 rounded-full bg-ninja-blue/25" />
+            <div className="h-1.5 w-4/5 rounded-full bg-ninja-blue/25" />
+            <div className="h-1.5 w-3/5 rounded-full bg-ninja-blue/25" />
           </div>
           <div className="flex-1 p-1.5 space-y-1.5">
-            <div className="h-2 w-1/2 rounded-full bg-ninja-border" />
-            <div className="h-6 w-full rounded-md bg-white border border-ninja-border" />
-            <div className="h-6 w-full rounded-md bg-white border border-ninja-border" />
+            <div className="h-1.5 w-2/3 rounded-full bg-ninja-border" />
+            <div className="h-7 w-full rounded-md bg-white border border-ninja-border" />
+            <div className="h-7 w-full rounded-md bg-white border border-ninja-border" />
           </div>
         </div>
       ),
     },
     {
       value: true,
-      label: 'Top bar',
+      label: 'Ridge',
+      hint: 'Nav across the top',
       preview: (
         <div className="flex h-full flex-col">
-          <div className="flex items-center gap-1.5 border-b border-ninja-border bg-white px-1.5 py-1">
-            <div className="h-1.5 w-1/4 rounded-full bg-ninja-blue/50" />
-            <div className="h-1.5 w-1/5 rounded-full bg-ninja-border" />
-            <div className="h-1.5 w-1/5 rounded-full bg-ninja-border" />
+          <div className="flex items-center gap-1.5 border-b border-ninja-border bg-ninja-blue/10 px-1.5 py-2">
+            <div className="h-2.5 w-2.5 rounded-md bg-ninja-blue flex-shrink-0" />
+            <div className="h-1.5 w-1/5 rounded-full bg-ninja-blue" />
+            <div className="h-1.5 w-1/6 rounded-full bg-ninja-blue/25" />
+            <div className="h-1.5 w-1/6 rounded-full bg-ninja-blue/25" />
+            <div className="h-1.5 w-1/12 rounded-full bg-ninja-blue/25" />
           </div>
           <div className="flex-1 p-1.5 space-y-1.5">
-            <div className="h-2 w-1/2 rounded-full bg-ninja-border" />
-            <div className="h-6 w-full rounded-md bg-white border border-ninja-border" />
-            <div className="h-6 w-full rounded-md bg-white border border-ninja-border" />
+            <div className="h-1.5 w-1/3 rounded-full bg-ninja-border" />
+            <div className="flex gap-1.5">
+              <div className="h-7 flex-1 rounded-md bg-white border border-ninja-border" />
+              <div className="h-7 flex-1 rounded-md bg-white border border-ninja-border" />
+            </div>
+            <div className="h-4 w-full rounded-md bg-white border border-ninja-border" />
           </div>
         </div>
       ),
@@ -363,7 +377,7 @@ export default function AccountPage() {
         </div>
       </div>
       <div role="radiogroup" aria-label="Navigation layout" className="grid grid-cols-2 gap-4 max-w-md">
-        {navLayouts.map(({ value, label, preview }) => {
+        {navLayouts.map(({ value, label, hint, preview }) => {
           const selected = horizontalNav === value;
           return (
             <button
@@ -371,6 +385,7 @@ export default function AccountPage() {
               type="button"
               role="radio"
               aria-checked={selected}
+              aria-label={`${label}, ${hint.toLowerCase()}`}
               onClick={() => setHorizontalNav(value)}
               className="group text-center"
             >
@@ -388,6 +403,7 @@ export default function AccountPage() {
               }`}>
                 {label}
               </p>
+              <p className="text-ninja-muted font-ninja text-xs">{hint}</p>
             </button>
           );
         })}
