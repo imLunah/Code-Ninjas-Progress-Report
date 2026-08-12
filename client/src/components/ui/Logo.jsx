@@ -7,11 +7,16 @@
 // the mask does not apply, and a logo that can vanish is not worth the two
 // kilobytes it saves.
 //
-// `ink` follows the text around it; `accent` is DOJO, which is blue the way it
-// has always been blue. That blue is PINNED to the brand rather than taken from
-// the theme accent token: a director who sets their accent to purple has
-// recoloured their app, not the product's name. It still answers to the theme,
-// lightening in the dark so it does not go muddy on a dark rail.
+// `ink` follows the text around it; `accent` is DOJO, drawn in the brand token
+// rather than a fixed hex. On the stock light and dark themes that token holds
+// the same blue the wordmark has always been (#006ADD / #38a1ff in index.css,
+// which is what the hardcoded pair used to say), so nothing moves. Once someone
+// turns on the theme customiser and picks a colour, the token carries it and the
+// name picks it up with everything else, which is the point of choosing one.
+//
+// Public pages are unaffected: `.theme-locked` re-declares the token for the
+// landing, login and legal subtree, so a director's purple never greets a
+// visitor.
 //
 // The path data is the art from `client/public/logo/*.svg`, which stays in the
 // repo as the source those files are cut from. Each viewBox is trimmed to the
@@ -59,7 +64,7 @@ const ART = {
   },
 };
 
-const ACCENT = 'fill-[#006ADD] dark:fill-[#38a1ff]';
+const ACCENT = 'fill-ninja-blue';
 
 // Height comes from the caller (h-8, h-10…) and the width follows the art's own
 // ratio, so a lockup never has to be measured by hand at each size.
