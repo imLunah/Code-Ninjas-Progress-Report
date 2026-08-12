@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import LazyMarkdownEditor from '../shared/LazyMarkdownEditor';
+import { api } from '../../api/client';
 import { COLUMNS } from '../../lib/taskBoard';
 
 const TITLE_MAX = 200;
@@ -16,9 +17,24 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
   // saving a card doesn't quietly wipe what is in the column.
   const [color, setColor] = useState('none');
   const [due, setDue] = useState('');
+  const [assignee, setAssignee] = useState('');
   const [columnKey, setColumnKey] = useState(column);
+  const [directors, setDirectors] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // Who is at this center is a property of the center, not of the card, so it
+  // is fetched when the dialog opens rather than carried in with the task. A
+  // failure leaves the list empty and the field says as much, which is better
+  // than a select that silently offers nobody.
+  useEffect(() => {
+    if (!isOpen) return;
+    let alive = true;
+    api.get('/director-tasks/assignees')
+      .catch(() => [])
+      .then((rows) => { if (alive) setDirectors(rows || []); });
+    return () => { alive = false; };
+  }, [isOpen]);
 
   // Reseeded on open rather than on every render, so typing isn't clobbered by
   // the parent re-rendering underneath the dialog.
@@ -28,6 +44,7 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
     setBody(task?.body ?? '');
     setColor(task?.color ?? 'none');
     setDue(task?.due_date ?? '');
+    setAssignee(task?.assignee_id ? String(task.assignee_id) : '');
     setColumnKey(task?.column_key ?? column);
     setError('');
     setSaving(false);
@@ -51,6 +68,7 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
         body: body.trim() || null,
         color,
         due_date: due || null,
+        assignee_id: assignee ? Number(assignee) : null,
         column_key: columnKey,
       });
       onClose();
@@ -115,6 +133,31 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
                 Clear date
               </button>
             )}
+          </div>
+
+          <div>
+            <label htmlFor="task-assignee" className="block font-ninja text-sm font-bold text-ninja-navy mb-1.5">
+              Assigned to
+            </label>
+            <select
+              id="task-assignee"
+              value={assignee}
+              onChange={(e) => setAssignee(e.target.value)}
+              className="w-full rounded-xl bg-white border border-ninja-border focus:border-ninja-blue transition-colors px-3 py-2.5 font-ninja text-sm text-ninja-navy"
+            >
+              {/* Unassigned is the default and stays first: most of what a
+                  center is carrying is nobody's in particular. */}
+              <option value="">Nobody yet</option>
+              {directors.map((d) => (
+                <option key={d.id} value={d.id}>{d.display_name}</option>
+              ))}
+              {/* A card handed to someone who has since left the center would
+                  otherwise show as unassigned the moment it is opened, and
+                  saving would quietly drop them. */}
+              {task?.assignee_id && !directors.some((d) => d.id === task.assignee_id) && (
+                <option value={task.assignee_id}>{task.assignee_name || 'No longer at this center'}</option>
+              )}
+            </select>
           </div>
 
           <div>

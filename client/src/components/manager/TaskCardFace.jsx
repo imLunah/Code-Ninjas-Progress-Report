@@ -13,7 +13,33 @@ import { DUE_TONE, dueMeta, plainPreview } from '../../lib/taskBoard';
 //
 // Layout follows the reference: the card's own words and its menu, a
 // description under them, then a footer holding the date on the left and the
-// tag on the right.
+// person carrying it on the right.
+
+// Initials, then the name they belong to. The circle is what the eye finds
+// when scanning a column for its own cards; the name is there because a
+// two-letter circle is a puzzle until you have learnt it, and a board read by
+// three people should not need learning.
+function initials(name) {
+  const parts = String(name).trim().split(/\s+/);
+  return (parts.length === 1
+    ? parts[0].slice(0, 2)
+    : parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function Assignee({ name }) {
+  return (
+    <span className="flex items-center gap-1.5 flex-shrink-0 min-w-0" aria-label={`Assigned to ${name}`}>
+      <span
+        aria-hidden="true"
+        className="w-5 h-5 rounded-full border border-ninja-border flex items-center justify-center font-ninja text-[9px] font-black text-ninja-muted leading-none"
+      >
+        {initials(name)}
+      </span>
+      <span className="font-ninja text-xs text-ninja-muted truncate">{name.split(/\s+/)[0]}</span>
+    </span>
+  );
+}
+
 export default function TaskCardFace({ task, onOpen, actions }) {
   const due = dueMeta(task.due_date);
   const body = plainPreview(task.body);
@@ -53,12 +79,14 @@ export default function TaskCardFace({ task, onOpen, actions }) {
         </p>
       )}
 
-      {/* The footer is the date's alone. The coloured bar that used to sit
-          beside it is gone: the card is one pane of glass now, and a task's
-          colour is not drawn anywhere. */}
-      {due && (
-        <div className="mt-3">
-          <span className={`font-ninja text-xs truncate ${DUE_TONE[due.tone]}`}>{due.text}</span>
+      {/* The footer holds the two things about a card that are not what it
+          says: when it is due, and who has it. */}
+      {(due || task.assignee_name) && (
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <span className={`font-ninja text-xs truncate ${due ? DUE_TONE[due.tone] : ''}`}>
+            {due?.text}
+          </span>
+          {task.assignee_name && <Assignee name={task.assignee_name} />}
         </div>
       )}
     </>
