@@ -46,7 +46,11 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
     setBody(task?.body ?? '');
     setColor(task?.color ?? 'none');
     setDue(task?.due_date ?? '');
-    setAssignee(task?.assignee_center ? 'center' : task?.assignee_id ? String(task.assignee_id) : '');
+    // The center is the default, including for the older cards that predate
+    // this field: with no empty option to fall back to, a select showing the
+    // center while the card is stored as unassigned would save one thing and
+    // display another.
+    setAssignee(task?.assignee_id ? String(task.assignee_id) : 'center');
     setColumnKey(task?.column_key ?? column);
     setError('');
     setSaving(false);
@@ -148,15 +152,12 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
               onChange={(e) => setAssignee(e.target.value)}
               className="w-full rounded-xl bg-white border border-ninja-border focus:border-ninja-blue transition-colors px-3 py-2.5 font-ninja text-sm text-ninja-navy"
             >
-              {/* Unassigned first, then the center, then the people. Plenty of
-                  a board is the center's job and nobody's in particular, and
-                  saying so is better than leaving a card unassigned and hoping
-                  everyone reads the silence the same way. */}
-              <option value="">Nobody yet</option>
-              <option value="center">
-                {user?.activeLocation?.name ? `${user.activeLocation.name} (whole center)` : 'The whole center'}
-              </option>
-              <optgroup label="Directors">
+              {/* The center first and no empty option: every card belongs to
+                  the center unless somebody there has taken it, which is truer
+                  than an unassigned card and does not need reading between the
+                  lines. */}
+              <option value="center">{user?.activeLocation?.name || 'The whole center'}</option>
+              <optgroup label="Center Directors">
                 {directors.map((d) => (
                   <option key={d.id} value={d.id}>{d.display_name}</option>
                 ))}
