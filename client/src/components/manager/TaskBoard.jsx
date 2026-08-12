@@ -813,18 +813,27 @@ export default function TaskBoard({
         <motion.div
           aria-hidden="true"
           initial={reduce ? false : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.18, ease: EASE }}
-          className={`fixed z-[59] pointer-events-none flex items-center justify-center transition-colors duration-200 ${
-            target?.trash ? 'bg-ninja-red/20' : 'bg-ninja-red/[0.07]'
-          }`}
+          // One gradient, and the whole panel's opacity is what changes when
+          // the card comes over it. Two tints cross-fading would be a colour
+          // animating, which browsers do less reliably than an opacity, and
+          // this one has to hold up over a moving card.
+          animate={{ opacity: target?.trash ? 1 : 0.45 }}
+          transition={{ duration: 0.2, ease: EASE }}
+          className="fixed z-[59] pointer-events-none flex items-center justify-center"
           style={{
             left: held.trash.left, top: held.trash.top,
             width: held.trash.width, height: held.trash.height,
+            // Strongest at the outside edge and gone by the time it meets the
+            // board, so there is no line anywhere: the red simply stops being
+            // red. A flat rectangle drew its own border whether or not it had
+            // one, which over the nav read as a panel that had appeared.
+            backgroundImage: `linear-gradient(${
+              held.trash.height >= held.trash.width ? 'to right' : 'to bottom'
+            }, rgba(229,21,32,0.3) 0%, rgba(229,21,32,0.16) 45%, rgba(229,21,32,0) 100%)`,
           }}
         >
-          <span className={`flex flex-col items-center gap-2 font-ninja text-sm font-bold text-ninja-red transition-all duration-200 ${
-            target?.trash ? 'scale-110 opacity-100' : 'opacity-70'
+          <span className={`flex flex-col items-center gap-2 font-ninja text-sm font-bold text-ninja-red transition-transform duration-200 ${
+            target?.trash ? 'scale-110' : ''
           }`}>
             <Trash2Icon size={22} strokeWidth={2.25} />
             {target?.trash ? 'Let go to delete' : 'Drag here to delete'}
