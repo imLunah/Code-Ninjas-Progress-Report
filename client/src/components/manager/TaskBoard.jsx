@@ -31,6 +31,11 @@ const SETTLE_MS = 420;
 // same beat, so deleting looks like one thing however it was asked for.
 const TRASH_MS = 200;
 
+// And how long the card takes to stop being a card. Longer than the plain
+// delete: there is a shape change to watch here, and 200ms is not enough of it
+// to read as anything but a disappearance.
+const SWALLOW_MS = 380;
+
 // How near the bin a card has to be before the red starts reaching for it, and
 // how much blur the goo filter has to work with. The two are related: the
 // stretch only forms while the gap between two blobs is within a couple of
@@ -749,12 +754,57 @@ export default function TaskBoard({
         const o = overlayRef.current;
         const r = snap.current?.trash;
         if (o && r) {
-          o.style.transition = `transform ${TRASH_MS}ms var(--ease-out), opacity ${TRASH_MS}ms linear`;
+          const box = info.current;
+          const y = lastPoint.current.y;
+
+          // The card goes first and quickly, rounding off as it goes. What is
+          // left behind is the blob that has been standing in for it under the
+          // filter all along, so the card does not vanish — it stops being a
+          // card and carries on as liquid.
+          o.style.transition = `transform ${SWALLOW_MS * 0.55}ms var(--ease-out), opacity ${SWALLOW_MS * 0.4}ms linear`;
           o.style.transform =
-            `translate3d(${r.left + r.w / 2 - info.current.w / 2}px, ${lastPoint.current.y - info.current.h / 2}px, 0) scale(0.35)`;
+            `translate3d(${r.left + r.w / 2 - box.w / 2}px, ${y - box.h / 2}px, 0) scale(0.55)`;
           o.style.opacity = '0';
+
+          // Thicker while it is being swallowed. The resting tint is set for a
+          // hint sitting in the margin; this is the one moment the red is the
+          // thing being looked at.
+          const g = gooRef.current;
+          if (g) {
+            g.style.transition = `opacity ${SWALLOW_MS}ms var(--ease-out)`;
+            g.style.opacity = '0.34';
+          }
+
+          // And the blob is drawn in: over to the middle of the band, down to a
+          // bead, and round on the way. Through the filter that is a card
+          // stretching thin and letting go, which is the whole trick — nothing
+          // here is simulating a liquid, it is two shapes moving towards each
+          // other while something blurs and thresholds the gap between them.
+          const bead = gooBeadRef.current;
+          const drop = gooDropRef.current;
+          const originX = r.left - GOO_REACH;
+          const flow = `transform ${SWALLOW_MS}ms cubic-bezier(0.5, 0, 0.2, 1), ` +
+            `width ${SWALLOW_MS}ms cubic-bezier(0.5, 0, 0.2, 1), ` +
+            `height ${SWALLOW_MS}ms cubic-bezier(0.5, 0, 0.2, 1), ` +
+            `border-radius ${SWALLOW_MS}ms linear`;
+          if (bead) {
+            bead.style.transition = flow;
+            bead.style.width = '54px';
+            bead.style.height = '54px';
+            bead.style.borderRadius = '27px';
+            bead.style.transform =
+              `translate3d(${r.left + r.w / 2 - 27 - originX}px, ${y - 27 + BLEED}px, 0)`;
+          }
+          if (drop) {
+            // The bridge thins rather than disappearing, so the last thing to
+            // go is the thread between the card and the bin.
+            drop.style.transition = flow;
+            drop.style.width = '18px';
+            drop.style.height = '18px';
+            drop.style.borderRadius = '9px';
+          }
         }
-        setTimeout(() => { clearDrag(); onDelete(task); }, o && r ? TRASH_MS : 0);
+        setTimeout(() => { clearDrag(); onDelete(task); }, o && r ? SWALLOW_MS : 0);
         return;
       }
 
@@ -1040,11 +1090,23 @@ export default function TaskBoard({
               until it is over the bin, where it goes red and shrinks, so the
               card itself says what will happen to it and not just the thing
               underneath it. */}
-          <div className={`${CARD} ${TASK_SURFACE} task-lensed p-3.5 shadow-xl relative transition-transform duration-150 ${
-            target?.trash ? 'ring-2 ring-ninja-red -rotate-3 scale-95' : '-rotate-1'
-          }`}>
+          {/* Over the bin the card starts going soft before it is let go of:
+              it rounds towards the capsule the blob underneath it already is,
+              tips further over and gives up its edges. By the time it is
+              dropped it is most of the way to being liquid, so the swallow has
+              something to finish rather than something to start. */}
+          <div
+            className={`${CARD} ${TASK_SURFACE} task-lensed p-3.5 shadow-xl relative transition-all duration-200 ease-[var(--ease-out)] ${
+              target?.trash ? 'ring-2 ring-ninja-red -rotate-3 scale-95' : '-rotate-1'
+            }`}
+            style={target?.trash ? { borderRadius: `${Math.min(held.w, held.h) / 2}px` } : undefined}
+          >
             {target?.trash && (
-              <span aria-hidden="true" className="absolute inset-0 rounded-2xl bg-ninja-red/15 pointer-events-none" />
+              <span
+                aria-hidden="true"
+                className="absolute inset-0 bg-ninja-red/15 pointer-events-none"
+                style={{ borderRadius: `${Math.min(held.w, held.h) / 2}px` }}
+              />
             )}
             <TaskCardFace task={held.task} />
           </div>
