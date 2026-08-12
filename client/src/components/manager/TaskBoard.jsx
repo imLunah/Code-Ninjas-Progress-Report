@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArchiveIcon, PlusIcon } from 'lucide-react';
+import { PlusIcon, Trash2Icon } from 'lucide-react';
 import TaskCardFace from './TaskCardFace';
 import TaskActionsMenu from './TaskActionsMenu';
 import { CARD } from '../../lib/surfaces';
@@ -55,9 +55,11 @@ function useDragEnabled() {
 
 /* --------------------------------------------------------- swipe away -- */
 
-// A card can be pushed off the board with the pointer. It ARCHIVES rather than
-// deletes: a gesture that can be started by accident must not end in a row that
-// cannot come back, and archived cards are one press away in the filter bar.
+// A card can be pushed off the board with the pointer, and pushing it off
+// DELETES it, by the user's call. The card travels a hundred pixels before the
+// gesture counts and the word Delete is under it in red the whole way, so it is
+// not a thing that happens on the way past — but there is no undo behind it,
+// which is why the same action in the card's menu still asks first.
 //
 // Offered only where the reorder drag is not — below xl, or while a filter is
 // on. Both gestures read a horizontal pull, and on a board whose four columns
@@ -124,7 +126,7 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
       if (hint) { hint.style.transition = 'opacity 160ms linear'; hint.style.opacity = '0'; }
       // The card is gone from the screen before it is gone from the board, so
       // the columns close the gap behind something that has already left.
-      timer.current = setTimeout(() => onArchive(task), reduce ? 150 : FLING_MS - 40);
+      timer.current = setTimeout(() => onDelete(task), reduce ? 150 : FLING_MS - 40);
       return;
     }
 
@@ -213,14 +215,19 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
         <div
           ref={hintRef}
           aria-hidden="true"
-          className="absolute inset-0 rounded-2xl bg-ninja-blue/10 flex items-center justify-between px-5 opacity-0 pointer-events-none"
+          // The brand red at a tenth, not `bg-red-50`: index.css overrides the
+          // stock red backgrounds in dark with `!important`, and this one would
+          // have come out plum on the one surface that has to read as danger.
+          className="absolute inset-0 rounded-2xl bg-ninja-red/10 flex items-center justify-between px-5 opacity-0 pointer-events-none"
         >
           {/* Named on both edges: the card goes the way you push it, and a
-              label on one side would be a rule nobody was told. */}
+              label on one side would be a rule nobody was told. Red, and
+              reaching full strength at the threshold, because the word arriving
+              is the only warning there is. */}
           {[0, 1].map((i) => (
-            <span key={i} className="flex items-center gap-1.5 font-ninja text-xs font-bold text-ninja-blue-ink">
-              <ArchiveIcon size={14} strokeWidth={2.25} />
-              Archive
+            <span key={i} className="flex items-center gap-1.5 font-ninja text-xs font-bold text-ninja-red">
+              <Trash2Icon size={14} strokeWidth={2.25} />
+              Delete
             </span>
           ))}
         </div>
