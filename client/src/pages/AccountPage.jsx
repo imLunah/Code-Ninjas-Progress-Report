@@ -312,14 +312,14 @@ export default function AccountPage() {
   // Desktop-only setting, so it only appears in the desktop layout's rail.
   // Picked from little window previews rather than a switch, so you can see
   // what each layout looks like before committing to it.
-  // The two layouts are named rather than described so the picker reads as a
-  // choice between places, not a pair of settings. The nav region is tinted in
-  // both previews so the shape you are choosing (a left column or a top strip)
-  // is the first thing you see.
+  // The two layouts carry names rather than descriptions, so the preview has to
+  // do the explaining: the nav region is tinted in both, which puts the shape
+  // you are choosing (a left column or a top strip) first. `hint` never renders,
+  // it only feeds the radio's accessible name, where a bare noun says nothing.
   const navLayouts = [
     {
       value: false,
-      label: 'Rail',
+      label: 'Spine',
       hint: 'Nav down the left',
       preview: (
         <div className="flex h-full">
@@ -341,7 +341,7 @@ export default function AccountPage() {
     },
     {
       value: true,
-      label: 'Ridge',
+      label: 'Crown',
       hint: 'Nav across the top',
       preview: (
         <div className="flex h-full flex-col">
@@ -403,7 +403,6 @@ export default function AccountPage() {
               }`}>
                 {label}
               </p>
-              <p className="text-ninja-muted font-ninja text-xs">{hint}</p>
             </button>
           );
         })}
