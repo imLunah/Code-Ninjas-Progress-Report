@@ -815,18 +815,15 @@ export default function TaskBoard({
           initial={reduce ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.22, ease: EASE }}
-          // Two states, and only one of them is loud. Until the card is over
-          // it this is a hint: barely tinted, enough to say the nav has become
-          // something. Once the card arrives it takes the whole panel, opaque
-          // enough that the sidebar's own blues cannot come up through the red
-          // and turn it a purple that means nothing here — the blur takes what
-          // the fill leaves. `transition-all` because the blur has to travel
-          // between the two along with the colour, or the panel would snap
-          // frosted while the red was still arriving.
-          className={`fixed z-[59] pointer-events-none flex items-center justify-center border-2 border-dashed transition-all duration-200 ease-[var(--ease-out)] ${
+          // A tint at both ends, by the user's call: barely there while the
+          // card is elsewhere, and a step up rather than a takeover when it
+          // arrives. The nav reads through it either way, which is fine — the
+          // panel is not hiding the sidebar, it is saying what letting go over
+          // it would do. The edge and the label carry most of the difference.
+          className={`fixed z-[59] pointer-events-none flex items-center justify-center border-2 border-dashed transition-colors duration-200 ease-[var(--ease-out)] ${
             target?.trash
-              ? 'border-white/60 bg-ninja-red/85 backdrop-blur-[3px]'
-              : 'border-ninja-red/35 bg-ninja-red/10 backdrop-blur-0'
+              ? 'border-ninja-red bg-ninja-red/20'
+              : 'border-ninja-red/25 bg-ninja-red/[0.06]'
           }`}
           style={{
             left: held.trash.left, top: held.trash.top,
@@ -834,7 +831,7 @@ export default function TaskBoard({
           }}
         >
           <span className={`flex flex-col items-center gap-2 font-ninja text-sm font-bold transition-all duration-200 ease-[var(--ease-out)] ${
-            target?.trash ? 'text-white scale-110' : 'text-ninja-red/80'
+            target?.trash ? 'text-ninja-red scale-110' : 'text-ninja-red/60'
           }`}>
             <Trash2Icon size={22} strokeWidth={2.25} />
             {target?.trash ? 'Let go to delete' : 'Drag here to delete'}
