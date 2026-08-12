@@ -621,9 +621,10 @@ export default function TaskBoard({
       el.style.transform = `translate3d(${left - originX}px, ${top - originY}px, 0)`;
     };
 
-    // The card, at its own size. It needs no distance maths: the mask above
-    // fades it out long before it reaches the far side of the board.
-    put(gooBeadRef.current, bx, by, box.w, box.h, 16);
+    // The card, at its own size, but drawn as a capsule rather than a card:
+    // a rounded rectangle merging with a rounded rectangle reads as two shapes
+    // that have been glued, where two capsules read as one thing that flowed.
+    put(gooBeadRef.current, bx, by, box.w, box.h, Math.min(box.w, box.h) / 2);
 
     // And the drop that bridges the gap, sized off the card so a wide card gets
     // a bridge to match. It is the only part that has to know about distance,
@@ -940,12 +941,18 @@ export default function TaskBoard({
         <>
           <svg width="0" height="0" aria-hidden="true" className="absolute pointer-events-none">
             <defs>
+              {/* A softer blur and a gentler slope on the alpha than a goo
+                  filter usually runs. Steep is what gives the effect its
+                  cartoon snap — everything either fully there or not — and the
+                  cost is a hard edge on every shape. Easing the slope lets the
+                  blur keep some of its own falloff, so the blobs round off and
+                  meet each other rather than clicking together. */}
               <filter id="taskGoo" x="-40%" y="-40%" width="180%" height="180%" colorInterpolationFilters="sRGB">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="16" result="soft" />
+                <feGaussianBlur in="SourceGraphic" stdDeviation="22" result="soft" />
                 <feColorMatrix
                   in="soft"
                   type="matrix"
-                  values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 26 -12"
+                  values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 14 -6"
                 />
               </filter>
             </defs>
@@ -975,7 +982,7 @@ export default function TaskBoard({
                 filter rounds are all outside the window. */}
             <div
               className="absolute top-0 right-0 h-full bg-ninja-red"
-              style={{ width: held.trash.w + BLEED }}
+              style={{ width: held.trash.w + BLEED, borderRadius: '999px 0 0 999px' }}
             />
             <div ref={gooBeadRef} className="absolute top-0 left-0 bg-ninja-red" />
             <div ref={gooDropRef} className="absolute top-0 left-0 bg-ninja-red" />

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArchiveRestoreIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
 import Modal from '../ui/Modal';
+import SidePanel from '../ui/SidePanel';
 import Button from '../ui/Button';
 import LazyMarkdownEditor from '../shared/LazyMarkdownEditor';
 import { useAuth } from '../../context/AuthContext';
@@ -8,10 +9,27 @@ import { COLUMNS } from '../../lib/taskBoard';
 
 const TITLE_MAX = 200;
 
+// Which shell the card opens in. Decided in JS rather than with `lg:hidden` on
+// both, so only one is ever mounted: two copies would be two sets of form
+// inputs bound to one piece of state, which is the bug the Account page's
+// layout switch exists to avoid.
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const onChange = (e) => setIsDesktop(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return isDesktop;
+}
+
 // Create and edit are the same form. `task` null means create; `column` is the
 // column a new card lands in.
 export default function TaskEditorModal({ isOpen, task, directors = [], column = 'todo', onClose, onSave, onDelete, onPurge, onRestore }) {
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
   const [confirming, setConfirming] = useState(false);
   // `archived_at` is the day the card was deleted. The column is older than the
   // name; see the note in the tasks route.
@@ -97,12 +115,18 @@ export default function TaskEditorModal({ isOpen, task, directors = [], column =
     }
   };
 
+  // One form, two shells. On a desktop board a card opens beside the column it
+  // came out of, so the board it belongs to is still readable while it is being
+  // edited; on a phone there is no beside, and it takes the screen.
+  const Shell = isDesktop ? SidePanel : Modal;
+  const shellProps = isDesktop ? { width: 'w-[27rem]' } : { width: 'max-w-lg' };
+
   return (
-    <Modal
+    <Shell
       isOpen={isOpen}
       onClose={onClose}
       title={task ? 'Edit task' : 'New task'}
-      width="max-w-lg"
+      {...shellProps}
     >
       <div className="space-y-4">
         <div>
@@ -352,6 +376,6 @@ export default function TaskEditorModal({ isOpen, task, directors = [], column =
           </Button>
         </div>
       </div>
-    </Modal>
+    </Shell>
   );
 }
