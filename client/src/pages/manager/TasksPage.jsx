@@ -229,6 +229,8 @@ export default function TasksPage() {
           showArchived={showArchived}
           onShowArchived={setShowArchived}
           boardView={view === 'board'}
+          centerName={user?.activeLocation?.name}
+          meId={user?.id}
         />
 
         {error && (

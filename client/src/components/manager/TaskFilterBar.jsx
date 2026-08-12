@@ -1,21 +1,30 @@
 import { SearchIcon } from 'lucide-react';
 import { EMPTY_FILTERS, isFiltered } from '../../lib/taskFilters';
 
-const DUE_CHIPS = [
+// Due used to be four chips sitting in a row next to the assignee menu, so the
+// bar read as seven things to decide before looking at any work. It is one menu
+// now: the four answers are exclusive, which is what a menu is for.
+const DUE_OPTIONS = [
   { key: 'any', label: 'Any time' },
   { key: 'overdue', label: 'Overdue' },
-  { key: 'week', label: 'Next 7 days' },
-  { key: 'none', label: 'No date' },
+  { key: 'week', label: 'Due in 7 days' },
+  { key: 'none', label: 'No due date' },
 ];
 
 const FIELD =
-  'bg-white border border-ninja-border rounded-lg px-3 py-1.5 font-ninja text-sm text-ninja-navy focus:outline-none focus:border-ninja-blue transition-colors';
+  'bg-white border rounded-lg px-3 py-1.5 font-ninja text-sm text-ninja-navy focus:outline-none transition-colors';
 
 // One bar above both views. Narrowing the board narrows the list, because they
 // are the same question asked of the same array.
-export default function TaskFilterBar({ filters, onChange, directors, showArchived, onShowArchived, boardView }) {
+export default function TaskFilterBar({
+  filters, onChange, directors, showArchived, onShowArchived, boardView, centerName, meId,
+}) {
   const set = (patch) => onChange({ ...filters, ...patch });
   const active = isFiltered(filters);
+
+  // "Me" already covers whoever is reading, so listing them again by name below
+  // it offers the same board twice under two labels.
+  const others = directors.filter((d) => String(d.id) !== String(meId));
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -27,59 +36,36 @@ export default function TaskFilterBar({ filters, onChange, directors, showArchiv
           onChange={(e) => set({ q: e.target.value })}
           placeholder="Search tasks"
           aria-label="Search tasks"
-          className={`${FIELD} pl-8 w-44`}
+          className={`${FIELD} border-ninja-border focus:border-ninja-blue pl-8 w-48`}
         />
       </div>
 
+      {/* The card carried by the center is named after the center, the way the
+          editor names it. "The center" was a phrase nobody had been taught. */}
       <select
         value={filters.assignee}
         onChange={(e) => set({ assignee: e.target.value })}
-        aria-label="Filter by who has it"
-        className={FIELD}
+        aria-label="Show tasks assigned to"
+        className={`${FIELD} ${filters.assignee === 'anyone' ? 'border-ninja-border' : 'border-ninja-blue'} focus:border-ninja-blue`}
       >
         <option value="anyone">Anyone</option>
-        <option value="mine">Mine</option>
-        <option value="center">The center</option>
-        {directors.map((d) => (
+        <option value="mine">Me</option>
+        <option value="center">{centerName || 'The whole center'}</option>
+        {others.map((d) => (
           <option key={d.id} value={String(d.id)}>{d.display_name}</option>
         ))}
       </select>
 
-      <div className="flex flex-wrap items-center gap-1.5">
-        {DUE_CHIPS.map((c) => {
-          const on = filters.due === c.key;
-          return (
-            <button
-              key={c.key}
-              type="button"
-              aria-pressed={on}
-              onClick={() => set({ due: c.key })}
-              className={`px-3 py-1.5 rounded-full font-ninja text-xs font-semibold border transition-colors duration-150 ease-[var(--ease-out)] active:scale-95 ${
-                on
-                  ? 'bg-ninja-blue text-white border-ninja-blue'
-                  : 'bg-white text-ninja-navy border-ninja-border hover:border-ninja-blue'
-              }`}
-            >
-              {c.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Archived is a different fetch, not a different filter: those cards are
-          not in the board's hands until they are asked for. */}
-      <button
-        type="button"
-        aria-pressed={showArchived}
-        onClick={() => onShowArchived(!showArchived)}
-        className={`px-3 py-1.5 rounded-full font-ninja text-xs font-semibold border transition-colors duration-150 ease-[var(--ease-out)] active:scale-95 ${
-          showArchived
-            ? 'bg-ninja-navy text-white border-ninja-navy dark:bg-white dark:text-ninja-bg'
-            : 'bg-white text-ninja-navy border-ninja-border hover:border-ninja-blue'
-        }`}
+      <select
+        value={filters.due}
+        onChange={(e) => set({ due: e.target.value })}
+        aria-label="Show tasks due"
+        className={`${FIELD} ${filters.due === 'any' ? 'border-ninja-border' : 'border-ninja-blue'} focus:border-ninja-blue`}
       >
-        {showArchived ? 'Viewing archived' : 'Archived'}
-      </button>
+        {DUE_OPTIONS.map((o) => (
+          <option key={o.key} value={o.key}>{o.label}</option>
+        ))}
+      </select>
 
       {active && (
         <button
@@ -90,6 +76,22 @@ export default function TaskFilterBar({ filters, onChange, directors, showArchiv
           Clear
         </button>
       )}
+
+      {/* Archived is a different fetch, not a different filter: those cards are
+          not in the board's hands until they are asked for. It sits apart from
+          the filters for that reason, and because it is not a daily question. */}
+      <button
+        type="button"
+        aria-pressed={showArchived}
+        onClick={() => onShowArchived(!showArchived)}
+        className={`ml-auto px-3 py-1.5 rounded-full font-ninja text-xs font-semibold border transition-colors duration-150 ease-[var(--ease-out)] active:scale-95 ${
+          showArchived
+            ? 'bg-ninja-navy text-white border-ninja-navy dark:bg-white dark:text-ninja-bg'
+            : 'bg-transparent text-ninja-muted border-transparent hover:text-ninja-navy hover:border-ninja-border'
+        }`}
+      >
+        {showArchived ? 'Viewing archived' : 'Archived'}
+      </button>
 
       {/* Said once, where the filter is set, rather than leaving somebody to
           discover a board that has quietly stopped responding to a drag. */}
