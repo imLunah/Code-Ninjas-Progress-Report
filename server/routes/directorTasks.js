@@ -7,7 +7,7 @@ const { requireManager, requireOwnLocation } = require('../middleware/auth');
 // Senseis never reach this — every route is requireManager, and writes add
 // requireOwnLocation so a director browsing another center gets it read-only.
 
-const COLUMNS = ['todo', 'doing', 'done'];
+const COLUMNS = ['todo', 'doing', 'review', 'done'];
 const COLORS = ['none', 'blue', 'amber', 'green', 'purple', 'red'];
 
 const TITLE_MAX = 200;
@@ -15,10 +15,16 @@ const TITLE_MAX = 200;
 // content rule — same reasoning as the 2000-char cap on pinned notes.
 const BODY_MAX = 4000;
 
+// A checklist is a handful of sub-steps, not a second task list. The cap is
+// what stops a card becoming a project, and it matches the CHECK on the column.
+const CHECKLIST_MAX = 20;
+const CHECKLIST_TEXT_MAX = 200;
+
 const SELECT = `
   SELECT t.id, t.title, t.body, t.column_key, t.color, t.position,
          to_char(t.due_date, 'YYYY-MM-DD') AS due_date,
-         t.assignee_id, t.assignee_center, t.created_at, t.updated_at,
+         t.assignee_id, t.assignee_center, t.checklist, t.archived_at,
+         t.created_at, t.updated_at,
          u.display_name AS created_by_name,
          a.display_name AS assignee_name,
          l.name AS location_name
@@ -90,6 +96,22 @@ function validate(body) {
   const color = body.color ?? 'none';
   if (!COLORS.includes(color)) return { error: 'Invalid color' };
 
+  // Absent means "leave it alone"; anything present has to be the real shape.
+  // Stored as jsonb, so a bad array would land in the database as-is and come
+  // back to the card as a crash rather than a 400.
+  let checklist;
+  if (body.checklist !== undefined) {
+    if (!Array.isArray(body.checklist)) return { error: 'Invalid checklist' };
+    if (body.checklist.length > CHECKLIST_MAX) return { error: `A card can hold ${CHECKLIST_MAX} checklist items` };
+    checklist = [];
+    for (const item of body.checklist) {
+      const text = typeof item?.text === 'string' ? item.text.trim() : '';
+      if (!text) continue; // a blank row is somebody mid-typing, not an item
+      if (text.length > CHECKLIST_TEXT_MAX) return { error: `Checklist item max ${CHECKLIST_TEXT_MAX} characters` };
+      checklist.push({ text, done: item.done === true });
+    }
+  }
+
   // Empty string comes back from a cleared <input type="date">; both it and an
   // absent field mean "no due date".
   const due = body.due_date;
@@ -103,6 +125,7 @@ function validate(body) {
     column_key,
     color,
     due_date: due || null,
+    checklist,
   };
 }
 
@@ -119,12 +142,17 @@ router.get('/assignees', requireManager, async (req, res) => {
   }
 });
 
-// GET /api/director-tasks — the whole board for the active location.
+// GET /api/director-tasks — the whole live board for the active location.
+// ?archived=true returns what has been cleared off it instead, newest first,
+// which is a different question and a different order: an archived card has no
+// place on a board, only a date it left one.
 router.get('/', requireManager, async (req, res) => {
   const pool = req.app.get('db');
+  const archived = req.query.archived === 'true';
   try {
     const { rows } = await pool.query(
-      `${SELECT} WHERE t.location_id = $1 ORDER BY t.position ASC, t.id ASC`,
+      `${SELECT} WHERE t.location_id = $1 AND t.archived_at IS ${archived ? 'NOT NULL' : 'NULL'}
+       ORDER BY ${archived ? 't.archived_at DESC' : 't.position ASC'}, t.id ASC`,
       [req.session.activeLocationId]
     );
     res.json(rows);
@@ -146,11 +174,11 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
 
     const { rows } = await pool.query(
       `INSERT INTO director_tasks
-         (location_id, title, body, column_key, color, due_date, assignee_id, assignee_center, position, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
+         (location_id, title, body, column_key, color, due_date, assignee_id, assignee_center, checklist, position, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb,
          COALESCE((SELECT MAX(position) + 1 FROM director_tasks
-                   WHERE location_id = $1 AND column_key = $4), 0),
-         $9)
+                   WHERE location_id = $1 AND column_key = $4 AND archived_at IS NULL), 0),
+         $10)
        RETURNING id`,
       [
         req.session.activeLocationId,
@@ -161,6 +189,7 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
         fields.due_date,
         assignee.skip ? null : assignee.id,
         assignee.skip ? false : assignee.center,
+        JSON.stringify(fields.checklist ?? []),
         req.session.userId,
       ]
     );
@@ -171,6 +200,74 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   } catch (err) {
     console.error('Error creating task:', err);
     res.status(500).json({ error: 'Failed to create task' });
+  }
+});
+
+// POST /api/director-tasks/archive-done — clear the finished column.
+//
+// One statement rather than one PATCH per card: a dropped connection halfway
+// through a fan-out leaves a board half-cleared, and there is no reason for the
+// client to enumerate rows the server can select for itself. MUST stay above
+// the /:id routes, or Express reads 'archive-done' as an id.
+router.post('/archive-done', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  try {
+    const { rows } = await pool.query(
+      `UPDATE director_tasks SET archived_at = now(), updated_at = now()
+       WHERE location_id = $1 AND column_key = 'done' AND archived_at IS NULL
+       RETURNING id`,
+      [req.session.activeLocationId]
+    );
+    res.json({ archived: rows.map((r) => r.id) });
+  } catch (err) {
+    console.error('Error clearing finished tasks:', err);
+    res.status(500).json({ error: 'Failed to clear finished tasks' });
+  }
+});
+
+// POST /api/director-tasks/:id/archive — take a card off the board.
+// Not a delete: the work happened, and a center's record of what it did should
+// not depend on nobody having tidied up. location_id in the WHERE is the
+// authorization, same as every other write here.
+router.post('/:id/archive', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  try {
+    const { rows } = await pool.query(
+      `UPDATE director_tasks SET archived_at = now(), updated_at = now()
+       WHERE id = $1 AND location_id = $2 AND archived_at IS NULL
+       RETURNING id`,
+      [req.params.id, req.session.activeLocationId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Task not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error archiving task:', err);
+    res.status(500).json({ error: 'Failed to archive task' });
+  }
+});
+
+// POST /api/director-tasks/:id/restore — put it back, at the end of whichever
+// column it left from. Its old position belonged to a board that has moved on.
+router.post('/:id/restore', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  try {
+    const { rows } = await pool.query(
+      `UPDATE director_tasks t
+       SET archived_at = NULL, updated_at = now(),
+           position = COALESCE((SELECT MAX(d.position) + 1 FROM director_tasks d
+                                WHERE d.location_id = t.location_id
+                                  AND d.column_key = t.column_key
+                                  AND d.archived_at IS NULL), 0)
+       WHERE t.id = $1 AND t.location_id = $2 AND t.archived_at IS NOT NULL
+       RETURNING t.id`,
+      [req.params.id, req.session.activeLocationId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Task not found' });
+    const { rows: full } = await pool.query(`${SELECT} WHERE t.id = $1`, [rows[0].id]);
+    res.json(full[0]);
+  } catch (err) {
+    console.error('Error restoring task:', err);
+    res.status(500).json({ error: 'Failed to restore task' });
   }
 });
 
@@ -244,10 +341,12 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
        SET title = $1, body = $2, column_key = $3, color = $4, due_date = $5,
            assignee_id = CASE WHEN $6::boolean THEN t.assignee_id ELSE $7 END,
            assignee_center = CASE WHEN $6::boolean THEN t.assignee_center ELSE $10 END,
+           checklist = COALESCE($11::jsonb, t.checklist),
            position = CASE
              WHEN t.column_key = $3 THEN t.position
              ELSE COALESCE((SELECT MAX(d.position) + 1 FROM director_tasks d
-                            WHERE d.location_id = t.location_id AND d.column_key = $3), 0)
+                            WHERE d.location_id = t.location_id AND d.column_key = $3
+                              AND d.archived_at IS NULL), 0)
            END,
            updated_at = now()
        WHERE t.id = $8 AND t.location_id = $9
@@ -263,6 +362,7 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
         req.params.id,
         req.session.activeLocationId,
         assignee.skip ? false : assignee.center,
+        fields.checklist === undefined ? null : JSON.stringify(fields.checklist),
       ]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Task not found' });
