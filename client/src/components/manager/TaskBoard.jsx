@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback, useEffect, useMemo, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowRightIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import {
+  ArchiveRestoreIcon, ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon, Trash2Icon,
+} from 'lucide-react';
 import TaskCardFace from './TaskCardFace';
-import TaskActionsMenu from './TaskActionsMenu';
 import { CARD } from '../../lib/surfaces';
 import {
   COLUMNS,
@@ -33,9 +34,10 @@ const GAP = 12; // matches space-y-3
 const DRAG_THRESHOLD = 5;
 
 // Drag is a pointer affordance with no keyboard or touch equivalent, so it is
-// only ever the *fast* way to move a card — never the only way. Every move is
-// also in the card's own menu, which is what makes the board usable on a phone
-// and with a keyboard. Below this width the columns wrap, and wrapped columns
+// only ever the *fast* way to move a card — never the only way. The two arrows
+// on every card do the same job a press at a time, which is what makes the
+// board usable on a phone and with a keyboard. Below this width the columns
+// wrap, and wrapped columns
 // share the x axis that the drop target is read from, so dragging is switched
 // off rather than left to guess. Four columns only sit in one row at xl, which
 // is why this tracks the grid's last breakpoint and must move with it.
@@ -65,14 +67,13 @@ function useDragEnabled() {
 // which is the way round it has to be: the hand that overshoots is the hand
 // going forward. The card travels a hundred pixels before either counts, the
 // word under it names what is about to happen, and Delete is red the whole way.
-// The card's menu still asks before deleting; the gesture does not.
+// The Delete in the card's dialog still asks first; the gesture does not.
 //
 // Offered only where the reorder drag is not — below xl, or while a filter is
 // on. Both gestures read a horizontal pull, and on a board whose four columns
 // sit side by side that pull already means "move this to In progress". One axis,
 // one meaning, decided by which mode the board is in. Which leaves the gesture
-// exactly where it is worth most: the phone, where dragging is off and the
-// card's menu was the only way to move or clear anything.
+// exactly where it is worth most: the phone, where dragging is off.
 const DISMISS_AT = 100;  // px of travel past which release acts on the card
 const SWIPE_START = 8;   // px before a press counts as a swipe rather than a tap
 const MAX_TILT = 7;      // deg at the far end of the pull
@@ -81,9 +82,32 @@ const SETTLE = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
+// Resting at half strength so the card's own words stay the loudest thing on
+// it, the way the sticky notes' actions do. The name is in `title` and
+// `aria-label` both, because a glyph that only speaks on hover says nothing on
+// a phone and nothing to a screen reader.
+function CardButton({ onClick, disabled, label, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors duration-150 ${
+        disabled
+          ? 'text-ninja-muted/30 cursor-default'
+          : 'text-ninja-muted opacity-60 hover:opacity-100 hover:text-ninja-blue hover:bg-ninja-blue/10'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 /* --------------------------------------------------------------- card -- */
 
-function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onOpen, onDelete, onArchive, onRestore, onMoveTo, cardRef, onPointerDown, onSwipeStart }) {
+function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onOpen, onDelete, onRestore, onMoveTo, cardRef, onPointerDown, onSwipeStart }) {
   const reduce = useReducedMotion();
   const faceRef = useRef(null);
   const aheadRef = useRef(null);   // revealed by a pull to the right
@@ -93,9 +117,13 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  // Where right goes. The last column has nowhere to go, so a card in it takes
-  // the pull and gives it back rather than inventing a stage.
-  const nextKey = COLUMN_KEYS[COLUMN_KEYS.indexOf(task.column_key) + 1];
+  // The stage before and the stage after, which is the whole of what the arrows
+  // and the swipe can do. The last column has nowhere to go, so a card in it
+  // takes a rightward pull and gives it back rather than inventing a stage.
+  const at = COLUMN_KEYS.indexOf(task.column_key);
+  const prevKey = at > 0 ? COLUMN_KEYS[at - 1] : null;
+  const nextKey = COLUMN_KEYS[at + 1] || null;
+  const archived = Boolean(task.archived_at);
   const canAdvance = Boolean(swipeable && nextKey);
 
   // Written straight to the node. A setState per pointermove would re-render
@@ -287,18 +315,40 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
           onOpen={onOpen}
           actions={
             canManage && (
-              // The menu is the one part of the card a press must not drag from,
-              // or its trigger would never survive long enough to open.
-              <span data-no-drag className="flex-shrink-0">
-                <TaskActionsMenu
-                  task={task}
-                  className="-mr-1 -mt-1"
-                  onOpen={onOpen}
-                  onDelete={onDelete}
-                  onArchive={onArchive}
-                  onRestore={onRestore}
-                  onMoveTo={onMoveTo}
-                />
+              // Two arrows in place of the menu that used to live here. Nearly
+              // everything that menu held was a stage to move the card to, and
+              // a card only ever has two of those: the one before and the one
+              // after. The rest of it moved to the dialog the card opens.
+              //
+              // `data-no-drag` is the one part of the card a press must not
+              // drag from, or the button would never survive long enough to be
+              // pressed.
+              <span data-no-drag className="flex items-center gap-0.5 flex-shrink-0 -mr-1.5 -mt-1">
+                {archived ? (
+                  <CardButton onClick={() => onRestore(task)} label="Put back on the board">
+                    <ArchiveRestoreIcon size={15} strokeWidth={2.25} />
+                  </CardButton>
+                ) : (
+                  <>
+                    {/* Held rather than hidden at the ends: a card whose arrows
+                        come and go with the column it is in makes the whole
+                        row of them jump about as cards move. */}
+                    <CardButton
+                      onClick={() => onMoveTo(task, prevKey)}
+                      disabled={!prevKey}
+                      label={prevKey ? `Move to ${COLUMN_LABEL[prevKey]}` : 'Nothing before this stage'}
+                    >
+                      <ChevronLeftIcon size={16} strokeWidth={2.5} />
+                    </CardButton>
+                    <CardButton
+                      onClick={() => onMoveTo(task, nextKey)}
+                      disabled={!nextKey}
+                      label={nextKey ? `Move to ${COLUMN_LABEL[nextKey]}` : 'Nothing after this stage'}
+                    >
+                      <ChevronRightIcon size={16} strokeWidth={2.5} />
+                    </CardButton>
+                  </>
+                )}
               </span>
             )
           }
@@ -316,7 +366,7 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
 // the hidden ones. `visibleIds` is the filter, and only rendering consults it.
 export default function TaskBoard({
   tasks, canManage, visibleIds, filtered = false,
-  onEdit, onDelete, onArchive, onRestore, onReorder, onAdd, onQuickAdd, onClearDone,
+  onEdit, onDelete, onRestore, onReorder, onAdd, onQuickAdd, onClearDone,
 }) {
   const wide = useDragEnabled();
   // A drag measures the gaps between the cards on screen. With cards hidden,
@@ -609,7 +659,6 @@ export default function TaskBoard({
                     onSwipeStart={() => { suppressClick.current = true; }}
                     onOpen={() => openTask(task)}
                     onDelete={onDelete}
-                    onArchive={onArchive}
                     onRestore={onRestore}
                     onMoveTo={handleMoveTo}
                   />

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PlusIcon, XIcon } from 'lucide-react';
+import { ArchiveIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import LazyMarkdownEditor from '../shared/LazyMarkdownEditor';
@@ -10,8 +10,9 @@ const TITLE_MAX = 200;
 
 // Create and edit are the same form. `task` null means create; `column` is the
 // column a new card lands in.
-export default function TaskEditorModal({ isOpen, task, directors = [], column = 'todo', onClose, onSave }) {
+export default function TaskEditorModal({ isOpen, task, directors = [], column = 'todo', onClose, onSave, onDelete, onArchive }) {
   const { user } = useAuth();
+  const [confirming, setConfirming] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   // Kept, not chosen: a task's colour is no longer drawn on the board, so
@@ -59,6 +60,7 @@ export default function TaskEditorModal({ isOpen, task, directors = [], column =
       setItem('');
       setError('');
       setSaving(false);
+      setConfirming(false);
     }
   }
 
@@ -271,7 +273,58 @@ export default function TaskEditorModal({ isOpen, task, directors = [], column =
 
         {error && <p className="font-ninja text-sm text-ninja-red">{error}</p>}
 
-        <div className="flex justify-end gap-2 pt-1">
+        {/* Archive and Delete live here now. The board's cards carry two arrows
+            where a menu holding both used to be, and a card's own dialog is the
+            place to look for what else can be done to it — it is also the route
+            that does not need a pointer, which the board's gestures do. */}
+        <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+          {task && (onArchive || onDelete) && (
+            <div className="flex items-center gap-1 mr-auto">
+              {onArchive && !confirming && (
+                <button
+                  type="button"
+                  onClick={() => { onArchive(task); onClose(); }}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-ninja text-xs font-bold text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg transition-colors"
+                >
+                  <ArchiveIcon size={14} strokeWidth={2.25} />
+                  Archive
+                </button>
+              )}
+              {onDelete && (confirming ? (
+                // The word, not a glyph, and asked before it happens. The board
+                // deletes on a gesture that takes a hundred pixels of intent;
+                // a button under a pointer has no such distance in it.
+                <>
+                  <span className="font-ninja text-xs text-ninja-muted">Delete for good?</span>
+                  <button
+                    type="button"
+                    onClick={() => { onDelete(task); onClose(); }}
+                    className="px-2.5 py-1.5 rounded-lg bg-ninja-red text-white font-ninja text-xs font-bold transition-transform duration-150 ease-[var(--ease-out)] active:scale-95"
+                  >
+                    Delete
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirming(false)}
+                    className="px-2.5 py-1.5 rounded-lg bg-ninja-bg text-ninja-navy font-ninja text-xs font-bold transition-transform duration-150 ease-[var(--ease-out)] active:scale-95"
+                  >
+                    Keep
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirming(true)}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-ninja text-xs font-bold text-ninja-red hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                >
+                  <Trash2Icon size={14} strokeWidth={2.25} />
+                  Delete
+                </button>
+              ))}
+            </div>
+          )}
           <Button variant="secondary" size="sm" onClick={onClose} disabled={saving}>
             Cancel
           </Button>

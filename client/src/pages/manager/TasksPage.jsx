@@ -273,7 +273,6 @@ export default function TasksPage() {
             onAdd={(column) => setEditor({ column })}
             onEdit={(task) => setEditor({ task })}
             onDelete={remove}
-            onArchive={archive}
             onRestore={restore}
             onReorder={reorder}
             onQuickAdd={quickAdd}
@@ -289,6 +288,8 @@ export default function TasksPage() {
         column={editor?.column ?? 'todo'}
         onClose={() => setEditor(null)}
         onSave={save}
+        onDelete={canManage ? remove : undefined}
+        onArchive={canManage ? archive : undefined}
       />
     </Layout>
   );
