@@ -10,7 +10,10 @@ import { MoreHorizontalIcon } from 'lucide-react';
 //
 // `children` is a render prop so the consumer can swap the panel's contents for
 // its own confirm step without the menu closing underneath it.
-export default function ActionMenu({ children, label = 'Actions', align = 'right', className = '', onClosed }) {
+// `panelClassName` dresses the panel itself, not the trigger's wrapper. The
+// task board hands it the board's own glass so a menu opening over a pane of
+// glass is made of the same thing, only thicker.
+export default function ActionMenu({ children, label = 'Actions', align = 'right', className = '', panelClassName = '', onClosed }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef(null);
   const panelRef = useRef(null);
@@ -92,7 +95,7 @@ export default function ActionMenu({ children, label = 'Actions', align = 'right
             transition={{ duration: 0.14, ease: [0.23, 1, 0.32, 1] }}
             className={`absolute z-20 top-full mt-1 min-w-[9.5rem] p-1 rounded-xl bg-white border border-ninja-border shadow-lg dark:shadow-[0_12px_32px_rgb(0_0_0/0.45)] ${
               align === 'right' ? 'right-0' : 'left-0'
-            }`}
+            } ${panelClassName}`}
           >
             {typeof children === 'function' ? children({ close }) : children}
           </motion.div>
