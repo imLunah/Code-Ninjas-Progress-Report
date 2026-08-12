@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { PlusIcon, ArrowLeftIcon } from 'lucide-react';
+import { ArrowLeftIcon } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import TaskBoard from '../../components/manager/TaskBoard';
 import TaskEditorModal from '../../components/manager/TaskEditorModal';
@@ -88,26 +88,16 @@ export default function TasksPage() {
             Dashboard
           </Link>
 
-          <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h1 className="text-3xl font-black font-ninja text-ninja-navy tracking-tight">Tasks</h1>
-              <p className="mt-1 font-ninja text-sm text-ninja-muted text-pretty">
-                {canManage
-                  ? 'Assign tasks to this location'
-                  : "You're viewing another center, so this board is read-only."}
-              </p>
-            </div>
-
-            {canManage && (
-              <button
-                type="button"
-                onClick={() => setEditor({ column: 'todo' })}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-ninja-blue hover:bg-ninja-blue-hover text-white font-ninja text-sm font-bold transition duration-150 ease-[var(--ease-out)] active:scale-[0.97]"
-              >
-                <PlusIcon size={16} strokeWidth={2.5} />
-                New task
-              </button>
-            )}
+          {/* No New task button up here. Every column carries its own + and an
+              Add task row at its foot, and those land the card where it
+              belongs; a button in the header has to guess a column. */}
+          <div className="mt-3">
+            <h1 className="text-3xl font-black font-ninja text-ninja-navy tracking-tight">Tasks</h1>
+            <p className="mt-1 font-ninja text-sm text-ninja-muted text-pretty">
+              {canManage
+                ? 'Assign tasks to this location'
+                : "You're viewing another center, so this board is read-only."}
+            </p>
           </div>
         </motion.header>
 
