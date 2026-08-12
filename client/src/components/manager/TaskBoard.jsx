@@ -125,7 +125,14 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
   // not once per frame.
   const [armed, setArmed] = useState(false);
   const armedRef = useRef(false);
-  const arm = (on) => { armedRef.current = on; setArmed(on); };
+  const arm = (on) => {
+    armedRef.current = on;
+    // Cleared so the keyframe can play again. A swipe turns the animation off
+    // outright (see `paint`), and that `none` would otherwise still be sitting
+    // on the node the next time the card is held.
+    if (on && faceRef.current) faceRef.current.style.animation = '';
+    setArmed(on);
+  };
 
   useEffect(() => () => { clearTimeout(timer.current); clearTimeout(holdTimer.current); }, []);
 
@@ -148,8 +155,14 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
     const face = faceRef.current;
     if (!face) return;
     const tilt = reduce ? '' : ` rotate(${clamp(dx / 26, -MAX_TILT, MAX_TILT)}deg)`;
+    // An animation outranks an inline transform for as long as it is running,
+    // so the arming keyframe has to be called off before the swipe can move the
+    // card. Its final size is carried on by hand instead, and the card stays
+    // proud of the column all the way across.
+    const lift = armedRef.current ? ' scale(1.03)' : '';
+    face.style.animation = 'none';
     face.style.transition = 'none';
-    face.style.transform = `translate3d(${dx}px, 0, 0)${tilt}`;
+    face.style.transform = `translate3d(${dx}px, 0, 0)${tilt}${lift}`;
     face.style.opacity = String(1 - Math.min(Math.abs(dx) / 340, 0.55));
 
     // Only the side being pulled towards is lit, so the card is never offering
@@ -213,6 +226,7 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
       faceRef.current.style.transition = '';
       faceRef.current.style.transform = '';
       faceRef.current.style.opacity = '';
+      faceRef.current.style.animation = '';
     }, 460);
   };
 
@@ -362,7 +376,7 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
         className={`${CARD} ${TASK_SURFACE} p-3.5 relative transition-shadow duration-150 ${
           grabbable ? 'cursor-grab' : ''
         } ${swipeable ? 'select-none' : ''} ${
-          armed ? 'ring-2 ring-ninja-red' : ''
+          armed ? 'ring-2 ring-ninja-red task-armed z-10' : ''
         } ${landed && !reduce ? 'task-landing' : ''}`}
       >
         <TaskCardFace

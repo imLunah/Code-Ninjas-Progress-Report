@@ -237,8 +237,26 @@ textarea:focus-visible {
   to   { transform: scale(1); }
 }
 .task-landing { animation: taskLand 420ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* A held card arming for deletion. It comes up off the column and shakes its
+   head once, which is the card saying it is no longer doing the thing it was
+   about to do. It stays slightly proud of its neighbours for as long as the
+   finger is down, so armed is a state you can see and not just a moment you
+   might have missed. `forwards` holds that last frame; the swipe clears the
+   animation outright when it starts writing transforms of its own. */
+@keyframes taskArm {
+  0%   { transform: scale(1)     rotate(0deg); }
+  30%  { transform: scale(1.035) rotate(-1.2deg); }
+  55%  { transform: scale(1.035) rotate(1.1deg); }
+  80%  { transform: scale(1.032) rotate(-0.5deg); }
+  100% { transform: scale(1.03)  rotate(0deg); }
+}
+.task-armed { animation: taskArm 340ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
 @media (prefers-reduced-motion: reduce) {
   .task-landing { animation: none; }
+  /* The size still says it, without the shake saying it twice. */
+  .task-armed { animation: none; transform: scale(1.02); }
 }
 
 /* Glass is a preference, not a requirement. Someone who has asked their system
