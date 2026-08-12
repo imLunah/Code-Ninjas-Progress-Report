@@ -172,14 +172,17 @@ textarea:focus-visible {
     0 2px 8px rgb(0 0 0 / 0.35);
 }
 
-/* A menu is the same material, frosted. Apple's rule for stacked translucency
-   is that a floating surface reads heavier than the one it sits on, and a menu
-   is the heaviest thing on this board: it is asking a question, and the card's
-   own sentence must not still be readable through the answers. So the blur
-   goes wide enough to reduce what is behind to colour, and the pane goes
-   nearly opaque. Clear glass belongs to the cards, which have nothing to say
-   over anything. */
-.task-card.task-menu {
+/* ── Floating menus: frosted glass ──
+   Every action menu in the app, not just the board's. A menu is the heaviest
+   surface on screen because it is the one asking a question: the blur goes
+   wide enough to reduce what is behind it to colour, and the pane goes nearly
+   opaque, so whatever it opened over cannot still be read through the answers.
+   Clear glass is for surfaces with nothing to say over anything.
+
+   Two class names deep for the same reason as the cards: `.dark .bg-white` and
+   `.dark .shadow-lg` are both two deep, and a single class would tie and lose
+   on source order, repainting the panel grey and flattening its shadow. */
+.glass-panel.glass-frost {
   background-color: rgb(255 255 255 / 0.93);
   backdrop-filter: blur(30px) saturate(1.6);
   -webkit-backdrop-filter: blur(30px) saturate(1.6);
@@ -189,7 +192,7 @@ textarea:focus-visible {
     0 16px 40px -12px rgb(15 23 42 / 0.35),
     0 2px 8px rgb(15 23 42 / 0.1);
 }
-.dark .task-card.task-menu {
+.dark .glass-panel.glass-frost {
   background-color: rgb(37 44 62 / 0.94);
   border-color: rgb(255 255 255 / 0.14);
   box-shadow:
@@ -197,6 +200,15 @@ textarea:focus-visible {
     inset 0 0 0 1px rgb(255 255 255 / 0.06),
     0 20px 48px -16px rgb(0 0 0 / 0.7),
     0 4px 12px rgb(0 0 0 / 0.4);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass-panel.glass-frost {
+    background-color: #fff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .dark .glass-panel.glass-frost { background-color: #252c3e; }
 }
 
 /* An open menu hangs off the bottom of its card, and every glass pane is its

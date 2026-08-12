@@ -73,7 +73,6 @@ function TaskCard({ task, canManage, grabbable, onOpen, onDelete, onMoveTo, card
               <ActionMenu
                 label="Task actions"
                 className="-mr-1 -mt-1"
-                panelClassName={`${TASK_SURFACE} task-menu`}
                 onClosed={() => setConfirming(false)}
               >
                 {({ close }) =>
