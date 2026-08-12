@@ -1,18 +1,16 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeftIcon, LayoutGridIcon, ListIcon } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import TaskBoard from '../../components/manager/TaskBoard';
 import TaskList from '../../components/manager/TaskList';
-import TaskFilterBar from '../../components/manager/TaskFilterBar';
 import TaskEditorModal from '../../components/manager/TaskEditorModal';
 import Segmented from '../../components/ui/Segmented';
 import { Skeleton, SkeletonList } from '../../components/ui/Skeleton';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { COLUMNS, cardFields, reorderPayload } from '../../lib/taskBoard';
-import { EMPTY_FILTERS, filterTasks, isFiltered } from '../../lib/taskFilters';
 
 const EASE = [0.23, 1, 0.32, 1];
 
@@ -29,7 +27,6 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editor, setEditor] = useState(null); // { task } | { column } | null
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [showArchived, setShowArchived] = useState(false);
   const [directors, setDirectors] = useState([]);
 
@@ -68,14 +65,6 @@ export default function TasksPage() {
     return () => { alive = false; };
   }, [user?.activeLocation?.id]);
 
-  const visible = useMemo(
-    () => filterTasks(tasks, filters, { userId: user?.id }),
-    [tasks, filters, user?.id]
-  );
-  // Memoised: a bare Set in the render body would be a new identity every
-  // render and re-render every card on the board with it.
-  const visibleIds = useMemo(() => new Set(visible.map((t) => t.id)), [visible]);
-  const filtered = isFiltered(filters);
 
   // Reordering is optimistic: the card is already under the pointer where the
   // director dropped it, and snapping it back while a round trip finishes would
@@ -218,27 +207,42 @@ export default function TasksPage() {
                   : "You're viewing another center, so this board is read-only."}
               </p>
             </div>
-            <Segmented
-              options={VIEWS}
-              value={view}
-              onChange={chooseView}
-              label="How to show the tasks"
-              layoutId="tasksViewPill"
-              size="sm"
-            />
+            <div className="flex items-center gap-2">
+              {/* Not a filter — a different fetch, and the only thing left from
+                  the row of controls that used to sit under this header. It
+                  lives beside the view switch because both are questions about
+                  what the page is showing rather than about any one card. */}
+              <button
+                type="button"
+                aria-pressed={showArchived}
+                onClick={() => setShowArchived((v) => !v)}
+                className={`px-3 py-1.5 rounded-full font-ninja text-xs font-semibold border transition-colors duration-150 ease-[var(--ease-out)] active:scale-95 ${
+                  showArchived
+                    ? 'bg-ninja-navy text-white border-ninja-navy dark:bg-white dark:text-ninja-bg'
+                    : 'bg-transparent text-ninja-muted border-transparent hover:text-ninja-navy hover:border-ninja-border'
+                }`}
+              >
+                Recently deleted
+              </button>
+              <Segmented
+                options={VIEWS}
+                value={view}
+                onChange={chooseView}
+                label="How to show the tasks"
+                layoutId="tasksViewPill"
+                size="sm"
+              />
+            </div>
           </div>
-        </motion.header>
 
-        <TaskFilterBar
-          filters={filters}
-          onChange={setFilters}
-          directors={directors}
-          showArchived={showArchived}
-          onShowArchived={setShowArchived}
-          boardView={view === 'board'}
-          centerName={user?.activeLocation?.name}
-          meId={user?.id}
-        />
+          {/* The rule, where the cards it applies to are. A bin that empties
+              itself has to say so before it does, not after. */}
+          {showArchived && (
+            <p className="mt-3 font-ninja text-xs text-ninja-muted">
+              Deleted tasks are kept here for 14 days, then removed for good.
+            </p>
+          )}
+        </motion.header>
 
         {error && (
           <p role="status" className="font-ninja text-sm text-ninja-red">{error}</p>
@@ -261,7 +265,7 @@ export default function TasksPage() {
           )
         ) : view === 'list' ? (
           <TaskList
-            tasks={visible}
+            tasks={tasks}
             canManage={canManage}
             directors={directors}
             centerName={user?.activeLocation?.name}
@@ -274,8 +278,7 @@ export default function TasksPage() {
         ) : (
           <TaskBoard
             tasks={tasks}
-            visibleIds={visibleIds}
-            filtered={filtered || showArchived}
+            filtered={showArchived}
             canManage={canManage}
             onAdd={(column) => setEditor({ column })}
             onEdit={(task) => setEditor({ task })}

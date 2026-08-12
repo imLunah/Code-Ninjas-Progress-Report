@@ -38,9 +38,9 @@ const DRAG_THRESHOLD = 5;
 // only ever the *fast* way to move a card — never the only way. The two arrows
 // on every card do the same job a press at a time, which is what makes the
 // board usable on a phone and with a keyboard. Below this width the columns
-// wrap, and wrapped columns
-// share the x axis that the drop target is read from, so dragging is switched
-// off rather than left to guess. Four columns only sit in one row at xl, which
+// wrap, and wrapped columns share the x axis the drop target is read from, so
+// dragging is switched off rather than left to guess. Four columns only sit in
+// one row at xl, which
 // is why this tracks the grid's last breakpoint and must move with it.
 const DRAG_MIN_WIDTH = 1280;
 
@@ -72,8 +72,8 @@ function useDragEnabled() {
 // deleted into Recently deleted either way, so a hold nobody meant is a card
 // that comes back.
 //
-// Offered only where the reorder drag is not — below xl, or while a filter is
-// on. Both gestures read a horizontal pull, and on a board whose four columns
+// Offered only where the reorder drag is not — below xl, or while Recently
+// deleted is open. Both read a horizontal pull, and on a board whose columns
 // sit side by side that pull already means "move this to In progress". One axis,
 // one meaning, decided by which mode the board is in. Which leaves the gesture
 // exactly where it is worth most: the phone, where dragging is off.
@@ -429,12 +429,11 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
 
 /* -------------------------------------------------------------- board -- */
 
-// `tasks` is always the WHOLE board, even while a filter is on. Every mutation
-// reads it, because moveTask restamps position across every column: handed a
-// filtered subset it would renumber the visible cards and scramble the order of
-// the hidden ones. `visibleIds` is the filter, and only rendering consults it.
+// `tasks` is the WHOLE board. Every mutation reads it, because moveTask
+// restamps position across every column: handed a subset it would renumber the
+// cards it could see and scramble the order of the ones it could not.
 export default function TaskBoard({
-  tasks, canManage, visibleIds, filtered = false,
+  tasks, canManage, filtered = false,
   onEdit, onDelete, onRestore, onReorder, onAdd, onQuickAdd, onClearDone,
 }) {
   const wide = useDragEnabled();
@@ -641,7 +640,7 @@ export default function TaskBoard({
       {COLUMNS.map((col) => {
         // The held card leaves the list entirely — it is being drawn over the
         // page — and a placeholder stands in the slot it would drop into.
-        const all = (grouped[col.key] || []).filter((t) => !visibleIds || visibleIds.has(t.id));
+        const all = grouped[col.key] || [];
         const items = all.filter((t) => t.id !== held?.task.id);
         const isTarget = held && target?.key === col.key;
         const at = isTarget ? Math.min(target.index, items.length) : -1;
