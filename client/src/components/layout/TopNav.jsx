@@ -49,12 +49,7 @@ export default function TopNav({ onOpenBug }) {
     'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-ninja text-sm font-semibold text-left transition-colors';
 
   return (
-    <header
-      // See the note in Sidebar: the task board treats the nav as the way off
-      // the board, whichever edge the nav is living on.
-      data-nav-root
-      className="hidden lg:flex sticky top-0 z-40 h-16 items-center gap-6 bg-white border-b border-ninja-border px-6 flex-shrink-0"
-    >
+    <header className="hidden lg:flex sticky top-0 z-40 h-16 items-center gap-6 bg-white border-b border-ninja-border px-6 flex-shrink-0">
       <Link to="/" className="flex-shrink-0 outline-none" aria-label="DojoLink">
         <Logo variant="lockup" className="h-8 text-ninja-navy" />
       </Link>
