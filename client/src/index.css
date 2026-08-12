@@ -166,14 +166,17 @@ textarea:focus-visible {
     0 2px 8px rgb(0 0 0 / 0.3);
 }
 
-/* A menu is the same material, thicker. Apple's rule for stacked translucency
-   is that a floating surface reads heavier than the one it sits on: more blur,
-   a brighter rim, a deeper shadow. Without that, glass on glass is two clear
-   panes and the words on both fight each other. */
+/* A menu is the same material, frosted. Apple's rule for stacked translucency
+   is that a floating surface reads heavier than the one it sits on, and a menu
+   is the heaviest thing on this board: it is asking a question, and the card's
+   own sentence must not still be readable through the answers. So the blur
+   goes wide enough to reduce what is behind to colour, and the pane goes
+   nearly opaque. Clear glass belongs to the cards, which have nothing to say
+   over anything. */
 .task-card.task-menu {
-  background-color: rgb(255 255 255 / 0.82);
-  backdrop-filter: blur(20px) saturate(1.8);
-  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  background-color: rgb(255 255 255 / 0.93);
+  backdrop-filter: blur(30px) saturate(1.6);
+  -webkit-backdrop-filter: blur(30px) saturate(1.6);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.9),
     inset 0 0 0 1px rgb(255 255 255 / 0.4),
@@ -181,7 +184,7 @@ textarea:focus-visible {
     0 2px 8px rgb(15 23 42 / 0.1);
 }
 .dark .task-card.task-menu {
-  background-color: rgb(37 44 62 / 0.78);
+  background-color: rgb(37 44 62 / 0.94);
   border-color: rgb(255 255 255 / 0.14);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.16),
