@@ -78,9 +78,9 @@ const DRAG_THRESHOLD = 5;
 // on every card do the same job a press at a time, which is what makes the
 // board usable on a phone and with a keyboard. Below this width the columns
 // wrap, and wrapped columns share the x axis the drop target is read from, so
-// dragging is switched off rather than left to guess. Four columns only sit in
-// one row at xl, which
-// is why this tracks the grid's last breakpoint and must move with it.
+// dragging is switched off rather than left to guess. The columns only sit in
+// one row at xl, which is why this tracks the grid's last breakpoint and must
+// move with it.
 const DRAG_MIN_WIDTH = 1280;
 
 function useDragEnabled() {
@@ -881,7 +881,7 @@ export default function TaskBoard({
                 onClick={onClearDone}
                 className="mt-3 w-full px-3 py-2.5 rounded-xl bg-transparent border border-transparent hover:border-ninja-border hover:text-ninja-navy font-ninja text-sm text-ninja-muted text-left transition-colors duration-150"
               >
-                Clear
+                Clear All
               </button>
             )}
 

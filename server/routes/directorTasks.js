@@ -7,7 +7,7 @@ const { requireManager, requireOwnLocation } = require('../middleware/auth');
 // Senseis never reach this — every route is requireManager, and writes add
 // requireOwnLocation so a director browsing another center gets it read-only.
 
-const COLUMNS = ['todo', 'doing', 'review', 'done'];
+const COLUMNS = ['todo', 'doing', 'done'];
 const COLORS = ['none', 'blue', 'amber', 'green', 'purple', 'red'];
 
 const TITLE_MAX = 200;

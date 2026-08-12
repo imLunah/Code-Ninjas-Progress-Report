@@ -5,14 +5,13 @@
 // "2 in progress" can't come to mean something different from the column the
 // board draws under the same name.
 
-// Order here IS the board's left-to-right order, the order the Move-to menu
-// lists, and the order moveTask restamps positions in. In review is inserted
-// rather than appended for that reason: the menu's arrow points the way a card
-// travels by comparing indexes, and appending would make Done come before it.
+// Order here IS the board's left-to-right order, the order the arrows on a card
+// move it in, and the order moveTask restamps positions in. Anything added has
+// to go in at the right place rather than on the end: a card travels by index,
+// so a stage appended after Done would be a stage after finished.
 export const COLUMNS = [
   { key: 'todo', label: 'To do' },
   { key: 'doing', label: 'In progress' },
-  { key: 'review', label: 'In review' },
   { key: 'done', label: 'Done' },
 ];
 
