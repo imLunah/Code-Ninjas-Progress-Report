@@ -388,8 +388,8 @@ export default function TaskBoard({
                   value={quickAdd.key === col.key ? quickAdd.text : ''}
                   onChange={(e) => setQuickAdd({ key: col.key, text: e.target.value })}
                   onKeyDown={(e) => { if (e.key === 'Escape') { setQuickAdd({ key: null, text: '' }); e.currentTarget.blur(); } }}
-                  placeholder="+ Add a task"
-                  aria-label={`Add a task to ${col.label}`}
+                  placeholder="+ Quick add"
+                  aria-label={`Quick add a task to ${col.label}`}
                   className="w-full px-3 py-2.5 rounded-xl bg-transparent border border-transparent hover:border-ninja-border focus:border-ninja-blue focus:bg-white dark:focus:bg-white/5 font-ninja text-sm text-ninja-navy placeholder:text-ninja-muted transition-colors duration-150"
                 />
               </form>
