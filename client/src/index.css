@@ -156,20 +156,21 @@ textarea:focus-visible {
     0 8px 20px -10px rgb(15 23 42 / 0.22),
     0 1px 2px rgb(15 23 42 / 0.06);
 }
-/* Dark glass is a dark veil, not a light one. A pane lifted with white sits
-   in FRONT of a dark page and reads as a lighter card; the same pane tinted
-   toward black sits behind it, which is what a window does at night. The value
-   is the mobile nav's own #0c0f1a at 55%, so the two are the same material.
-   The lip and rim stay bright: they are the light on the edge, and they are
-   what keeps a darker pane from reading as a hole. */
+/* Dark glass is a dark veil, not a light one: a pane lifted with white sits in
+   FRONT of a dark page and reads as a lighter card, where glass should sit
+   behind it. But near-black went the other way and dropped the card out of the
+   board altogether. The veil is the app's own card colour instead, at 70%,
+   which lands between the column it sits on and the solid card it would be if
+   it were not glass. The lip and rim stay bright: they are the light on the
+   edge, and they are what keeps a darker pane from reading as a hole. */
 .dark .task-card.task-glass {
-  background-color: rgb(12 15 26 / 0.55);
-  border-color: rgb(255 255 255 / 0.1);
+  background-color: rgb(37 44 62 / 0.7);
+  border-color: rgb(255 255 255 / 0.11);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.16),
+    inset 0 1px 0 rgb(255 255 255 / 0.18),
     inset 0 0 0 1px rgb(255 255 255 / 0.05),
-    0 12px 28px -12px rgb(0 0 0 / 0.6),
-    0 2px 8px rgb(0 0 0 / 0.35);
+    0 12px 28px -12px rgb(0 0 0 / 0.55),
+    0 2px 8px rgb(0 0 0 / 0.32);
 }
 
 /* ── Floating menus: frosted glass ──
