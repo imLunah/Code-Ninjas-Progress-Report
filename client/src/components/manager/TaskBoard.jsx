@@ -37,13 +37,19 @@ const TRASH_MS = 200;
 // standard deviations, which is what the droplet in between is for.
 const GOO_REACH = 260;
 
-// The bin is its own thing, at its own coordinates, and belongs to nothing on
-// the page. It used to be measured off the nav, which made it the nav's size
-// and the nav's shape — and the sidebar is a spring-animated width, so a drag
-// begun mid-collapse stretched the red into whatever the sidebar happened to be
-// at that instant. A band pinned to the left edge cannot be distorted by
-// anything else moving.
-const TRASH_W = 200;  // px of the left edge that deletes what is dropped on it
+// The bin is the gutter: everything to the left of where the board actually
+// starts. Measured off the board and not off the nav, which is the distinction
+// that matters — the sidebar is a spring-animated width, and reading its rect
+// mid-collapse is how the red used to end up drawn to a shape that no longer
+// existed. The board's own left edge is wherever the layout has finished
+// putting it, whatever the nav is doing to get there.
+//
+// So a collapsed sidebar makes a narrower bin rather than one that reaches into
+// the To do column. Narrow is not the same as hard to hit: the reach below
+// telegraphs the thing from 260px out, and the gesture is "carry it left until
+// it stops being on the board", which is true at any width.
+const TRASH_MIN_W = 72;   // never thinner than this, even with no gutter at all
+const TRASH_MAX_W = 240;  // and never a bin so wide it stops reading as a margin
 
 // The goo filter blurs everything it is given and then cuts the result back to
 // a hard edge, which rounds every corner it finds. Given a rectangle the size of
@@ -54,9 +60,10 @@ const BLEED = 100;
 
 // Solid across the band, then away to nothing over the reach, so the red thins
 // out towards the board instead of ending on a line. Measured from the layer's
-// own left edge, which starts a bleed to the left of the window's.
-const MASK =
-  `linear-gradient(to right, rgb(0 0 0) 0px, rgb(0 0 0) ${BLEED + TRASH_W * 0.7}px, rgb(0 0 0 / 0) ${BLEED + TRASH_W + GOO_REACH}px)`;
+// own left edge, which starts a bleed to the left of the window's, and built
+// per drag now that the band's width is whatever the gutter turned out to be.
+const maskFor = (w) =>
+  `linear-gradient(to right, rgb(0 0 0) 0px, rgb(0 0 0) ${BLEED + w * 0.7}px, rgb(0 0 0 / 0) ${BLEED + w + GOO_REACH}px)`;
 
 // Vertical rhythm between cards. The drop maths has to know it, because the
 // space a lifted card frees up is its own height plus one gap.
@@ -491,6 +498,7 @@ export default function TaskBoard({
   // pool over the nav, a bead on the card, and one droplet between them. Written
   // by hand on every pointermove for the same reason the overlay is — this is a
   // per-frame value, and state would re-render the board to carry it.
+  const boardRef = useRef(null);
   const gooRef = useRef(null);
   const gooBeadRef = useRef(null);
   const gooDropRef = useRef(null);
@@ -649,9 +657,11 @@ export default function TaskBoard({
       s[key] = { col: colEl.getBoundingClientRect(), mids };
     }
 
-    // Read once, like everything else here, and read off the viewport rather
-    // than off any element on the page.
-    s.trash = { w: TRASH_W, h: window.innerHeight };
+    // Read once, like everything else here. The board's left edge is the one
+    // measurement that says where the gutter ends, and it is taken at the same
+    // instant as every other rect in this snapshot.
+    const boardLeft = boardRef.current?.getBoundingClientRect().left ?? TRASH_MAX_W;
+    s.trash = { w: clamp(boardLeft, TRASH_MIN_W, TRASH_MAX_W), h: window.innerHeight };
 
     snap.current = s;
     info.current = { id: task.id, dx: startX - rect.left, dy: startY - rect.top, w: rect.width, h: rect.height };
@@ -760,7 +770,7 @@ export default function TaskBoard({
   }, [tasks, grouped, onReorder]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5 items-start">
+    <div ref={boardRef} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5 items-start">
       {COLUMNS.map((col) => {
         // The held card leaves the list entirely — it is being drawn over the
         // page — and a placeholder stands in the slot it would drop into.
@@ -941,8 +951,8 @@ export default function TaskBoard({
               // It goes on the whole layer afterwards instead, which fades the
               // reaching bead along with the band and is why the red thins out
               // towards the board rather than stopping at a line.
-              maskImage: MASK,
-              WebkitMaskImage: MASK,
+              maskImage: maskFor(held.trash.w),
+              WebkitMaskImage: maskFor(held.trash.w),
               opacity: 0.07,
             }}
           >
