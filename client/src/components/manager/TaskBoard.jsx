@@ -34,7 +34,7 @@ const TRASH_MS = 200;
 // And how long the card takes to stop being a card. Longer than the plain
 // delete: there is a shape change to watch here, and 200ms is not enough of it
 // to read as anything but a disappearance.
-const SWALLOW_MS = 380;
+const SWALLOW_MS = 520;
 
 // How near the bin a card has to be before the red starts reaching for it, and
 // how much blur the goo filter has to work with. The two are related: the
@@ -621,7 +621,7 @@ export default function TaskBoard({
     // Eased so the reach is slow to start and quick to close, which is what
     // makes it read as something being pulled rather than something growing.
     const pull = t * t;
-    g.style.opacity = String(0.09 + 0.10 * pull);
+    g.style.opacity = String(0.09 + 0.17 * pull);
 
     // Positions are viewport coordinates; the layer's own origin sits a reach to
     // the left of the band and a bleed above the window.
@@ -756,53 +756,84 @@ export default function TaskBoard({
         if (o && r) {
           const box = info.current;
           const y = lastPoint.current.y;
+          // Where the card already is, so it fades in place rather than making
+          // a trip of its own across the blob that is standing in for it.
+          const bxCard = lastPoint.current.x - box.dx;
 
           // The card goes first and quickly, rounding off as it goes. What is
           // left behind is the blob that has been standing in for it under the
           // filter all along, so the card does not vanish — it stops being a
           // card and carries on as liquid.
-          o.style.transition = `transform ${SWALLOW_MS * 0.55}ms var(--ease-out), opacity ${SWALLOW_MS * 0.4}ms linear`;
+          // The card hands over early — it is gone before the stretch is, so
+          // what is being pulled into the bin is liquid and not a picture of a
+          // card being dragged there.
+          o.style.transition = `transform ${SWALLOW_MS * 0.45}ms var(--ease-out), opacity ${SWALLOW_MS * 0.26}ms linear`;
           o.style.transform =
-            `translate3d(${r.left + r.w / 2 - box.w / 2}px, ${y - box.h / 2}px, 0) scale(0.55)`;
+            `translate3d(${bxCard}px, ${y - box.h / 2}px, 0) scale(0.88)`;
           o.style.opacity = '0';
 
-          // Thicker while it is being swallowed. The resting tint is set for a
-          // hint sitting in the margin; this is the one moment the red is the
-          // thing being looked at.
+          // Loud while it is being swallowed, and thicker: the resting tint is
+          // set for a hint sitting in a margin, and the swap to the heavier
+          // filter gives the stretch enough blur to hold together instead of
+          // snapping the moment it is pulled.
           const g = gooRef.current;
           if (g) {
-            g.style.transition = `opacity ${SWALLOW_MS}ms var(--ease-out)`;
-            g.style.opacity = '0.34';
+            g.style.filter = 'url(#taskGooThick)';
+            g.style.transition = `opacity ${SWALLOW_MS * 0.3}ms var(--ease-out)`;
+            g.style.opacity = '0.55';
           }
 
-          // And the blob is drawn in: over to the middle of the band, down to a
-          // bead, and round on the way. Through the filter that is a card
-          // stretching thin and letting go, which is the whole trick — nothing
-          // here is simulating a liquid, it is two shapes moving towards each
-          // other while something blurs and thresholds the gap between them.
+          // Then the blob does the whole thing in two moves, because one move
+          // is a shape travelling and two is a liquid being drawn in.
+          //
+          // It stretches first: the card's blob reaches into the band and
+          // squeezes thin doing it, the way something viscous goes narrow when
+          // it is pulled. Then it lets go of where it was and collapses into
+          // the pool. The bridge fattens on the way out and only breaks at the
+          // end, so the thread is the last thing left.
           const bead = gooBeadRef.current;
           const drop = gooDropRef.current;
           const originX = r.left - GOO_REACH;
-          const flow = `transform ${SWALLOW_MS}ms cubic-bezier(0.5, 0, 0.2, 1), ` +
-            `width ${SWALLOW_MS}ms cubic-bezier(0.5, 0, 0.2, 1), ` +
-            `height ${SWALLOW_MS}ms cubic-bezier(0.5, 0, 0.2, 1), ` +
-            `border-radius ${SWALLOW_MS}ms linear`;
+          const bx = lastPoint.current.x - box.dx;
+          const by = lastPoint.current.y - box.dy;
+          const stretchMs = Math.round(SWALLOW_MS * 0.45);
+          const ease = (ms, curve) =>
+            `width ${ms}ms ${curve}, height ${ms}ms ${curve}, ` +
+            `border-radius ${ms}ms linear, transform ${ms}ms ${curve}`;
+
+          const thin = Math.max(box.h * 0.52, 34);
           if (bead) {
-            bead.style.transition = flow;
-            bead.style.width = '54px';
-            bead.style.height = '54px';
-            bead.style.borderRadius = '27px';
+            bead.style.transition = ease(stretchMs, 'cubic-bezier(0.35, 0, 0.25, 1)');
+            bead.style.width = `${Math.max(r.left + r.w * 0.4 - bx, box.w)}px`;
+            bead.style.height = `${thin}px`;
+            bead.style.borderRadius = `${thin / 2}px`;
             bead.style.transform =
-              `translate3d(${r.left + r.w / 2 - 27 - originX}px, ${y - 27 + BLEED}px, 0)`;
+              `translate3d(${bx - originX}px, ${by + box.h / 2 - thin / 2 + BLEED}px, 0)`;
           }
           if (drop) {
-            // The bridge thins rather than disappearing, so the last thing to
-            // go is the thread between the card and the bin.
-            drop.style.transition = flow;
-            drop.style.width = '18px';
-            drop.style.height = '18px';
-            drop.style.borderRadius = '9px';
+            const fat = Math.max(thin * 0.8, 30);
+            drop.style.transition = ease(stretchMs, 'cubic-bezier(0.35, 0, 0.25, 1)');
+            drop.style.width = `${fat}px`;
+            drop.style.height = `${fat}px`;
+            drop.style.borderRadius = `${fat / 2}px`;
           }
+
+          setTimeout(() => {
+            const collapse = SWALLOW_MS - stretchMs;
+            if (bead) {
+              bead.style.transition = ease(collapse, 'cubic-bezier(0.6, 0, 0.2, 1)');
+              bead.style.width = '46px';
+              bead.style.height = '46px';
+              bead.style.borderRadius = '23px';
+              bead.style.transform =
+                `translate3d(${r.left + r.w / 2 - 23 - originX}px, ${y - 23 + BLEED}px, 0)`;
+            }
+            if (drop) {
+              drop.style.transition = ease(collapse, 'cubic-bezier(0.6, 0, 0.2, 1)');
+              drop.style.width = '0px';
+              drop.style.height = '0px';
+            }
+          }, stretchMs);
         }
         setTimeout(() => { clearDrag(); onDelete(task); }, o && r ? SWALLOW_MS : 0);
         return;
@@ -1012,6 +1043,18 @@ export default function TaskBoard({
                   in="soft"
                   type="matrix"
                   values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 14 -6"
+                />
+              </filter>
+              {/* The same thing with more blur to work with, swapped in for the
+                  swallow. More blur is more distance over which two shapes can
+                  find each other, which is what makes the stretch hold together
+                  instead of snapping the moment it is pulled. */}
+              <filter id="taskGooThick" x="-60%" y="-60%" width="220%" height="220%" colorInterpolationFilters="sRGB">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="34" result="soft" />
+                <feColorMatrix
+                  in="soft"
+                  type="matrix"
+                  values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 13 -5.5"
                 />
               </filter>
             </defs>
