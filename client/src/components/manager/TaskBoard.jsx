@@ -37,19 +37,18 @@ const TRASH_MS = 200;
 // standard deviations, which is what the droplet in between is for.
 const GOO_REACH = 260;
 
-// The bin is the gutter: everything to the left of where the board actually
-// starts. Measured off the board and not off the nav, which is the distinction
-// that matters — the sidebar is a spring-animated width, and reading its rect
-// mid-collapse is how the red used to end up drawn to a shape that no longer
-// existed. The board's own left edge is wherever the layout has finished
-// putting it, whatever the nav is doing to get there.
+// The bin is the gutter to the RIGHT of the last column — the track In review
+// used to occupy, which the grid still reserves. It went there when the board
+// dropped to three columns: the left margin belongs to the nav, and how wide it
+// was depended on whether the sidebar happened to be open, so a collapsed
+// sidebar put the red inside the To do column. The space past Done belongs to
+// nothing and does not move.
 //
-// So a collapsed sidebar makes a narrower bin rather than one that reaches into
-// the To do column. Narrow is not the same as hard to hit: the reach below
-// telegraphs the thing from 260px out, and the gesture is "carry it left until
-// it stops being on the board", which is true at any width.
-const TRASH_MIN_W = 72;   // never thinner than this, even with no gutter at all
-const TRASH_MAX_W = 240;  // and never a bin so wide it stops reading as a margin
+// Measured off the last column's own rect, not off the window or the grid: the
+// grid stretches the full width whether it has three children or four, so its
+// right edge says nothing about where the columns actually stop.
+const TRASH_MIN_W = 96;   // never thinner than this, even on a cramped window
+const TRASH_GAP = 12;     // breathing room between the last column and the band
 
 // The goo filter blurs everything it is given and then cuts the result back to
 // a hard edge, which rounds every corner it finds. Given a rectangle the size of
@@ -63,7 +62,7 @@ const BLEED = 100;
 // own left edge, which starts a bleed to the left of the window's, and built
 // per drag now that the band's width is whatever the gutter turned out to be.
 const maskFor = (w) =>
-  `linear-gradient(to right, rgb(0 0 0) 0px, rgb(0 0 0) ${BLEED + w * 0.7}px, rgb(0 0 0 / 0) ${BLEED + w + GOO_REACH}px)`;
+  `linear-gradient(to left, rgb(0 0 0) 0px, rgb(0 0 0) ${BLEED + w * 0.7}px, rgb(0 0 0 / 0) ${BLEED + w + GOO_REACH}px)`;
 
 // Vertical rhythm between cards. The drop maths has to know it, because the
 // space a lifted card frees up is its own height plus one gap.
@@ -547,8 +546,8 @@ export default function TaskBoard({
     setTarget(next);
   };
 
-  // A band down the left edge, so only how far across the pointer is matters.
-  const overTrash = (b, x) => Boolean(b) && x <= b.w;
+  // A band down the right edge, so only how far across the pointer is matters.
+  const overTrash = (b, x) => Boolean(b) && x >= b.left;
 
   const readTarget = (x, y) => {
     const s = snap.current;
@@ -597,9 +596,11 @@ export default function TaskBoard({
     const bx = x - box.dx;
     const by = y - box.dy;
 
-    // The band's edge is a vertical line, so the nearest point on it is
-    // straight out to the left of the card's leading edge.
-    const d = Math.max(0, bx - r.w);
+    // The band's edge is a vertical line, so the gap is measured straight out
+    // from the card's leading edge — its right one, now that the bin is over
+    // there.
+    const lead = bx + box.w;
+    const d = Math.max(0, r.left - lead);
     const t = clamp(1 - d / GOO_REACH, 0, 1);
 
     // Eased so the reach is slow to start and quick to close, which is what
@@ -607,14 +608,16 @@ export default function TaskBoard({
     const pull = t * t;
     g.style.opacity = String(0.07 + 0.17 * pull);
 
-    // Everything inside the layer is offset by the bleed, since the layer starts
-    // outside the window on three sides.
+    // Positions are viewport coordinates; the layer's own origin sits a reach to
+    // the left of the band and a bleed above the window.
+    const originX = r.left - GOO_REACH;
+    const originY = -BLEED;
     const put = (el, left, top, w, h, radius) => {
       if (!el) return;
       el.style.width = `${w}px`;
       el.style.height = `${h}px`;
       el.style.borderRadius = `${radius}px`;
-      el.style.transform = `translate3d(${left + BLEED}px, ${top + BLEED}px, 0)`;
+      el.style.transform = `translate3d(${left - originX}px, ${top - originY}px, 0)`;
     };
 
     // The card, at its own size. It needs no distance maths: the mask above
@@ -627,7 +630,7 @@ export default function TaskBoard({
     const bridge = Math.min(box.h, 120) * pull;
     put(
       gooDropRef.current,
-      (bx + Math.min(bx, r.w)) / 2 - bridge / 2,
+      (lead + Math.max(lead, r.left)) / 2 - bridge / 2,
       by + box.h / 2 - bridge / 2,
       bridge, bridge, bridge / 2
     );
@@ -657,11 +660,12 @@ export default function TaskBoard({
       s[key] = { col: colEl.getBoundingClientRect(), mids };
     }
 
-    // Read once, like everything else here. The board's left edge is the one
-    // measurement that says where the gutter ends, and it is taken at the same
-    // instant as every other rect in this snapshot.
-    const boardLeft = boardRef.current?.getBoundingClientRect().left ?? TRASH_MAX_W;
-    s.trash = { w: clamp(boardLeft, TRASH_MIN_W, TRASH_MAX_W), h: window.innerHeight };
+    // Read once, like everything else here: where the last column stops is where
+    // the bin starts, taken at the same instant as every other rect below.
+    const lastCol = colRefs.current[COLUMN_KEYS[COLUMN_KEYS.length - 1]];
+    const edge = (lastCol?.getBoundingClientRect().right ?? window.innerWidth - TRASH_MIN_W) + TRASH_GAP;
+    const left = Math.min(edge, window.innerWidth - TRASH_MIN_W);
+    s.trash = { left, w: window.innerWidth - left, h: window.innerHeight };
 
     snap.current = s;
     info.current = { id: task.id, dx: startX - rect.left, dy: startY - rect.top, w: rect.width, h: rect.height };
@@ -730,7 +734,7 @@ export default function TaskBoard({
         if (o && r) {
           o.style.transition = `transform ${TRASH_MS}ms var(--ease-out), opacity ${TRASH_MS}ms linear`;
           o.style.transform =
-            `translate3d(${r.w / 2 - info.current.w / 2}px, ${lastPoint.current.y - info.current.h / 2}px, 0) scale(0.35)`;
+            `translate3d(${r.left + r.w / 2 - info.current.w / 2}px, ${lastPoint.current.y - info.current.h / 2}px, 0) scale(0.35)`;
           o.style.opacity = '0';
         }
         setTimeout(() => { clearDrag(); onDelete(task); }, o && r ? TRASH_MS : 0);
@@ -769,6 +773,9 @@ export default function TaskBoard({
     onReorder(moveTask(tasks, task.id, key, (grouped[key] || []).length));
   }, [tasks, grouped, onReorder]);
 
+  // Four tracks for three columns. The empty one is not a gap the layout forgot
+  // to close — it is where a card goes to be deleted, and closing it would put
+  // the bin back on top of a column the way the left margin used to.
   return (
     <div ref={boardRef} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5 items-start">
       {COLUMNS.map((col) => {
@@ -863,9 +870,7 @@ export default function TaskBoard({
                   because there it has nothing else to say. */}
               {items.length === 0 && !canManage && (
                 <p className="font-ninja text-xs text-ninja-muted px-1 py-3">
-                  {col.key === 'done' ? 'Nothing finished yet.'
-                    : col.key === 'review' ? 'Nothing waiting.'
-                    : 'Nothing here.'}
+                  {col.key === 'done' ? 'Nothing finished yet.' : 'Nothing here.'}
                 </p>
               )}
             </div>
@@ -943,7 +948,7 @@ export default function TaskBoard({
             aria-hidden="true"
             className="fixed z-[58] pointer-events-none"
             style={{
-              left: -BLEED,
+              left: held.trash.left - GOO_REACH,
               top: -BLEED,
               width: held.trash.w + GOO_REACH + BLEED,
               height: held.trash.h + BLEED * 2,
@@ -959,10 +964,10 @@ export default function TaskBoard({
               opacity: 0.07,
             }}
           >
-            {/* Hangs off the top, the left and the bottom, so the corners the
+            {/* Hangs off the top, the right and the bottom, so the corners the
                 filter rounds are all outside the window. */}
             <div
-              className="absolute left-0 top-0 h-full bg-ninja-red"
+              className="absolute top-0 right-0 h-full bg-ninja-red"
               style={{ width: held.trash.w + BLEED }}
             />
             <div ref={gooBeadRef} className="absolute top-0 left-0 bg-ninja-red" />
@@ -985,8 +990,8 @@ export default function TaskBoard({
           // No fill here any more — the goo layer underneath is the red. This
           // is the dashed edge and the words, which is the part that has to
           // stay legible whatever the liquid is doing.
-          className="fixed left-0 top-0 z-[59] pointer-events-none flex items-center justify-center"
-          style={{ width: held.trash.w, height: held.trash.h }}
+          className="fixed top-0 z-[59] pointer-events-none flex items-center justify-center"
+          style={{ left: held.trash.left, width: held.trash.w, height: held.trash.h }}
         >
           <span className={`flex flex-col items-center gap-2 font-ninja text-xs font-bold text-center transition-all duration-200 ease-[var(--ease-out)] ${
             target?.trash ? 'text-ninja-red scale-110' : 'text-ninja-red/55'
