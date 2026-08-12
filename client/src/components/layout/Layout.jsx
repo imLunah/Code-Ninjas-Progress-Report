@@ -16,10 +16,15 @@ import { XIcon } from 'lucide-react';
 
 const SKIP_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON']);
 
+// True when the thing under the finger has its own use for a sideways drag, so
+// the page must not steal it to change tabs. `data-no-swipe` is how a component
+// says that about itself: the task board's cards are swiped to archive, and a
+// card that both archived itself and navigated away would be neither.
 function touchTargetShouldScroll(el) {
   let node = el;
   while (node && node !== document.body) {
     if (SKIP_TAGS.has(node.tagName)) return true;
+    if (node.dataset && node.dataset.noSwipe !== undefined) return true;
     const style = window.getComputedStyle(node);
     const ox = style.overflowX;
     if ((ox === 'auto' || ox === 'scroll') && node.scrollWidth > node.clientWidth) return true;

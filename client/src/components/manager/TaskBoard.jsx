@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { PlusIcon } from 'lucide-react';
+import { ArchiveIcon, PlusIcon } from 'lucide-react';
 import TaskCardFace from './TaskCardFace';
 import TaskActionsMenu from './TaskActionsMenu';
 import { CARD } from '../../lib/surfaces';
@@ -45,10 +45,142 @@ function useDragEnabled() {
   return ok;
 }
 
+/* --------------------------------------------------------- swipe away -- */
+
+// A card can be pushed off the board with the pointer. It ARCHIVES rather than
+// deletes: a gesture that can be started by accident must not end in a row that
+// cannot come back, and archived cards are one press away in the filter bar.
+//
+// Offered only where the reorder drag is not — below xl, or while a filter is
+// on. Both gestures read a horizontal pull, and on a board whose four columns
+// sit side by side that pull already means "move this to In progress". One axis,
+// one meaning, decided by which mode the board is in. Which leaves the gesture
+// exactly where it is worth most: the phone, where dragging is off and the
+// card's menu was the only way to clear anything.
+const DISMISS_AT = 100;  // px of travel past which release throws the card away
+const SWIPE_START = 8;   // px before a press counts as a swipe rather than a tap
+const MAX_TILT = 7;      // deg at the far end of the pull
+const FLING_MS = 240;
+const SETTLE = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
+
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
 /* --------------------------------------------------------------- card -- */
 
-function TaskCard({ task, canManage, grabbable, onOpen, onDelete, onArchive, onRestore, onMoveTo, cardRef, onPointerDown }) {
+function TaskCard({ task, canManage, grabbable, swipeable, onOpen, onDelete, onArchive, onRestore, onMoveTo, cardRef, onPointerDown, onSwipeStart }) {
   const reduce = useReducedMotion();
+  const faceRef = useRef(null);
+  const hintRef = useRef(null);
+  const flung = useRef(false);
+  const timer = useRef(null);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  // Written straight to the node. A setState per pointermove would re-render
+  // every card in the column for the length of the gesture, which is the same
+  // reason the reorder drag moves its overlay by hand.
+  const paint = (dx) => {
+    const face = faceRef.current;
+    if (!face) return;
+    const tilt = reduce ? '' : ` rotate(${clamp(dx / 26, -MAX_TILT, MAX_TILT)}deg)`;
+    face.style.transition = 'none';
+    face.style.transform = `translate3d(${dx}px, 0, 0)${tilt}`;
+    face.style.opacity = String(1 - Math.min(Math.abs(dx) / 340, 0.55));
+
+    // The hint reaches full strength exactly at the threshold, so "I can read
+    // it" and "letting go archives this" are the same moment. Nothing else
+    // marks the line, and a line you cannot see is a line you cross by accident.
+    const hint = hintRef.current;
+    if (hint) {
+      const p = Math.min(Math.abs(dx) / DISMISS_AT, 1);
+      hint.style.transition = 'none';
+      hint.style.opacity = String(p);
+      hint.style.transform = `scale(${0.97 + p * 0.03})`;
+    }
+  };
+
+  const settle = (dx) => {
+    const face = faceRef.current;
+    const hint = hintRef.current;
+    if (!face) return;
+
+    if (Math.abs(dx) >= DISMISS_AT) {
+      flung.current = true;
+      const away = Math.sign(dx) * (window.innerWidth + 240);
+      face.style.pointerEvents = 'none';
+      face.style.transition = reduce
+        ? 'opacity 160ms linear'
+        : `transform ${FLING_MS}ms var(--ease-out), opacity ${FLING_MS}ms linear`;
+      if (!reduce) face.style.transform = `translate3d(${away}px, 0, 0) rotate(${Math.sign(dx) * MAX_TILT}deg)`;
+      face.style.opacity = '0';
+      if (hint) { hint.style.transition = 'opacity 160ms linear'; hint.style.opacity = '0'; }
+      // The card is gone from the screen before it is gone from the board, so
+      // the columns close the gap behind something that has already left.
+      timer.current = setTimeout(() => onArchive(task), reduce ? 150 : FLING_MS - 40);
+      return;
+    }
+
+    face.style.transition = `transform 420ms ${SETTLE}, opacity 200ms ease-out`;
+    face.style.transform = 'translate3d(0, 0, 0)';
+    face.style.opacity = '1';
+    if (hint) { hint.style.transition = 'opacity 220ms ease-out'; hint.style.opacity = '0'; }
+    // Handed back once it has landed. A card left holding a transform is a
+    // containing block for anything positioned inside it, and this one is
+    // holding a menu.
+    timer.current = setTimeout(() => {
+      if (!faceRef.current) return;
+      faceRef.current.style.transition = '';
+      faceRef.current.style.transform = '';
+      faceRef.current.style.opacity = '';
+    }, 460);
+  };
+
+  const startSwipe = (e) => {
+    if (!swipeable || flung.current) return;
+    if (e.button !== 0) return;
+    if (e.target.closest('[data-no-drag]')) return;
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    let live = false;
+
+    // On the document rather than the card: a pointer that leaves the card
+    // mid-swipe is still swiping, and a card that unmounts under a capture
+    // would strand the gesture.
+    const detach = () => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', cancel);
+      document.body.style.userSelect = '';
+      if (faceRef.current) faceRef.current.style.willChange = '';
+    };
+
+    const move = (ev) => {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      if (!live) {
+        // Whichever axis commits first wins the gesture. A pull that goes down
+        // the page is the page scrolling and must be handed straight back.
+        if (Math.abs(dx) < SWIPE_START) {
+          if (Math.abs(dy) > SWIPE_START) detach();
+          return;
+        }
+        if (Math.abs(dx) < Math.abs(dy)) { detach(); return; }
+        live = true;
+        onSwipeStart?.();
+        document.body.style.userSelect = 'none';
+        if (faceRef.current) faceRef.current.style.willChange = 'transform, opacity';
+      }
+      paint(dx);
+    };
+
+    const up = (ev) => { detach(); if (live) settle(ev.clientX - startX); };
+    const cancel = () => { detach(); if (live) settle(0); };
+
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', cancel);
+  };
 
   return (
     <motion.div
@@ -58,30 +190,58 @@ function TaskCard({ task, canManage, grabbable, onOpen, onDelete, onArchive, onR
       // it's what tells you where the card will land before you let go.
       layout={reduce ? false : 'position'}
       transition={{ duration: 0.2, ease: EASE }}
-      onPointerDown={onPointerDown}
-      className={`${CARD} ${TASK_SURFACE} p-3.5 relative ${grabbable ? 'cursor-grab' : ''}`}
+      onPointerDown={(e) => { onPointerDown(e); startSwipe(e); }}
+      // The wrapper carries the layout animation and nothing else. The surface
+      // moved inside it so the swipe has a transform of its own to write:
+      // framer owns `transform` on a motion element, and the two would fight
+      // over the same property on the same node.
+      data-no-swipe
+      className="relative"
     >
-      <TaskCardFace
-        task={task}
-        onOpen={onOpen}
-        actions={
-          canManage && (
-            // The menu is the one part of the card a press must not drag from,
-            // or its trigger would never survive long enough to open.
-            <span data-no-drag className="flex-shrink-0">
-              <TaskActionsMenu
-                task={task}
-                className="-mr-1 -mt-1"
-                onOpen={onOpen}
-                onDelete={onDelete}
-                onArchive={onArchive}
-                onRestore={onRestore}
-                onMoveTo={onMoveTo}
-              />
+      {swipeable && (
+        <div
+          ref={hintRef}
+          aria-hidden="true"
+          className="absolute inset-0 rounded-2xl bg-ninja-blue/10 flex items-center justify-between px-5 opacity-0 pointer-events-none"
+        >
+          {/* Named on both edges: the card goes the way you push it, and a
+              label on one side would be a rule nobody was told. */}
+          {[0, 1].map((i) => (
+            <span key={i} className="flex items-center gap-1.5 font-ninja text-xs font-bold text-ninja-blue-ink">
+              <ArchiveIcon size={14} strokeWidth={2.25} />
+              Archive
             </span>
-          )
-        }
-      />
+          ))}
+        </div>
+      )}
+
+      <div
+        ref={faceRef}
+        style={swipeable ? { touchAction: 'pan-y' } : undefined}
+        className={`${CARD} ${TASK_SURFACE} p-3.5 relative ${grabbable ? 'cursor-grab' : ''}`}
+      >
+        <TaskCardFace
+          task={task}
+          onOpen={onOpen}
+          actions={
+            canManage && (
+              // The menu is the one part of the card a press must not drag from,
+              // or its trigger would never survive long enough to open.
+              <span data-no-drag className="flex-shrink-0">
+                <TaskActionsMenu
+                  task={task}
+                  className="-mr-1 -mt-1"
+                  onOpen={onOpen}
+                  onDelete={onDelete}
+                  onArchive={onArchive}
+                  onRestore={onRestore}
+                  onMoveTo={onMoveTo}
+                />
+              </span>
+            )
+          }
+        />
+      </div>
     </motion.div>
   );
 }
@@ -341,11 +501,17 @@ export default function TaskBoard({
                     task={task}
                     canManage={canManage}
                     grabbable={canManage && dragEnabled && !task.archived_at}
+                    // The other horizontal gesture. Never both at once — see
+                    // the note above DISMISS_AT.
+                    swipeable={canManage && !dragEnabled && !task.archived_at}
                     cardRef={(el) => {
                       if (el) cardRefs.current.set(task.id, el);
                       else cardRefs.current.delete(task.id);
                     }}
                     onPointerDown={(e) => onCardPointerDown(e, task)}
+                    // The click that follows the pointerup that ended a swipe
+                    // would otherwise open the card as it flies away.
+                    onSwipeStart={() => { suppressClick.current = true; }}
                     onOpen={() => openTask(task)}
                     onDelete={onDelete}
                     onArchive={onArchive}
