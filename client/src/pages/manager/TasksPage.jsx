@@ -6,6 +6,7 @@ import Layout from '../../components/layout/Layout';
 import TaskBoard from '../../components/manager/TaskBoard';
 import TaskList from '../../components/manager/TaskList';
 import TaskEditorModal from '../../components/manager/TaskEditorModal';
+import RecentlyDeleted from '../../components/manager/RecentlyDeleted';
 import Segmented from '../../components/ui/Segmented';
 import { Skeleton, SkeletonList } from '../../components/ui/Skeleton';
 import { api } from '../../api/client';
@@ -183,6 +184,20 @@ export default function TasksPage() {
     }
   }, [tasks]);
 
+  // Emptying the bin. One request rather than one per card: the confirm was
+  // asked once, and twenty round trips would leave the list half gone if the
+  // fourth of them failed.
+  const purgeAll = useCallback(async () => {
+    const previous = tasks;
+    setTasks([]);
+    try {
+      await api.delete('/director-tasks/deleted');
+    } catch (err) {
+      setTasks(previous);
+      setError(err.message || 'Could not empty Recently deleted.');
+    }
+  }, [tasks]);
+
   // The one that does not come back, and the only one the fortnight's wait is
   // there to make unnecessary.
   const purge = useCallback(async (task) => {
@@ -218,11 +233,15 @@ export default function TasksPage() {
               belongs; a button in the header has to guess a column. */}
           <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-3xl font-black font-ninja text-ninja-navy tracking-tight">Tasks</h1>
+              <h1 className="text-3xl font-black font-ninja text-ninja-navy tracking-tight">
+                {showArchived ? 'Recently deleted' : 'Tasks'}
+              </h1>
               <p className="mt-1 font-ninja text-sm text-ninja-muted text-pretty">
-                {canManage
-                  ? 'Assign tasks to this location'
-                  : "You're viewing another center, so this board is read-only."}
+                {showArchived
+                  ? 'Deleted tasks are kept here for 14 days, then removed for good.'
+                  : canManage
+                    ? 'Assign tasks to this location'
+                    : "You're viewing another center, so this board is read-only."}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -242,24 +261,21 @@ export default function TasksPage() {
               >
                 Recently deleted
               </button>
-              <Segmented
-                options={VIEWS}
-                value={view}
-                onChange={chooseView}
-                label="How to show the tasks"
-                layoutId="tasksViewPill"
-                size="sm"
-              />
+              {/* Board or list is a question about a board. Recently deleted is
+                  neither, so the switch is not offered while it is open. */}
+              {!showArchived && (
+                <Segmented
+                  options={VIEWS}
+                  value={view}
+                  onChange={chooseView}
+                  label="How to show the tasks"
+                  layoutId="tasksViewPill"
+                  size="sm"
+                />
+              )}
             </div>
           </div>
 
-          {/* The rule, where the cards it applies to are. A bin that empties
-              itself has to say so before it does, not after. */}
-          {showArchived && (
-            <p className="mt-3 font-ninja text-xs text-ninja-muted">
-              Deleted tasks are kept here for 14 days, then removed for good.
-            </p>
-          )}
         </motion.header>
 
         {error && (
@@ -267,7 +283,7 @@ export default function TasksPage() {
         )}
 
         {loading ? (
-          view === 'list' ? (
+          view === 'list' || showArchived ? (
             <SkeletonList rows={8} label="Loading tasks" />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5 items-start" aria-busy="true" aria-label="Loading tasks">
@@ -281,6 +297,15 @@ export default function TasksPage() {
               ))}
             </div>
           )
+        ) : showArchived ? (
+          <RecentlyDeleted
+            tasks={tasks}
+            canManage={canManage}
+            leavingId={leavingId}
+            onRestore={restore}
+            onPurge={purge}
+            onPurgeAll={purgeAll}
+          />
         ) : view === 'list' ? (
           <TaskList
             tasks={tasks}
@@ -296,7 +321,6 @@ export default function TasksPage() {
         ) : (
           <TaskBoard
             tasks={tasks}
-            filtered={showArchived}
             leavingId={leavingId}
             canManage={canManage}
             onAdd={(column) => setEditor({ column })}

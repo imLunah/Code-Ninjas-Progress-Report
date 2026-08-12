@@ -403,6 +403,26 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
   }
 });
 
+// DELETE /api/director-tasks/deleted — empty Recently deleted for this center.
+//
+// ABOVE /:id, and it has to stay there: Express takes the first route that
+// matches, so below it this path would be read as a task with the id "deleted".
+router.delete('/deleted', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  try {
+    const { rows } = await pool.query(
+      `DELETE FROM director_tasks
+       WHERE location_id = $1 AND archived_at IS NOT NULL
+       RETURNING id`,
+      [req.session.activeLocationId]
+    );
+    res.json({ deleted: rows.map((r) => r.id) });
+  } catch (err) {
+    console.error('Error emptying deleted tasks:', err);
+    res.status(500).json({ error: 'Failed to empty Recently deleted' });
+  }
+});
+
 // DELETE /api/director-tasks/:id
 router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
