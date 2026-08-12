@@ -411,6 +411,21 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, lea
 
       <div
         ref={faceRef}
+        // The whole card opens it, not just the words at the top. A card is one
+        // thing and reads as one thing, so pressing the empty half of it and
+        // getting nothing is the card saying it is two.
+        //
+        // Anything that already does something keeps doing it: the arrows, the
+        // menu, the checkbox. And the title stays a real button underneath, so
+        // this adds a way in for a pointer without taking the keyboard's away —
+        // a div with role="button" wrapped around three other buttons announces
+        // itself as one control containing controls, which is worse than what
+        // it fixes.
+        onClick={(e) => {
+          if (!onOpen) return;
+          if (e.target.closest('button, a, input, select, textarea, [data-no-drag]')) return;
+          onOpen();
+        }}
         // `pan-y` keeps the page scrolling vertically while the horizontal axis
         // is ours. `select-none` is for the hold: half a second on a phone is
         // also the browser's own idea of "select this text".
@@ -423,7 +438,7 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, lea
         // a written style would be overwritten by it.
         className={`${CARD} ${TASK_SURFACE} p-3.5 relative transition-shadow duration-150 ${
           grabbable ? 'cursor-grab' : ''
-        } ${swipeable ? 'select-none' : ''} ${
+        } ${onOpen && !grabbable ? 'cursor-pointer' : ''} ${swipeable ? 'select-none' : ''} ${
           armed ? 'ring-2 ring-ninja-red task-armed z-10' : ''
         } ${landed && !reduce ? 'task-landing' : ''} ${
           // A card that has already been flung off the screen has an inline

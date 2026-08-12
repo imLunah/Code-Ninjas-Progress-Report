@@ -26,8 +26,23 @@ export default function SidePanel({ isOpen, onClose, title, children, width = 'w
     const onKeyDown = (e) => {
       if (e.key === 'Escape') { e.stopPropagation(); onClose(); }
     };
+    // A press anywhere else closes it. With no backdrop to click there is
+    // nothing to catch that press, so the document is asked instead: if it did
+    // not land inside the panel, whatever it landed on is what is wanted now.
+    //
+    // On pointerdown rather than click, so a press that starts outside and ends
+    // inside — dragging a card across the panel, a text selection that runs off
+    // the edge — still counts as leaving. And it runs after this render, so the
+    // press that opened the panel is long finished and cannot close it again.
+    const onPointerDown = (e) => {
+      if (panelRef.current && !panelRef.current.contains(e.target)) onClose();
+    };
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
   }, [isOpen, onClose]);
 
   useEffect(() => {
