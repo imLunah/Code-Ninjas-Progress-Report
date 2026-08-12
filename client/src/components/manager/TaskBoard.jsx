@@ -817,7 +817,7 @@ export default function TaskBoard({
           // the card comes over it. Two tints cross-fading would be a colour
           // animating, which browsers do less reliably than an opacity, and
           // this one has to hold up over a moving card.
-          animate={{ opacity: target?.trash ? 1 : 0.45 }}
+          animate={{ opacity: target?.trash ? 1 : 0.6 }}
           transition={{ duration: 0.2, ease: EASE }}
           className="fixed z-[59] pointer-events-none flex items-center justify-center"
           style={{
@@ -829,7 +829,7 @@ export default function TaskBoard({
             // one, which over the nav read as a panel that had appeared.
             backgroundImage: `linear-gradient(${
               held.trash.height >= held.trash.width ? 'to right' : 'to bottom'
-            }, rgba(229,21,32,0.3) 0%, rgba(229,21,32,0.16) 45%, rgba(229,21,32,0) 100%)`,
+            }, rgba(229,21,32,0.62) 0%, rgba(229,21,32,0.34) 45%, rgba(229,21,32,0) 100%)`,
           }}
         >
           <span className={`flex flex-col items-center gap-2 font-ninja text-sm font-bold text-ninja-red transition-transform duration-200 ${
