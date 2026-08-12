@@ -1,14 +1,13 @@
 import { useState, useRef, useCallback, useEffect, useMemo, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { PlusIcon, PencilIcon, Trash2Icon, ArrowRightIcon, ArrowLeftIcon } from 'lucide-react';
-import ActionMenu, { MenuItem } from '../ui/ActionMenu';
+import { PlusIcon } from 'lucide-react';
 import TaskCardFace from './TaskCardFace';
+import TaskActionsMenu from './TaskActionsMenu';
 import { CARD } from '../../lib/surfaces';
 import {
   COLUMNS,
   COLUMN_KEYS,
-  COLUMN_LABEL,
   groupByColumn,
   moveTask,
   TASK_SURFACE,
@@ -27,10 +26,11 @@ const DRAG_THRESHOLD = 5;
 // Drag is a pointer affordance with no keyboard or touch equivalent, so it is
 // only ever the *fast* way to move a card — never the only way. Every move is
 // also in the card's own menu, which is what makes the board usable on a phone
-// and with a keyboard. Below this width the columns stack, and stacked columns
-// overlap on the x axis that the drop target is read from, so dragging is
-// switched off rather than left to guess.
-const DRAG_MIN_WIDTH = 768;
+// and with a keyboard. Below this width the columns wrap, and wrapped columns
+// share the x axis that the drop target is read from, so dragging is switched
+// off rather than left to guess. Four columns only sit in one row at xl, which
+// is why this tracks the grid's last breakpoint and must move with it.
+const DRAG_MIN_WIDTH = 1280;
 
 function useDragEnabled() {
   const [ok, setOk] = useState(
@@ -47,8 +47,7 @@ function useDragEnabled() {
 
 /* --------------------------------------------------------------- card -- */
 
-function TaskCard({ task, canManage, grabbable, onOpen, onDelete, onMoveTo, cardRef, onPointerDown }) {
-  const [confirming, setConfirming] = useState(false);
+function TaskCard({ task, canManage, grabbable, onOpen, onDelete, onArchive, onRestore, onMoveTo, cardRef, onPointerDown }) {
   const reduce = useReducedMotion();
 
   return (
@@ -70,65 +69,15 @@ function TaskCard({ task, canManage, grabbable, onOpen, onDelete, onMoveTo, card
             // The menu is the one part of the card a press must not drag from,
             // or its trigger would never survive long enough to open.
             <span data-no-drag className="flex-shrink-0">
-              <ActionMenu
-                label="Task actions"
+              <TaskActionsMenu
+                task={task}
                 className="-mr-1 -mt-1"
-                onClosed={() => setConfirming(false)}
-              >
-                {({ close }) =>
-                  confirming ? (
-                    // A destructive confirm keeps its word. Everything else on
-                    // this board is a glyph; nothing irreversible rests on
-                    // recognising one.
-                    <div className="p-1.5 w-44">
-                      <p className="font-ninja text-xs text-ninja-muted px-1 pb-2 leading-snug">
-                        Delete this task? This can't be undone.
-                      </p>
-                      <div className="flex gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => { onDelete(task); close({ restoreFocus: false }); }}
-                          className="flex-1 py-1.5 rounded-lg bg-ninja-red text-white font-ninja text-xs font-bold transition-transform duration-150 ease-[var(--ease-out)] active:scale-95"
-                        >
-                          Delete
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirming(false)}
-                          className="flex-1 py-1.5 rounded-lg bg-ninja-bg text-ninja-navy font-ninja text-xs font-bold transition-transform duration-150 ease-[var(--ease-out)] active:scale-95"
-                        >
-                          Keep
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <MenuItem icon={PencilIcon} onSelect={() => { close(); onOpen(); }}>
-                        Edit
-                      </MenuItem>
-                      {/* The keyboard and touch route between columns. The
-                          arrow points the way the card will actually travel:
-                          from the middle column one of these goes back to To
-                          do, and two arrows pointing right would say otherwise. */}
-                      {COLUMN_KEYS.filter((k) => k !== task.column_key).map((k) => {
-                        const back = COLUMN_KEYS.indexOf(k) < COLUMN_KEYS.indexOf(task.column_key);
-                        return (
-                          <MenuItem
-                            key={k}
-                            icon={back ? ArrowLeftIcon : ArrowRightIcon}
-                            onSelect={() => { close(); onMoveTo(task, k); }}
-                          >
-                            Move to {COLUMN_LABEL[k]}
-                          </MenuItem>
-                        );
-                      })}
-                      <MenuItem icon={Trash2Icon} danger onSelect={() => setConfirming(true)}>
-                        Delete
-                      </MenuItem>
-                    </>
-                  )
-                }
-              </ActionMenu>
+                onOpen={onOpen}
+                onDelete={onDelete}
+                onArchive={onArchive}
+                onRestore={onRestore}
+                onMoveTo={onMoveTo}
+              />
             </span>
           )
         }
@@ -139,8 +88,18 @@ function TaskCard({ task, canManage, grabbable, onOpen, onDelete, onMoveTo, card
 
 /* -------------------------------------------------------------- board -- */
 
-export default function TaskBoard({ tasks, canManage, onEdit, onDelete, onReorder, onAdd }) {
-  const dragEnabled = useDragEnabled();
+// `tasks` is always the WHOLE board, even while a filter is on. Every mutation
+// reads it, because moveTask restamps position across every column: handed a
+// filtered subset it would renumber the visible cards and scramble the order of
+// the hidden ones. `visibleIds` is the filter, and only rendering consults it.
+export default function TaskBoard({
+  tasks, canManage, visibleIds, filtered = false,
+  onEdit, onDelete, onArchive, onRestore, onReorder, onAdd, onQuickAdd, onClearDone,
+}) {
+  const wide = useDragEnabled();
+  // A drag measures the gaps between the cards on screen. With cards hidden,
+  // those gaps describe a board that isn't there.
+  const dragEnabled = wide && !filtered;
   const reduce = useReducedMotion();
   const grouped = useMemo(() => groupByColumn(tasks), [tasks]);
 
@@ -165,6 +124,7 @@ export default function TaskBoard({ tasks, canManage, onEdit, onDelete, onReorde
 
   const [held, setHeld] = useState(null);   // the card drawn in the overlay
   const [target, setTarget] = useState(null);
+  const [quickAdd, setQuickAdd] = useState({ key: null, text: '' });
 
   const clearDrag = useCallback(() => {
     snap.current = null;
@@ -305,11 +265,12 @@ export default function TaskBoard({ tasks, canManage, onEdit, onDelete, onReorde
   }, [tasks, grouped, onReorder]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 items-start">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5 items-start">
       {COLUMNS.map((col) => {
         // The held card leaves the list entirely — it is being drawn over the
         // page — and a placeholder stands in the slot it would drop into.
-        const items = (grouped[col.key] || []).filter((t) => t.id !== held?.task.id);
+        const all = (grouped[col.key] || []).filter((t) => !visibleIds || visibleIds.has(t.id));
+        const items = all.filter((t) => t.id !== held?.task.id);
         const isTarget = held && target?.key === col.key;
         const at = isTarget ? Math.min(target.index, items.length) : -1;
 
@@ -341,9 +302,21 @@ export default function TaskBoard({ tasks, canManage, onEdit, onDelete, onReorde
               <h3 id={`col-${col.key}`} className="font-ninja text-[15px] font-bold text-ninja-navy">
                 {col.label}
                 <span className="ml-2 text-sm font-normal text-ninja-muted tabular-nums">
-                  {(grouped[col.key] || []).length}
+                  {all.length}
                 </span>
               </h3>
+              {col.key === 'done' && canManage && all.length > 0 && (
+                // Clearing lives on the column it clears, not in a page menu
+                // where it would be a button that says "done" and means "all
+                // of them".
+                <button
+                  type="button"
+                  onClick={onClearDone}
+                  className="ml-auto mr-1 font-ninja text-xs font-semibold text-ninja-muted hover:text-ninja-blue transition-colors"
+                >
+                  Clear finished
+                </button>
+              )}
               {canManage && (
                 <button
                   type="button"
@@ -367,7 +340,7 @@ export default function TaskBoard({ tasks, canManage, onEdit, onDelete, onReorde
                   <TaskCard
                     task={task}
                     canManage={canManage}
-                    grabbable={canManage && dragEnabled}
+                    grabbable={canManage && dragEnabled && !task.archived_at}
                     cardRef={(el) => {
                       if (el) cardRefs.current.set(task.id, el);
                       else cardRefs.current.delete(task.id);
@@ -375,6 +348,8 @@ export default function TaskBoard({ tasks, canManage, onEdit, onDelete, onReorde
                     onPointerDown={(e) => onCardPointerDown(e, task)}
                     onOpen={() => openTask(task)}
                     onDelete={onDelete}
+                    onArchive={onArchive}
+                    onRestore={onRestore}
                     onMoveTo={handleMoveTo}
                   />
                 </Fragment>
@@ -387,20 +362,37 @@ export default function TaskBoard({ tasks, canManage, onEdit, onDelete, onReorde
                   because there it has nothing else to say. */}
               {items.length === 0 && !canManage && (
                 <p className="font-ninja text-xs text-ninja-muted px-1 py-3">
-                  {col.key === 'done' ? 'Nothing finished yet.' : 'Nothing here.'}
+                  {col.key === 'done' ? 'Nothing finished yet.'
+                    : col.key === 'review' ? 'Nothing waiting.'
+                    : 'Nothing here.'}
                 </p>
               )}
             </div>
 
             {canManage && (
-              <button
-                type="button"
-                onClick={() => onAdd(col.key)}
-                className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-blue hover:bg-white dark:hover:bg-white/5 transition-colors duration-150 ease-[var(--ease-out)] active:scale-[0.98]"
+              // Most cards on this board are one sentence somebody thought of
+              // while standing up. Typing it here is the whole interaction; the
+              // + in the header is for the ones that need a date and an owner.
+              <form
+                className="mt-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const text = quickAdd.text.trim();
+                  if (!text) return;
+                  setQuickAdd({ key: col.key, text: '' });
+                  onQuickAdd(col.key, text);
+                }}
               >
-                <PlusIcon size={16} strokeWidth={2.5} />
-                Add task
-              </button>
+                <input
+                  type="text"
+                  value={quickAdd.key === col.key ? quickAdd.text : ''}
+                  onChange={(e) => setQuickAdd({ key: col.key, text: e.target.value })}
+                  onKeyDown={(e) => { if (e.key === 'Escape') { setQuickAdd({ key: null, text: '' }); e.currentTarget.blur(); } }}
+                  placeholder="+ Add a task"
+                  aria-label={`Add a task to ${col.label}`}
+                  className="w-full px-3 py-2.5 rounded-xl bg-transparent border border-transparent hover:border-ninja-border focus:border-ninja-blue focus:bg-white dark:focus:bg-white/5 font-ninja text-sm text-ninja-navy placeholder:text-ninja-muted transition-colors duration-150"
+                />
+              </form>
             )}
           </section>
         );

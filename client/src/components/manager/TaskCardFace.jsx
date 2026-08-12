@@ -1,5 +1,5 @@
 import { Building2Icon } from 'lucide-react';
-import { DUE_TONE, dueMeta, plainPreview } from '../../lib/taskBoard';
+import { DUE_TONE, dueMeta, plainPreview, taskHolder } from '../../lib/taskBoard';
 
 // What a task card looks like, in one place.
 //
@@ -30,7 +30,7 @@ function initials(name) {
 // A card carried by the center wears the same chip with a building in place of
 // the initials, so "everyone here" and "this person" read as answers to the
 // same question rather than two different kinds of thing.
-function Assignee({ name, center }) {
+export function Assignee({ name, center }) {
   return (
     <span className="flex items-center gap-1.5 flex-shrink-0 min-w-0" aria-label={`Assigned to ${name}`}>
       <span
@@ -51,9 +51,9 @@ export default function TaskCardFace({ task, onOpen, actions }) {
   const body = plainPreview(task.body);
   // The center's name comes down with the card, so a board being viewed from
   // another center still names the right one.
-  const holder = task.assignee_center
-    ? (task.location_name || 'The whole center')
-    : task.assignee_name;
+  const holder = taskHolder(task);
+  const checklist = task.checklist || [];
+  const ticked = checklist.filter((i) => i.done).length;
 
   // A card is allowed to be a note. Everything carried over from the sticky
   // wall is a paragraph somebody typed with no title on it, and inventing one
@@ -92,10 +92,17 @@ export default function TaskCardFace({ task, onOpen, actions }) {
 
       {/* The footer holds the two things about a card that are not what it
           says: when it is due, and who has it. */}
-      {(due || holder) && (
+      {(due || holder || checklist.length > 0) && (
         <div className="mt-3 flex items-center justify-between gap-3">
-          <span className={`font-ninja text-xs truncate ${due ? DUE_TONE[due.tone] : ''}`}>
-            {due?.text}
+          <span className="flex items-center gap-2.5 min-w-0">
+            <span className={`font-ninja text-xs truncate ${due ? DUE_TONE[due.tone] : ''}`}>
+              {due?.text}
+            </span>
+            {checklist.length > 0 && (
+              <span className="font-ninja text-xs text-ninja-muted tabular-nums flex-shrink-0">
+                {ticked}/{checklist.length}
+              </span>
+            )}
           </span>
           {holder && <Assignee name={holder} center={task.assignee_center} />}
         </div>

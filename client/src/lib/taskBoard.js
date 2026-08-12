@@ -5,11 +5,21 @@
 // "2 in progress" can't come to mean something different from the column the
 // board draws under the same name.
 
+// Order here IS the board's left-to-right order, the order the Move-to menu
+// lists, and the order moveTask restamps positions in. In review is inserted
+// rather than appended for that reason: the menu's arrow points the way a card
+// travels by comparing indexes, and appending would make Done come before it.
 export const COLUMNS = [
   { key: 'todo', label: 'To do' },
   { key: 'doing', label: 'In progress' },
+  { key: 'review', label: 'In review' },
   { key: 'done', label: 'Done' },
 ];
+
+// The columns that hold work still to finish. Derived, not listed: an
+// allowlist is how the dashboard came to leave a whole column out of its
+// overdue count the last time one was added.
+export const OPEN_COLUMN_KEYS = COLUMNS.filter((c) => c.key !== 'done').map((c) => c.key);
 
 export const COLUMN_KEYS = COLUMNS.map((c) => c.key);
 
@@ -117,3 +127,10 @@ export function plainPreview(md) {
 }
 
 export const todayKey = () => dayKey(new Date());
+
+// Who is carrying a card, as one string. The center's name travels with the
+// card so a board viewed from another center still names the right one.
+export function taskHolder(task) {
+  if (task.assignee_center) return task.location_name || 'The whole center';
+  return task.assignee_name || null;
+}

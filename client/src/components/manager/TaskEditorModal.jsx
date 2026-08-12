@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { PlusIcon, XIcon } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import LazyMarkdownEditor from '../shared/LazyMarkdownEditor';
-import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { COLUMNS } from '../../lib/taskBoard';
 
@@ -10,7 +10,7 @@ const TITLE_MAX = 200;
 
 // Create and edit are the same form. `task` null means create; `column` is the
 // column a new card lands in.
-export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose, onSave }) {
+export default function TaskEditorModal({ isOpen, task, directors = [], column = 'todo', onClose, onSave }) {
   const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -21,22 +21,10 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
   const [due, setDue] = useState('');
   const [assignee, setAssignee] = useState('');
   const [columnKey, setColumnKey] = useState(column);
-  const [directors, setDirectors] = useState([]);
+  const [checklist, setChecklist] = useState([]);
+  const [item, setItem] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-
-  // Who is at this center is a property of the center, not of the card, so it
-  // is fetched when the dialog opens rather than carried in with the task. A
-  // failure leaves the list empty and the field says as much, which is better
-  // than a select that silently offers nobody.
-  useEffect(() => {
-    if (!isOpen) return;
-    let alive = true;
-    api.get('/director-tasks/assignees')
-      .catch(() => [])
-      .then((rows) => { if (alive) setDirectors(rows || []); });
-    return () => { alive = false; };
-  }, [isOpen]);
 
   // Seeded during render, not in an effect, and only when the dialog opens on a
   // different card.
@@ -67,6 +55,8 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
       // display another.
       setAssignee(task?.assignee_id ? String(task.assignee_id) : 'center');
       setColumnKey(task?.column_key ?? column);
+      setChecklist(task?.checklist ? task.checklist.map((i) => ({ ...i })) : []);
+      setItem('');
       setError('');
       setSaving(false);
     }
@@ -92,6 +82,7 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
         due_date: due || null,
         assignee_id: assignee && assignee !== 'center' ? Number(assignee) : null,
         assignee_center: assignee === 'center',
+        checklist,
         column_key: columnKey,
       });
       onClose();
@@ -201,6 +192,80 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
                 <option key={c.key} value={c.key}>{c.label}</option>
               ))}
             </select>
+          </div>
+        </div>
+
+        <div>
+          <span className="block font-ninja text-sm font-bold text-ninja-navy mb-1.5">
+            Checklist
+            {checklist.length > 0 && (
+              <span className="ml-1.5 font-normal text-ninja-muted tabular-nums">
+                {checklist.filter((i) => i.done).length}/{checklist.length}
+              </span>
+            )}
+          </span>
+
+          {checklist.length > 0 && (
+            <ul className="mb-2 space-y-1">
+              {checklist.map((it, i) => (
+                <li key={i} className="flex items-center gap-2 group">
+                  {/* A label around the box, so the words are the target too. */}
+                  <label className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={it.done}
+                      onChange={() => setChecklist((cs) => cs.map((c, j) => (j === i ? { ...c, done: !c.done } : c)))}
+                      className="rounded border-ninja-border accent-ninja-blue cursor-pointer flex-shrink-0"
+                    />
+                    <span className={`font-ninja text-sm truncate ${it.done ? 'text-ninja-muted line-through' : 'text-ninja-navy'}`}>
+                      {it.text}
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setChecklist((cs) => cs.filter((_, j) => j !== i))}
+                    aria-label={`Remove ${it.text}`}
+                    className="p-1 rounded text-ninja-muted opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-ninja-red transition-opacity flex-shrink-0"
+                  >
+                    <XIcon size={14} strokeWidth={2.5} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Enter adds and leaves the field ready for the next one: a
+              checklist is written in one go, not one dialog at a time. */}
+          <div className="flex items-center gap-2">
+            <input
+              value={item}
+              onChange={(e) => setItem(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                const text = item.trim();
+                if (!text || checklist.length >= 20) return;
+                setChecklist((cs) => [...cs, { text, done: false }]);
+                setItem('');
+              }}
+              placeholder={checklist.length >= 20 ? 'Twenty is the limit' : 'Add a step and press Enter'}
+              disabled={checklist.length >= 20}
+              aria-label="Add a checklist item"
+              className="flex-1 rounded-xl bg-white border border-ninja-border focus:border-ninja-blue transition-colors px-3 py-2 font-ninja text-sm text-ninja-navy disabled:opacity-60"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const text = item.trim();
+                if (!text || checklist.length >= 20) return;
+                setChecklist((cs) => [...cs, { text, done: false }]);
+                setItem('');
+              }}
+              aria-label="Add checklist item"
+              className="w-9 h-9 flex items-center justify-center rounded-xl border border-ninja-border text-ninja-muted hover:text-ninja-blue hover:border-ninja-blue transition-colors flex-shrink-0"
+            >
+              <PlusIcon size={16} strokeWidth={2.5} />
+            </button>
           </div>
         </div>
 

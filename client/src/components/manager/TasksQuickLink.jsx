@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ListTodoIcon } from 'lucide-react';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { groupByColumn, todayKey } from '../../lib/taskBoard';
+import { COLUMNS, OPEN_COLUMN_KEYS, groupByColumn, todayKey } from '../../lib/taskBoard';
 
 // Tasks as one of the quick links: a link, and nothing more.
 //
@@ -29,13 +29,17 @@ export default function TasksQuickLink({ className = '' }) {
   }, [user?.activeLocation?.id]);
 
   const grouped = tasks ? groupByColumn(tasks) : null;
-  const openTasks = grouped ? [...grouped.doing, ...grouped.todo] : [];
+  // Derived from the columns, not listed by name. An allowlist is how a whole
+  // column came to be missing from this count the last time one was added, and
+  // work that is invisible here is work nobody is reminded of.
+  const openTasks = grouped ? OPEN_COLUMN_KEYS.flatMap((k) => grouped[k] || []) : [];
   const overdue = openTasks.filter((t) => t.due_date && t.due_date < todayKey()).length;
 
   const label = !tasks
     ? 'Tasks'
-    : `Tasks: ${grouped.todo.length} to do, ${grouped.doing.length} in progress` +
-      (overdue ? `, ${overdue} overdue` : '');
+    : `Tasks: ${COLUMNS.filter((c) => c.key !== 'done')
+        .map((c) => `${(grouped[c.key] || []).length} ${c.label.toLowerCase()}`)
+        .join(', ')}` + (overdue ? `, ${overdue} overdue` : '');
 
   return (
     <Link to="/manager/tasks" aria-label={label} className={className}>
