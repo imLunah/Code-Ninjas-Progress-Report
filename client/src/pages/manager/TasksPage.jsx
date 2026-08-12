@@ -93,7 +93,7 @@ export default function TasksPage() {
               <h1 className="text-3xl font-black font-ninja text-ninja-navy tracking-tight">Tasks</h1>
               <p className="mt-1 font-ninja text-sm text-ninja-muted text-pretty">
                 {canManage
-                  ? 'Shared with every director at this center. Drag a card between columns, or use its menu.'
+                  ? 'Assign tasks to this location'
                   : "You're viewing another center, so this board is read-only."}
               </p>
             </div>
