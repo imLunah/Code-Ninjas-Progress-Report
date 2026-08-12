@@ -47,7 +47,8 @@ const GOO_REACH = 260;
 // Measured off the last column's own rect, not off the window or the grid: the
 // grid stretches the full width whether it has three children or four, so its
 // right edge says nothing about where the columns actually stop.
-const TRASH_MIN_W = 96;   // never thinner than this, even on a cramped window
+const TRASH_MIN_W = 88;   // never thinner than this, even on a cramped window
+const TRASH_MAX_W = 148;  // and never wider, however much room the track leaves
 const TRASH_GAP = 12;     // breathing room between the last column and the band
 
 // The goo filter blurs everything it is given and then cuts the result back to
@@ -606,7 +607,7 @@ export default function TaskBoard({
     // Eased so the reach is slow to start and quick to close, which is what
     // makes it read as something being pulled rather than something growing.
     const pull = t * t;
-    g.style.opacity = String(0.07 + 0.17 * pull);
+    g.style.opacity = String(0.05 + 0.12 * pull);
 
     // Positions are viewport coordinates; the layer's own origin sits a reach to
     // the left of the band and a bleed above the window.
@@ -662,9 +663,15 @@ export default function TaskBoard({
 
     // Read once, like everything else here: where the last column stops is where
     // the bin starts, taken at the same instant as every other rect below.
+    // The empty track can be a quarter of a wide board, which is more red than
+    // a drop target needs to be. The band takes the outer part of it: pinned to
+    // the window's edge, capped, and never crossing into the last column.
     const lastCol = colRefs.current[COLUMN_KEYS[COLUMN_KEYS.length - 1]];
     const edge = (lastCol?.getBoundingClientRect().right ?? window.innerWidth - TRASH_MIN_W) + TRASH_GAP;
-    const left = Math.min(edge, window.innerWidth - TRASH_MIN_W);
+    const left = Math.min(
+      Math.max(edge, window.innerWidth - TRASH_MAX_W),
+      window.innerWidth - TRASH_MIN_W
+    );
     s.trash = { left, w: window.innerWidth - left, h: window.innerHeight };
 
     snap.current = s;
@@ -993,10 +1000,10 @@ export default function TaskBoard({
           className="fixed top-0 z-[59] pointer-events-none flex items-center justify-center"
           style={{ left: held.trash.left, width: held.trash.w, height: held.trash.h }}
         >
-          <span className={`flex flex-col items-center gap-2 font-ninja text-xs font-bold text-center transition-all duration-200 ease-[var(--ease-out)] ${
-            target?.trash ? 'text-ninja-red scale-110' : 'text-ninja-red/55'
+          <span className={`flex flex-col items-center gap-2 px-3 font-ninja text-xs font-bold text-center transition-all duration-200 ease-[var(--ease-out)] ${
+            target?.trash ? 'text-ninja-red scale-105' : 'text-ninja-red/45'
           }`}>
-            <Trash2Icon size={24} strokeWidth={2.25} />
+            <Trash2Icon size={20} strokeWidth={2.25} />
             {target?.trash ? 'Let go to delete' : 'Drag here to delete'}
           </span>
         </motion.div>,
