@@ -772,15 +772,16 @@ export default function TaskBoard({
             `translate3d(${bxCard}px, ${y - box.h / 2}px, 0) scale(0.88)`;
           o.style.opacity = '0';
 
-          // Loud while it is being swallowed, and thicker: the resting tint is
-          // set for a hint sitting in a margin, and the swap to the heavier
-          // filter gives the stretch enough blur to hold together instead of
-          // snapping the moment it is pulled.
+          // A step up while it is being swallowed, not a flood: the shape is
+          // what is worth watching here and a solid red panel only buries it.
+          // The swap to the heavier filter is the part that matters — it gives
+          // the stretch enough blur to hold together instead of snapping the
+          // moment it is pulled.
           const g = gooRef.current;
           if (g) {
             g.style.filter = 'url(#taskGooThick)';
             g.style.transition = `opacity ${SWALLOW_MS * 0.3}ms var(--ease-out)`;
-            g.style.opacity = '0.55';
+            g.style.opacity = '0.3';
           }
 
           // Then the blob does the whole thing in two moves, because one move
