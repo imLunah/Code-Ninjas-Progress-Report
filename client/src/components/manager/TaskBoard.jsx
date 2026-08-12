@@ -45,10 +45,18 @@ const GOO_REACH = 260;
 // anything else moving.
 const TRASH_W = 200;  // px of the left edge that deletes what is dropped on it
 
+// The goo filter blurs everything it is given and then cuts the result back to
+// a hard edge, which rounds every corner it finds. Given a rectangle the size of
+// the screen's left edge, the rounding happens ON the screen and the band pulls
+// away from the corners. So the pool is drawn larger than the area it has to
+// cover and hangs off all three edges: the rounding still happens, out of sight.
+const BLEED = 100;
+
 // Solid across the band, then away to nothing over the reach, so the red thins
-// out towards the board instead of ending on a line.
+// out towards the board instead of ending on a line. Measured from the layer's
+// own left edge, which starts a bleed to the left of the window's.
 const MASK =
-  `linear-gradient(to right, rgb(0 0 0) 0px, rgb(0 0 0 / 0.88) ${TRASH_W * 0.75}px, rgb(0 0 0 / 0) ${TRASH_W + GOO_REACH}px)`;
+  `linear-gradient(to right, rgb(0 0 0) 0px, rgb(0 0 0) ${BLEED + TRASH_W * 0.7}px, rgb(0 0 0 / 0) ${BLEED + TRASH_W + GOO_REACH}px)`;
 
 // Vertical rhythm between cards. The drop maths has to know it, because the
 // space a lifted card frees up is its own height plus one gap.
@@ -572,11 +580,18 @@ export default function TaskBoard({
     const r = snap.current?.trash;
     if (!g || !r) return;
 
+    // The red takes hold of the card, not the cursor: the bead is the card's
+    // own box in the card's own place, so what the band reaches out and grabs
+    // is the thing being deleted rather than a dot the hand happens to be
+    // dragging it by.
+    const box = info.current;
+    if (!box) return;
+    const bx = x - box.dx;
+    const by = y - box.dy;
+
     // The band's edge is a vertical line, so the nearest point on it is
-    // straight out to the left of wherever the pointer is.
-    const cx = Math.min(x, r.w);
-    const cy = y;
-    const d = Math.max(0, x - r.w);
+    // straight out to the left of the card's leading edge.
+    const d = Math.max(0, bx - r.w);
     const t = clamp(1 - d / GOO_REACH, 0, 1);
 
     // Eased so the reach is slow to start and quick to close, which is what
@@ -584,21 +599,30 @@ export default function TaskBoard({
     const pull = t * t;
     g.style.opacity = String(0.07 + 0.17 * pull);
 
-    // The bead sits on the card and grows as it nears; the droplet sits between
-    // the two and is what lets the bridge form across a gap wider than the
-    // filter's blur could span on its own.
-    const originX = 0;
-    const originY = 0;
-    const place = (el, px, py, size) => {
+    // Everything inside the layer is offset by the bleed, since the layer starts
+    // outside the window on three sides.
+    const put = (el, left, top, w, h, radius) => {
       if (!el) return;
-      el.style.width = `${size}px`;
-      el.style.height = `${size}px`;
-      el.style.transform = `translate3d(${px - originX - size / 2}px, ${py - originY - size / 2}px, 0)`;
+      el.style.width = `${w}px`;
+      el.style.height = `${h}px`;
+      el.style.borderRadius = `${radius}px`;
+      el.style.transform = `translate3d(${left + BLEED}px, ${top + BLEED}px, 0)`;
     };
-    // Both scale from nothing, so a card dragged between two columns on the far
-    // side of the board is not trailing a red dot around behind it.
-    place(gooBeadRef.current, x, y, 104 * pull);
-    place(gooDropRef.current, (x + cx) / 2, (y + cy) / 2, 52 * pull * (1 - 0.3 * pull));
+
+    // The card, at its own size. It needs no distance maths: the mask above
+    // fades it out long before it reaches the far side of the board.
+    put(gooBeadRef.current, bx, by, box.w, box.h, 16);
+
+    // And the drop that bridges the gap, sized off the card so a wide card gets
+    // a bridge to match. It is the only part that has to know about distance,
+    // because a bridge to nothing is just a blob in the middle of the page.
+    const bridge = Math.min(box.h, 120) * pull;
+    put(
+      gooDropRef.current,
+      (bx + Math.min(bx, r.w)) / 2 - bridge / 2,
+      by + box.h / 2 - bridge / 2,
+      bridge, bridge, bridge / 2
+    );
   };
 
   const beginDrag = (task, rect, startX, startY) => {
@@ -904,10 +928,12 @@ export default function TaskBoard({
           <div
             ref={gooRef}
             aria-hidden="true"
-            className="fixed left-0 top-0 z-[58] pointer-events-none"
+            className="fixed z-[58] pointer-events-none"
             style={{
-              width: held.trash.w + GOO_REACH,
-              height: held.trash.h,
+              left: -BLEED,
+              top: -BLEED,
+              width: held.trash.w + GOO_REACH + BLEED,
+              height: held.trash.h + BLEED * 2,
               filter: 'url(#taskGoo)',
               // The fade cannot live inside the filter: the threshold that
               // welds the blobs together works on alpha, so a gradient handed
@@ -920,12 +946,14 @@ export default function TaskBoard({
               opacity: 0.07,
             }}
           >
+            {/* Hangs off the top, the left and the bottom, so the corners the
+                filter rounds are all outside the window. */}
             <div
               className="absolute left-0 top-0 h-full bg-ninja-red"
-              style={{ width: held.trash.w }}
+              style={{ width: held.trash.w + BLEED }}
             />
-            <div ref={gooBeadRef} className="absolute top-0 left-0 bg-ninja-red rounded-full" />
-            <div ref={gooDropRef} className="absolute top-0 left-0 bg-ninja-red rounded-full" />
+            <div ref={gooBeadRef} className="absolute top-0 left-0 bg-ninja-red" />
+            <div ref={gooDropRef} className="absolute top-0 left-0 bg-ninja-red" />
           </div>
         </>,
         document.body
