@@ -323,16 +323,19 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
           both of them say the same thing, because armed there is only one
           thing either direction can do.
 
-          The tint is the brand red at a tenth, not `bg-red-50`: index.css
-          overrides the stock red backgrounds in dark with `!important`, and it
-          would have come out plum on the one surface that has to read as
-          danger. */}
+          A moving card is a label and nothing else. It thins as it travels, so
+          anything laid behind it comes up THROUGH it, and a card washing blue
+          on the way to the next column reads as the card changing rather than
+          the column it is going to. Armed keeps its tint: red coming up through
+          a card that is about to be thrown away is the warning doing its job.
+          That tint is the brand red at a tenth and not `bg-red-50`, which
+          index.css overrides to plum in dark with `!important`. */}
       {canRight && (
         <div
           ref={aheadRef}
           aria-hidden="true"
           className={`absolute inset-0 rounded-2xl flex items-center justify-start px-5 opacity-0 pointer-events-none ${
-            armed ? 'bg-ninja-red/10' : 'bg-ninja-blue/10'
+            armed ? 'bg-ninja-red/10' : ''
           }`}
         >
           <span className={`flex items-center gap-1.5 font-ninja text-xs font-bold ${
@@ -349,7 +352,7 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
           ref={backRef}
           aria-hidden="true"
           className={`absolute inset-0 rounded-2xl flex items-center justify-end px-5 opacity-0 pointer-events-none ${
-            armed ? 'bg-ninja-red/10' : 'bg-ninja-blue/10'
+            armed ? 'bg-ninja-red/10' : ''
           }`}
         >
           <span className={`flex items-center gap-1.5 font-ninja text-xs font-bold ${
@@ -470,15 +473,6 @@ export default function TaskBoard({
   const [landing, setLanding] = useState(null);
   const landTimer = useRef(null);
   useEffect(() => () => clearTimeout(landTimer.current), []);
-
-  // A card dropped on the bin is left on screen to be destroyed there. The
-  // overlay it was being dragged in outlives the drag by the length of the
-  // animation, which is the only reason any of this is state rather than a
-  // straight call to onDelete.
-  const [destroying, setDestroying] = useState(false);
-  const destroyTimer = useRef(null);
-  useEffect(() => () => clearTimeout(destroyTimer.current), []);
-  const DESTROY_MS = 340;
 
   const clearDrag = useCallback(() => {
     snap.current = null;
@@ -608,30 +602,12 @@ export default function TaskBoard({
 
       const t = targetRef.current;
       const from = (grouped[task.column_key] || []).findIndex((x) => x.id === task.id);
-
-      // Dropped off the board. No confirm, by the same call as the swipe: the
-      // card was carried the whole width of the page onto a target that has
-      // been red since the drag began. Everything the drag was holding is let
-      // go of here EXCEPT the overlay, which stays exactly where the pointer
-      // left it and is destroyed there — a card that vanished on release would
-      // be indistinguishable from one that had not been dropped at all.
-      if (t?.trash) {
-        snap.current = null;
-        info.current = null;
-        targetRef.current = null;
-        document.body.style.userSelect = '';
-        setDestroying(true);
-        destroyTimer.current = setTimeout(() => {
-          setDestroying(false);
-          setHeld(null);
-          setTarget(null);
-          onDelete(task);
-        }, reduce ? 140 : DESTROY_MS);
-        return;
-      }
-
       clearDrag();
       if (!t) return;
+      // Dropped off the board. No confirm, by the same call as the swipe: the
+      // card was carried the whole width of the page onto a target that has
+      // been red since the drag began.
+      if (t.trash) { onDelete(task); return; }
       // Indices are in dragged-card-removed space, so landing back on `from` in
       // the same column is the no-op.
       if (t.key === task.column_key && t.index === from) return;
@@ -803,36 +779,27 @@ export default function TaskBoard({
         );
       })}
 
-      {/* Where a card goes to be got rid of. It fades up the moment a drag
+      {/* Where a card goes to be got rid of. It appears the moment a drag
           starts rather than waiting to be discovered, because a drop target
           nobody knows about is not one, and it is red from the outset so that
-          arriving there is a confirmation of something already said. No border:
-          the red deepening as the card comes over is enough to say the target
-          is live, and a dashed rectangle over the nav read as scaffolding. */}
+          arriving there is a confirmation of something already said. */}
       {held?.trash && createPortal(
         <motion.div
           aria-hidden="true"
           initial={reduce ? false : { opacity: 0 }}
-          // One gradient, and the whole panel's opacity is what changes when
-          // the card comes over it. Two tints cross-fading would be a colour
-          // animating, which browsers do less reliably than an opacity, and
-          // this one has to hold up over a moving card.
-          animate={{ opacity: target?.trash ? 1 : 0.6 }}
-          transition={{ duration: 0.2, ease: EASE }}
-          className="fixed z-[59] pointer-events-none flex items-center justify-center"
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.15, ease: EASE }}
+          className={`fixed z-[59] pointer-events-none flex items-center justify-center border-2 border-dashed transition-colors duration-150 ${
+            target?.trash
+              ? 'border-ninja-red bg-ninja-red/20'
+              : 'border-ninja-red/40 bg-ninja-red/[0.07]'
+          }`}
           style={{
             left: held.trash.left, top: held.trash.top,
             width: held.trash.width, height: held.trash.height,
-            // Strongest at the outside edge and gone by the time it meets the
-            // board, so there is no line anywhere: the red simply stops being
-            // red. A flat rectangle drew its own border whether or not it had
-            // one, which over the nav read as a panel that had appeared.
-            backgroundImage: `linear-gradient(${
-              held.trash.height >= held.trash.width ? 'to right' : 'to bottom'
-            }, rgba(229,21,32,0.62) 0%, rgba(229,21,32,0.34) 45%, rgba(229,21,32,0) 100%)`,
           }}
         >
-          <span className={`flex flex-col items-center gap-2 font-ninja text-sm font-bold text-ninja-red transition-transform duration-200 ${
+          <span className={`flex flex-col items-center gap-2 font-ninja text-sm font-bold text-ninja-red transition-transform duration-150 ${
             target?.trash ? 'scale-110' : ''
           }`}>
             <Trash2Icon size={22} strokeWidth={2.25} />
@@ -852,20 +819,13 @@ export default function TaskBoard({
           className="fixed top-0 left-0 z-[60] pointer-events-none"
           style={{ width: held.w, transform: `translate3d(${held.x}px, ${held.y}px, 0)` }}
         >
-          {/* The puff the card collapses into, drawn behind it and spreading
-              past its edges as it goes. */}
-          {destroying && !reduce && (
-            <span aria-hidden="true" className="absolute inset-0 rounded-2xl bg-ninja-red/30 task-destroy-puff" />
-          )}
-
           {/* The card under the pointer keeps its colour while it travels —
               until it is over the bin, where it goes red and shrinks, so the
               card itself says what will happen to it and not just the thing
-              underneath it. Let go there and it is crushed where it was
-              dropped: one last flinch outwards, then down to nothing. */}
-          <div className={`${CARD} ${TASK_SURFACE} task-lensed p-3.5 shadow-xl relative ${
-            destroying ? 'task-destroy' : 'transition-transform duration-150'
-          } ${target?.trash ? 'ring-2 ring-ninja-red -rotate-3 scale-95' : '-rotate-1'}`}>
+              underneath it. */}
+          <div className={`${CARD} ${TASK_SURFACE} task-lensed p-3.5 shadow-xl relative transition-transform duration-150 ${
+            target?.trash ? 'ring-2 ring-ninja-red -rotate-3 scale-95' : '-rotate-1'
+          }`}>
             {target?.trash && (
               <span aria-hidden="true" className="absolute inset-0 rounded-2xl bg-ninja-red/15 pointer-events-none" />
             )}
