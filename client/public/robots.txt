@@ -13,7 +13,7 @@ Allow: /accessibility
 # cannot be rendered and evaluated correctly.
 Allow: /assets/
 Allow: /fonts/
-Allow: /favicon.png
+Allow: /logo/
 Allow: /og-preview.jpg
 Allow: /CodeNinjasIcon.svg
 Allow: /CodeNinjasCelebrate.webp

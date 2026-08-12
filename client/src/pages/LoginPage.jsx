@@ -6,6 +6,7 @@ import { getHomePath } from '../lib/navTabs';
 import { EyeIcon as LucideEye, EyeOffIcon as LucideEyeOff } from 'lucide-react';
 import { useParentAuth } from '../context/ParentAuthContext';
 import ThemeToggle from '../components/ui/ThemeToggle';
+import Logo from '../components/ui/Logo';
 
 const stagger = {
   hidden: {},
@@ -88,7 +89,7 @@ export default function LoginPage() {
 
         {/* DojoLink logo — big and prominent */}
         <motion.div variants={fadeUp} className="mb-5 sm:mb-8">
-          <img src="/DojoLinkLogoH.webp" alt="DojoLink" width="800" height="420" className="h-11 sm:h-16 w-auto" />
+          <Logo variant="lockup" className="h-9 sm:h-12 text-ninja-navy" />
         </motion.div>
 
         {/* Hero copy */}

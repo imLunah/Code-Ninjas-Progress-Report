@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import ThemeToggle from '../ui/ThemeToggle';
+import Logo from '../ui/Logo';
 import { RocketIcon } from '../ui/icons';
 import { LogOutIcon } from 'lucide-react';
 import { LayoutGridIcon, BookOpenIcon } from 'lucide-react';
@@ -114,11 +115,9 @@ export default function Sidebar({ onOpenBug }) {
       {/* Logo */}
       <div className={`py-5 border-b border-ninja-border overflow-hidden ${collapsed ? 'px-2 flex justify-center' : 'px-5'}`}>
         <Link to="/" className="block outline-none" aria-label="DojoLink">
-          {collapsed ? (
-            <img src="/favicon.png" alt="DojoLink" width="512" height="512" className="h-9 w-9 select-none" draggable={false} />
-          ) : (
-            <img src="/DojoLinkLogoH.webp" alt="DojoLink" width="800" height="420" className="h-14 w-auto max-w-none select-none" draggable={false} />
-          )}
+          {collapsed
+            ? <Logo variant="mark" className="h-9 text-ninja-navy" />
+            : <Logo variant="lockup" className="h-8 text-ninja-navy" />}
         </Link>
       </div>
 

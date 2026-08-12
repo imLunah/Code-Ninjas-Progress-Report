@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import ThemeToggle from '../ui/ThemeToggle';
+import Logo from '../ui/Logo';
 import { RocketIcon } from '../ui/icons';
 import { LogOutIcon, UserIcon, ChevronDownIcon } from 'lucide-react';
 import { managerLinks, senseiLinks, isLinkActive } from './Sidebar';
@@ -50,7 +51,7 @@ export default function TopNav({ onOpenBug }) {
   return (
     <header className="hidden lg:flex sticky top-0 z-40 h-16 items-center gap-6 bg-white border-b border-ninja-border px-6 flex-shrink-0">
       <Link to="/" className="flex-shrink-0 outline-none" aria-label="DojoLink">
-        <img src="/DojoLinkLogoH.webp" alt="DojoLink" width="800" height="420" className="h-10 w-auto select-none" draggable={false} />
+        <Logo variant="lockup" className="h-8 text-ninja-navy" />
       </Link>
 
       <nav className="flex items-center gap-1 min-w-0 overflow-x-auto no-scrollbar">

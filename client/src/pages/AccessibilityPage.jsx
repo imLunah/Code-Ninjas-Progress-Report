@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom';
 import { CARD } from '../lib/surfaces';
+import Logo from '../components/ui/Logo';
 
 export default function AccessibilityPage() {
   return (
     <div className="theme-locked min-h-[100dvh] bg-ninja-bg py-12 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
-          <img src="/DojoLinkLogoH.webp" alt="DojoLink" width="800" height="420" className="h-10 w-auto mb-6" />
+          <Logo variant="lockup" className="h-8 text-ninja-navy mb-6" />
           <h1 className="text-3xl font-bold font-ninja text-ninja-navy">Accessibility Statement</h1>
           <p className="text-ninja-muted font-ninja text-sm mt-1">Last Updated: May 28, 2026</p>
         </div>
