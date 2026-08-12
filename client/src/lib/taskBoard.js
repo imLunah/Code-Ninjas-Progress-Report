@@ -128,6 +128,21 @@ export function plainPreview(md) {
 
 export const todayKey = () => dayKey(new Date());
 
+// A card as the fields the API takes. PATCH /:id is a whole-card write, so an
+// edit of one cell has to hand back everything else unchanged; this is that
+// "everything else", in one place, so a new field cannot be forgotten by the
+// list and silently wiped every time somebody changes a due date.
+export const cardFields = (t) => ({
+  title: t.title ?? null,
+  body: t.body ?? null,
+  color: t.color ?? 'none',
+  due_date: t.due_date ?? null,
+  assignee_id: t.assignee_id ?? null,
+  assignee_center: Boolean(t.assignee_center),
+  checklist: t.checklist ?? [],
+  column_key: t.column_key,
+});
+
 // Who is carrying a card, as one string. The center's name travels with the
 // card so a board viewed from another center still names the right one.
 export function taskHolder(task) {

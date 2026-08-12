@@ -11,7 +11,7 @@ import Segmented from '../../components/ui/Segmented';
 import { Skeleton, SkeletonList } from '../../components/ui/Skeleton';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { COLUMNS, moveTask, reorderPayload } from '../../lib/taskBoard';
+import { COLUMNS, cardFields, reorderPayload } from '../../lib/taskBoard';
 import { EMPTY_FILTERS, filterTasks, isFiltered } from '../../lib/taskFilters';
 
 const EASE = [0.23, 1, 0.32, 1];
@@ -155,11 +155,22 @@ export default function TasksPage() {
     }
   }, [tasks]);
 
-  // The list has no columns to drag between, so its menu moves cards the same
-  // way the board's does.
-  const moveTo = useCallback((task, key) => {
-    reorder(moveTask(tasks, task.id, key, tasks.filter((t) => t.column_key === key).length));
-  }, [tasks, reorder]);
+  // One cell of one card, changed from the list. PATCH is a whole-card write,
+  // so the rest of the card goes back with it — cardFields is that "rest", in
+  // one place, so a field added later cannot be quietly wiped by an edit that
+  // never meant to touch it.
+  const patchTask = useCallback(async (task, fields) => {
+    const previous = tasks;
+    setTasks((ts) => ts.map((t) => (t.id === task.id ? { ...t, ...fields } : t)));
+    try {
+      const saved = await api.patch(`/director-tasks/${task.id}`, { ...cardFields(task), ...fields });
+      setTasks((ts) => ts.map((t) => (t.id === saved.id ? { ...t, ...saved } : t)));
+      setError('');
+    } catch (err) {
+      setTasks(previous);
+      setError(err.message || 'Could not save that change.');
+    }
+  }, [tasks]);
 
   const remove = useCallback(async (task) => {
     const previous = tasks;
@@ -243,11 +254,13 @@ export default function TasksPage() {
           <TaskList
             tasks={visible}
             canManage={canManage}
+            directors={directors}
+            centerName={user?.activeLocation?.name}
             onEdit={(task) => setEditor({ task })}
             onDelete={remove}
             onArchive={archive}
             onRestore={restore}
-            onMoveTo={moveTo}
+            onPatch={patchTask}
           />
         ) : (
           <TaskBoard
