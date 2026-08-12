@@ -814,18 +814,23 @@ export default function TaskBoard({
           aria-hidden="true"
           initial={reduce ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.15, ease: EASE }}
-          className={`fixed z-[59] pointer-events-none flex items-center justify-center border-2 border-dashed transition-colors duration-150 ${
+          transition={{ duration: 0.22, ease: EASE }}
+          // Opaque enough to actually cover the nav. A red wash thin enough to
+          // read the sidebar's own blues through it made a purple no colour on
+          // this board means, and a delete target you have to squint at is not
+          // one. The blur takes what the fill leaves, so the panel is red and
+          // whatever is under it is unreadably soft rather than half there.
+          className={`fixed z-[59] pointer-events-none flex items-center justify-center border-2 border-dashed backdrop-blur-[3px] transition-colors duration-200 ease-[var(--ease-out)] ${
             target?.trash
-              ? 'border-ninja-red bg-ninja-red/20'
-              : 'border-ninja-red/40 bg-ninja-red/[0.07]'
+              ? 'border-white/70 bg-ninja-red/95'
+              : 'border-white/40 bg-ninja-red/75'
           }`}
           style={{
             left: held.trash.left, top: held.trash.top,
             width: held.trash.width, height: held.trash.height,
           }}
         >
-          <span className={`flex flex-col items-center gap-2 font-ninja text-sm font-bold text-ninja-red transition-transform duration-150 ${
+          <span className={`flex flex-col items-center gap-2 font-ninja text-sm font-bold text-white transition-transform duration-200 ease-[var(--ease-out)] ${
             target?.trash ? 'scale-110' : ''
           }`}>
             <Trash2Icon size={22} strokeWidth={2.25} />
