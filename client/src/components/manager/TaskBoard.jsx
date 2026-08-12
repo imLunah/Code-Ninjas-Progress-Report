@@ -607,7 +607,7 @@ export default function TaskBoard({
     // Eased so the reach is slow to start and quick to close, which is what
     // makes it read as something being pulled rather than something growing.
     const pull = t * t;
-    g.style.opacity = String(0.05 + 0.12 * pull);
+    g.style.opacity = String(0.09 + 0.10 * pull);
 
     // Positions are viewport coordinates; the layer's own origin sits a reach to
     // the left of the band and a bleed above the window.
