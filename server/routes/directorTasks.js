@@ -18,12 +18,14 @@ const BODY_MAX = 4000;
 const SELECT = `
   SELECT t.id, t.title, t.body, t.column_key, t.color, t.position,
          to_char(t.due_date, 'YYYY-MM-DD') AS due_date,
-         t.assignee_id, t.created_at, t.updated_at,
+         t.assignee_id, t.assignee_center, t.created_at, t.updated_at,
          u.display_name AS created_by_name,
-         a.display_name AS assignee_name
+         a.display_name AS assignee_name,
+         l.name AS location_name
   FROM director_tasks t
   LEFT JOIN users u ON u.id = t.created_by
   LEFT JOIN users a ON a.id = t.assignee_id
+  LEFT JOIN locations l ON l.id = t.location_id
 `;
 
 // Directors of this center, by membership rather than home center, so someone
@@ -38,14 +40,21 @@ const ASSIGNEE_SELECT = `
   ORDER BY u.display_name ASC
 `;
 
-// Absent means "leave it alone", null or empty means "unassign". Anything else
-// has to be a director who is actually at this center: without that check the
-// board would be a way to write a row naming any user in the system and read
-// their display name back out of it.
-async function readAssignee(pool, raw, locationId) {
-  if (raw === undefined) return { skip: true };
-  if (raw === null || raw === '') return { value: null };
-  const id = Number(raw);
+// Who is carrying a card: nobody, the center, or one director. The three are
+// exclusive, and the server decides which it is rather than trusting two fields
+// to agree — the DB carries the same rule as a CHECK.
+//
+// Absent means "leave it alone". A named director has to be one who is actually
+// at this center: without that check the board would be a way to write a row
+// naming any user in the system and read their display name back out of it.
+async function readAssignee(pool, body, locationId) {
+  const rawId = body?.assignee_id;
+  const center = body?.assignee_center;
+  if (rawId === undefined && center === undefined) return { skip: true };
+  if (center === true) return { id: null, center: true };
+  if (rawId === null || rawId === undefined || rawId === '') return { id: null, center: false };
+
+  const id = Number(rawId);
   if (!Number.isInteger(id) || id < 1) return { error: 'Unknown director' };
   const { rows } = await pool.query(
     `SELECT 1 FROM users u
@@ -54,7 +63,7 @@ async function readAssignee(pool, raw, locationId) {
     [id, locationId]
   );
   if (!rows[0]) return { error: 'That director is not at this center' };
-  return { value: id };
+  return { id, center: false };
 }
 
 // pg serializes a DATE as UTC midnight, which a browser in a negative offset
@@ -132,16 +141,16 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   if (fields.error) return res.status(400).json({ error: fields.error });
 
   try {
-    const assignee = await readAssignee(pool, req.body?.assignee_id, req.session.activeLocationId);
+    const assignee = await readAssignee(pool, req.body, req.session.activeLocationId);
     if (assignee.error) return res.status(400).json({ error: assignee.error });
 
     const { rows } = await pool.query(
       `INSERT INTO director_tasks
-         (location_id, title, body, column_key, color, due_date, assignee_id, position, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7,
+         (location_id, title, body, column_key, color, due_date, assignee_id, assignee_center, position, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
          COALESCE((SELECT MAX(position) + 1 FROM director_tasks
                    WHERE location_id = $1 AND column_key = $4), 0),
-         $8)
+         $9)
        RETURNING id`,
       [
         req.session.activeLocationId,
@@ -150,7 +159,8 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
         fields.column_key,
         fields.color,
         fields.due_date,
-        assignee.skip ? null : assignee.value,
+        assignee.skip ? null : assignee.id,
+        assignee.skip ? false : assignee.center,
         req.session.userId,
       ]
     );
@@ -220,7 +230,7 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
   if (fields.error) return res.status(400).json({ error: fields.error });
 
   try {
-    const assignee = await readAssignee(pool, req.body?.assignee_id, req.session.activeLocationId);
+    const assignee = await readAssignee(pool, req.body, req.session.activeLocationId);
     if (assignee.error) return res.status(400).json({ error: assignee.error });
 
     // The editor can move a card between columns, and a card carrying its old
@@ -233,6 +243,7 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
       `UPDATE director_tasks t
        SET title = $1, body = $2, column_key = $3, color = $4, due_date = $5,
            assignee_id = CASE WHEN $6::boolean THEN t.assignee_id ELSE $7 END,
+           assignee_center = CASE WHEN $6::boolean THEN t.assignee_center ELSE $10 END,
            position = CASE
              WHEN t.column_key = $3 THEN t.position
              ELSE COALESCE((SELECT MAX(d.position) + 1 FROM director_tasks d
@@ -248,9 +259,10 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
         fields.color,
         fields.due_date,
         !!assignee.skip,
-        assignee.skip ? null : assignee.value,
+        assignee.skip ? null : assignee.id,
         req.params.id,
         req.session.activeLocationId,
+        assignee.skip ? false : assignee.center,
       ]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Task not found' });

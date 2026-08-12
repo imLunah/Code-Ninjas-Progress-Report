@@ -1,3 +1,4 @@
+import { Building2Icon } from 'lucide-react';
 import { DUE_TONE, dueMeta, plainPreview } from '../../lib/taskBoard';
 
 // What a task card looks like, in one place.
@@ -26,16 +27,21 @@ function initials(name) {
     : parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function Assignee({ name }) {
+// A card carried by the center wears the same chip with a building in place of
+// the initials, so "everyone here" and "this person" read as answers to the
+// same question rather than two different kinds of thing.
+function Assignee({ name, center }) {
   return (
     <span className="flex items-center gap-1.5 flex-shrink-0 min-w-0" aria-label={`Assigned to ${name}`}>
       <span
         aria-hidden="true"
         className="w-5 h-5 rounded-full border border-ninja-border flex items-center justify-center font-ninja text-[9px] font-black text-ninja-muted leading-none"
       >
-        {initials(name)}
+        {center ? <Building2Icon size={11} strokeWidth={2.25} /> : initials(name)}
       </span>
-      <span className="font-ninja text-xs text-ninja-muted truncate">{name.split(/\s+/)[0]}</span>
+      <span className="font-ninja text-xs text-ninja-muted truncate">
+        {center ? name : name.split(/\s+/)[0]}
+      </span>
     </span>
   );
 }
@@ -43,6 +49,11 @@ function Assignee({ name }) {
 export default function TaskCardFace({ task, onOpen, actions }) {
   const due = dueMeta(task.due_date);
   const body = plainPreview(task.body);
+  // The center's name comes down with the card, so a board being viewed from
+  // another center still names the right one.
+  const holder = task.assignee_center
+    ? (task.location_name || 'The whole center')
+    : task.assignee_name;
 
   // A card is allowed to be a note. Everything carried over from the sticky
   // wall is a paragraph somebody typed with no title on it, and inventing one
@@ -81,12 +92,12 @@ export default function TaskCardFace({ task, onOpen, actions }) {
 
       {/* The footer holds the two things about a card that are not what it
           says: when it is due, and who has it. */}
-      {(due || task.assignee_name) && (
+      {(due || holder) && (
         <div className="mt-3 flex items-center justify-between gap-3">
           <span className={`font-ninja text-xs truncate ${due ? DUE_TONE[due.tone] : ''}`}>
             {due?.text}
           </span>
-          {task.assignee_name && <Assignee name={task.assignee_name} />}
+          {holder && <Assignee name={holder} center={task.assignee_center} />}
         </div>
       )}
     </>
