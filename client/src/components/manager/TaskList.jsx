@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
+import { ChevronDownIcon, ChevronUpIcon, Trash2Icon } from 'lucide-react';
 import TaskActionsMenu from './TaskActionsMenu';
 import { CARD } from '../../lib/surfaces';
 import { COLUMNS, COLUMN_KEYS, DUE_TONE, dueMeta, plainPreview, taskHolder } from '../../lib/taskBoard';
@@ -12,7 +12,9 @@ import { COLUMNS, COLUMN_KEYS, DUE_TONE, dueMeta, plainPreview, taskHolder } fro
 // only read means triaging twenty cards is twenty dialogs, which is the work
 // the list was supposed to save.
 
-const COLS = 'grid-cols-[minmax(0,2.6fr)_9rem_11rem_9rem_2rem]';
+// A checkbox column ahead of the rest. Triaging is what this view is for, and
+// triaging twenty cards one menu at a time is the work it was meant to save.
+const COLS = 'grid-cols-[1.5rem_minmax(0,2.6fr)_9rem_11rem_9rem_2rem]';
 
 // Ghost controls: no chrome until the pointer or focus arrives, so the table
 // reads as text and behaves as a form. The row is a row, not a toolbar.
@@ -59,8 +61,16 @@ function SortHeader({ label, sortKey, sort, onSort, className = '' }) {
   );
 }
 
-export default function TaskList({ tasks, canManage, directors = [], centerName, onEdit, onDelete, onPurge, onRestore, onPatch }) {
+export default function TaskList({ tasks, canManage, directors = [], centerName, onEdit, onDelete, onPurge, onRestore, onPatch, onQuickAdd }) {
   const [sort, setSort] = useState({ key: 'due', dir: 'asc' });
+  const [picked, setPicked] = useState(() => new Set());
+  const [adding, setAdding] = useState('');
+
+  const togglePicked = (id) => setPicked((p) => {
+    const next = new Set(p);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   const toggleSort = (key) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
@@ -81,10 +91,80 @@ export default function TaskList({ tasks, canManage, directors = [], centerName,
     });
   }, [tasks, sort]);
 
+  // Selection is by id, and ids outlive a sort but not a delete. Anything that
+  // has left the board is dropped rather than left in the set, or the count
+  // above the table would go on counting rows that are not there.
+  const live = rows.filter((t) => picked.has(t.id));
+  const allPicked = rows.length > 0 && live.length === rows.length;
+
+  const quickAdd = (e) => {
+    e.preventDefault();
+    const text = adding.trim();
+    if (!text) return;
+    setAdding('');
+    onQuickAdd?.('todo', text);
+  };
+
+  // Typing a task straight into the list, the way each column does at its foot.
+  // It lands in To do, because the list has no column to be at the bottom of
+  // and anything typed in one breath is a thing to do rather than a thing being
+  // done.
+  const addRow = canManage && onQuickAdd && (
+    <form onSubmit={quickAdd} className="px-4 lg:px-5 py-2 border-t border-ninja-border/50">
+      <input
+        type="text"
+        value={adding}
+        onChange={(e) => setAdding(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Escape') { setAdding(''); e.currentTarget.blur(); } }}
+        placeholder="+ Quick add to To do"
+        aria-label="Quick add a task to To do"
+        className="w-full px-2 py-1.5 -mx-2 rounded-lg bg-transparent border border-transparent hover:border-ninja-border focus:border-ninja-blue focus:bg-white dark:focus:bg-white/5 font-ninja text-sm text-ninja-navy placeholder:text-ninja-muted transition-colors duration-150"
+      />
+    </form>
+  );
+
+  // Sits above the table rather than floating over it: the count is the point,
+  // and a bar that covers the rows it is counting is a bar you have to move to
+  // check. Delete here is the recoverable one, like everywhere else, so it goes
+  // without asking.
+  const selectionBar = live.length > 0 && (
+    <div className="mb-3 flex flex-wrap items-center gap-2">
+      <span className="font-ninja text-sm font-bold text-ninja-navy">
+        {live.length} selected
+      </span>
+      <button
+        type="button"
+        onClick={() => { live.forEach((t) => onDelete(t)); setPicked(new Set()); }}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-ninja text-xs font-bold text-ninja-red hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+      >
+        <Trash2Icon size={14} strokeWidth={2.25} />
+        Delete
+      </button>
+      <button
+        type="button"
+        onClick={() => setPicked(new Set())}
+        className="font-ninja text-xs font-semibold text-ninja-muted hover:text-ninja-navy transition-colors"
+      >
+        Clear selection
+      </button>
+    </div>
+  );
+
+  const pickBox = (task) => canManage && (
+    <input
+      type="checkbox"
+      checked={picked.has(task.id)}
+      onChange={() => togglePicked(task.id)}
+      aria-label={`Select ${task.title?.trim() || plainPreview(task.body) || 'task'}`}
+      className="rounded border-ninja-border accent-ninja-blue cursor-pointer flex-shrink-0"
+    />
+  );
+
   if (!rows.length) {
     return (
-      <div className={`${CARD} py-12 text-center font-ninja text-sm text-ninja-muted`}>
-        Nothing matches.
+      <div className={CARD}>
+        <p className="py-12 text-center font-ninja text-sm text-ninja-muted">Nothing here yet.</p>
+        {addRow}
       </div>
     );
   }
@@ -93,8 +173,19 @@ export default function TaskList({ tasks, canManage, directors = [], centerName,
   // clipped every menu that opened near the bottom of the list with it; the
   // corners are rounded by the first and last rows instead.
   return (
+    <>
+    {selectionBar}
     <div className={CARD}>
       <div className={`hidden lg:grid ${COLS} gap-3 px-5 py-2.5 rounded-t-2xl border-b border-ninja-border bg-ninja-bg font-ninja font-bold text-[11px] text-ninja-muted`}>
+        {canManage ? (
+          <input
+            type="checkbox"
+            checked={allPicked}
+            onChange={() => setPicked(allPicked ? new Set() : new Set(rows.map((t) => t.id)))}
+            aria-label={allPicked ? 'Clear selection' : 'Select every task'}
+            className="rounded border-ninja-border accent-ninja-blue cursor-pointer self-center"
+          />
+        ) : <span />}
         <SortHeader label="Task" sortKey="title" sort={sort} onSort={toggleSort} />
         <SortHeader label="Status" sortKey="status" sort={sort} onSort={toggleSort} />
         <SortHeader label="Who has it" sortKey="assignee" sort={sort} onSort={toggleSort} />
@@ -203,6 +294,7 @@ export default function TaskList({ tasks, canManage, directors = [], centerName,
             className={`border-b border-ninja-border/50 last:border-b-0 last:rounded-b-2xl hover:bg-ninja-bg/60 transition-colors ${task.archived_at ? 'opacity-60' : ''}`}
           >
             <div className={`hidden lg:grid ${COLS} gap-3 px-5 py-2.5 items-center`}>
+              {canManage ? pickBox(task) : <span />}
               {title}
               {status}
               {owner}
@@ -212,6 +304,7 @@ export default function TaskList({ tasks, canManage, directors = [], centerName,
 
             <div className="lg:hidden px-4 py-3">
               <div className="flex items-start justify-between gap-2">
+                {canManage && <span className="pt-0.5">{pickBox(task)}</span>}
                 {title}
                 {menu}
               </div>
@@ -224,6 +317,8 @@ export default function TaskList({ tasks, canManage, directors = [], centerName,
           </div>
         );
       })}
+      {addRow}
     </div>
+    </>
   );
 }
