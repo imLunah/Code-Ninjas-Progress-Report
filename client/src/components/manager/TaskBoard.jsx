@@ -15,6 +15,14 @@ import {
 
 const EASE = [0.23, 1, 0.32, 1];
 
+// The overshoot, kept for the moment a card is let go of and nowhere else.
+// While a card is under the pointer the board is answering a question — the gap
+// opening ahead of it is information, and information that wobbles is harder to
+// read. Once the card is dropped the question is settled, and the overshoot is
+// what settling sounds like.
+const SETTLE_EASE = [0.34, 1.56, 0.64, 1];
+const SETTLE_MS = 420;
+
 // Vertical rhythm between cards. The drop maths has to know it, because the
 // space a lifted card frees up is its own height plus one gap.
 const GAP = 12; // matches space-y-3
@@ -67,7 +75,7 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 /* --------------------------------------------------------------- card -- */
 
-function TaskCard({ task, canManage, grabbable, swipeable, onOpen, onDelete, onArchive, onRestore, onMoveTo, cardRef, onPointerDown, onSwipeStart }) {
+function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onOpen, onDelete, onArchive, onRestore, onMoveTo, cardRef, onPointerDown, onSwipeStart }) {
   const reduce = useReducedMotion();
   const faceRef = useRef(null);
   const hintRef = useRef(null);
@@ -189,7 +197,10 @@ function TaskCard({ task, canManage, grabbable, swipeable, onOpen, onDelete, onA
       // gap opens and closes under the held one. That reflow IS the feedback —
       // it's what tells you where the card will land before you let go.
       layout={reduce ? false : 'position'}
-      transition={{ duration: 0.2, ease: EASE }}
+      // Mid-drag the cards make room in a plain ease. The overshoot is switched
+      // on for the length of the landing and then switched off again, so it is
+      // only ever the sound of a card being let go of.
+      transition={settling ? { duration: SETTLE_MS / 1000, ease: SETTLE_EASE } : { duration: 0.2, ease: EASE }}
       onPointerDown={(e) => { onPointerDown(e); startSwipe(e); }}
       // The wrapper carries the layout animation and nothing else. The surface
       // moved inside it so the swipe has a transform of its own to write:
@@ -218,7 +229,13 @@ function TaskCard({ task, canManage, grabbable, swipeable, onOpen, onDelete, onA
       <div
         ref={faceRef}
         style={swipeable ? { touchAction: 'pan-y' } : undefined}
-        className={`${CARD} ${TASK_SURFACE} p-3.5 relative ${grabbable ? 'cursor-grab' : ''}`}
+        // The dropped card is a fresh mount — it left the list the moment it was
+        // lifted — so there is no position for it to animate from and it would
+        // otherwise appear in its new slot fully formed while the board settles
+        // around it. A keyframe rather than an inline transform: this card
+        // re-renders on the same tick it lands, and a class survives that where
+        // a written style would be overwritten by it.
+        className={`${CARD} ${TASK_SURFACE} p-3.5 relative ${grabbable ? 'cursor-grab' : ''} ${landed && !reduce ? 'task-landing' : ''}`}
       >
         <TaskCardFace
           task={task}
@@ -285,6 +302,11 @@ export default function TaskBoard({
   const [held, setHeld] = useState(null);   // the card drawn in the overlay
   const [target, setTarget] = useState(null);
   const [quickAdd, setQuickAdd] = useState({ key: null, text: '' });
+  // The id of the card just dropped, held for as long as the board takes to
+  // settle around it and then let go of.
+  const [landing, setLanding] = useState(null);
+  const landTimer = useRef(null);
+  useEffect(() => () => clearTimeout(landTimer.current), []);
 
   const clearDrag = useCallback(() => {
     snap.current = null;
@@ -406,6 +428,9 @@ export default function TaskBoard({
       // Indices are in dragged-card-removed space, so landing back on `from` in
       // the same column is the no-op.
       if (t.key === task.column_key && t.index === from) return;
+      setLanding(task.id);
+      clearTimeout(landTimer.current);
+      landTimer.current = setTimeout(() => setLanding(null), SETTLE_MS + 60);
       onReorder(moveTask(tasks, task.id, t.key, t.index));
     };
 
@@ -504,6 +529,8 @@ export default function TaskBoard({
                     // The other horizontal gesture. Never both at once — see
                     // the note above DISMISS_AT.
                     swipeable={canManage && !dragEnabled && !task.archived_at}
+                    settling={landing !== null}
+                    landed={landing === task.id}
                     cardRef={(el) => {
                       if (el) cardRefs.current.set(task.id, el);
                       else cardRefs.current.delete(task.id);

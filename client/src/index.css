@@ -228,6 +228,19 @@ textarea:focus-visible {
   backdrop-filter: url(#liquidGlass) blur(2px) saturate(1.8);
 }
 
+/* A dropped card is a fresh mount in its new slot, so it has no old position to
+   travel from and would simply be there. This is the last of the drop: it
+   arrives a hair small and overshoots very slightly on the way to its size,
+   which is the same overshoot the rest of the board settles with. */
+@keyframes taskLand {
+  from { transform: scale(0.965); }
+  to   { transform: scale(1); }
+}
+.task-landing { animation: taskLand 420ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .task-landing { animation: none; }
+}
+
 /* Glass is a preference, not a requirement. Someone who has asked their system
    for less transparency gets a plain card. */
 @media (prefers-reduced-transparency: reduce) {
