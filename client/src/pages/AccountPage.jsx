@@ -371,10 +371,7 @@ export default function AccountPage() {
         <span className="w-9 h-9 rounded-xl flex items-center justify-center text-ninja-blue-ink bg-ninja-blue/10">
           <PanelTopIcon width="17" height="17" />
         </span>
-        <div>
-          <p className="text-ninja-navy font-ninja font-semibold text-sm">Navigation layout</p>
-          <p className="text-ninja-muted font-ninja text-xs">Where the nav lives on desktop. Only follows this device.</p>
-        </div>
+        <p className="text-ninja-navy font-ninja font-semibold text-sm">Navigation layout</p>
       </div>
       <div role="radiogroup" aria-label="Navigation layout" className="grid grid-cols-2 gap-4 max-w-md">
         {navLayouts.map(({ value, label, hint, preview }) => {
