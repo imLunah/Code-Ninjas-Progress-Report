@@ -319,7 +319,7 @@ export default function AccountPage() {
   const navLayouts = [
     {
       value: false,
-      label: 'Spine',
+      label: 'Tokyo',
       hint: 'Nav down the left',
       preview: (
         <div className="flex h-full">
@@ -341,7 +341,7 @@ export default function AccountPage() {
     },
     {
       value: true,
-      label: 'Crown',
+      label: 'Hokkaido',
       hint: 'Nav across the top',
       preview: (
         <div className="flex h-full flex-col">
