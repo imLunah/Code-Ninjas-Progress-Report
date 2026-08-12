@@ -38,23 +38,39 @@ export default function TaskEditorModal({ isOpen, task, column = 'todo', onClose
     return () => { alive = false; };
   }, [isOpen]);
 
-  // Reseeded on open rather than on every render, so typing isn't clobbered by
-  // the parent re-rendering underneath the dialog.
-  useEffect(() => {
-    if (!isOpen) return;
-    setTitle(task?.title ?? '');
-    setBody(task?.body ?? '');
-    setColor(task?.color ?? 'none');
-    setDue(task?.due_date ?? '');
-    // The center is the default, including for the older cards that predate
-    // this field: with no empty option to fall back to, a select showing the
-    // center while the card is stored as unassigned would save one thing and
-    // display another.
-    setAssignee(task?.assignee_id ? String(task.assignee_id) : 'center');
-    setColumnKey(task?.column_key ?? column);
-    setError('');
-    setSaving(false);
-  }, [isOpen, task, column]);
+  // Seeded during render, not in an effect, and only when the dialog opens on a
+  // different card.
+  //
+  // An effect is one render too late here. Modal mounts its children on the
+  // same render that opens it, and the note editor reads its content ONCE when
+  // it mounts — so opening a second card would build the editor from the state
+  // still holding the first card's note, and the effect that corrected the
+  // state afterwards could not reach inside an editor that had already started.
+  // Titles looked right and notes were a card behind, which on a board of
+  // titleless cards reads as the wrong task opening altogether.
+  //
+  // Keyed by which card is open, so a re-render of the board underneath the
+  // dialog never clobbers what is being typed, and closing re-arms it: the same
+  // card opened again comes back to what was saved, not to an abandoned edit.
+  const seedKey = isOpen ? String(task?.id ?? `new:${column}`) : null;
+  const [seeded, setSeeded] = useState(null);
+  if (seedKey !== seeded) {
+    setSeeded(seedKey);
+    if (isOpen) {
+      setTitle(task?.title ?? '');
+      setBody(task?.body ?? '');
+      setColor(task?.color ?? 'none');
+      setDue(task?.due_date ?? '');
+      // The center is the default, including for the older cards that predate
+      // this field: with no empty option to fall back to, a select showing the
+      // center while the card is stored as unassigned would save one thing and
+      // display another.
+      setAssignee(task?.assignee_id ? String(task.assignee_id) : 'center');
+      setColumnKey(task?.column_key ?? column);
+      setError('');
+      setSaving(false);
+    }
+  }
 
   // A card must say something, but it chooses whether that is a title or a
   // note. The server has always been the authority on this (has_content); the

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import Button from '../ui/Button';
@@ -316,7 +316,16 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, o
   const hasLessonFields = !!(subPrograms[program] || curriculum[program]?.length);
 
   // Switching class, or switching which log is being edited, starts over.
-  useEffect(() => {
+  //
+  // During render rather than in an effect: the note editor reads its content
+  // once when it mounts and never looks at the prop again, so a seed that
+  // arrives an effect later leaves the previous session's notes sitting in a
+  // form that has otherwise moved on. Guarded by what is being logged, so
+  // nothing clobbers what is being typed.
+  const seedKey = `${program}:${editLog?.id ?? 'new'}`;
+  const [seeded, setSeeded] = useState(seedKey);
+  if (seedKey !== seeded) {
+    setSeeded(seedKey);
     const next = seed();
     setNotes(next.notes);
     setBeltLevel(next.beltLevel);
@@ -326,7 +335,7 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, o
     // A leftover success banner from the previous program would hide this form
     setSuccess(false);
     setError('');
-  }, [program, editLog?.id]);
+  }
 
   const updateEntry = (index, field, value) => {
     setLessonEntries((prev) =>
