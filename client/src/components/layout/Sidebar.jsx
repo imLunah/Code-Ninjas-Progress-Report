@@ -115,9 +115,13 @@ export default function Sidebar({ onOpenBug }) {
       {/* Logo */}
       <div className={`py-5 border-b border-ninja-border overflow-hidden ${collapsed ? 'px-2 flex justify-center' : 'px-5'}`}>
         <Link to="/" className="block outline-none" aria-label="DojoLink">
+          {/* The rail already showed the mark a moment ago, and the two states
+              are the same header: repeating it beside the name says the bird
+              twice. Collapsed is the mark alone, expanded is the name alone.
+              h-7 because the wordmark is 6.4:1 and the rail gives it 184px. */}
           {collapsed
             ? <Logo variant="mark" className="h-9 text-ninja-navy" />
-            : <Logo variant="lockup" className="h-8 text-ninja-navy" />}
+            : <Logo variant="wordmark" className="h-7 text-ninja-navy" />}
         </Link>
       </div>
 
