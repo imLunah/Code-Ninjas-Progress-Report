@@ -263,10 +263,36 @@ textarea:focus-visible {
     taskArmJiggle 240ms ease-in-out 160ms infinite;
 }
 
+/* Letting a card go over the bin. It flinches outwards once — the wind-up that
+   makes the collapse land — and is then crushed down to nothing with a turn on
+   it, while a red puff spreads out from underneath and thins away. `forwards`
+   holds the last frame for the few milliseconds between the animation ending
+   and the board removing the card. */
+@keyframes taskDestroy {
+  0%   { transform: scale(0.95) rotate(-3deg); opacity: 1; }
+  30%  { transform: scale(1.06) rotate(-7deg); opacity: 1; }
+  100% { transform: scale(0.12) rotate(16deg); opacity: 0; }
+}
+.task-destroy { animation: taskDestroy 340ms cubic-bezier(0.36, 0, 0.66, -0.36) forwards; }
+
+@keyframes taskDestroyPuff {
+  0%   { transform: scale(0.7);  opacity: 0; }
+  35%  { transform: scale(1.02); opacity: 0.6; }
+  100% { transform: scale(1.5);  opacity: 0; }
+}
+.task-destroy-puff { animation: taskDestroyPuff 340ms ease-out forwards; }
+
 @media (prefers-reduced-motion: reduce) {
   .task-landing { animation: none; }
   /* The size still says it, without the shake saying it twice. */
   .task-armed { animation: none; transform: scale(1.02); }
+  /* Gone, without being thrown anywhere. */
+  .task-destroy { animation: taskFadeOut 140ms linear forwards; }
+  .task-destroy-puff { animation: none; opacity: 0; }
+}
+
+@keyframes taskFadeOut {
+  to { opacity: 0; }
 }
 
 /* Glass is a preference, not a requirement. Someone who has asked their system
