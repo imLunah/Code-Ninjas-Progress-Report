@@ -810,18 +810,6 @@ export default function TaskBoard({
                   {all.length}
                 </span>
               </h3>
-              {col.key === 'done' && canManage && all.length > 0 && (
-                // Clearing lives on the column it clears, not in a page menu
-                // where it would be a button that says "done" and means "all
-                // of them".
-                <button
-                  type="button"
-                  onClick={onClearDone}
-                  className="ml-auto mr-1 font-ninja text-xs font-semibold text-ninja-muted hover:text-ninja-blue transition-colors"
-                >
-                  Clear finished
-                </button>
-              )}
               {canManage && (
                 <button
                   type="button"
@@ -882,7 +870,22 @@ export default function TaskBoard({
               )}
             </div>
 
-            {canManage && (
+            {/* Clearing lives at the foot of the column it clears, in the slot
+                the other columns give to quick add — because those two are the
+                same thing in their own way: the one action a column wants
+                often enough to have it waiting there. Nothing is typed into
+                Done, and nothing is cleared out of the others. */}
+            {canManage && col.key === 'done' && all.length > 0 && (
+              <button
+                type="button"
+                onClick={onClearDone}
+                className="mt-3 w-full px-3 py-2.5 rounded-xl bg-transparent border border-transparent hover:border-ninja-border hover:text-ninja-navy font-ninja text-sm text-ninja-muted text-left transition-colors duration-150"
+              >
+                Clear
+              </button>
+            )}
+
+            {canManage && col.key !== 'done' && (
               // Most cards on this board are one sentence somebody thought of
               // while standing up. Typing it here is the whole interaction; the
               // + in the header is for the ones that need a date and an owner.
