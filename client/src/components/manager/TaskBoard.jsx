@@ -26,6 +26,11 @@ const EASE = [0.23, 1, 0.32, 1];
 const SETTLE_EASE = [0.34, 1.56, 0.64, 1];
 const SETTLE_MS = 420;
 
+// How long the dropped card takes to travel into the bin, and how long a card
+// deleted from anywhere else takes to shrink out of its column. Both are the
+// same beat, so deleting looks like one thing however it was asked for.
+const TRASH_MS = 200;
+
 // Vertical rhythm between cards. The drop maths has to know it, because the
 // space a lifted card frees up is its own height plus one gap.
 const GAP = 12; // matches space-y-3
@@ -111,7 +116,7 @@ function CardButton({ onClick, disabled, label, children }) {
 
 /* --------------------------------------------------------------- card -- */
 
-function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onOpen, onDelete, onRestore, onMoveTo, cardRef, onPointerDown, onSwipeStart }) {
+function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, leaving, onOpen, onDelete, onRestore, onMoveTo, cardRef, onPointerDown, onSwipeStart }) {
   const reduce = useReducedMotion();
   const faceRef = useRef(null);
   const aheadRef = useRef(null);   // revealed by a pull to the right
@@ -380,7 +385,12 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
           grabbable ? 'cursor-grab' : ''
         } ${swipeable ? 'select-none' : ''} ${
           armed ? 'ring-2 ring-ninja-red task-armed z-10' : ''
-        } ${landed && !reduce ? 'task-landing' : ''}`}
+        } ${landed && !reduce ? 'task-landing' : ''} ${
+          // A card that has already been flung off the screen has an inline
+          // transform holding it there, and an animation would outrank it and
+          // bring the card back to shrink out in the middle of its column.
+          leaving && !flung.current ? 'task-leaving' : ''
+        }`}
       >
         <TaskCardFace
           task={task}
@@ -436,7 +446,7 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, onO
 // restamps position across every column: handed a subset it would renumber the
 // cards it could see and scramble the order of the ones it could not.
 export default function TaskBoard({
-  tasks, canManage, filtered = false,
+  tasks, canManage, filtered = false, leavingId = null,
   onEdit, onDelete, onRestore, onReorder, onAdd, onQuickAdd, onClearDone,
 }) {
   const wide = useDragEnabled();
@@ -602,12 +612,27 @@ export default function TaskBoard({
 
       const t = targetRef.current;
       const from = (grouped[task.column_key] || []).findIndex((x) => x.id === task.id);
-      clearDrag();
-      if (!t) return;
+
       // Dropped off the board. No confirm, by the same call as the swipe: the
       // card was carried the whole width of the page onto a target that has
-      // been red since the drag began.
-      if (t.trash) { onDelete(task); return; }
+      // been red since the drag began. The overlay is kept a moment longer and
+      // sent into the bin, because a card that simply stops existing under the
+      // pointer leaves nothing to connect the drop to the thing that happened.
+      if (t?.trash) {
+        const o = overlayRef.current;
+        const r = snap.current?.trash;
+        if (o && r) {
+          o.style.transition = `transform ${TRASH_MS}ms var(--ease-out), opacity ${TRASH_MS}ms linear`;
+          o.style.transform =
+            `translate3d(${r.left + r.width / 2 - info.current.w / 2}px, ${r.top + r.height / 2}px, 0) scale(0.55)`;
+          o.style.opacity = '0';
+        }
+        setTimeout(() => { clearDrag(); onDelete(task); }, o && r ? TRASH_MS : 0);
+        return;
+      }
+
+      clearDrag();
+      if (!t) return;
       // Indices are in dragged-card-removed space, so landing back on `from` in
       // the same column is the no-op.
       if (t.key === task.column_key && t.index === from) return;
@@ -720,6 +745,7 @@ export default function TaskBoard({
                     swipeable={canManage && !dragEnabled && !task.archived_at}
                     settling={landing !== null}
                     landed={landing === task.id}
+                    leaving={leavingId === task.id}
                     cardRef={(el) => {
                       if (el) cardRefs.current.set(task.id, el);
                       else cardRefs.current.delete(task.id);

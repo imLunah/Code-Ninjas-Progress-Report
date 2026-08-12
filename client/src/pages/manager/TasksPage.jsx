@@ -29,6 +29,22 @@ export default function TasksPage() {
   const [editor, setEditor] = useState(null); // { task } | { column } | null
   const [showArchived, setShowArchived] = useState(false);
   const [directors, setDirectors] = useState([]);
+  // The card on its way out. A delete asked for from the dialog or the list's
+  // menu has nothing moving on screen to connect the press to the row closing
+  // up, so the card is left where it is for a beat and shrinks out of it. The
+  // gestures skip this: they have already carried the card off themselves.
+  const [leavingId, setLeavingId] = useState(null);
+  const leaveTimer = useRef(null);
+  useEffect(() => () => clearTimeout(leaveTimer.current), []);
+  const LEAVE_MS = 200;
+  const dropAfterExit = useCallback((id) => {
+    setLeavingId(id);
+    clearTimeout(leaveTimer.current);
+    leaveTimer.current = setTimeout(() => {
+      setLeavingId(null);
+      setTasks((ts) => ts.filter((t) => t.id !== id));
+    }, LEAVE_MS);
+  }, []);
 
   // Which view, remembered per device. A director who works from the list works
   // from the list; asking them again every morning is the app forgetting.
@@ -118,14 +134,15 @@ export default function TasksPage() {
   // other one, and it is only reachable from inside Recently deleted.
   const softDelete = useCallback(async (task) => {
     const previous = tasks;
-    setTasks((ts) => ts.filter((t) => t.id !== task.id));
+    dropAfterExit(task.id);
     try {
       await api.post(`/director-tasks/${task.id}/archive`);
     } catch (err) {
+      setLeavingId(null);
       setTasks(previous);
       setError(err.message || 'Could not delete the task.');
     }
-  }, [tasks]);
+  }, [tasks, dropAfterExit]);
 
   const restore = useCallback(async (task) => {
     const previous = tasks;
@@ -170,14 +187,15 @@ export default function TasksPage() {
   // there to make unnecessary.
   const purge = useCallback(async (task) => {
     const previous = tasks;
-    setTasks((ts) => ts.filter((t) => t.id !== task.id));
+    dropAfterExit(task.id);
     try {
       await api.delete(`/director-tasks/${task.id}`);
     } catch (err) {
+      setLeavingId(null);
       setTasks(previous);
       setError(err.message || 'Could not delete the task for good.');
     }
-  }, [tasks]);
+  }, [tasks, dropAfterExit]);
 
   return (
     <Layout>
@@ -279,6 +297,7 @@ export default function TasksPage() {
           <TaskBoard
             tasks={tasks}
             filtered={showArchived}
+            leavingId={leavingId}
             canManage={canManage}
             onAdd={(column) => setEditor({ column })}
             onEdit={(task) => setEditor({ task })}
