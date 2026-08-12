@@ -815,23 +815,26 @@ export default function TaskBoard({
           initial={reduce ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.22, ease: EASE }}
-          // Opaque enough to actually cover the nav. A red wash thin enough to
-          // read the sidebar's own blues through it made a purple no colour on
-          // this board means, and a delete target you have to squint at is not
-          // one. The blur takes what the fill leaves, so the panel is red and
-          // whatever is under it is unreadably soft rather than half there.
-          className={`fixed z-[59] pointer-events-none flex items-center justify-center border-2 border-dashed backdrop-blur-[3px] transition-colors duration-200 ease-[var(--ease-out)] ${
+          // Two states, and only one of them is loud. Until the card is over
+          // it this is a hint: barely tinted, enough to say the nav has become
+          // something. Once the card arrives it takes the whole panel, opaque
+          // enough that the sidebar's own blues cannot come up through the red
+          // and turn it a purple that means nothing here — the blur takes what
+          // the fill leaves. `transition-all` because the blur has to travel
+          // between the two along with the colour, or the panel would snap
+          // frosted while the red was still arriving.
+          className={`fixed z-[59] pointer-events-none flex items-center justify-center border-2 border-dashed transition-all duration-200 ease-[var(--ease-out)] ${
             target?.trash
-              ? 'border-white/70 bg-ninja-red/95'
-              : 'border-white/40 bg-ninja-red/75'
+              ? 'border-white/60 bg-ninja-red/85 backdrop-blur-[3px]'
+              : 'border-ninja-red/35 bg-ninja-red/10 backdrop-blur-0'
           }`}
           style={{
             left: held.trash.left, top: held.trash.top,
             width: held.trash.width, height: held.trash.height,
           }}
         >
-          <span className={`flex flex-col items-center gap-2 font-ninja text-sm font-bold text-white transition-transform duration-200 ease-[var(--ease-out)] ${
-            target?.trash ? 'scale-110' : ''
+          <span className={`flex flex-col items-center gap-2 font-ninja text-sm font-bold transition-all duration-200 ease-[var(--ease-out)] ${
+            target?.trash ? 'text-white scale-110' : 'text-ninja-red/80'
           }`}>
             <Trash2Icon size={22} strokeWidth={2.25} />
             {target?.trash ? 'Let go to delete' : 'Drag here to delete'}
