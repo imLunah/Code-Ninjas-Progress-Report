@@ -31,6 +31,12 @@ const SETTLE_MS = 420;
 // same beat, so deleting looks like one thing however it was asked for.
 const TRASH_MS = 200;
 
+// How near the bin a card has to be before the red starts reaching for it, and
+// how much blur the goo filter has to work with. The two are related: the
+// stretch only forms while the gap between two blobs is within a couple of
+// standard deviations, which is what the droplet in between is for.
+const GOO_REACH = 260;
+
 // Vertical rhythm between cards. The drop maths has to know it, because the
 // space a lifted card frees up is its own height plus one gap.
 const GAP = 12; // matches space-y-3
@@ -460,6 +466,13 @@ export default function TaskBoard({
   const listRefs = useRef({});
   const cardRefs = useRef(new Map());
   const overlayRef = useRef(null);
+  // The red under the bin panel, drawn as three blobs through a goo filter: the
+  // pool over the nav, a bead on the card, and one droplet between them. Written
+  // by hand on every pointermove for the same reason the overlay is — this is a
+  // per-frame value, and state would re-render the board to carry it.
+  const gooRef = useRef(null);
+  const gooBeadRef = useRef(null);
+  const gooDropRef = useRef(null);
 
   // Geometry captured once, at the moment the press becomes a drag.
   //
@@ -534,6 +547,39 @@ export default function TaskBoard({
     setTargetIfChanged({ trash: false, key, index: s[key].mids.filter((m) => m < y).length });
   };
 
+  // Distance from the pointer to the bin, turned into how much the red reaches
+  // out. Inside the panel it is 1 and everything is merged; a screen away it is
+  // 0 and there is nothing but the resting pool.
+  const paintGoo = (x, y) => {
+    const g = gooRef.current;
+    const r = snap.current?.trash;
+    if (!g || !r) return;
+
+    const cx = clamp(x, r.left, r.right);
+    const cy = clamp(y, r.top, r.bottom);
+    const d = Math.hypot(x - cx, y - cy);
+    const t = clamp(1 - d / GOO_REACH, 0, 1);
+
+    // Eased so the reach is slow to start and quick to close, which is what
+    // makes it read as something being pulled rather than something growing.
+    const pull = t * t;
+    g.style.opacity = String(0.07 + 0.17 * pull);
+
+    // The bead sits on the card and grows as it nears; the droplet sits between
+    // the two and is what lets the bridge form across a gap wider than the
+    // filter's blur could span on its own.
+    const place = (el, px, py, size) => {
+      if (!el) return;
+      el.style.width = `${size}px`;
+      el.style.height = `${size}px`;
+      el.style.transform = `translate3d(${px - r.left - size / 2}px, ${py - r.top - size / 2}px, 0)`;
+    };
+    // Both scale from nothing, so a card dragged between two columns on the far
+    // side of the board is not trailing a red dot around behind it.
+    place(gooBeadRef.current, x, y, 104 * pull);
+    place(gooDropRef.current, (x + cx) / 2, (y + cy) / 2, 52 * pull * (1 - 0.3 * pull));
+  };
+
   const beginDrag = (task, rect, startX, startY) => {
     const slot = rect.height + GAP;
     const s = {};
@@ -568,6 +614,9 @@ export default function TaskBoard({
     document.body.style.userSelect = 'none';
     setHeld({ task, w: rect.width, h: rect.height, x: rect.left, y: rect.top, trash: s.trash });
     readTarget(startX, startY);
+    // One frame late on purpose: the blobs do not exist until the portal below
+    // has rendered them.
+    requestAnimationFrame(() => paintGoo(startX, startY));
   };
 
   const onCardPointerDown = (e, task) => {
@@ -602,6 +651,7 @@ export default function TaskBoard({
         o.style.transform = `translate3d(${ev.clientX - info.current.dx}px, ${ev.clientY - info.current.dy}px, 0)`;
       }
       readTarget(ev.clientX, ev.clientY);
+      paintGoo(ev.clientX, ev.clientY);
     };
 
     const up = () => {
@@ -805,6 +855,54 @@ export default function TaskBoard({
         );
       })}
 
+      {/* The red itself, three blobs under one goo filter. A pool over the nav,
+          a bead riding the card, and a droplet between them: blurred together
+          and then thresholded back to a hard edge, two shapes near each other
+          stop being two shapes, and the pool reaches out and takes the card
+          rather than waiting for it to arrive. The droplet is what carries the
+          bridge across a gap wider than the blur alone could span.
+
+          Solid red inside the filter, with the tint applied to the whole layer
+          afterwards — the threshold works on alpha, so a translucent blob would
+          come out of it either fully there or not at all. */}
+      {held?.trash && createPortal(
+        <>
+          <svg width="0" height="0" aria-hidden="true" className="absolute pointer-events-none">
+            <defs>
+              <filter id="taskGoo" x="-40%" y="-40%" width="180%" height="180%" colorInterpolationFilters="sRGB">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="16" result="soft" />
+                <feColorMatrix
+                  in="soft"
+                  type="matrix"
+                  values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 26 -12"
+                />
+              </filter>
+            </defs>
+          </svg>
+          <div
+            ref={gooRef}
+            aria-hidden="true"
+            className="fixed z-[58] pointer-events-none"
+            style={{
+              left: held.trash.left,
+              top: held.trash.top,
+              width: held.trash.width + GOO_REACH,
+              height: held.trash.height,
+              filter: 'url(#taskGoo)',
+              opacity: 0.07,
+            }}
+          >
+            <div
+              className="absolute top-0 left-0 bg-ninja-red rounded-[28px]"
+              style={{ width: held.trash.width, height: held.trash.height }}
+            />
+            <div ref={gooBeadRef} className="absolute top-0 left-0 bg-ninja-red rounded-full" />
+            <div ref={gooDropRef} className="absolute top-0 left-0 bg-ninja-red rounded-full" />
+          </div>
+        </>,
+        document.body
+      )}
+
       {/* Where a card goes to be got rid of. It appears the moment a drag
           starts rather than waiting to be discovered, because a drop target
           nobody knows about is not one, and it is red from the outset so that
@@ -815,15 +913,11 @@ export default function TaskBoard({
           initial={reduce ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.22, ease: EASE }}
-          // A tint at both ends, by the user's call: barely there while the
-          // card is elsewhere, and a step up rather than a takeover when it
-          // arrives. The nav reads through it either way, which is fine — the
-          // panel is not hiding the sidebar, it is saying what letting go over
-          // it would do. The edge and the label carry most of the difference.
+          // No fill here any more — the goo layer underneath is the red. This
+          // is the dashed edge and the words, which is the part that has to
+          // stay legible whatever the liquid is doing.
           className={`fixed z-[59] pointer-events-none flex items-center justify-center border-2 border-dashed transition-colors duration-200 ease-[var(--ease-out)] ${
-            target?.trash
-              ? 'border-ninja-red bg-ninja-red/20'
-              : 'border-ninja-red/25 bg-ninja-red/[0.06]'
+            target?.trash ? 'border-ninja-red' : 'border-ninja-red/25'
           }`}
           style={{
             left: held.trash.left, top: held.trash.top,
