@@ -41,11 +41,14 @@ const GOO_REACH = 260;
 // the page. It used to be measured off the nav, which made it the nav's size
 // and the nav's shape — and the sidebar is a spring-animated width, so a drag
 // begun mid-collapse stretched the red into whatever the sidebar happened to be
-// at that instant. A circle at a fixed offset from the left edge cannot be
-// distorted by anything else moving.
-const TRASH_X = 96;   // px from the left edge to the middle of the bin
-const TRASH_R = 62;   // px radius
-const TRASH_GRAB = 18; // px of forgiveness around the edge
+// at that instant. A band pinned to the left edge cannot be distorted by
+// anything else moving.
+const TRASH_W = 200;  // px of the left edge that deletes what is dropped on it
+
+// Solid across the band, then away to nothing over the reach, so the red thins
+// out towards the board instead of ending on a line.
+const MASK =
+  `linear-gradient(to right, rgb(0 0 0) 0px, rgb(0 0 0 / 0.88) ${TRASH_W * 0.75}px, rgb(0 0 0 / 0) ${TRASH_W + GOO_REACH}px)`;
 
 // Vertical rhythm between cards. The drop maths has to know it, because the
 // space a lifted card frees up is its own height plus one gap.
@@ -483,6 +486,9 @@ export default function TaskBoard({
   const gooRef = useRef(null);
   const gooBeadRef = useRef(null);
   const gooDropRef = useRef(null);
+  // Where the pointer was last, so the drop can send the card into the band at
+  // the height it was let go of rather than at some fixed point on it.
+  const lastPoint = useRef({ x: 0, y: 0 });
 
   // Geometry captured once, at the moment the press becomes a drag.
   //
@@ -525,7 +531,8 @@ export default function TaskBoard({
     setTarget(next);
   };
 
-  const overTrash = (b, x, y) => b && Math.hypot(x - b.cx, y - b.cy) <= b.r + TRASH_GRAB;
+  // A band down the left edge, so only how far across the pointer is matters.
+  const overTrash = (b, x) => Boolean(b) && x <= b.w;
 
   const readTarget = (x, y) => {
     const s = snap.current;
@@ -535,7 +542,7 @@ export default function TaskBoard({
     // board, so dragging a card onto it is the plainest way to say this card
     // is not on the board any more — and it is checked before the columns
     // because the nearest-column fallback below would otherwise claim it.
-    if (overTrash(s.trash, x, y)) { setTargetIfChanged({ trash: true }); return; }
+    if (overTrash(s.trash, x)) { setTargetIfChanged({ trash: true }); return; }
 
     // Inside a column outright, else the nearest one horizontally — dragging
     // above or below the columns should still have an answer rather than
@@ -565,11 +572,11 @@ export default function TaskBoard({
     const r = snap.current?.trash;
     if (!g || !r) return;
 
-    // Nearest point on the bin's edge, and how far the pointer is from it.
-    const away = Math.hypot(x - r.cx, y - r.cy) || 1;
-    const cx = r.cx + ((x - r.cx) / away) * r.r;
-    const cy = r.cy + ((y - r.cy) / away) * r.r;
-    const d = Math.max(0, away - r.r);
+    // The band's edge is a vertical line, so the nearest point on it is
+    // straight out to the left of wherever the pointer is.
+    const cx = Math.min(x, r.w);
+    const cy = y;
+    const d = Math.max(0, x - r.w);
     const t = clamp(1 - d / GOO_REACH, 0, 1);
 
     // Eased so the reach is slow to start and quick to close, which is what
@@ -580,8 +587,8 @@ export default function TaskBoard({
     // The bead sits on the card and grows as it nears; the droplet sits between
     // the two and is what lets the bridge form across a gap wider than the
     // filter's blur could span on its own.
-    const originX = r.cx - r.r - GOO_REACH;
-    const originY = r.cy - r.r - GOO_REACH;
+    const originX = 0;
+    const originY = 0;
     const place = (el, px, py, size) => {
       if (!el) return;
       el.style.width = `${size}px`;
@@ -620,7 +627,7 @@ export default function TaskBoard({
 
     // Read once, like everything else here, and read off the viewport rather
     // than off any element on the page.
-    s.trash = { cx: TRASH_X, cy: window.innerHeight / 2, r: TRASH_R };
+    s.trash = { w: TRASH_W, h: window.innerHeight };
 
     snap.current = s;
     info.current = { id: task.id, dx: startX - rect.left, dy: startY - rect.top, w: rect.width, h: rect.height };
@@ -630,6 +637,7 @@ export default function TaskBoard({
     // One frame late on purpose: the blobs do not exist until the portal below
     // has rendered them.
     requestAnimationFrame(() => paintGoo(startX, startY));
+    lastPoint.current = { x: startX, y: startY };
   };
 
   const onCardPointerDown = (e, task) => {
@@ -665,6 +673,7 @@ export default function TaskBoard({
       }
       readTarget(ev.clientX, ev.clientY);
       paintGoo(ev.clientX, ev.clientY);
+      lastPoint.current = { x: ev.clientX, y: ev.clientY };
     };
 
     const up = () => {
@@ -687,7 +696,7 @@ export default function TaskBoard({
         if (o && r) {
           o.style.transition = `transform ${TRASH_MS}ms var(--ease-out), opacity ${TRASH_MS}ms linear`;
           o.style.transform =
-            `translate3d(${r.cx - info.current.w / 2}px, ${r.cy - info.current.h / 2}px, 0) scale(0.35)`;
+            `translate3d(${r.w / 2 - info.current.w / 2}px, ${lastPoint.current.y - info.current.h / 2}px, 0) scale(0.35)`;
           o.style.opacity = '0';
         }
         setTimeout(() => { clearDrag(); onDelete(task); }, o && r ? TRASH_MS : 0);
@@ -895,22 +904,25 @@ export default function TaskBoard({
           <div
             ref={gooRef}
             aria-hidden="true"
-            className="fixed z-[58] pointer-events-none"
+            className="fixed left-0 top-0 z-[58] pointer-events-none"
             style={{
-              left: held.trash.cx - held.trash.r - GOO_REACH,
-              top: held.trash.cy - held.trash.r - GOO_REACH,
-              width: (held.trash.r + GOO_REACH) * 2,
-              height: (held.trash.r + GOO_REACH) * 2,
+              width: held.trash.w + GOO_REACH,
+              height: held.trash.h,
               filter: 'url(#taskGoo)',
+              // The fade cannot live inside the filter: the threshold that
+              // welds the blobs together works on alpha, so a gradient handed
+              // to it comes back as a hard edge in a slightly different place.
+              // It goes on the whole layer afterwards instead, which fades the
+              // reaching bead along with the band and is why the red thins out
+              // towards the board rather than stopping at a line.
+              maskImage: MASK,
+              WebkitMaskImage: MASK,
               opacity: 0.07,
             }}
           >
             <div
-              className="absolute bg-ninja-red rounded-full"
-              style={{
-                left: GOO_REACH, top: GOO_REACH,
-                width: held.trash.r * 2, height: held.trash.r * 2,
-              }}
+              className="absolute left-0 top-0 h-full bg-ninja-red"
+              style={{ width: held.trash.w }}
             />
             <div ref={gooBeadRef} className="absolute top-0 left-0 bg-ninja-red rounded-full" />
             <div ref={gooDropRef} className="absolute top-0 left-0 bg-ninja-red rounded-full" />
@@ -932,22 +944,13 @@ export default function TaskBoard({
           // No fill here any more — the goo layer underneath is the red. This
           // is the dashed edge and the words, which is the part that has to
           // stay legible whatever the liquid is doing.
-          className="fixed z-[59] pointer-events-none"
-          style={{
-            left: held.trash.cx - held.trash.r,
-            top: held.trash.cy - held.trash.r,
-            width: held.trash.r * 2,
-            height: held.trash.r * 2,
-          }}
+          className="fixed left-0 top-0 z-[59] pointer-events-none flex items-center justify-center"
+          style={{ width: held.trash.w, height: held.trash.h }}
         >
-          <div className={`w-full h-full rounded-full border-2 border-dashed flex items-center justify-center transition-all duration-200 ease-[var(--ease-out)] ${
-            target?.trash ? 'border-ninja-red text-ninja-red scale-110' : 'border-ninja-red/25 text-ninja-red/60'
+          <span className={`flex flex-col items-center gap-2 font-ninja text-xs font-bold text-center transition-all duration-200 ease-[var(--ease-out)] ${
+            target?.trash ? 'text-ninja-red scale-110' : 'text-ninja-red/55'
           }`}>
             <Trash2Icon size={24} strokeWidth={2.25} />
-          </div>
-          <span className={`absolute left-1/2 -translate-x-1/2 top-full mt-2.5 whitespace-nowrap font-ninja text-xs font-bold transition-colors duration-200 ${
-            target?.trash ? 'text-ninja-red' : 'text-ninja-red/60'
-          }`}>
             {target?.trash ? 'Let go to delete' : 'Drag here to delete'}
           </span>
         </motion.div>,
