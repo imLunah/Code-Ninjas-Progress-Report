@@ -547,18 +547,25 @@ export default function TaskBoard({
     setTarget(next);
   };
 
-  // A band down the right edge, so only how far across the pointer is matters.
-  const overTrash = (b, x) => Boolean(b) && x >= b.left;
+  // The card is what is being deleted, so the card is what has to arrive: the
+  // bin takes it once its middle crosses the band's edge, half of it inside.
+  //
+  // Not the pointer. Where the pointer sits on a card is an accident of where
+  // it was picked up — grab a card by its left edge and a pointer test asks you
+  // to drag the whole card off the screen before anything happens, while the
+  // same drag on a card grabbed by its right edge fires early. The card's own
+  // middle is in the same place whoever is holding it.
+  const overTrash = (b, cardMiddle) => Boolean(b) && cardMiddle >= b.left;
 
   const readTarget = (x, y) => {
     const s = snap.current;
     if (!s) return;
 
-    // Off the board first. The nav is the one thing on screen that is not the
-    // board, so dragging a card onto it is the plainest way to say this card
-    // is not on the board any more — and it is checked before the columns
-    // because the nearest-column fallback below would otherwise claim it.
-    if (overTrash(s.trash, x)) { setTargetIfChanged({ trash: true }); return; }
+    // Off the board first, and checked before the columns because the
+    // nearest-column fallback below would otherwise claim everything.
+    const box = info.current;
+    const middle = box ? x - box.dx + box.w / 2 : x;
+    if (overTrash(s.trash, middle)) { setTargetIfChanged({ trash: true }); return; }
 
     // Inside a column outright, else the nearest one horizontally — dragging
     // above or below the columns should still have an answer rather than
