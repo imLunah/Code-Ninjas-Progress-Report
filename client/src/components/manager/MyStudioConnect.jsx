@@ -39,19 +39,22 @@ const FIELD =
 // place people already right click, it always contains the cookie, and the
 // server pulls it out of whatever lands on the clipboard.
 //
-// The filter is mystudio.io/api and not mystudio.io, which is the correction to
-// the correction. Filtering by domain leaves 89 rows across five hosts, because
-// the HubSpot and Stripe requests carry mystudio.io inside their own query
-// strings and referers, and because uploaded images come from cn.mystudio.io,
-// a host that never sees the sign-in. Both of those are rows you can copy in
-// good faith and get nothing. Adding /api narrows it to the ten calls that only
-// the signed-in origin answers, so every visible row is one that works.
+// Name one row instead of describing a filter. Two rounds of filter advice both
+// failed in the same way: "any mystudio.io row" includes the HubSpot and Stripe
+// requests, which carry mystudio.io inside their own query strings, and includes
+// cn.mystudio.io, which serves uploaded images and never sees the sign-in. The
+// follow-up, mystudio.io/api, is only true if you type it and then reload, since
+// a filter hides captured rows rather than producing new ones, and the person
+// following it had already loaded the page.
+//
+// The document request is the one row that is always there, always first, always
+// on the signed-in host, and needs no filter to find. It is also the row the
+// first person to work this out reached for unprompted.
 const STEPS = [
-  'Sign in to MyStudio in another tab.',
+  'Sign in to MyStudio and go to its home page.',
   'Press F12 to open devtools, then click the Network tab.',
-  'Type mystudio.io/api in the filter box, exactly like that.',
-  'Reload the page. Rows appear as it loads.',
-  'Right click any row, choose Copy, then Copy as cURL.',
+  'Reload the page, keeping devtools open.',
+  'Right click the very first row, named home, and choose Copy, then Copy as cURL.',
   'Paste the whole thing below. Only the cookie part is kept.',
 ];
 

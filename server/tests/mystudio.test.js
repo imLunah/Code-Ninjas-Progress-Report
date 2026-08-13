@@ -123,7 +123,7 @@ describe('a request copied from the wrong site', () => {
     expect(ms.isMyStudioHost('codeninjas.mystudio.io')).toBe(true);
   });
 
-  it('names the wrong site and says how to filter for the right one', () => {
+  it('names the wrong site and points at the row that works', () => {
     let message = '';
     try {
       ms.readCookieIdentity(hubspotCurl);
@@ -131,7 +131,9 @@ describe('a request copied from the wrong site', () => {
       message = e.message;
     }
     expect(message).toContain('app.hubspot.com');
-    expect(message).toMatch(/mystudio\.io/);
+    // Names one row rather than describing a filter, because two rounds of
+    // filter advice both failed for different reasons.
+    expect(message).toMatch(/home/i);
     // Must not read as a MyStudio fault, which is what "missing companyId" did.
     expect(message).not.toMatch(/missing companyId/i);
   });
@@ -175,7 +177,7 @@ describe('a request copied from the wrong site', () => {
       message = e.message;
     }
     expect(message).toContain('cn.mystudio.io');
-    expect(message).toMatch(/mystudio\.io\/api/);
+    expect(message).toMatch(/home/i);
     expect(message).not.toMatch(/missing companyId/i);
   });
 });

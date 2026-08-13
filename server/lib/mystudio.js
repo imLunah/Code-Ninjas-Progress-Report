@@ -267,14 +267,14 @@ function readCookieIdentity(raw) {
     const host = extractRequestHost(raw);
     if (isMyStudioAssetHost(host)) {
       throw new MyStudioAuthError(
-        `${host} only serves images, so it never sees your sign-in. Type ` +
-          'mystudio.io/api in the Network tab filter box and copy one of those rows.'
+        `${host} only serves images, so it never sees your sign-in. Reload ` +
+          "MyStudio's home page and copy the first row, named home, instead."
       );
     }
     if (host && !isMyStudioHost(host)) {
       throw new MyStudioAuthError(
-        `That request went to ${host}, not MyStudio. Type mystudio.io/api in ` +
-          'the Network tab filter box, then copy one of the rows that appears.'
+        `That request went to ${host}, not MyStudio. Reload MyStudio's home ` +
+          'page with devtools open and copy the first row, named home.'
       );
     }
   }
@@ -287,8 +287,8 @@ function readCookieIdentity(raw) {
   }
   if (!access && !refresh) {
     throw new MyStudioAuthError(
-      'That cookie is missing the kc_access and kc_refresh values. Copy a ' +
-        'mystudio.io request with Copy as cURL, not the cookie from the console.'
+      'That cookie is missing the kc_access and kc_refresh values. Use Copy ' +
+        'as cURL on the home row, not the cookie from the console.'
     );
   }
 
