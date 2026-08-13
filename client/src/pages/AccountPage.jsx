@@ -291,6 +291,7 @@ export default function AccountPage() {
             {isManager && (
               <MyStudioRow
                 status={mystudio}
+                centerName={user?.activeLocation?.name}
                 onOpen={() => setShowMyStudio(true)}
               />
             )}
@@ -307,6 +308,7 @@ export default function AccountPage() {
       isOpen={showMyStudio}
       onClose={() => setShowMyStudio(false)}
       status={mystudio}
+      centerName={user?.activeLocation?.name}
       onChanged={setMystudio}
     />
   ) : null;

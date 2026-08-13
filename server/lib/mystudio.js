@@ -132,9 +132,54 @@ function sanitizeCookie(raw) {
   return String(raw || '').replace(/[\r\n]+/g, ' ').trim();
 }
 
+// Pulls the cookie out of whatever the person actually pasted.
+//
+// The credential lives in two httpOnly cookies, which means there is no way to
+// read it from the console and no bookmarklet that can fetch it. Someone has to
+// go into devtools. Asking a center director to find one header row inside a
+// request is a bad instruction, and the first person to try it said so, so the
+// screen now says "right click the request, Copy, Copy as cURL" instead: one
+// menu everybody can find, and the cookie is in what lands on the clipboard.
+//
+// So this accepts three shapes and stops caring which:
+//   - a cURL command, from either the -b/--cookie flag or a cookie -H header
+//   - a bare cookie header, with or without a leading "cookie:" label
+//   - the raw "a=b; c=d" string
+//
+// Being generous here is a security decision as much as a usability one. The
+// alternative to accepting a pasted cURL is a person retyping a credential by
+// hand, and retyping goes wrong quietly.
+function extractCookie(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return '';
+
+  // cURL's -b/--cookie, quoted or not.
+  const flag = /(?:^|\s)(?:-b|--cookie)\s+(?:'([^']*)'|"([^"]*)"|(\S+))/.exec(text);
+  if (flag) return sanitizeCookie(flag[1] ?? flag[2] ?? flag[3]);
+
+  // A cookie passed as a header, in a cURL command or pasted on its own. Chrome
+  // writes -H 'cookie: ...'; Firefox and Safari capitalise it differently, hence
+  // the case-insensitive match.
+  const header =
+    /(?:-H|--header)\s+(?:'\s*cookie\s*:\s*([^']*)'|"\s*cookie\s*:\s*([^"]*)")/i.exec(text) ||
+    /(?:^|\n)\s*cookie\s*:\s*([^\n]+)/i.exec(text);
+  if (header) return sanitizeCookie(header[1] ?? header[2] ?? header[3]);
+
+  // It was a command or a set of headers, and none of them was the cookie. Give
+  // back nothing rather than falling through, because the fallback below would
+  // hand the whole command over to be stored and sent as a cookie header. An
+  // empty answer becomes "paste the cookie to connect", which is the truth.
+  const looksLikeCommand =
+    /^\s*curl\b/i.test(text) || /(?:^|\s)(?:-H|--header|-b|--cookie)\s/.test(text);
+  if (looksLikeCommand) return '';
+
+  // Nothing wrapping it: treat the paste as the cookie itself.
+  return sanitizeCookie(text);
+}
+
 function parseCookie(raw) {
   const out = {};
-  for (const pair of sanitizeCookie(raw).split(';')) {
+  for (const pair of extractCookie(raw).split(';')) {
     const eq = pair.indexOf('=');
     if (eq < 1) continue;
     const name = pair.slice(0, eq).trim();
@@ -189,7 +234,9 @@ function readCookieIdentity(raw) {
 function buildHeaders(cookie, companyId, extra = {}) {
   return {
     accept: 'application/json',
-    cookie: sanitizeCookie(cookie),
+    // extract rather than sanitize: a stored value that came from a pasted cURL
+    // must go out as the cookie header, not as the whole command.
+    cookie: extractCookie(cookie),
     // Only companyId is actually required. The vendor's client also sends
     // stripeAcc, userId, userEmail and isStaffRequest, all of which the read
     // endpoints ignore, and two of which we deliberately do not store.
@@ -430,6 +477,7 @@ module.exports = {
   encryptCookie,
   decryptCookie,
   sanitizeCookie,
+  extractCookie,
   parseCookie,
   readCookieIdentity,
   verifySession,

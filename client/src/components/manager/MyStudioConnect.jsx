@@ -29,17 +29,21 @@ import useIsDesktop from '../../lib/useIsDesktop';
 const FIELD =
   'w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue';
 
-// The network tab, specifically, and not the console.
+// Copy as cURL, because the honest alternative is worse.
 //
-// Two of the values that actually authorize the connection are httpOnly, which
-// means the console cannot read them: pasting what `document.cookie` returns
-// gives a string that looks complete and fails. Copying the request header is
-// the one route that includes them, so these steps name it exactly.
+// Two of the values that authorize the connection are httpOnly, so the console
+// cannot read them and no button on this page can fetch them. Someone has to go
+// into devtools once. The first version of these steps said to find the cookie
+// row inside Request Headers, and the first person to read it got stuck, which
+// is fair: that is a developer's instruction. Copy as cURL is one menu item in a
+// place people already right click, it always contains the cookie, and the
+// server pulls it out of whatever lands on the clipboard.
 const STEPS = [
   'Sign in to MyStudio in another tab.',
-  'Open your browser devtools and pick the Network tab.',
-  'Reload the page, then click any request to mystudio.io.',
-  'Under Request Headers, right click the cookie row and copy its value.',
+  'Press F12 to open devtools, then click the Network tab.',
+  'Reload the page. A list of requests appears.',
+  'Right click any row, choose Copy, then Copy as cURL.',
+  'Paste the whole thing below. Only the cookie part is kept.',
 ];
 
 function formatWhen(value) {
@@ -54,7 +58,7 @@ function formatWhen(value) {
   });
 }
 
-export default function MyStudioConnect({ isOpen, onClose, status, onChanged }) {
+export default function MyStudioConnect({ isOpen, onClose, status, onChanged, centerName }) {
   const isDesktop = useIsDesktop();
   const [cookie, setCookie] = useState('');
   const [busy, setBusy] = useState(false);
@@ -129,8 +133,12 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged }) 
               {expired ? <TriangleAlertIcon size={17} /> : <CircleCheckIcon size={17} />}
             </span>
             <div className="min-w-0">
+              {/* MyStudio's own name for the center is the best label, but it
+                  comes from a session that expires sooner than the credential
+                  does, so it is often missing. Our name for the same center says
+                  more than "Connected center" ever did. */}
               <p className="font-ninja text-sm font-semibold text-ninja-navy">
-                {status.companyName || 'Connected center'}
+                {status.companyName || centerName || 'Connected'}
               </p>
               <p className="font-ninja text-xs text-ninja-muted">
                 {expired
@@ -174,7 +182,7 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged }) 
           rows={4}
           spellCheck={false}
           autoComplete="off"
-          placeholder="companyId=...; kc_access=...; kc_refresh=..."
+          placeholder={"curl 'https://codeninjas.mystudio.io/...' \\\n  -H 'cookie: companyId=...; kc_refresh=...'"}
           className={`${FIELD} resize-none font-mono text-xs`}
           disabled={busy || !status?.configured}
         />
@@ -269,7 +277,7 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged }) 
 }
 
 // The row that lives in the account page's experimental block.
-export function MyStudioRow({ status, onOpen }) {
+export function MyStudioRow({ status, onOpen, centerName }) {
   const connected = status?.connected;
   const expired = connected && status.status === 'expired';
 
@@ -289,7 +297,7 @@ export function MyStudioRow({ status, onOpen }) {
             {expired
               ? 'Session ran out. Reconnect to keep pulling.'
               : connected
-                ? `${status.companyName || 'Connected'}. Today's classes appear on the board.`
+                ? `${status.companyName || centerName || 'Connected'}. Today's classes appear on the board.`
                 : "Pull today's booked ninjas onto the board"}
           </p>
         </div>

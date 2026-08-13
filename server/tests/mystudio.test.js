@@ -55,6 +55,55 @@ describe('cookie handling', () => {
   });
 });
 
+// The connect screen asks for "Copy as cURL" because the credential is httpOnly
+// and the header-row instruction it replaced was one a director could not follow.
+// That only works if the paste is accepted in whatever shape it arrives.
+describe('accepting what people actually paste', () => {
+  const COOKIE = 'companyId=480; kc_access=tok-a; kc_refresh=tok-r';
+
+  it('takes a Chrome Copy as cURL, where the cookie is a -H header', () => {
+    const pasted =
+      `curl 'https://codeninjas.mystudio.io/api/features/attendance/class-list?selected_date=2026-08-13' \\\n` +
+      `  -H 'accept: application/json' \\\n` +
+      `  -H 'cookie: ${COOKIE}' \\\n` +
+      `  -H 'user-agent: Mozilla/5.0'`;
+    expect(ms.extractCookie(pasted)).toBe(COOKIE);
+    expect(ms.readCookieIdentity(pasted).companyId).toBe('480');
+  });
+
+  it('takes a cURL that uses -b or --cookie instead', () => {
+    expect(ms.extractCookie(`curl 'https://x.test' -b '${COOKIE}'`)).toBe(COOKIE);
+    expect(ms.extractCookie(`curl 'https://x.test' --cookie "${COOKIE}"`)).toBe(COOKIE);
+  });
+
+  it('takes a bare header line, whatever its capitalisation', () => {
+    expect(ms.extractCookie(`Cookie: ${COOKIE}`)).toBe(COOKIE);
+    expect(ms.extractCookie(`cookie: ${COOKIE}`)).toBe(COOKIE);
+  });
+
+  it('still takes the plain cookie string', () => {
+    expect(ms.extractCookie(COOKIE)).toBe(COOKIE);
+  });
+
+  it('does not mistake another header for the cookie', () => {
+    // A cURL with no cookie at all must not hand back the user-agent.
+    const noCookie = `curl 'https://x.test' -H 'user-agent: Mozilla/5.0'`;
+    expect(ms.extractCookie(noCookie)).not.toMatch(/Mozilla/);
+  });
+
+  it('never lets a pasted newline into the outbound header', () => {
+    // Multi-line cURL is the normal case, so this is the shape most likely to
+    // carry a newline into a header value if extraction were sloppy.
+    const pasted = `curl 'https://x.test' \\\n  -H 'cookie: ${COOKIE}' \\\n`;
+    expect(ms.extractCookie(pasted)).not.toMatch(/[\r\n]/);
+  });
+
+  it('returns empty for an empty paste rather than guessing', () => {
+    expect(ms.extractCookie('')).toBe('');
+    expect(ms.extractCookie(null)).toBe('');
+  });
+});
+
 describe('credential encryption', () => {
   const raw = 'PHPSESSID=abc123; ms_u_em=a%40b.com; companyId=480';
 

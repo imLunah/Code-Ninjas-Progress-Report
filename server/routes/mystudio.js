@@ -76,7 +76,11 @@ router.post('/connect', requireManager, requireOwnLocation, async (req, res) => 
     });
   }
 
-  const cookie = ms.sanitizeCookie(req.body && req.body.cookie);
+  // The paste may be a whole cURL command, so pull the cookie out before it is
+  // stored: what goes in the column has to be a usable cookie header. The limit
+  // is checked after extraction for the same reason, since a cURL command is
+  // much longer than the cookie inside it.
+  const cookie = ms.extractCookie(req.body && req.body.cookie);
   if (!cookie || cookie.length > 8000) {
     return res.status(400).json({ error: 'Paste the MyStudio cookie to connect.' });
   }
