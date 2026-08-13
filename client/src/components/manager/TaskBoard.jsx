@@ -64,6 +64,13 @@ const ARM_AT = 1 / 3;     // how much of the card has to be in before it commits
 // cover and hangs off all three edges: the rounding still happens, out of sight.
 const BLEED = 100;
 
+// How far the red sits inside the glass it is filling. The goo threshold
+// crosses at 0.464 alpha rather than half, so every shape comes back out of
+// the filter a couple of pixels larger than it went in — harmless for the
+// wall, but red spilling past the card's lit edge is the one overflow that
+// reads as a mistake.
+const INSET = 3;
+
 // Solid across the band, then away to nothing over the reach, so the red thins
 // out towards the board instead of ending on a line. Measured from the layer's
 // own left edge, which starts a bleed to the left of the window's, and built
@@ -702,16 +709,46 @@ export default function TaskBoard({
     // fade, not the fade being quick.
     const rampR = (cap) => 16 + (cap - 16) * Math.min(1, pull * 1.8);
 
-    // The red used to ride the whole card as a hidden bead, there purely so
-    // the pool had something to reach for. The card is see-through when it
-    // is molten, so a full-card bead reads as the card filling with red
-    // before the red has arrived. Now the red only wets what it has actually
-    // reached: the slice of the card past the band's edge, growing from the
-    // leading edge as the card pushes in, and nothing at all while there is
-    // still a gap.
-    const wetX = Math.max(bx, r.left);
-    const wetW = Math.max(0, gLead - wetX);
-    put(gooBeadRef.current, wetX, gy, wetW, gh, Math.min(wetW, gh) / 2);
+    // The red climbs INTO the card. Before this it was clipped at the band's
+    // edge, which drew it entirely inside the wall already covering that
+    // strip — so it contributed nothing, and the card crossed a red panel
+    // rather than filling with it.
+    //
+    // The bead is now the card's own silhouette, the exact box the glass bead
+    // draws, and a mask decides how much of it is filled, from the leading
+    // edge back. That is what makes it seamless: the red inside the card is
+    // bounded on three sides by the card's own outline, so it reads as the
+    // box filling with liquid instead of a red shape parked behind a
+    // transparent one — and because this bead sits under the same goo filter
+    // as the wall, the two weld, and the liquid in the card is continuous
+    // with the liquid in the band.
+    //
+    // Inset by the blur's own overshoot: the threshold crosses at 0.464
+    // rather than half, so a shape comes back out a couple of pixels bigger
+    // than it went in, and red is the one thing that must not spill past the
+    // glass. Liquid sits inside the vessel.
+    const enter = clamp((gLead - r.left) / gw, 0, 1);
+    const fill = Math.min(1, enter * 1.7);
+    const bead = gooBeadRef.current;
+    if (bead) {
+      if (fill <= 0) {
+        // Nothing has touched yet. The bridging droplet is the whole of the
+        // reach until the card is actually in.
+        bead.style.width = '0px';
+        bead.style.height = '0px';
+      } else {
+        put(bead, bx + INSET, gy + INSET, gw - INSET * 2, gh - INSET * 2, Math.max(0, rampR(gh / 2) - INSET), tilt);
+      }
+      // Feathered, because a liquid front is a meniscus and not a cut. The
+      // goo's threshold sharpens most of the feather back out, which is the
+      // point: what survives is a soft, slightly curved front rather than
+      // either a gradient or a straight edge.
+      const w = gw * fill;
+      const soft = Math.min(34, w);
+      bead.style.maskImage = fill <= 0 ? 'none'
+        : `linear-gradient(to left, rgb(0 0 0) 0px, rgb(0 0 0) ${w - soft}px, rgb(0 0 0 / 0) ${w}px)`;
+      bead.style.webkitMaskImage = bead.style.maskImage;
+    }
 
     // And the drop that bridges the gap, sized off the card so a wide card gets
     // a bridge to match. It is the only part that has to know about distance,
@@ -963,6 +1000,13 @@ export default function TaskBoard({
 
           const thin = Math.max(box.h * 0.52, 34);
           if (bead) {
+            // The fill mask goes with the card. While the card exists the red
+            // is only the part of it that is under, but the swallow is what
+            // happens after there is no card — the whole blob is liquid then,
+            // and a mask left behind would clip the stretch to the waterline
+            // of a shape that has stopped existing.
+            bead.style.maskImage = 'none';
+            bead.style.webkitMaskImage = 'none';
             bead.style.transition = ease(stretchMs, 'cubic-bezier(0.35, 0, 0.25, 1)');
             bead.style.width = `${Math.max(r.left + r.w * 0.4 - bx, box.w)}px`;
             bead.style.height = `${thin}px`;

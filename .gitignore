@@ -17,3 +17,6 @@ test-results/
 
 # integration-test dump logs
 test/db/*.log
+
+# local tooling lockfile, not part of the app
+skills-lock.json
