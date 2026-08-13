@@ -52,8 +52,8 @@ const GOO_REACH = 260;
 // Measured off the last column's own rect, not off the window or the grid: the
 // grid stretches the full width whether it has three children or four, so its
 // right edge says nothing about where the columns actually stop.
-const TRASH_MIN_W = 88;   // never thinner than this, even on a cramped window
-const TRASH_MAX_W = 148;  // and never wider, however much room the track leaves
+const TRASH_MIN_W = 116;  // never thinner than this, even on a cramped window
+const TRASH_MAX_W = 200;  // and never wider, however much room the track leaves
 const TRASH_GAP = 12;     // breathing room between the last column and the band
 const ARM_AT = 1 / 3;     // how much of the card has to be in before it commits
 
@@ -640,10 +640,10 @@ export default function TaskBoard({
     // Eased so the reach is slow to start and quick to close, which is what
     // makes it read as something being pulled rather than something growing.
     const pull = t * t;
-    // The wall over the band is always there — it is the drop target and a
-    // pane of glass should read as one from the moment a drag starts — and
-    // comes up to full as the card nears.
-    g.style.opacity = String(Math.min(1, 0.45 + pull * 1.2));
+    // The real pane under this layer carries the band's resting material, so
+    // the goo — the weld, the rim, the neck — only needs a quiet presence at
+    // rest, coming up to full as the card nears.
+    g.style.opacity = String(Math.min(1, 0.35 + pull * 1.3));
     // And it blushes while the card is actually over the bin: the armed
     // filter is the same glass with a breath of red in the fill, which is
     // the "letting go deletes" signal living in the liquid itself.
@@ -1162,7 +1162,7 @@ export default function TaskBoard({
                 <feOffset in="rimA" dy="1.5" result="rimLoA" />
                 <feFlood floodColor="#1e293b" floodOpacity="0.25" result="loC" />
                 <feComposite in="loC" in2="rimLoA" operator="in" result="rimLo" />
-                <feFlood floodColor="#e51520" floodOpacity="0.16" result="fillC" />
+                <feFlood floodColor="#e51520" floodOpacity="0.07" result="fillC" />
                 <feComposite in="fillC" in2="shape" operator="in" result="fill" />
                 <feFlood floodColor="#ffffff" floodOpacity="0.9" result="hiC" />
                 <feComposite in="hiC" in2="rimA" operator="in" result="rimHi" />
@@ -1191,7 +1191,7 @@ export default function TaskBoard({
                 <feOffset in="rimA" dy="1.5" result="rimLoA" />
                 <feFlood floodColor="#1e293b" floodOpacity="0.25" result="loC" />
                 <feComposite in="loC" in2="rimLoA" operator="in" result="rimLo" />
-                <feFlood floodColor="#e51520" floodOpacity="0.16" result="fillC" />
+                <feFlood floodColor="#e51520" floodOpacity="0.07" result="fillC" />
                 <feComposite in="fillC" in2="shape" operator="in" result="fill" />
                 <feFlood floodColor="#ffffff" floodOpacity="0.9" result="hiC" />
                 <feComposite in="hiC" in2="rimA" operator="in" result="rimHi" />
@@ -1203,15 +1203,37 @@ export default function TaskBoard({
               </filter>
             </defs>
           </svg>
-          {/* The pane itself: one edge-lit sheet of glass whose silhouette is
-              the card's box merging with the wall over the band. The blobs
-              only contribute their alpha (the filter reads SourceAlpha and
-              floods its own colours), so bg-white here is just "solid". The
-              wall is a plain rectangle on purpose: the filter keeps straight
-              edges straight and only rounds corners, and the wall hangs off
-              the top, the right and the bottom so the corners it would round
-              are all outside the window — what the card merges into is a
-              flat vertical edge of glass, not a lobe. */}
+          {/* The band in the app's OWN glass. The goo layer above draws the
+              welded silhouette, but its fill is flooded pixels — it cannot
+              bend or blur what is behind it, and a bin that does not bend the
+              page is not the same material as the cards. So the material
+              comes from here: a real pane over the band with the exact
+              backdrop treatment the dragged card wears, refraction included.
+              It blushes red when the card is over the bin — a colour change
+              in the pane, smoothed by the transition, while the goo above
+              adds only a breath of the same red so the neck matches. */}
+          <div
+            aria-hidden="true"
+            className={`fixed top-0 z-[57] pointer-events-none transition-colors duration-200 ease-[var(--ease-out)] ${
+              target?.trash ? 'bg-ninja-red/15' : 'bg-white/40 dark:bg-[#252c3e]/45'
+            }`}
+            style={{
+              left: held.trash.left,
+              width: held.trash.w,
+              height: held.trash.h,
+              backdropFilter: 'url(#liquidGlass) blur(2px) saturate(1.8)',
+              WebkitBackdropFilter: 'blur(2px) saturate(1.8)',
+            }}
+          />
+          {/* The welded silhouette: one edge-lit sheet whose outline is the
+              card's box merging with the wall over the band. The blobs only
+              contribute their alpha (the filter reads SourceAlpha and floods
+              its own colours), so bg-white here is just "solid". The wall is
+              a plain rectangle on purpose: the filter keeps straight edges
+              straight and only rounds corners, and the wall hangs off the
+              top, the right and the bottom so the corners it would round are
+              all outside the window — what the card merges into is a flat
+              vertical edge of glass, not a lobe. */}
           <div
             ref={glassRef}
             aria-hidden="true"
