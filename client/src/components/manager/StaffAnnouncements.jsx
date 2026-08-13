@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { formatDate } from '../../utils/dateUtils';
-import { CARD } from '../../lib/surfaces';
+import { CARD, GLASS } from '../../lib/surfaces';
 import { Skeleton } from '../ui/Skeleton';
 
 // CD-authored announcements to staff. Center-scoped; shown to all staff at the
@@ -48,7 +48,7 @@ export default function StaffAnnouncements() {
   };
 
   return (
-    <div className={`${CARD} p-5`}>
+    <div className={`${CARD} ${GLASS} p-5`}>
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="font-ninja font-bold text-ninja-navy text-lg">Announcements</h2>

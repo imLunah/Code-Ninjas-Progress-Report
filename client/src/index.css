@@ -123,13 +123,17 @@ textarea:focus-visible {
   background-color: #252c3e;
 }
 
-/* ── Task cards: a pane of glass ──
+/* ── Clear glass ──
    Apple's Liquid Glass is clear. It bends what is behind it rather than
    scattering it, and you read the material off its edges, where a real lens is
    thickest. Three attempts at putting colour on this card all failed the same
    way, because every one of them was paint on a surface: a wash darkened it, a
    white veil frosted it, a tinted rim and glow still asked the card to be a
-   colour first. The card is just glass now, the same for every task.
+   colour first. The card is just glass now, the same for every one of them.
+
+   It started on the task board and is not the task board's any more: the
+   dashboard's panels wear it too, which is why the class says what the
+   material is rather than what it was first used on.
 
    The layers Apple names:
 
@@ -145,7 +149,7 @@ textarea:focus-visible {
    .shadow-sm` below are both two deep, and a single class would tie with them
    and lose on source order, repainting every card grey and flattening its
    shadow. */
-.task-card.task-glass {
+.glass-card.glass-clear {
   background-color: rgb(255 255 255 / 0.55);
   backdrop-filter: blur(2px) saturate(1.8);
   -webkit-backdrop-filter: blur(2px) saturate(1.8);
@@ -163,7 +167,7 @@ textarea:focus-visible {
    which lands between the column it sits on and the solid card it would be if
    it were not glass. The lip and rim stay bright: they are the light on the
    edge, and they are what keeps a darker pane from reading as a hole. */
-.dark .task-card.task-glass {
+.dark .glass-card.glass-clear {
   background-color: rgb(37 44 62 / 0.7);
   border-color: rgb(255 255 255 / 0.11);
   box-shadow:
@@ -289,12 +293,12 @@ textarea:focus-visible {
 /* Glass is a preference, not a requirement. Someone who has asked their system
    for less transparency gets a plain card. */
 @media (prefers-reduced-transparency: reduce) {
-  .task-card.task-glass {
+  .glass-card.glass-clear {
     background-color: #fff;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
-  .dark .task-card.task-glass { background-color: #252c3e; }
+  .dark .glass-card.glass-clear { background-color: #252c3e; }
 }
 
 /* ── Dark mode: input / select fields ── */

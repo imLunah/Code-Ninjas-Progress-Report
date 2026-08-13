@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import Modal from '../ui/Modal';
-import { CARD } from '../../lib/surfaces';
+import { CARD, GLASS } from '../../lib/surfaces';
 import { CakeIcon as Cake, ChevronLeftIcon as ChevL, ChevronRightIcon as ChevR } from 'lucide-react';
 
 
@@ -223,7 +223,7 @@ export default function EventCalendar({ canManage = true, bare = false }) {
   };
 
   return (
-    <div className={bare ? '' : `${CARD} p-5`}>
+    <div className={bare ? '' : `${CARD} ${GLASS} p-5`}>
       {!bare && (
         <div className="flex items-center justify-between mb-4">
           <div>

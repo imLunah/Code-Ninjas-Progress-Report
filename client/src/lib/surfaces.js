@@ -18,3 +18,13 @@ export const CARD =
 // Tighter radius, no lift. For surfaces nested inside a CARD, and for the
 // denser list/form panels that predate the 2xl card.
 export const PANEL = 'bg-white border border-ninja-border rounded-xl shadow-sm';
+
+// Clear glass, over the top of CARD. A translucent pane with its saturation
+// lifted and its edges lit, defined in index.css — two class names deep,
+// because `.dark .bg-white` and `.dark .shadow-sm` are two deep as well and a
+// single class would tie with them and lose on source order.
+//
+// Not every surface should take it. Glass is worth having where there is
+// something behind it worth bending: a card on a column, a panel on a page. A
+// field inside a card has nothing behind it but the card.
+export const GLASS = 'glass-card glass-clear';

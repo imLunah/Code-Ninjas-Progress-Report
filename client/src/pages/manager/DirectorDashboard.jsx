@@ -15,7 +15,7 @@ import Modal from '../../components/ui/Modal';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
-import { CARD } from '../../lib/surfaces';
+import { CARD, GLASS } from '../../lib/surfaces';
 import { Skeleton } from '../../components/ui/Skeleton';
 
 // Strong ease-out (Emil's design-eng default). The built-in easeOut is too
@@ -746,7 +746,7 @@ export default function DirectorDashboard() {
 
           {/* Enrollment used to sit here; that breakdown lives on Reports, so
               it isn't duplicated on the dashboard. */}
-          <section className={`${CARD} p-5`} aria-labelledby="checkins-heading">
+          <section className={`${CARD} ${GLASS} p-5`} aria-labelledby="checkins-heading">
             {/* No Reports link here: there is already one in the row under the
                 greeting, and two on one screen is one too many. */}
             <h2 id="checkins-heading" className="font-ninja font-bold text-ninja-navy text-lg mb-3">Check-ins</h2>
