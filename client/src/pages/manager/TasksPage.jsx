@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeftIcon, LayoutGridIcon, ListIcon } from 'lucide-react';
+import { ArrowLeftIcon, LayoutGridIcon, ListIcon, PlusIcon } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import TaskBoard from '../../components/manager/TaskBoard';
 import TaskList from '../../components/manager/TaskList';
@@ -228,9 +228,6 @@ export default function TasksPage() {
             Dashboard
           </Link>
 
-          {/* No New task button up here. Every column carries its own + and a
-              quick-add row at its foot, and those land the card where it
-              belongs; a button in the header has to guess a column. */}
           <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
             <div>
               <h1 className="text-3xl font-black font-ninja text-ninja-navy tracking-tight">
@@ -272,6 +269,25 @@ export default function TasksPage() {
                   layoutId="tasksViewPill"
                   size="sm"
                 />
+              )}
+              {/* The full task, from anywhere on the page. The quick adds are
+                  the fast path — a title, in one breath, into the column you
+                  typed at — and this is the one that asks for a date, an owner
+                  and a checklist up front. It defaults to To do because a task
+                  being created has not been started; the dialog's own Column
+                  field is there to say otherwise.
+
+                  Not offered while Recently deleted is open: nothing on that
+                  screen is a board to add to. */}
+              {canManage && !showArchived && (
+                <button
+                  type="button"
+                  onClick={() => setEditor({ column: 'todo' })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-ninja-blue text-white font-ninja text-xs font-bold hover:bg-ninja-blue-hover transition-colors duration-150 ease-[var(--ease-out)] active:scale-95"
+                >
+                  <PlusIcon size={15} strokeWidth={2.75} aria-hidden="true" />
+                  Add task
+                </button>
               )}
             </div>
           </div>
@@ -317,7 +333,7 @@ export default function TasksPage() {
             onPurge={purge}
             onRestore={restore}
             onPatch={patchTask}
-            onAdd={(column) => setEditor({ column })}
+            onQuickAdd={quickAdd}
           />
         ) : (
           <TaskBoard
