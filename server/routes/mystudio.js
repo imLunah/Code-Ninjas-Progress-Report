@@ -354,9 +354,11 @@ router.post('/login/verify', requireManager, requireOwnLocation, async (req, res
     });
   }
 
+  // Six digits exactly. Anything else cannot be a MyStudio passcode, and
+  // forwarding it would spend one of their attempts to be told so.
   const code = String((req.body && req.body.code) || '').trim();
-  if (!/^\d{4,8}$/.test(code)) {
-    return res.status(400).json({ error: 'Enter the code MyStudio emailed you.' });
+  if (!/^\d{6}$/.test(code)) {
+    return res.status(400).json({ error: 'Enter the six digit code MyStudio emailed you.' });
   }
 
   try {

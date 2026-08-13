@@ -36,6 +36,9 @@ import useIsDesktop from '../../lib/useIsDesktop';
 const FIELD =
   'w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue';
 
+// MyStudio's passcode is six digits, and the field should not accept a seventh.
+const CODE_LENGTH = 6;
+
 // Copy as cURL, because the honest alternative is worse.
 //
 // Two of the values that authorize the connection are httpOnly, so the console
@@ -349,40 +352,48 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
           <p className="font-ninja text-sm text-ninja-navy mb-3">
             MyStudio emailed a six digit code to{' '}
             <span className="font-semibold">{email || awaitingEmail || savedEmail}</span>.
-            Go and read it — this will still be here when you come back. Asking
-            for another code cancels the one you have.
           </p>
 
           <label htmlFor="mystudio-code" className="sr-only">
             MyStudio code
           </label>
+          {/* Six digits and no more. The field used to take eight, which let a
+              fat-fingered seventh sit there invisibly at the end of a code that
+              looked right, and spent an attempt to say so. */}
           <input
             id="mystudio-code"
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, CODE_LENGTH))}
             onKeyDown={(e) => {
               if (e.key === 'Enter') verifyCode();
             }}
             inputMode="numeric"
             autoComplete="one-time-code"
-            maxLength={8}
+            maxLength={CODE_LENGTH}
             placeholder="123456"
             autoFocus
-            className={`${FIELD} font-mono tracking-[0.3em] text-center text-base`}
+            className={`${FIELD} font-mono tracking-[0.5em] indent-[0.5em] text-center text-xl py-3`}
             disabled={busy}
           />
 
-          <div className="flex flex-wrap items-center gap-2 mt-3">
-            <Button onClick={verifyCode} disabled={busy || !code.trim()}>
-              {busy ? (
-                <span className="flex items-center gap-2">
-                  <Loader2Icon size={15} className="animate-spin" aria-hidden />
-                  Checking
-                </span>
-              ) : (
-                'Finish connecting'
-              )}
-            </Button>
+          {/* The primary action on its own line, so the two quiet ones beside it
+              stop reading as one run-on phrase. */}
+          <Button
+            onClick={verifyCode}
+            className="w-full mt-3"
+            disabled={busy || code.length !== CODE_LENGTH}
+          >
+            {busy ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2Icon size={15} className="animate-spin" aria-hidden />
+                Checking
+              </span>
+            ) : (
+              'Finish connecting'
+            )}
+          </Button>
+
+          <div className="flex items-center justify-between mt-3">
             <button
               type="button"
               onClick={() => sendCode({ resend: true })}
