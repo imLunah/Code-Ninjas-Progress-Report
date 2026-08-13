@@ -635,9 +635,12 @@ async function resolveLoginActions({ force = false } = {}) {
   )];
   if (!scripts.length) throw new MyStudioSignInUnavailable();
 
+  // Only otpAction is needed. loginAction is read when it happens to be in the
+  // same chunk, purely so a future debugging session can see it, but nothing
+  // calls it: see requestOtp for why the code request goes elsewhere.
   const found = {};
   const read = (source) => {
-    for (const name of ['loginAction', 'otpAction']) {
+    for (const name of ['otpAction', 'loginAction']) {
       if (found[name]) continue;
       const hit = new RegExp(
         `createServerReference\\)?\\(\\s*"([0-9a-f]{20,})"[^)]*"${name}"\\s*\\)`
@@ -647,7 +650,7 @@ async function resolveLoginActions({ force = false } = {}) {
   };
 
   await mapPooled(scripts, 6, async (src) => {
-    if (found.loginAction && found.otpAction) return;
+    if (found.otpAction) return;
     try {
       const res = await fetch(new URL(src, BASE), {
         headers: { 'user-agent': USER_AGENT },
@@ -659,7 +662,7 @@ async function resolveLoginActions({ force = false } = {}) {
     }
   });
 
-  if (!found.loginAction || !found.otpAction) throw new MyStudioSignInUnavailable();
+  if (!found.otpAction) throw new MyStudioSignInUnavailable();
 
   actionIdCache = found;
   return found;
@@ -744,61 +747,61 @@ function describePayload(payload) {
 
 // Asks MyStudio to email the six digit code.
 //
-// rememberMe is always on. It is the difference between the ten hour session
-// that made this worth building and a thirty day one, and there is no case where
-// a center director wants the short version.
-async function startLogin({ email, password }) {
-  const ids = await resolveLoginActions();
-  const fields = { email, password, rememberMe: 'on' };
-
-  let result;
-  try {
-    result = await callLoginAction(ids.loginAction, fields);
-  } catch (err) {
-    if (!(err instanceof MyStudioSignInUnavailable)) throw err;
-    // Re-read the ids once in case MyStudio deployed, then give up.
-    const fresh = await resolveLoginActions({ force: true });
-    result = await callLoginAction(fresh.loginAction, fields);
-  }
-
-  if (actionRejected(result.payload)) {
-    console.error('MyStudio sign-in rejected:', describePayload(result.payload));
-    // The action's own message is the same generic sentence for a wrong password
-    // and an unknown address, so the resend route is asked instead: it is a plain
-    // JSON endpoint that says which one it was. It also sends the code, so on the
-    // paths where it succeeds the sign-in is still moving forward.
-    throw new MyStudioAuthError(await explainLoginFailure({ email, password }));
-  }
-
-  console.log('MyStudio sign-in accepted:', describePayload(result.payload));
-  return { otpSent: true };
-}
-
-// Turns a rejected sign-in into something a person can act on.
+// This uses their plain resendOtp route rather than the loginAction the sign-in
+// form uses, and the difference is not a preference. loginAction is a Server
+// Action, and every call we made to it came back with the same generic
+// "Something went wrong", including calls carrying a password MyStudio accepted
+// moments later on this route. Its arguments are bound and encrypted into hidden
+// fields on their page, which is the likeliest reason a hand-built call cannot
+// satisfy it, and none of that is anything we can reproduce reliably.
 //
-// Deliberately does not set a content-type. Their handler runs JSON.parse on the
-// raw body, so declaring JSON makes Next parse it first and the handler throws on
-// the object it gets. Their own client omits the header for the same reason.
-async function explainLoginFailure({ email, password }) {
+// resendOtp does the whole job: it checks the credential, it emails the code,
+// and it answers in plain JSON with a message worth showing someone. The name
+// says resend, but it sends the first one just as happily.
+//
+// Do not set a content-type. Their handler runs JSON.parse on the raw body, so
+// declaring JSON makes Next parse it first and the handler throws on the object
+// it gets, leaking a stack trace. Their own client omits it for the same reason.
+async function requestOtp({ email, password }) {
+  let res;
   try {
-    const res = await fetch(new URL('/api/legacy/login/resendOtp', BASE), {
+    res = await fetch(new URL('/api/legacy/login/resendOtp', BASE), {
       method: 'POST',
       headers: { 'user-agent': USER_AGENT },
       body: JSON.stringify({ email, password }),
       signal: AbortSignal.timeout(20000),
     });
-    const data = await res.json();
-    const msg = String((data && data.msg) || '').trim();
-    if (msg) return msg;
-  } catch {
-    // Fall through to the generic sentence.
+  } catch (err) {
+    throw new MyStudioError(
+      err && err.name === 'TimeoutError' ? 'MyStudio timed out' : 'Could not reach MyStudio'
+    );
   }
-  return 'MyStudio did not accept that email and password.';
+
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    throw new MyStudioSignInUnavailable();
+  }
+
+  const status = String((data && data.status) || '');
+  const msg = String((data && data.msg) || '').trim();
+
+  if (/fail|error/i.test(status)) {
+    console.error('MyStudio sign-in rejected:', redactEmails(msg) || `status=${status}`);
+    throw new MyStudioAuthError(msg || 'MyStudio did not accept that email and password.');
+  }
+
+  console.log('MyStudio sign-in accepted:', redactEmails(msg) || `status=${status}`);
+  return { otpSent: true, message: msg };
+}
+
+async function startLogin({ email, password }) {
+  return requestOtp({ email, password });
 }
 
 async function resendOtp({ email, password }) {
-  const message = await explainLoginFailure({ email, password });
-  return { otpSent: true, message };
+  return requestOtp({ email, password });
 }
 
 // Exchanges the six digit code for a session.
