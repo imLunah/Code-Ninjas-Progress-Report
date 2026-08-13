@@ -36,33 +36,70 @@ const STUDENT_PROGRAMS_SUBQUERY = `
 `;
 
 // POST /api/parent/login
+// Center code first, then the email.
+//
+// There is no password here and there never has been: knowing an address that
+// appears in students.parent_email was, on its own, full access to that child's
+// record. The code is therefore not "an extra layer" on a credential, it is the
+// second half of the only one. It is not a secret either — it goes on a flyer
+// and into a group chat — but it means a harvested address is useless without
+// knowing which center it belongs to, and that one center's parents cannot
+// probe another's.
+//
+// It also fixes something quieter. The lookup used to run across every student
+// row in the database, so a parent with children at two centers got both at
+// once with no way to say which they meant, and a deactivated center's parents
+// carried on regardless. The session now carries a center, and every route
+// below is scoped to it.
 router.post('/login', loginLimiter, async (req, res) => {
   const pool = req.app.get('db');
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ error: 'Email is required' });
+  const email = String((req.body && req.body.email) || '').trim();
+  const centerCode = String((req.body && req.body.centerCode) || '').trim().toUpperCase();
+
+  if (!centerCode || !email) {
+    return res.status(400).json({ error: 'Center code and email are required.' });
+  }
 
   try {
-    const { rows } = await pool.query(
-      'SELECT id, parent_name FROM students WHERE LOWER(parent_email) = LOWER($1) AND active = true LIMIT 1',
-      [email.trim()]
+    const { rows: centers } = await pool.query(
+      'SELECT id, name FROM locations WHERE UPPER(center_code) = $1 AND active = true',
+      [centerCode]
     );
-    if (!rows.length) {
-      return res.status(401).json({ error: 'Invalid email or no account found.' });
-    }
+
+    // One message for a wrong code and a wrong email, deliberately. Telling
+    // somebody the code was right narrows the guess for them.
+    const denied = { error: 'That center code and email do not match an account.' };
+    if (!centers.length) return res.status(401).json(denied);
+
+    const center = centers[0];
+    const { rows } = await pool.query(
+      `SELECT parent_name FROM students
+        WHERE LOWER(parent_email) = LOWER($1) AND location_id = $2 AND active = true
+        LIMIT 1`,
+      [email, center.id]
+    );
+    if (!rows.length) return res.status(401).json(denied);
 
     await new Promise((resolve, reject) => {
       req.session.regenerate((err) => (err ? reject(err) : resolve()));
     });
 
-    req.session.parentEmail = email.trim().toLowerCase();
+    req.session.parentEmail = email.toLowerCase();
     req.session.role = 'parent';
     req.session.parentName = rows[0].parent_name || null;
+    req.session.parentLocationId = center.id;
+    req.session.parentLocationName = center.name;
 
     await new Promise((resolve, reject) => {
       req.session.save((err) => (err ? reject(err) : resolve()));
     });
 
-    res.json({ email: req.session.parentEmail, role: 'parent', parentName: req.session.parentName });
+    res.json({
+      email: req.session.parentEmail,
+      role: 'parent',
+      parentName: req.session.parentName,
+      centerName: center.name,
+    });
   } catch (err) {
     console.error('Parent login error:', err);
     res.status(500).json({ error: 'Login failed' });
@@ -71,8 +108,16 @@ router.post('/login', loginLimiter, async (req, res) => {
 
 // GET /api/parent/me
 router.get('/me', (req, res) => {
-  if (!req.session.parentEmail) return res.json(null);
-  res.json({ email: req.session.parentEmail, role: 'parent', parentName: req.session.parentName });
+  // A session made before centers existed has no location and cannot be scoped,
+  // so it is treated as signed out rather than silently given the old
+  // cross-center reach.
+  if (!req.session.parentEmail || !req.session.parentLocationId) return res.json(null);
+  res.json({
+    email: req.session.parentEmail,
+    role: 'parent',
+    parentName: req.session.parentName,
+    centerName: req.session.parentLocationName || null,
+  });
 });
 
 // POST /api/parent/logout
@@ -89,9 +134,9 @@ router.get('/students', requireParent, async (req, res) => {
         ${STUDENT_PROGRAMS_SUBQUERY},
         (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id AND pl.notes IS DISTINCT FROM 'Marked complete from roadmap') AS last_activity
       FROM students s
-      WHERE LOWER(s.parent_email) = LOWER($1) AND s.active = true
+      WHERE LOWER(s.parent_email) = LOWER($1) AND s.location_id = $2 AND s.active = true
       ORDER BY s.full_name
-    `, [req.session.parentEmail]);
+    `, [req.session.parentEmail, req.session.parentLocationId]);
     res.json(rows);
   } catch (err) {
     console.error('Parent students error:', err);
@@ -108,8 +153,8 @@ router.get('/students/:id', requireParent, async (req, res) => {
       SELECT s.id, s.full_name, s.birthday, s.created_at, s.special_instructions, s.parent_note,
         ${STUDENT_PROGRAMS_SUBQUERY}
       FROM students s
-      WHERE s.id = $1 AND LOWER(s.parent_email) = LOWER($2) AND s.active = true
-    `, [id, req.session.parentEmail]);
+      WHERE s.id = $1 AND LOWER(s.parent_email) = LOWER($2) AND s.location_id = $3 AND s.active = true
+    `, [id, req.session.parentEmail, req.session.parentLocationId]);
 
     if (!rows[0]) return res.status(404).json({ error: 'Student not found' });
 
@@ -154,8 +199,10 @@ router.patch('/students/:id/instructions', requireParent, async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      'UPDATE students SET special_instructions = $1 WHERE id = $2 AND LOWER(parent_email) = LOWER($3) AND active = true RETURNING special_instructions',
-      [special_instructions?.trim() || null, id, req.session.parentEmail]
+      `UPDATE students SET special_instructions = $1
+        WHERE id = $2 AND LOWER(parent_email) = LOWER($3) AND location_id = $4 AND active = true
+        RETURNING special_instructions`,
+      [special_instructions?.trim() || null, id, req.session.parentEmail, req.session.parentLocationId]
     );
     if (!rows[0]) return res.status(403).json({ error: 'Forbidden' });
     res.json(rows[0]);

@@ -45,8 +45,17 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+// A parent session must name the center it was made for.
+//
+// Sessions created before center codes existed carry an email and nothing else,
+// and every query below scopes on the location. Without this they would fall
+// through with location_id = undefined and match nothing, or worse, be read as
+// unscoped. Failing them here sends the parent back to sign in once.
 function requireParent(req, res, next) {
   if (!req.session.parentEmail) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.session.parentLocationId) {
+    return res.status(401).json({ error: 'Please sign in again with your center code.' });
+  }
   next();
 }
 

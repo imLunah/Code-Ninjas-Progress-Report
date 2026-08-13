@@ -14,8 +14,8 @@ export function ParentAuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  async function login(email) {
-    const data = await api.post('/parent/login', { email });
+  async function login(centerCode, email) {
+    const data = await api.post('/parent/login', { centerCode, email });
     setParent(data);
     return data;
   }

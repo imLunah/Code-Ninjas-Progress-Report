@@ -28,6 +28,7 @@ export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [parentEmail, setParentEmail] = useState('');
+  const [parentCode, setParentCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(false);
   const [error, setError] = useState('');
@@ -44,7 +45,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (tab === 'parent') {
-        await parentLogin(parentEmail.trim());
+        await parentLogin(parentCode.trim(), parentEmail.trim());
         navigate('/parent/dashboard');
       } else {
         const user = await login(username, password, keepSignedIn);
@@ -238,7 +239,31 @@ export default function LoginPage() {
                 exit={{    opacity: 0, y: -8 }}
                 transition={{ duration: 0.22, ease: 'easeOut' }}
               >
-                <label htmlFor="parent-email" className="block text-ninja-navy font-ninja font-bold text-xs uppercase tracking-widest mb-2">
+                {/* The code first, because it says which center this is, and
+                    the email only means anything inside one. Uppercased as it
+                    is typed: it gets read aloud and copied off a flyer, and
+                    nobody should have to wonder whether case matters. */}
+                <label htmlFor="parent-code" className="block text-ninja-navy font-ninja font-bold text-xs uppercase tracking-widest mb-2">
+                  Center Code
+                </label>
+                <input
+                  id="parent-code"
+                  name="centerCode"
+                  type="text"
+                  inputMode="text"
+                  autoComplete="off"
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  maxLength={10}
+                  value={parentCode}
+                  onChange={(e) => setParentCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase())}
+                  placeholder="Ask your center"
+                  required
+                  autoFocus
+                  className="w-full border border-ninja-border text-ninja-navy rounded-xl px-4 py-3 sm:py-3.5 font-ninja font-semibold tracking-[0.2em] text-base focus:outline-none focus:border-ninja-blue focus:ring-2 focus:ring-ninja-blue/10 transition-all bg-white"
+                />
+
+                <label htmlFor="parent-email" className="block text-ninja-navy font-ninja font-bold text-xs uppercase tracking-widest mt-4 mb-2">
                   Email Address
                 </label>
                 <input
@@ -250,7 +275,6 @@ export default function LoginPage() {
                   onChange={(e) => setParentEmail(e.target.value)}
                   placeholder="you@email.com"
                   required
-                  autoFocus
                   className="w-full border border-ninja-border text-ninja-navy rounded-xl px-4 py-3 sm:py-3.5 font-ninja text-base focus:outline-none focus:border-ninja-blue focus:ring-2 focus:ring-ninja-blue/10 transition-all bg-white"
                 />
               </motion.div>
