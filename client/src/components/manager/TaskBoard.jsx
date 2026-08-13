@@ -668,12 +668,21 @@ export default function TaskBoard({
     // it. The factors go through `reduce` because the wrapper's stretch does:
     // a bead wearing a stretch the card is not is the same misalignment as a
     // tilt the bead is not.
+    //
+    // Height comes from the overlay card's OWN layout, not from the rect
+    // grabbed in the column. The in-column card and the overlay card are two
+    // renders of the same face and they do not lay out to the same pixel —
+    // measured five apart in practice — and a bead sized off the stale rect
+    // hangs out below the card it is supposed to be. offsetHeight is a plain
+    // layout read; nothing invalidates layout mid-drag, so it costs nothing.
+    const fh = faceRef.current?.offsetHeight || box.h;
     const sx = reduce ? 1 : 1 + 0.14 * pull;
     const sy = reduce ? 1 : 1 - 0.07 * pull;
     const gw = box.w * sx;
-    const gh = box.h * sy;
+    const gh = fh * sy;
     const gLead = bx + gw;
-    const gy = by + (box.h - gh) / 2;
+    const gy = by + (fh - gh) / 2;
+    const gMidY = by + fh / 2;
     // And the tilt it is carrying. The bead wears the SAME tilt as the card
     // at every frame — matching only at the end is what a misalignment is —
     // and the tilt itself levels on the corner ramp, because a liquid does
@@ -707,11 +716,11 @@ export default function TaskBoard({
     // And the drop that bridges the gap, sized off the card so a wide card gets
     // a bridge to match. It is the only part that has to know about distance,
     // because a bridge to nothing is just a blob in the middle of the page.
-    const bridge = Math.min(box.h, 120) * pull;
+    const bridge = Math.min(fh, 120) * pull;
     put(
       gooDropRef.current,
       (lead + Math.max(lead, r.left)) / 2 - bridge / 2,
-      by + box.h / 2 - bridge / 2,
+      gMidY - bridge / 2,
       bridge, bridge, bridge / 2
     );
 
@@ -737,6 +746,16 @@ export default function TaskBoard({
         // the ends of a wide card by real pixels.
         face.style.transform = pull > 0 ? `rotate(${tilt}deg)` : '';
 
+        // The lens goes off for the whole morph, not just the molten end.
+        // Chromium mismaps backdrop-filter's sample region under a scaled
+        // ancestor — the moment the taffy wrapper carries any scale, the
+        // card's refraction paints as an offset ghost copy of the page
+        // INSIDE the card, which reads as a second, misaligned card.
+        // Verified live: the ghost appears with the lens on and vanishes
+        // with it off. Near the bin the glass layer is the material anyway.
+        face.style.backdropFilter = pull > 0 ? 'none' : '';
+        face.style.webkitBackdropFilter = pull > 0 ? 'none' : '';
+
         // Two surfaces can never merge seamlessly while both keep their own
         // edges — one of them has to stop being a surface. It is this one,
         // because the goo union is the shape that knows about the neck. Once
@@ -750,8 +769,6 @@ export default function TaskBoard({
         face.style.backgroundColor = molten ? 'transparent' : '';
         face.style.borderColor = molten ? 'transparent' : '';
         face.style.boxShadow = molten ? 'none' : '';
-        face.style.backdropFilter = molten ? 'none' : '';
-        face.style.webkitBackdropFilter = molten ? 'none' : '';
       }
     }
 
@@ -770,7 +787,7 @@ export default function TaskBoard({
     put(
       glassDropRef.current,
       (gLead + Math.max(gLead, r.left)) / 2 - gBridge / 2,
-      by + box.h / 2 - gBridge / 2,
+      gMidY - gBridge / 2,
       gBridge, gBridge, gBridge / 2
     );
   };
