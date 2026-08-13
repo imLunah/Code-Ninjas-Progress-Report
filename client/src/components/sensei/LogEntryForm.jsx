@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../../api/client';
+import Toast from '../ui/Toast';
 import { today, formatDate } from '../../utils/dateUtils';
 import Button from '../ui/Button';
 import LazyMarkdownEditor from '../shared/LazyMarkdownEditor';
@@ -478,20 +479,18 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, o
           {error}
         </div>
       )}
-      {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg p-3 text-sm font-ninja flex items-center justify-between gap-3">
-          <span>{isEditing ? 'Session updated.' : 'Progress logged successfully!'}</span>
-          <button
-            type="button"
-            onClick={() => setSuccess(false)}
-            className="text-green-700 border border-green-400 hover:bg-green-100 font-ninja font-semibold text-xs px-3 py-1 rounded-lg transition-colors whitespace-nowrap"
-          >
-            {isEditing ? 'Keep editing' : '+ Log Another'}
-          </button>
-        </div>
-      )}
+      {/* The form stays put and the confirmation arrives from the bottom.
+          Swapping the form for a green banner made the thing you had just
+          finished disappear in order to tell you it had worked, and then asked
+          you to press a button to get it back. The fields are already cleared
+          for the next one. */}
+      <Toast
+        message={isEditing ? 'Session updated.' : 'Progress logged'}
+        show={success}
+        onDone={() => setSuccess(false)}
+      />
 
-      {!success && (<>
+      <>
 
       <div>
         <label className="block text-ninja-muted text-sm font-ninja font-semibold mb-1 uppercase tracking-wide">
@@ -600,7 +599,7 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, o
           : 'Log Progress'}
       </Button>
 
-      </>)}
+      </>
     </form>
   );
 }

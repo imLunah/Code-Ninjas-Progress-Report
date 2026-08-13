@@ -16,7 +16,6 @@ import useExpectedToday, {
   groupByClass,
   prettyTime,
   countNinjas,
-  beltColor,
 } from '../../lib/useExpectedToday';
 
 // Who MyStudio says is booked in today, offered as suggestions above the board.
@@ -215,7 +214,6 @@ export default function ExpectedToday({
                   const canAdd =
                     Boolean(row.studentId) && !done && !readOnly && !row.isClub;
                   const needsMatch = !row.studentId && !readOnly;
-                  const swatch = beltColor(row.rankName);
 
                   return (
                     <motion.li
@@ -246,19 +244,6 @@ export default function ExpectedToday({
                             : 'text-ninja-navy cursor-default',
                         ].join(' ')}
                       >
-                        {/* The belt, as a colour. A rank that is not a belt
-                            ("ScratchJR") gets a hollow ring rather than a
-                            misleading swatch. */}
-                        <span
-                          aria-hidden
-                          className="w-2.5 h-2.5 rounded-full flex-shrink-0 border"
-                          style={
-                            swatch
-                              ? { backgroundColor: swatch, borderColor: 'rgba(0,0,0,0.25)' }
-                              : { backgroundColor: 'transparent', borderColor: 'currentColor', opacity: 0.35 }
-                          }
-                        />
-
                         <span className="truncate">{row.studentName || row.fullName}</span>
 
                         {row.rankName && (

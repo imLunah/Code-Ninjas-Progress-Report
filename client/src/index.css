@@ -301,6 +301,37 @@ textarea:focus-visible {
   .task-leaving { animation: taskLeave 120ms linear forwards; }
 }
 
+/* Confirming something that worked, without taking the screen to say it.
+
+   Logging a ninja used to swap the form for a green banner, which meant the
+   thing you had just finished doing disappeared to tell you it had happened,
+   and you pressed a button to get it back. A toast says the same thing from
+   the bottom of the screen and leaves on its own.
+
+   It overshoots. The curve goes past 1 on the way out, so the panel arrives a
+   little too far and settles back — the difference between something appearing
+   and something being placed. */
+@keyframes toastIn {
+  from { transform: translateY(140%) scale(0.9); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes toastOut {
+  from { transform: translateY(0) scale(1); opacity: 1; }
+  to   { transform: translateY(140%) scale(0.95); opacity: 0; }
+}
+.toast-in {
+  animation: toastIn 0.55s cubic-bezier(0.18, 1.25, 0.4, 1) both;
+}
+.toast-out {
+  /* Leaving is quicker and does not overshoot: an exit that lingers reads as
+     hesitation, and nobody needs a flourish on the way out. */
+  animation: toastOut 0.22s cubic-bezier(0.4, 0, 1, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast-in { animation: none; opacity: 1; transform: none; }
+  .toast-out { animation: none; opacity: 0; }
+}
+
 /* Waiting on MyStudio.
 
    The booked list comes from a third party and takes a couple of seconds, and
