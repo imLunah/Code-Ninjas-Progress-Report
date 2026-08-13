@@ -11,9 +11,11 @@
 // Two rules that are easy to get wrong and expensive to get wrong:
 //
 //   1. The participants endpoint returns `all`, `registered` and `waitlisted`.
-//      `all` is every active member at the center, not a roster. Reading it
-//      would offer to check in the entire center. Only `registered` answers
-//      "who is booked into this class today".
+//      `all` is every active member at the center, not a class. Only
+//      `registered` answers "who is booked into this class today", and anything
+//      feeding the check-in board must read that and nothing else, or it will
+//      offer to check in all 73 people at the center. The single exception is
+//      getCenterRoster below, where the whole center IS the question.
 //
 //   2. The upstream roster carries a child's check-in PIN, date of birth,
 //      contact email, mobile number and parent names. None of that is needed to
@@ -1017,6 +1019,97 @@ async function getRegisteredForClass(session, companyId, date, cls) {
   return registered.map((p) => normalizeParticipant(p, cls));
 }
 
+// Everything the roster import needs, and nothing else.
+//
+// Same PII boundary as normalizeParticipant, for the same reason: these rows
+// carry a child's check-in PIN, date of birth, contact details and parent names,
+// and none of it is needed to create a DojoLink ninja. Membership and category
+// are kept because they are the only clue to which program somebody is in.
+function normalizeMember(p) {
+  const first = String(p.participant_first_name || '').trim();
+  const last = String(p.participant_last_name || '').trim();
+  return {
+    participantId: String(p.participant_id || ''),
+    firstName: first,
+    lastName: last,
+    fullName: [first, last].filter(Boolean).join(' '),
+    rankName: String(p.rank_name || '').trim() || null,
+    membershipTitle: String(p.membership_title || '').trim() || null,
+    categoryTitle: String(p.category_title || '').trim() || null,
+  };
+}
+
+// Which program a membership describes, when it describes one at all.
+//
+// A title naming exactly one program resolves to it; a title naming two resolves
+// to neither. That is the same rule the class titles follow and it exists for the
+// same reason: a membership says what a family bought, not what a child sits in,
+// so guessing files a session under a program nobody is enrolled in. Anything
+// unresolved becomes a ninja with no program, which a director can enrol in ten
+// seconds and which cannot be wrong.
+function programForMembership(...titles) {
+  for (const raw of titles) {
+    const text = String(raw || '').toLowerCase();
+    if (!text) continue;
+    const hits = PROGRAMS.filter((program) => text.includes(program.toLowerCase()));
+    if (hits.length === 1) return hits[0];
+    if (hits.length > 1) return null;
+  }
+  return null;
+}
+
+// Every active member at this center.
+//
+// This is the one place allowed to read `all[]`. The standing rule against it is
+// about check-in: `all` is the whole center rather than a class, so offering it
+// as "who is booked in today" would propose checking in all 73 of them. For
+// building a roster it is exactly the right list, and the only one there is.
+// Nothing here feeds the board.
+//
+// `all` is center-wide rather than class-scoped, so any class on the day serves
+// as the way in; the participants endpoint just needs one to be addressed to.
+async function getCenterRoster(cookieOrSession, companyId, date) {
+  const session = toSession(cookieOrSession);
+  const classes = await getClassList(session, companyId, date);
+  if (!classes.length) {
+    throw new MyStudioError(
+      'MyStudio has no classes scheduled on that date, so there is nothing to read the roster from.'
+    );
+  }
+
+  const cls = classes[0];
+  const data = await request(
+    session,
+    companyId,
+    'GET',
+    '/api/features/attendance/class-participants',
+    {
+      params: {
+        selected_date: date,
+        class_appointment_id: cls.class_appointment_id,
+        class_appointment_times_id: cls.class_appointment_times_id,
+        class_appointment_occurrence_id: cls.class_appointment_occurrence_id,
+        drop_in_flag: 'N',
+        include_active_only: '1',
+      },
+    }
+  );
+
+  const all = Array.isArray(data && data.all) ? data.all : [];
+  const members = all.map(normalizeMember).filter((m) => m.participantId && m.fullName);
+
+  // One row per person. The same member can appear more than once when they hold
+  // more than one membership.
+  const byId = new Map();
+  for (const member of members) {
+    if (!byId.has(member.participantId)) byId.set(member.participantId, member);
+  }
+
+  return [...byId.values()].sort(
+    (a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName)
+  );
+}
+
 // Small pool rather than Promise.all over every class. A center runs about 17
 // classes a day and we only ask about the ones with bookings, but firing all of
 // them at a vendor API at once is rude and gains nothing.
@@ -1106,6 +1199,9 @@ module.exports = {
   getRegisteredForClass,
   getExpectedForDate,
   normalizeParticipant,
+  normalizeMember,
+  getCenterRoster,
+  programForMembership,
   programForClass,
   isClubClass,
   toMinutes,

@@ -642,6 +642,251 @@ router.get('/today', requireSensei, async (req, res) => {
   }
 });
 
+// Same tolerant belt parse the CSV import uses, so a rank string resolves to
+// the same belt whichever way a roster arrives. Longest names first so a partial
+// substring cannot win.
+const BELT_NAMES = [
+  'Platinum', 'Bronze', 'Silver', 'Yellow', 'Orange', 'Purple',
+  'Brown', 'Green', 'Black', 'White', 'Blue', 'Gold', 'Red',
+];
+
+function parseBeltName(raw) {
+  if (!raw) return null;
+  const text = String(raw).toLowerCase();
+  return BELT_NAMES.find((name) => text.includes(name.toLowerCase())) || null;
+}
+
+// POST /api/mystudio/import   { dryRun } | { belt_ids, enroll_ids }
+//
+// Pulls this center's member list from MyStudio and adds the ninjas DojoLink
+// does not have yet.
+//
+// Additive by default and by design. It never archives, never deactivates, and
+// never edits a ninja who already exists — the CSV import proposes archiving
+// everyone absent from the file, and a live pull that did the same would empty a
+// roster the first time MyStudio had a bad day. Changes to existing ninjas are
+// listed and applied only for the ids the director ticks.
+//
+// Two passes, like the CSV import: dryRun classifies and rolls back, then the
+// same classification runs again for real. The preview has to be built from the
+// same code that does the work, or it is a description of something else.
+router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const locationId = req.session.activeLocationId;
+  const dryRun = req.body && req.body.dryRun === true;
+
+  // Ids the director ticked in the preview. Empty on a dry run, and empty means
+  // nothing existing is touched.
+  const beltIds = new Set((req.body && req.body.belt_ids) || []);
+  const enrollIds = new Set((req.body && req.body.enroll_ids) || []);
+
+  const date = todayDate();
+
+  try {
+    const conn = await loadConnection(pool, locationId);
+    if (!conn) return res.status(400).json({ error: 'This center is not connected to MyStudio.' });
+    if (!ms.isConfigured()) {
+      return res.status(503).json({ error: 'MyStudio is not set up on the server yet.' });
+    }
+
+    let members;
+    try {
+      const session = ms.createSession(ms.decryptCookie(conn.session_cookie));
+      members = await ms.getCenterRoster(session, conn.company_id, date);
+    } catch (err) {
+      if (err instanceof ms.MyStudioAuthError) {
+        await markExpired(pool, conn.id);
+        return res.status(400).json({ error: 'The MyStudio session ran out. Sign in again first.' });
+      }
+      console.error('MyStudio roster pull failed:', err.message);
+      return res.status(502).json({ error: err.message || 'Could not reach MyStudio.' });
+    }
+
+    // The center's ninjas, by upstream id and by name, in one pass.
+    const { rows: students } = await pool.query(
+      `SELECT s.id, s.full_name, s.mystudio_participant_id,
+              COALESCE(
+                json_agg(json_build_object('program', sp.program, 'belt', sp.belt_level))
+                  FILTER (WHERE sp.program IS NOT NULL),
+                '[]'
+              ) AS programs
+         FROM students s
+         LEFT JOIN student_programs sp ON sp.student_id = s.id
+        WHERE s.location_id = $1 AND s.active = true
+        GROUP BY s.id`,
+      [locationId]
+    );
+
+    const byParticipantId = new Map();
+    const byName = new Map();
+    for (const s of students) {
+      if (s.mystudio_participant_id) byParticipantId.set(String(s.mystudio_participant_id), s);
+      const key = String(s.full_name || '').trim().toLowerCase();
+      if (!key) continue;
+      if (!byName.has(key)) byName.set(key, []);
+      byName.get(key).push(s);
+    }
+
+    const toAdd = [];
+    const linkTargets = [];
+    const beltChanges = [];
+    const newEnrollments = [];
+    const unchanged = [];
+    const ambiguous = [];
+
+    for (const member of members) {
+      const program = ms.programForMembership(member.membershipTitle, member.categoryTitle);
+      const belt = parseBeltName(member.rankName);
+
+      const linked = byParticipantId.get(member.participantId);
+      const named = byName.get(member.fullName.toLowerCase()) || [];
+
+      // Two ninjas with one name cannot be told apart from here, and picking one
+      // would attach a stranger's upstream id to a child's record.
+      if (!linked && named.length > 1) {
+        ambiguous.push({ participant_id: member.participantId, full_name: member.fullName });
+        continue;
+      }
+
+      const student = linked || named[0] || null;
+
+      if (!student) {
+        toAdd.push({
+          participant_id: member.participantId,
+          full_name: member.fullName,
+          program,
+          belt,
+          membership: member.membershipTitle,
+        });
+        continue;
+      }
+
+      // Whoever this member turned out to be, remember which upstream row
+      // they are, so the next pull does not have to match on a name again.
+      linkTargets.push({ id: student.id, participant_id: member.participantId });
+
+      const enrolled = (student.programs || []).find((p) => p.program === program);
+
+      if (program && !enrolled) {
+        newEnrollments.push({
+          id: student.id,
+          participant_id: member.participantId,
+          full_name: student.full_name,
+          program,
+          belt,
+        });
+      } else if (program && enrolled && belt && enrolled.belt !== belt) {
+        beltChanges.push({
+          id: student.id,
+          participant_id: member.participantId,
+          full_name: student.full_name,
+          program,
+          current_belt: enrolled.belt || null,
+          new_belt: belt,
+        });
+      } else {
+        unchanged.push({ id: student.id, full_name: student.full_name });
+      }
+    }
+
+    if (dryRun) {
+      return res.json({
+        preview: true,
+        date,
+        member_count: members.length,
+        to_add: toAdd,
+        belt_changes: beltChanges,
+        new_enrollments: newEnrollments,
+        unchanged_count: unchanged.length,
+        ambiguous,
+      });
+    }
+
+    const client = await pool.connect();
+    let added = 0;
+    let enrolled = 0;
+    let belted = 0;
+    let linkedCount = 0;
+
+    try {
+      await client.query('BEGIN');
+
+      for (const row of toAdd) {
+        const { rows: inserted } = await client.query(
+          `INSERT INTO students (full_name, location_id, mystudio_participant_id)
+           VALUES ($1, $2, $3) RETURNING id`,
+          [row.full_name, locationId, row.participant_id]
+        );
+        added += 1;
+
+        // A ninja with no resolvable program is still worth having. The director
+        // enrols them in ten seconds; a guessed program is wrong for a term.
+        if (row.program) {
+          await client.query(
+            `INSERT INTO student_programs (student_id, program, belt_level, belt_sublevel)
+             VALUES ($1, $2, $3, $4) ON CONFLICT (student_id, program) DO NOTHING`,
+            [inserted[0].id, row.program, row.belt, row.belt ? 1 : null]
+          );
+        }
+      }
+
+      // Only what was ticked.
+      for (const row of newEnrollments) {
+        if (!enrollIds.has(row.id)) continue;
+        await client.query(
+          `INSERT INTO student_programs (student_id, program, belt_level, belt_sublevel)
+           VALUES ($1, $2, $3, $4) ON CONFLICT (student_id, program) DO NOTHING`,
+          [row.id, row.program, row.belt, row.belt ? 1 : null]
+        );
+        enrolled += 1;
+      }
+
+      for (const row of beltChanges) {
+        if (!beltIds.has(row.id)) continue;
+        // Scoped to the one program, and the sublevel resets, exactly as the CSV
+        // import's belt override does.
+        await client.query(
+          `UPDATE student_programs SET belt_level = $1, belt_sublevel = 1
+            WHERE student_id = $2 AND program = $3`,
+          [row.new_belt, row.id, row.program]
+        );
+        belted += 1;
+      }
+
+      // Remembering the upstream id is plumbing, not a change to a ninja: it is
+      // an internal mapping nobody sees, and it is what stops every later pull
+      // guessing from a name.
+      for (const row of linkTargets) {
+        if (!row.participant_id || !row.id) continue;
+        const { rowCount } = await client.query(
+          `UPDATE students SET mystudio_participant_id = $1
+            WHERE id = $2 AND location_id = $3 AND mystudio_participant_id IS DISTINCT FROM $1`,
+          [row.participant_id, row.id, locationId]
+        );
+        linkedCount += rowCount;
+      }
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    res.json({
+      added,
+      enrolled,
+      belts_changed: belted,
+      linked: linkedCount,
+      member_count: members.length,
+    });
+  } catch (err) {
+    console.error('MyStudio roster import failed:', err.message);
+    res.status(500).json({ error: 'Failed to import the MyStudio roster' });
+  }
+});
+
 // POST /api/mystudio/link  { participant_id, student_id }
 //
 // Promotes an accepted name match to a durable id so later pulls stop guessing.

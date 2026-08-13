@@ -371,6 +371,66 @@ describe('program mapping', () => {
 // A club booking is worth showing and must never be offered as a check-in.
 // DojoLink tracks clubs as their own sessions, so filing one as a daily
 // assignment puts the wrong kind of attendance against a ninja.
+// The roster import reads `all[]`, which every other path in this file is
+// forbidden to touch, so its boundary gets checked as carefully as the board's.
+describe('roster members', () => {
+  const upstream = {
+    participant_id: 'PID-9',
+    participant_first_name: 'Testy',
+    participant_last_name: 'McExample',
+    rank_name: 'White Belt 3',
+    membership_title: 'CREATE Monthly',
+    category_title: 'Member',
+    real_pin: 'PIN-0000',
+    date_of_birth: '1999-01-01',
+    student_email: 'nobody@example.invalid',
+    student_mobile: '5550000000',
+    buyer_first_name: 'Guardian',
+    buyer_postal_code: '00000',
+  };
+
+  it('drops every sensitive field', () => {
+    const json = JSON.stringify(ms.normalizeMember(upstream));
+    for (const secret of [
+      'PIN-0000',
+      '1999-01-01',
+      'nobody@example.invalid',
+      '5550000000',
+      'Guardian',
+      '00000',
+    ]) {
+      expect(json).not.toContain(secret);
+    }
+  });
+
+  it('builds a name that can match a DojoLink full_name', () => {
+    expect(ms.normalizeMember(upstream).fullName).toBe('Testy McExample');
+  });
+});
+
+describe('reading a program off a membership', () => {
+  it('resolves a membership naming exactly one program', () => {
+    expect(ms.programForMembership('CREATE Monthly')).toBe('CREATE');
+    expect(ms.programForMembership('Robotics Academy 1x/week')).toBe('Robotics Academy');
+  });
+
+  it('refuses a membership naming two', () => {
+    // Guessing here enrols a child in something they do not attend, and the
+    // wrong program is worse than none: a director fixes none in ten seconds.
+    expect(ms.programForMembership('CREATE and JR bundle')).toBe(null);
+  });
+
+  it('refuses a membership naming none', () => {
+    expect(ms.programForMembership('Academies')).toBe(null);
+    expect(ms.programForMembership('')).toBe(null);
+    expect(ms.programForMembership(null, undefined)).toBe(null);
+  });
+
+  it('falls back to the category when the membership says nothing', () => {
+    expect(ms.programForMembership('Unlimited', 'JR')).toBe('JR');
+  });
+});
+
 describe('telling a club apart', () => {
   it('recognises the club classes', () => {
     expect(ms.isClubClass('Roblox Club')).toBe(true);
