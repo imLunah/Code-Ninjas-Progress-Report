@@ -11,6 +11,7 @@ import {
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { CARD } from '../../lib/surfaces';
+import BouncingDots from '../ui/BouncingDots';
 import useExpectedToday, { groupByClass, prettyTime, countNinjas } from '../../lib/useExpectedToday';
 
 // Who MyStudio says is booked in today, offered as suggestions above the board.
@@ -82,9 +83,26 @@ export default function ExpectedToday({
     [adding, date, onAdded]
   );
 
-  // Nothing to say: no connection, an error, or a day with no bookings.
-  if (state.loading || state.error) return null;
-  if (!data || !data.connected) return null;
+  // Inside a dialog somebody opened on purpose, silence is an empty box. The
+  // icon is deliberately there before the answer is, so pressing it early has to
+  // land on something that says "working" rather than on nothing at all.
+  if (state.loading) return bare ? <BouncingDots label="Loading today's bookings" className="py-6" /> : null;
+
+  if (state.error) {
+    return bare ? (
+      <p className="font-ninja text-sm text-ninja-muted py-2">
+        Could not reach MyStudio just now. It will try again shortly.
+      </p>
+    ) : null;
+  }
+
+  if (!data || !data.connected) {
+    return bare ? (
+      <p className="font-ninja text-sm text-ninja-muted py-2">
+        This center is not connected to MyStudio.
+      </p>
+    ) : null;
+  }
 
   if (data.status === 'expired') {
     return (
@@ -113,7 +131,13 @@ export default function ExpectedToday({
   }
 
   const expected = data.expected || [];
-  if (expected.length === 0) return null;
+  if (expected.length === 0) {
+    return bare ? (
+      <p className="font-ninja text-sm text-ninja-muted py-2">
+        Nobody is booked in today.
+      </p>
+    ) : null;
+  }
 
   // A ninja can be booked into two classes on one day, so the same person
   // appears twice. Checking them in once settles both rows, which is why this

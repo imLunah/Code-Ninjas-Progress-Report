@@ -45,6 +45,10 @@ export default function SenseiDashboard() {
   // only appears when there is something behind it.
   const bookedFeed = useExpectedToday(todayStr, { enabled: experimental });
   const bookedCount = countNinjas(bookedFeed.data?.expected);
+  // Shown while the answer is still coming, so the header does not
+  // reshuffle a couple of seconds after the page settles. It only goes
+  // away once MyStudio has actually said there is nobody.
+  const showBooked = bookedFeed.loading || bookedCount > 0;
 
   const refresh = () => setRefreshKey(k => k + 1);
 
@@ -113,22 +117,28 @@ export default function SenseiDashboard() {
 
             {/* Only when somebody is actually booked. An icon that opens an
                 empty box teaches people to stop pressing it. */}
-            {bookedCount > 0 && (
+            {showBooked && (
               <button
                 type="button"
                 onClick={() => setBookedOpen(true)}
-                aria-label={`Who is booked in today, ${bookedCount} ninjas`}
+                aria-label={
+                  bookedCount > 0
+                    ? `Who is booked in today, ${bookedCount} ninjas`
+                    : "Who is booked in today"
+                }
                 aria-haspopup="dialog"
                 aria-expanded={bookedOpen}
                 className={`${CARD} relative w-11 h-11 flex items-center justify-center text-ninja-muted hover:text-ninja-blue hover:border-ninja-blue/50 transition-colors`}
               >
                 <UsersIcon className="w-5 h-5" />
-                <span
-                  aria-hidden
-                  className="absolute -top-1 -right-1 min-w-[1.15rem] h-[1.15rem] px-1 rounded-full bg-ninja-blue text-white font-ninja text-[11px] font-bold flex items-center justify-center tabular-nums"
-                >
-                  {bookedCount}
-                </span>
+                {bookedCount > 0 && (
+                  <span
+                    aria-hidden
+                    className="absolute -top-1 -right-1 min-w-[1.15rem] h-[1.15rem] px-1 rounded-full bg-ninja-blue text-white font-ninja text-[11px] font-bold flex items-center justify-center tabular-nums"
+                  >
+                    {bookedCount}
+                  </span>
+                )}
               </button>
             )}
 
