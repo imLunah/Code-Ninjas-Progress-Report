@@ -69,7 +69,9 @@ export default function AccountPage() {
   useEffect(() => {
     if (!isManager || searchParams.get('mystudio') !== '1') return;
     setShowMyStudio(true);
-    setSection('experimental');
+    // 'preferences' is the key the Experimental section is registered under.
+    // Anything else leaves the settings body rendering nothing behind the panel.
+    setSection('preferences');
     searchParams.delete('mystudio');
     setSearchParams(searchParams, { replace: true });
   }, [isManager, searchParams, setSearchParams]);
