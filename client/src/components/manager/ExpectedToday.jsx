@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   UsersIcon,
@@ -42,7 +42,6 @@ export default function ExpectedToday({
   const state = feed || own;
   const [adding, setAdding] = useState(() => new Set());
   const [accepted, setAccepted] = useState(() => new Set());
-  const [bulkBusy, setBulkBusy] = useState(false);
 
   const data = state.data;
 
@@ -147,28 +146,8 @@ export default function ExpectedToday({
     row.alreadyOnBoard ||
     (row.studentId && existingStudentIds?.has(row.studentId));
 
-  // One check-in per ninja, not per booking: posting twice for the same student
-  // would race the server's overdue-reuse rule against itself.
-  const actionable = [];
-  const queued = new Set();
-  for (const row of expected) {
-    if (row.isClub) continue;
-    if (!row.studentId || onBoard(row) || queued.has(row.studentId)) continue;
-    queued.add(row.studentId);
-    actionable.push(row);
-  }
-
   const unmatched = expected.filter((r) => !r.studentId);
   const ninjaCount = countNinjas(expected);
-
-  const addAll = async () => {
-    if (bulkBusy || actionable.length === 0) return;
-    setBulkBusy(true);
-    // One at a time. The same ninja can be booked into two classes and the
-    // server reuses an overdue row, so parallel posts would race for it.
-    for (const row of actionable) await checkIn(row);
-    setBulkBusy(false);
-  };
 
   const groups = groupByClass(expected);
 
@@ -198,23 +177,6 @@ export default function ExpectedToday({
           </div>
         </div>
 
-        {!readOnly && actionable.length > 0 && (
-          <button
-            type="button"
-            onClick={addAll}
-            disabled={bulkBusy}
-            className="font-ninja text-sm font-semibold rounded-lg px-3 py-1.5 bg-ninja-blue text-white transition-[transform,filter] duration-150 ease-[var(--ease-out)] hover:brightness-95 active:scale-[0.97] disabled:opacity-60"
-          >
-            {bulkBusy ? (
-              <span className="flex items-center gap-2">
-                <Loader2Icon size={14} className="animate-spin" aria-hidden />
-                Checking in
-              </span>
-            ) : (
-              `Check in all ${actionable.length}`
-            )}
-          </button>
-        )}
       </div>
 
       {/* By class, because "who is coming" is really "who is coming to what".

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 // Who is booked into today's classes upstream.
 //
@@ -20,6 +21,12 @@ const MIN_REFRESH_MS = 60 * 1000;
 
 export default function useExpectedToday(date, { enabled = true } = {}) {
   const [state, setState] = useState({ loading: true, data: null, error: '' });
+  // The answer is per center, and switching centers does not remount the
+  // page, so without this in the dependencies a director moving from Yorba
+  // Linda to Fullerton keeps Yorba Linda's bookings until they reload. Read
+  // here rather than passed in, so no caller can forget it.
+  const { user } = useAuth();
+  const locationId = user?.activeLocation?.id;
 
   useEffect(() => {
     if (!enabled) {
@@ -64,7 +71,7 @@ export default function useExpectedToday(date, { enabled = true } = {}) {
       document.removeEventListener('visibilitychange', refreshIfStale);
       window.removeEventListener('focus', refreshIfStale);
     };
-  }, [date, enabled]);
+  }, [date, enabled, locationId]);
 
   return state;
 }
