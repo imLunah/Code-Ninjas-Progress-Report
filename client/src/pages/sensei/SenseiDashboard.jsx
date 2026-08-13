@@ -14,7 +14,7 @@ import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import ExpectedToday from '../../components/manager/ExpectedToday';
-import useExpectedToday from '../../lib/useExpectedToday';
+import useExpectedToday, { countNinjas } from '../../lib/useExpectedToday';
 import { CARD } from '../../lib/surfaces';
 
 const fadeUp = {
@@ -44,7 +44,7 @@ export default function SenseiDashboard() {
   // connection. The feed is held here rather than inside the panel so the icon
   // only appears when there is something behind it.
   const bookedFeed = useExpectedToday(todayStr, { enabled: experimental });
-  const bookedCount = bookedFeed.data?.expected?.length || 0;
+  const bookedCount = countNinjas(bookedFeed.data?.expected);
 
   const refresh = () => setRefreshKey(k => k + 1);
 

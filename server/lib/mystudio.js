@@ -1028,20 +1028,24 @@ async function getExpectedForDate(cookieOrSession, companyId, date) {
     getRegisteredForClass(session, companyId, date, cls)
   );
 
-  // A ninja booked into two classes on one day is one person to check in, so
-  // collapse on participant id and keep the earliest class.
-  const byParticipant = new Map();
-  for (const row of perClass.flat()) {
-    if (!row.participantId) continue;
-    const seen = byParticipant.get(row.participantId);
-    if (!seen || toMinutes(row.startTime) < toMinutes(seen.startTime)) {
-      byParticipant.set(row.participantId, row);
-    }
-  }
-
-  const expected = [...byParticipant.values()].sort(
+  // Every booking, including the same ninja twice.
+  //
+  // This used to collapse on participant id and keep the earliest class, on the
+  // reasoning that one person is one check-in. True for checking in, wrong for
+  // showing a day: a ninja in the four o'clock CREATE and a club afterwards had
+  // the club silently deleted, and the class it belonged to vanished from the
+  // list while still being counted. A director asked why a club on the schedule
+  // was missing from DojoLink, and this was why.
+  //
+  // De-duplicating for the purpose that needs it — not posting the same
+  // check-in twice — belongs where that happens, not here.
+  const expected = perClass.flat().filter((row) => row.participantId).sort(
     (a, b) =>
       toMinutes(a.startTime) - toMinutes(b.startTime) ||
+      // Class before name, so two classes at the same time stay in one block
+      // each. The client groups by encounter order and would otherwise split a
+      // class in half.
+      a.className.localeCompare(b.className) ||
       a.lastName.localeCompare(b.lastName) ||
       a.firstName.localeCompare(b.firstName)
   );

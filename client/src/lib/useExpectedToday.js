@@ -91,6 +91,12 @@ export function groupByClass(expected) {
   return groups;
 }
 
+// People, not bookings. The same ninja can be booked into two classes on one
+// day and appears once per class, so a plain length counts the day twice.
+export function countNinjas(expected) {
+  return new Set((expected || []).map((row) => row.participantId)).size;
+}
+
 // "04:00 PM" reads as a timetable entry; "4:00 PM" reads as a time.
 export function prettyTime(value) {
   return String(value || '').replace(/^0/, '');

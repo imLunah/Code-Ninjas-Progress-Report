@@ -5,12 +5,12 @@ import {
   CheckIcon,
   Loader2Icon,
   TriangleAlertIcon,
-  ChevronRightIcon,
+  UserRoundPlusIcon,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { CARD } from '../../lib/surfaces';
-import useExpectedToday, { groupByClass, prettyTime } from '../../lib/useExpectedToday';
+import useExpectedToday, { groupByClass, prettyTime, countNinjas } from '../../lib/useExpectedToday';
 
 // Who MyStudio says is booked in today, offered as suggestions above the board.
 //
@@ -46,8 +46,8 @@ export default function ExpectedToday({
 
   const checkIn = useCallback(
     async (row) => {
-      if (!row.studentId || adding.has(row.participantId)) return null;
-      setAdding((prev) => new Set(prev).add(row.participantId));
+      if (!row.studentId || adding.has(row.studentId)) return null;
+      setAdding((prev) => new Set(prev).add(row.studentId));
       try {
         const created = await api.post('/daily', {
           student_id: row.studentId,
@@ -55,7 +55,7 @@ export default function ExpectedToday({
           session_date: date,
         });
         onAdded?.(created);
-        setAccepted((prev) => new Set(prev).add(row.participantId));
+        setAccepted((prev) => new Set(prev).add(row.studentId));
         // Remember the match so the next pull does not have to guess from the
         // name again. Best effort: the check-in already happened, and a failed
         // link is only a slower match tomorrow.
@@ -73,7 +73,7 @@ export default function ExpectedToday({
       } finally {
         setAdding((prev) => {
           const next = new Set(prev);
-          next.delete(row.participantId);
+          next.delete(row.studentId);
           return next;
         });
       }
@@ -114,13 +114,26 @@ export default function ExpectedToday({
   const expected = data.expected || [];
   if (expected.length === 0) return null;
 
+  // A ninja can be booked into two classes on one day, so the same person
+  // appears twice. Checking them in once settles both rows, which is why this
+  // asks about the student rather than the booking.
   const onBoard = (row) =>
-    accepted.has(row.participantId) ||
+    (row.studentId && accepted.has(row.studentId)) ||
     row.alreadyOnBoard ||
     (row.studentId && existingStudentIds?.has(row.studentId));
 
-  const actionable = expected.filter((r) => r.studentId && !onBoard(r));
+  // One check-in per ninja, not per booking: posting twice for the same student
+  // would race the server's overdue-reuse rule against itself.
+  const actionable = [];
+  const queued = new Set();
+  for (const row of expected) {
+    if (!row.studentId || onBoard(row) || queued.has(row.studentId)) continue;
+    queued.add(row.studentId);
+    actionable.push(row);
+  }
+
   const unmatched = expected.filter((r) => !r.studentId);
+  const ninjaCount = countNinjas(expected);
 
   const addAll = async () => {
     if (bulkBusy || actionable.length === 0) return;
@@ -152,7 +165,7 @@ export default function ExpectedToday({
               </p>
             )}
             <p className="font-ninja text-xs text-ninja-muted">
-              {expected.length} {expected.length === 1 ? 'ninja' : 'ninjas'} across{' '}
+              {ninjaCount} {ninjaCount === 1 ? 'ninja' : 'ninjas'} across{' '}
               {data.bookedClassCount} {data.bookedClassCount === 1 ? 'class' : 'classes'}
               {unmatched.length > 0 && `, ${unmatched.length} not matched yet`}
             </p>
@@ -200,12 +213,12 @@ export default function ExpectedToday({
               <AnimatePresence initial={false}>
                 {group.rows.map((row) => {
                   const done = onBoard(row);
-                  const busy = adding.has(row.participantId);
+                  const busy = Boolean(row.studentId) && adding.has(row.studentId);
                   const canAdd = Boolean(row.studentId) && !done && !readOnly;
 
                   return (
                     <motion.li
-                      key={row.participantId}
+                      key={`${group.key}|${row.participantId}`}
                       layout
                       initial={{ opacity: 0, y: -4 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -222,10 +235,15 @@ export default function ExpectedToday({
                           canAdd ? `Check in ${row.studentName || row.fullName}` : undefined
                         }
                         title={row.studentId ? undefined : 'No matching ninja in DojoLink yet'}
+                        // Already on the board is the resting state, not an
+                        // achievement. Filling those rows green made a list of
+                        // six settled ninjas look like six alarms, and drowned
+                        // out the only rows that wanted anything: the ones still
+                        // to check in. So done recedes and actionable stands out.
                         className={[
                           'group w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 font-ninja text-sm text-left transition-colors duration-150',
                           done
-                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                            ? 'text-ninja-muted cursor-default'
                             : canAdd
                               ? 'text-ninja-navy hover:bg-ninja-blue/10 hover:text-ninja-blue'
                               : 'text-ninja-muted cursor-default',
@@ -235,9 +253,12 @@ export default function ExpectedToday({
                           {busy ? (
                             <Loader2Icon size={14} className="animate-spin" />
                           ) : done ? (
-                            <CheckIcon size={14} />
+                            <CheckIcon size={14} className="text-emerald-600/70 dark:text-emerald-400/70" />
                           ) : canAdd ? (
-                            <ChevronRightIcon
+                            // Adding a person to the board, not going somewhere.
+                            // A chevron promised navigation and delivered a
+                            // check-in.
+                            <UserRoundPlusIcon
                               size={14}
                               className="text-ninja-muted group-hover:text-ninja-blue"
                             />
@@ -245,7 +266,7 @@ export default function ExpectedToday({
                             <TriangleAlertIcon size={13} />
                           )}
                         </span>
-                        <span className="font-semibold truncate">
+                        <span className={done ? 'truncate' : 'font-semibold truncate'}>
                           {row.studentName || row.fullName}
                         </span>
                         {row.rankName && (

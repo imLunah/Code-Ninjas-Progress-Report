@@ -14,6 +14,10 @@ import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { SkeletonList } from '../../components/ui/Skeleton';
+import Modal from '../../components/ui/Modal';
+import { UsersIcon } from 'lucide-react';
+import { CARD } from '../../lib/surfaces';
+import useExpectedToday, { countNinjas } from '../../lib/useExpectedToday';
 
 export default function ManagerDashboard() {
   const { user, isReadOnly } = useAuth();
@@ -22,12 +26,18 @@ export default function ManagerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [bookedOpen, setBookedOpen] = useState(false);
   const [showCheckInClub, setShowCheckInClub] = useState(false);
   const [clubSessions, setClubSessions] = useState([]);
   const [statusFilter, setStatusFilter] = useState('unlogged');
   const [programFilter, setProgramFilter] = useState(null);
 
   const todayStr = today();
+
+  // Held here rather than inside the panel, so the icon knows whether there
+  // is anything behind it before it offers to open.
+  const bookedFeed = useExpectedToday(todayStr, { enabled: experimental });
+  const bookedCount = countNinjas(bookedFeed.data?.expected);
 
   const programs = [...new Set(assignments.map((a) => a.program))].filter(Boolean);
   const visibleAssignments = programFilter
@@ -94,23 +104,54 @@ export default function ManagerDashboard() {
               </p>
             )}
           </div>
-          {!isReadOnly && (
-            <Button onClick={() => setShowAddModal(true)} size="md">
-              + Check In Ninja
-            </Button>
-          )}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Who MyStudio says is booked in. It used to sit open above the
+                board, which pushed the ninjas down the page every day to show
+                a list that is usually just confirming what is already there.
+                Behind an icon it is available in one press and costs no room,
+                and it only appears when somebody is actually booked. */}
+            {bookedCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setBookedOpen(true)}
+                aria-label={`Who is booked in today, ${bookedCount} ninjas`}
+                aria-haspopup="dialog"
+                aria-expanded={bookedOpen}
+                className={`${CARD} relative w-11 h-11 flex items-center justify-center text-ninja-muted hover:text-ninja-blue hover:border-ninja-blue/50 transition-colors`}
+              >
+                <UsersIcon className="w-5 h-5" />
+                <span
+                  aria-hidden
+                  className="absolute -top-1 -right-1 min-w-[1.15rem] h-[1.15rem] px-1 rounded-full bg-ninja-blue text-white font-ninja text-[11px] font-bold flex items-center justify-center tabular-nums"
+                >
+                  {bookedCount}
+                </span>
+              </button>
+            )}
+
+            {!isReadOnly && (
+              <Button onClick={() => setShowAddModal(true)} size="md">
+                + Check In Ninja
+              </Button>
+            )}
+          </div>
         </div>
 
-        {/* Experimental: who MyStudio says is booked in today. Renders nothing
-            when this center has no connection. */}
-        {experimental && (
+        <Modal
+          isOpen={bookedOpen}
+          onClose={() => setBookedOpen(false)}
+          title="Booked in today"
+          width="max-w-md"
+        >
           <ExpectedToday
+            feed={bookedFeed}
             date={todayStr}
             onAdded={handleAdded}
             existingStudentIds={new Set(assignments.map((a) => a.student_id))}
             readOnly={isReadOnly}
+            bare
           />
-        )}
+        </Modal>
 
         {/* Stat cards — also the board's status filter */}
         {!loading && !error && assignments.length > 0 && (
