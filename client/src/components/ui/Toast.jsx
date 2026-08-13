@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { CheckIcon } from 'lucide-react';
+import { PANEL } from '../../lib/surfaces';
 
 // A short confirmation that gets out of the way.
 //
@@ -49,9 +51,26 @@ export default function Toast({ message, show, duration = 2200, onDone }) {
       aria-live="polite"
     >
       <div
-        className={`${leaving ? 'toast-out' : 'toast-in'} max-w-sm rounded-xl bg-ninja-navy text-white font-ninja text-sm font-semibold px-4 py-3 shadow-lg`}
+        // The app's own solid panel, with the app's own text colour.
+        //
+        // This was bg-ninja-navy with white text, which is a text token used as
+        // a background: navy is near-black in light mode and near-WHITE in dark,
+        // so the dark theme got white on near-white. The accent was no better —
+        // ninja-blue is lightened in dark mode precisely so it can be read
+        // against a dark page, which makes white sitting on it about 2.6:1.
+        //
+        // PANEL and text-ninja-navy flip together, so the contrast holds in both
+        // themes without a special case for either.
+        className={`${leaving ? 'toast-out' : 'toast-in'} ${PANEL} flex items-center gap-2.5 max-w-sm px-4 py-3 font-ninja text-sm font-semibold text-ninja-navy shadow-lg dark:shadow-[0_10px_34px_rgb(0_0_0/0.45)]`}
       >
-        {message}
+        {/* The one spot of colour, and it carries the meaning. A whole panel
+            tinted green shouts; a check does the same job at a glance. */}
+        <CheckIcon
+          size={16}
+          className="text-emerald-600 dark:text-emerald-400 flex-shrink-0"
+          aria-hidden
+        />
+        <span>{message}</span>
       </div>
     </div>,
     document.body
