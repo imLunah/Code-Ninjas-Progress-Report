@@ -183,6 +183,30 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
     [busy, email, password, hasSavedPassword, savedEmail, status, onChanged, handleAuthError]
   );
 
+  // For someone already holding a code. Deliberately does not call MyStudio:
+  // asking for a code cancels the previous one, so the person who has just gone
+  // and fetched theirs would be sent back to their inbox for another.
+  const useExistingCode = useCallback(async () => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      const body = password ? { email: email.trim(), password } : {};
+      const res = await api.post('/mystudio/login/pending', body);
+      setStep('code');
+      onChanged?.({
+        ...(status || {}),
+        awaitingCode: true,
+        awaitingCodeEmail: res.email || email || savedEmail,
+      });
+    } catch (err) {
+      setError(err.message || 'Could not continue the sign-in.');
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, email, password, savedEmail, status, onChanged]);
+
   // Backing out. Clears the half-finished sign-in on the server too, so the
   // panel does not keep reopening on a code that is no longer wanted.
   const cancelCode = useCallback(async () => {
@@ -377,6 +401,14 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
             {connected ? 'Sign in again' : 'Sign in to MyStudio'}
           </p>
 
+          {/* Say what is about to happen. Without this the panel is two fields
+              and a button, the code box only appears at the next step, and
+              somebody holding a code has nowhere to put it and no idea why. */}
+          <p className="font-ninja text-sm text-ninja-muted mb-3">
+            MyStudio emails a six digit code every time. Enter your details here
+            and the box for that code comes next.
+          </p>
+
           {hasSavedPassword ? (
             <p className="font-ninja text-sm text-ninja-navy mb-3">
               Your MyStudio password is saved, so this only needs the code they
@@ -443,6 +475,18 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
                 'Send me a code'
               )}
             </Button>
+
+            {/* Asking for a code cancels the one before it, so anybody who
+                already has one needs a way past this that does not send a new
+                one and start them over. */}
+            <button
+              type="button"
+              onClick={useExistingCode}
+              disabled={busy || (!hasSavedPassword && (!email.trim() || !password))}
+              className="font-ninja text-sm text-ninja-muted hover:text-ninja-navy transition-colors disabled:opacity-60"
+            >
+              I already have a code
+            </button>
 
             {hasSavedPassword && (
               <AnimatePresence mode="wait" initial={false}>

@@ -298,6 +298,35 @@ router.post('/login/resend', requireManager, requireOwnLocation, async (req, res
   }
 });
 
+// POST /api/mystudio/login/pending  { email?, password? }
+//
+// "I already have a code." Takes the credential and moves straight to the code
+// step WITHOUT asking MyStudio for anything, because asking would email a new
+// code and cancel the one the person is holding. Nothing here is verified yet;
+// the code exchange is what proves it, and a wrong password fails there.
+router.post('/login/pending', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+
+  if (!ms.isConfigured()) {
+    return res.status(503).json({
+      error: 'MyStudio is not set up on the server yet. MYSTUDIO_ENC_KEY is missing.',
+    });
+  }
+
+  try {
+    const conn = await loadConnection(pool, req.session.activeLocationId);
+    const { email, password } = loginCredentials(conn, req.body, readPending(req));
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Enter your MyStudio email and password.' });
+    }
+    setPending(req, { email, password });
+    res.json({ awaitingCode: true, email });
+  } catch (err) {
+    console.error('MyStudio pending sign-in failed:', err.message);
+    res.status(500).json({ error: 'Could not continue the sign-in.' });
+  }
+});
+
 // DELETE /api/mystudio/login/pending
 //
 // Backing out of a half-finished sign-in. Without this, closing the panel would
