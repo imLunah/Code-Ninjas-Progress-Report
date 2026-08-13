@@ -18,6 +18,7 @@ import Modal from '../../components/ui/Modal';
 import { UsersIcon } from 'lucide-react';
 import { CARD } from '../../lib/surfaces';
 import useExpectedToday, { countNinjas } from '../../lib/useExpectedToday';
+import useLiveRefresh from '../../lib/useLiveRefresh';
 
 export default function ManagerDashboard() {
   const { user, isReadOnly } = useAuth();
@@ -56,16 +57,24 @@ export default function ManagerDashboard() {
     total:   visibleAssignments.length,
   };
 
-  const fetchAssignments = useCallback(async () => {
+  const fetchAssignments = useCallback(async ({ quiet = false } = {}) => {
     try {
       const data = await api.get(`/daily?date=${todayStr}`);
       setAssignments(data);
+      if (quiet) setError('');
     } catch (err) {
-      setError('Failed to load today\'s board');
+      // A background refresh that fails keeps whatever is on screen. The board
+      // going red behind somebody mid check-in is worse than it being a few
+      // seconds behind.
+      if (!quiet) setError('Failed to load today\'s board');
     } finally {
       setLoading(false);
     }
   }, [todayStr, user?.activeLocation?.id]);
+
+  // Somebody else is using this board too. A sensei logging a ninja at the back
+  // desk should not need the director at the front to reload the page.
+  useLiveRefresh(() => fetchAssignments({ quiet: true }));
 
   useEffect(() => {
     const controller = new AbortController();

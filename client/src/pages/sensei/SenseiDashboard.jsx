@@ -15,6 +15,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import ExpectedToday from '../../components/manager/ExpectedToday';
 import useExpectedToday, { countNinjas } from '../../lib/useExpectedToday';
+import useLiveRefresh from '../../lib/useLiveRefresh';
 import { CARD } from '../../lib/surfaces';
 
 const fadeUp = {
@@ -52,11 +53,10 @@ export default function SenseiDashboard() {
 
   const refresh = () => setRefreshKey(k => k + 1);
 
-  // Auto-refresh every 30 seconds so new check-ins added by the manager appear automatically
-  useEffect(() => {
-    const interval = setInterval(refresh, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  // New check-ins from the front desk appear without a reload. Shared with the
+  // director's board, and unlike the bare interval this replaced, it stops while
+  // the tab is hidden and catches up the moment somebody looks again.
+  useLiveRefresh(refresh);
 
   useEffect(() => {
     const controller = new AbortController();

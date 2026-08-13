@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import useLiveRefresh from './useLiveRefresh';
 
 // Who is booked into today's classes upstream.
 //
@@ -10,14 +11,8 @@ import { useAuth } from '../context/AuthContext';
 // minute, so a second reader costs nothing upstream.
 //
 // Bookings happen during the day, so this cannot be a snapshot taken when the
-// page happened to load. It is not a poll either: one pull is an upstream
-// request per booked class against a vendor API this app has no agreement with,
-// so a fast interval would mean thousands of requests a day to catch a handful
-// of late sign-ups. It refreshes when someone comes back to the tab, and slowly
-// while they sit on it. Nothing runs while the tab is hidden, and a minimum gap
-// keeps flicking between tabs from turning into a pull each time.
-const REFRESH_MS = 5 * 60 * 1000;
-const MIN_REFRESH_MS = 60 * 1000;
+// page happened to load. Refresh behaviour is useLiveRefresh's, tuned slower
+// here: one pull is an upstream request per booked class.
 
 export default function useExpectedToday(date, { enabled = true } = {}) {
   const [state, setState] = useState({ loading: true, data: null, error: '' });
@@ -28,50 +23,34 @@ export default function useExpectedToday(date, { enabled = true } = {}) {
   const { user } = useAuth();
   const locationId = user?.activeLocation?.id;
 
-  useEffect(() => {
-    if (!enabled) {
-      setState({ loading: false, data: null, error: '' });
-      return undefined;
-    }
-
-    let cancelled = false;
-    let lastLoad = 0;
-
-    const load = ({ quiet = false } = {}) => {
-      lastLoad = Date.now();
+  const load = useCallback(
+    ({ quiet = false } = {}) => {
+      if (!enabled) return;
       if (!quiet) setState({ loading: true, data: null, error: '' });
       api
         .get(`/mystudio/today?date=${date}`)
-        .then((data) => {
-          if (!cancelled) setState({ loading: false, data, error: '' });
-        })
+        .then((data) => setState({ loading: false, data, error: '' }))
         .catch((err) => {
-          // A failed background refresh keeps whatever is on screen. The board
-          // emptying out under someone's hands is worse than a minute stale.
-          if (cancelled || quiet) return;
+          // A failed background refresh keeps whatever is on screen.
+          if (quiet) return;
           setState({ loading: false, data: null, error: err.message || 'failed' });
         });
-    };
+    },
+    [date, enabled, locationId]
+  );
 
-    const refreshIfStale = () => {
-      if (document.visibilityState !== 'visible') return;
-      if (Date.now() - lastLoad < MIN_REFRESH_MS) return;
-      load({ quiet: true });
-    };
-
+  useEffect(() => {
+    if (!enabled) {
+      setState({ loading: false, data: null, error: '' });
+      return;
+    }
     load();
+  }, [load, enabled]);
 
-    const interval = setInterval(refreshIfStale, REFRESH_MS);
-    document.addEventListener('visibilitychange', refreshIfStale);
-    window.addEventListener('focus', refreshIfStale);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', refreshIfStale);
-      window.removeEventListener('focus', refreshIfStale);
-    };
-  }, [date, enabled, locationId]);
+  // Slower than the board's own refresh: a booking made mid-afternoon is worth
+  // noticing, and one pull is an upstream request per booked class against a
+  // vendor API with no agreement behind it.
+  useLiveRefresh(() => load({ quiet: true }), { intervalMs: 5 * 60 * 1000, minGapMs: 60 * 1000, enabled });
 
   return state;
 }
