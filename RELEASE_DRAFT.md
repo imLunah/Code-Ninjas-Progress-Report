@@ -1,13 +1,19 @@
-# Update v1.7.1 - small changes
+# Update v1.8
 
 ## New
-- Added club boards where senseis can attach resources, links, or any other comments about the clubs. Images will now display instead of just showing as an attachment.
-- Robotics Academy and AI Academy now have their own Icons 
-- Club section has been re-designed once again
+- Since I did not want to use the Code Ninjas logo, I re-designed the branding with Illustrator to have DojoLink as a seperate brand that isn't affliated with Code Ninjas. 
+- Added horizontal navbar into display settings 
+- Removed sticky notes and added kanban tasks for CDs
+- You can now edit ninja sessions either by clicking on the Logged Today filter or on ninja profile
 
 ## Changes
-- Editing Programs has been moved into the edit ninja section.  
-- Sending someone a DojoLink link shows a proper preview card, and the picture on it loads about five times quicker than before.
-- Optimized SEO
+- Slightly improved staff page UI
+- Improved archived page UI
+- Deleting a staff member for good no longer deletes what they logged. Their name will be labeled as a generic
+- Logging a session, editing, or submitting reports keeps you on the same page instead of going back to homepage.
+- Hovering over reactions mentions the user who left them.
+- Improved session history hovering design
+- Added liquid glass towards parts of the assets
+
 
 
