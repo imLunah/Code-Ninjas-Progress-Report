@@ -213,6 +213,9 @@ export default function ExpectedToday({
                   // attendance against a ninja.
                   const canAdd =
                     Boolean(row.studentId) && !done && !readOnly && !row.isClub;
+                  // A missing roster match is only worth flagging to somebody
+                  // who could act on it.
+                  const needsMatch = !row.studentId && !readOnly;
 
                   return (
                     <motion.li
@@ -235,9 +238,9 @@ export default function ExpectedToday({
                         title={
                           row.isClub
                             ? 'Clubs are logged from the Clubs page, not checked in here'
-                            : row.studentId
-                              ? undefined
-                              : 'No matching ninja in DojoLink yet'
+                            : needsMatch
+                              ? 'No matching ninja in DojoLink yet'
+                              : undefined
                         }
                         // Already on the board is the resting state, not an
                         // achievement. Filling those rows green made a list of
@@ -250,10 +253,16 @@ export default function ExpectedToday({
                             ? 'text-ninja-muted cursor-default'
                             : canAdd
                               ? 'text-ninja-navy hover:bg-ninja-blue/10 hover:text-ninja-blue'
-                              : 'text-ninja-muted cursor-default',
+                              : readOnly
+                                // Reading, not deciding. Nothing on this row is
+                                // wrong, so it reads as ordinary text.
+                                ? 'text-ninja-navy cursor-default'
+                                : 'text-ninja-muted cursor-default',
                         ].join(' ')}
                       >
-                        <span aria-hidden className="flex-shrink-0">
+                        {/* Fixed width whatever is in it, so the names line up
+                            down the column even when a row has no glyph. */}
+                        <span aria-hidden className="flex-shrink-0 w-3.5 flex justify-center">
                           {busy ? (
                             <Loader2Icon size={14} className="animate-spin" />
                           ) : done ? (
@@ -268,9 +277,13 @@ export default function ExpectedToday({
                             />
                           ) : row.isClub ? (
                             <SparklesIcon size={13} />
-                          ) : (
+                          ) : needsMatch ? (
+                            // Only where it means something. This used to appear
+                            // on every row a viewer could not check in, which for
+                            // a sensei was all of them, warning about ninjas who
+                            // were perfectly fine.
                             <TriangleAlertIcon size={13} />
-                          )}
+                          ) : null}
                         </span>
                         <span className={done ? 'truncate' : 'font-semibold truncate'}>
                           {row.studentName || row.fullName}
@@ -290,7 +303,7 @@ export default function ExpectedToday({
         ))}
       </div>
 
-      {unmatched.length > 0 && (
+      {!readOnly && unmatched.length > 0 && (
         <p className="font-ninja text-xs text-ninja-muted mt-4">
           Ninjas shown with a warning have no match on this center's roster yet.
           Add them to DojoLink and they will line up on the next pull.
