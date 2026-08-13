@@ -1292,15 +1292,16 @@ export default function TaskBoard({
           className="fixed top-0 left-0 z-[60] pointer-events-none"
           style={{ width: held.w, transform: `translate3d(${held.x}px, ${held.y}px, 0)` }}
         >
-          {/* The card under the pointer keeps its colour while it travels —
-              until it is over the bin, where it goes red and shrinks, so the
-              card itself says what will happen to it and not just the thing
-              underneath it. */}
           {/* Over the bin the card starts going soft before it is let go of:
               it rounds towards the capsule the blob underneath it already is,
               tips further over and gives up its edges. By the time it is
               dropped it is most of the way to being liquid, so the swallow has
-              something to finish rather than something to start. */}
+              something to finish rather than something to start.
+
+              And that is ALL it does — no red ring, no red wash. The card
+              stays the card the whole way; the red seen through the pane and
+              the label saying so are what mean delete. Glass merging with
+              glass while turning a different colour is two stories at once. */}
           {/* The taffy wrapper. paintGoo writes the stretch to it as the card
               nears the band — kept off the card itself so its own classes and
               React's over-the-bin styling never fight the per-frame writes.
@@ -1317,16 +1318,9 @@ export default function TaskBoard({
             <div
               ref={faceRef}
               className={`${CARD} ${TASK_SURFACE} task-lensed p-3.5 shadow-xl relative transition-all duration-200 ease-[var(--ease-out)] ${
-                target?.trash ? 'ring-2 ring-ninja-red -rotate-3 scale-95' : '-rotate-1'
+                target?.trash ? '-rotate-3 scale-95' : '-rotate-1'
               }`}
             >
-              {target?.trash && (
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-0 bg-ninja-red/15 pointer-events-none"
-                  style={{ borderRadius: 'inherit' }}
-                />
-              )}
               <TaskCardFace task={held.task} />
             </div>
           </div>
