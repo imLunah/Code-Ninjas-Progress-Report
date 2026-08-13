@@ -50,16 +50,6 @@ export function ThemeProvider({ children }) {
     try { localStorage.setItem('dj-nav-horizontal', on ? '1' : '0'); } catch { /* ignore */ }
   }, []);
 
-  // Halloween mode was here. Taken out at the user's request; the palette, the
-  // decorations and this toggle all went with it. One thing stays: the class it
-  // used to put on <html> is cleared on boot, because a device that had it on
-  // when it was removed would otherwise keep wearing a stylesheet that no
-  // longer exists to turn it off.
-  useEffect(() => {
-    document.documentElement.classList.remove('halloween');
-    try { localStorage.removeItem('dj-halloween'); } catch { /* ignore */ }
-  }, []);
-
   const setExperimental = useCallback((v) => {
     const on = !!v;
     setExperimentalState(on);
