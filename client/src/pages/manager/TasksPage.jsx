@@ -220,13 +220,34 @@ export default function TasksPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, ease: EASE }}
         >
-          <Link
-            to="/manager/overview"
-            className="inline-flex items-center gap-1.5 font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-navy transition-colors rounded"
-          >
-            <ArrowLeftIcon size={15} strokeWidth={2.25} />
-            Dashboard
-          </Link>
+          {/* Recently deleted is a place you go, not a filter you leave on, so
+              the way out is the way out of anywhere else on this page: the
+              back link, in the one spot on the header that never moves. It was
+              a pressed pill on the right before, which failed twice over — the
+              controls beside it unmount when it is on, so the button slid
+              across the header the moment it was clicked and no longer looked
+              like the thing that had just been pressed, and a toggle in the
+              corner is a weak signal for "you are somewhere else now" when the
+              heading, the description and the whole body have already
+              changed. */}
+          {showArchived ? (
+            <button
+              type="button"
+              onClick={() => setShowArchived(false)}
+              className="inline-flex items-center gap-1.5 font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-navy transition-colors rounded"
+            >
+              <ArrowLeftIcon size={15} strokeWidth={2.25} />
+              Tasks
+            </button>
+          ) : (
+            <Link
+              to="/manager/overview"
+              className="inline-flex items-center gap-1.5 font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-navy transition-colors rounded"
+            >
+              <ArrowLeftIcon size={15} strokeWidth={2.25} />
+              Dashboard
+            </Link>
+          )}
 
           <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -241,35 +262,31 @@ export default function TasksPage() {
                     : "You're viewing another center, so this board is read-only."}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              {/* Not a filter — a different fetch, and the only thing left from
-                  the row of controls that used to sit under this header. It
-                  lives beside the view switch because both are questions about
-                  what the page is showing rather than about any one card. */}
+            {/* The whole group is the board's controls, and Recently deleted
+                is not a board — so while it is open the group is empty rather
+                than half-empty, and the back link above is the only control.
+                Nothing here can move under the pointer, because nothing here
+                survives the click that opens it. */}
+            <div className={`flex items-center gap-2 ${showArchived ? 'hidden' : ''}`}>
+              {/* Not a filter — a different fetch. It goes first because it is
+                  a question about which set of tasks the page is showing, and
+                  the two controls after it are questions about how to show
+                  them. */}
               <button
                 type="button"
-                aria-pressed={showArchived}
-                onClick={() => setShowArchived((v) => !v)}
-                className={`px-3 py-1.5 rounded-full font-ninja text-xs font-semibold border transition-colors duration-150 ease-[var(--ease-out)] active:scale-95 ${
-                  showArchived
-                    ? 'bg-ninja-navy text-white border-ninja-navy dark:bg-white dark:text-ninja-bg'
-                    : 'bg-transparent text-ninja-muted border-transparent hover:text-ninja-navy hover:border-ninja-border'
-                }`}
+                onClick={() => setShowArchived(true)}
+                className="px-3 py-1.5 rounded-full font-ninja text-xs font-semibold border border-transparent bg-transparent text-ninja-muted hover:text-ninja-navy hover:border-ninja-border transition-colors duration-150 ease-[var(--ease-out)] active:scale-95"
               >
                 Recently deleted
               </button>
-              {/* Board or list is a question about a board. Recently deleted is
-                  neither, so the switch is not offered while it is open. */}
-              {!showArchived && (
-                <Segmented
-                  options={VIEWS}
-                  value={view}
-                  onChange={chooseView}
-                  label="How to show the tasks"
-                  layoutId="tasksViewPill"
-                  size="sm"
-                />
-              )}
+              <Segmented
+                options={VIEWS}
+                value={view}
+                onChange={chooseView}
+                label="How to show the tasks"
+                layoutId="tasksViewPill"
+                size="sm"
+              />
               {/* The full task, from anywhere on the page. The quick adds are
                   the fast path — a title, in one breath, into the column you
                   typed at — and this is the one that asks for a date, an owner
@@ -277,9 +294,10 @@ export default function TasksPage() {
                   being created has not been started; the dialog's own Column
                   field is there to say otherwise.
 
-                  Not offered while Recently deleted is open: nothing on that
-                  screen is a board to add to. */}
-              {canManage && !showArchived && (
+                  The group above is already hidden while Recently deleted is
+                  open, so this only has to ask whether the viewer can write
+                  here at all. */}
+              {canManage && (
                 <button
                   type="button"
                   onClick={() => setEditor({ column: 'todo' })}
