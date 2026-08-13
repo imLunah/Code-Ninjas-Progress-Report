@@ -300,6 +300,32 @@ describe('judging a sign-in response', () => {
   });
 });
 
+// Both of these were measured against the live login page. Getting either wrong
+// produces the same generic "Something went wrong" a malformed request does, so
+// a mistake here is indistinguishable from a wrong password.
+describe('encoding a server action call', () => {
+  const entries = () => [...ms.encodeActionForm({ email: 'a@b.invalid', otpCode: '123456' })];
+
+  it('sends two arguments, because useActionState passes the previous state first', () => {
+    const args = entries().find(([k]) => k === '0');
+    expect(args[1]).toBe('[null,"$K1"]');
+  });
+
+  it('puts the entries before the argument list', () => {
+    // The body is read as a stream: a reference met before its entries resolves
+    // to an empty FormData and every field comes back "Required".
+    const keys = entries().map(([k]) => k);
+    expect(keys[keys.length - 1]).toBe('0');
+    expect(keys.indexOf('1_email')).toBeLessThan(keys.indexOf('0'));
+  });
+
+  it('prefixes each field with the reference id', () => {
+    const keys = entries().map(([k]) => k);
+    expect(keys).toContain('1_email');
+    expect(keys).toContain('1_otpCode');
+  });
+});
+
 describe('reading an action response', () => {
   it('follows the pointer on line 0 rather than assuming line 1', () => {
     const stream =

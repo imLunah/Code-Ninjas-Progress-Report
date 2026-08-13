@@ -569,12 +569,31 @@ let actionIdCache = null;
 // header, with the arguments encoded as multipart form data: field "0" is the
 // argument list, in which "$K1" stands for a FormData, and that FormData's
 // entries arrive as "1_<name>".
+//
+// Two details here are not guesses, they were measured against the live login
+// page, and getting either wrong produces the same generic "Something went
+// wrong" that a completely malformed request produces. That identical message is
+// why this took three attempts to see: a wrong encoding and a wrong password are
+// indistinguishable from the outside.
+//
+//   1. There are TWO arguments, not one. Both actions are wrapped in
+//      useActionState, which calls them as (previousState, formData), so the
+//      list is [null, "$K1"]. With one argument the request never reaches their
+//      validation at all.
+//
+//   2. The entries must come BEFORE field 0. The body is read as a stream and
+//      the reference is resolved as it is met, so a reference that arrives ahead
+//      of its entries resolves to an empty FormData and every field comes back
+//      "Required". Insertion order here is the wire order.
+//
+// With both right, the responses turn specific: "Incorrect email and / or
+// password", "Incorrect 6-digit code".
 function encodeActionForm(fields) {
   const form = new FormData();
-  form.set('0', '["$K1"]');
   for (const [name, value] of Object.entries(fields)) {
     form.set(`1_${name}`, String(value));
   }
+  form.set('0', '[null,"$K1"]');
   return form;
 }
 
@@ -1030,6 +1049,7 @@ module.exports = {
   MyStudioError,
   MyStudioSignInUnavailable,
   parseFlightResult,
+  encodeActionForm,
   actionRejected,
   resolveLoginActions,
   startLogin,
