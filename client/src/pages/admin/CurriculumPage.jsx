@@ -5,6 +5,8 @@ import { api } from '../../api/client';
 import { useCurriculum, invalidateCurriculumCache } from '../../context/CurriculumContext';
 import { BELT_LEVEL_PROJECTS as STATIC_BELT_PROJECTS, BELTS } from '../../utils/beltConfig';
 import { SkeletonList } from '../../components/ui/Skeleton';
+import { WarningIcon } from '../../components/ui/icons';
+import { useAuth } from '../../context/AuthContext';
 
 const PROGRAMS = ['AI Academy', 'Robotics Academy', 'JR', 'VR Coding', 'CREATE'];
 
@@ -541,6 +543,8 @@ function BeltEditor() {
 }
 
 export default function CurriculumPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const { subPrograms, curriculum, refresh: refreshCurriculum } = useCurriculum();
 
   const [selectedProgram, setSelectedProgram] = useState('AI Academy');
@@ -645,6 +649,22 @@ export default function CurriculumPage() {
             <p className="text-ninja-muted font-ninja text-sm mt-0.5">Edit modules and lessons for each program</p>
           </div>
         </div>
+
+        {/* One curriculum, three centers. A director can fix a typo in a lesson
+            name without waiting for an admin, which is the point of them being
+            here — but the edit lands everywhere, and nothing else on the page
+            would tell them that. */}
+        {!isAdmin && (
+          <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/40 bg-amber-500/5 p-3 mb-6">
+            <span aria-hidden className="mt-0.5 text-amber-600 dark:text-amber-400 flex-shrink-0">
+              <WarningIcon width="16" height="16" />
+            </span>
+            <p className="font-ninja text-xs text-ninja-navy">
+              The curriculum is shared by every center. Edits here change what
+              Yorba Linda, Fullerton and Cerritos all teach, not only your center.
+            </p>
+          </div>
+        )}
 
         {/* Program tabs */}
         <div className="flex gap-2 flex-wrap mb-4">

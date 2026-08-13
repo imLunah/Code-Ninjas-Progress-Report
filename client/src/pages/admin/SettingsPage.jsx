@@ -14,6 +14,7 @@ import { api } from '../../api/client';
 import { CARD } from '../../lib/surfaces';
 import { SkeletonCards } from '../../components/ui/Skeleton';
 import { WarningIcon } from '../../components/ui/icons';
+import { useAuth } from '../../context/AuthContext';
 
 const ADMIN_NAV_LINKS = [
   { to: '/admin/locations', label: 'Locations' },
@@ -45,6 +46,8 @@ function AdminNav() {
 }
 
 export default function SettingsPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [announcement, setAnnouncement] = useState('');
   const [savedAnnouncement, setSavedAnnouncement] = useState('');
   const [saving, setSaving] = useState(false);
@@ -104,6 +107,25 @@ export default function SettingsPage() {
           <h1 className="text-ninja-navy font-ninja font-bold text-2xl mb-1">Settings</h1>
           <p className="text-ninja-muted font-ninja text-sm mb-8">Global configuration for all centers</p>
         </motion.div>
+
+        {/* Directors reach this page now, and what is on it is not theirs
+            alone. Saying so where the buttons are is the only thing standing
+            between a Yorba Linda edit and a surprise in Cerritos. */}
+        {!isAdmin && (
+          <motion.div
+            variants={fadeUp}
+            className="flex items-start gap-2.5 rounded-xl border border-amber-500/40 bg-amber-500/5 p-3 mb-6"
+          >
+            <span aria-hidden className="mt-0.5 text-amber-600 dark:text-amber-400 flex-shrink-0">
+              <WarningIcon width="16" height="16" />
+            </span>
+            <p className="font-ninja text-xs text-ninja-navy">
+              This is shared by every center. Changes here show up at Yorba Linda,
+              Fullerton and Cerritos alike, not only at yours.
+            </p>
+          </motion.div>
+        )}
+
 
         {loading ? (
           <SkeletonCards count={2} cols="sm:grid-cols-2" label="Loading settings" />

@@ -125,7 +125,23 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
       'SELECT id FROM locations WHERE id = ANY($1) AND active = true',
       [requestedIds]
     );
-    const validIds = validLocs.map((r) => r.id);
+    let validIds = validLocs.map((r) => r.id);
+
+    // A manager may only place staff at centers they belong to themselves.
+    // location_ids arrives from the client and was taken at face value, so a
+    // director could reach a center they have no connection to by sending an id
+    // the form never offered them.
+    if (req.session.role !== 'admin') {
+      const mine = req.session.locationIds?.length
+        ? req.session.locationIds
+        : [req.session.homeLocationId];
+      const outside = validIds.filter((id) => !mine.includes(id));
+      if (outside.length) {
+        return res.status(403).json({ error: 'You can only add staff to your own centers.' });
+      }
+      validIds = validIds.filter((id) => mine.includes(id));
+    }
+
     if (!validIds.length) return res.status(400).json({ error: 'No valid centers selected' });
     // Home = the CD's active center if included, else the first valid center.
     const homeId = validIds.includes(req.session.activeLocationId) ? req.session.activeLocationId : validIds[0];
@@ -184,7 +200,23 @@ router.patch('/:id/locations', requireManager, requireOwnLocation, async (req, r
       'SELECT id FROM locations WHERE id = ANY($1) AND active = true',
       [requestedIds]
     );
-    const validIds = validLocs.map((r) => r.id);
+    let validIds = validLocs.map((r) => r.id);
+
+    // A manager may only place staff at centers they belong to themselves.
+    // location_ids arrives from the client and was taken at face value, so a
+    // director could reach a center they have no connection to by sending an id
+    // the form never offered them.
+    if (req.session.role !== 'admin') {
+      const mine = req.session.locationIds?.length
+        ? req.session.locationIds
+        : [req.session.homeLocationId];
+      const outside = validIds.filter((id) => !mine.includes(id));
+      if (outside.length) {
+        return res.status(403).json({ error: 'You can only add staff to your own centers.' });
+      }
+      validIds = validIds.filter((id) => mine.includes(id));
+    }
+
     if (!validIds.length) return res.status(400).json({ error: 'No valid centers selected' });
 
     const client = await pool.connect();
@@ -400,7 +432,9 @@ router.delete('/:id', requireManager, requireOwnLocation, async (req, res) => {
     const target = rows[0];
     if (!target) return res.status(404).json({ error: 'User not found' });
     if (target.id === req.session.userId) return res.status(403).json({ error: 'Cannot remove your own account' });
-    if (target.role !== 'sensei') return res.status(403).json({ error: 'Can only remove senseis' });
+    // Directors manage directors now. Admin is still untouchable: it bypasses
+    // every location gate, so it cannot be archived by somebody it outranks.
+    if (target.role === 'admin') return res.status(403).json({ error: 'Cannot remove an admin account' });
 
     await pool.query('UPDATE users SET active = false WHERE id = $1', [id]);
     res.json({ message: 'Staff member removed' });

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { requireAdmin, requireSensei } = require('../middleware/auth');
+const { requireManager, requireSensei } = require('../middleware/auth');
 const { listResources, getResource } = require('../resources');
 
 // GET /api/curriculum/resources — reference docs for the Resources tab.
@@ -157,7 +157,7 @@ router.get('/roadmap', requireSensei, async (req, res) => {
 });
 
 // POST /api/curriculum/modules — add a module
-router.post('/modules', requireAdmin, async (req, res) => {
+router.post('/modules', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const { program, sub_program, module_name } = req.body;
   if (!program || !module_name) return res.status(400).json({ error: 'program and module_name are required' });
@@ -187,7 +187,7 @@ router.post('/modules', requireAdmin, async (req, res) => {
 });
 
 // PATCH /api/curriculum/modules/:id — rename a module or update description
-router.patch('/modules/:id', requireAdmin, async (req, res) => {
+router.patch('/modules/:id', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const { module_name, description } = req.body;
   if (!module_name && description === undefined) return res.status(400).json({ error: 'module_name or description required' });
@@ -211,7 +211,7 @@ router.patch('/modules/:id', requireAdmin, async (req, res) => {
 });
 
 // DELETE /api/curriculum/modules/:id — deletes module + all its lessons (CASCADE)
-router.delete('/modules/:id', requireAdmin, async (req, res) => {
+router.delete('/modules/:id', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   try {
     const { rowCount } = await pool.query('DELETE FROM curriculum_modules WHERE id = $1', [req.params.id]);
@@ -224,7 +224,7 @@ router.delete('/modules/:id', requireAdmin, async (req, res) => {
 });
 
 // POST /api/curriculum/modules/:id/lessons — add a lesson
-router.post('/modules/:moduleId/lessons', requireAdmin, async (req, res) => {
+router.post('/modules/:moduleId/lessons', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const { lesson_name } = req.body;
   if (!lesson_name) return res.status(400).json({ error: 'lesson_name is required' });
@@ -248,7 +248,7 @@ router.post('/modules/:moduleId/lessons', requireAdmin, async (req, res) => {
 });
 
 // PATCH /api/curriculum/lessons/:id — rename a lesson
-router.patch('/lessons/:id', requireAdmin, async (req, res) => {
+router.patch('/lessons/:id', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const { lesson_name } = req.body;
   if (!lesson_name) return res.status(400).json({ error: 'lesson_name is required' });
@@ -267,7 +267,7 @@ router.patch('/lessons/:id', requireAdmin, async (req, res) => {
 });
 
 // DELETE /api/curriculum/lessons/:id
-router.delete('/lessons/:id', requireAdmin, async (req, res) => {
+router.delete('/lessons/:id', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   try {
     const { rowCount } = await pool.query('DELETE FROM curriculum_lessons WHERE id = $1', [req.params.id]);
@@ -280,7 +280,7 @@ router.delete('/lessons/:id', requireAdmin, async (req, res) => {
 });
 
 // POST /api/curriculum/seed — initialize from defaults (admin only, only if tables are empty)
-router.post('/seed', requireAdmin, async (req, res) => {
+router.post('/seed', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const client = await pool.connect();
   try {
@@ -462,7 +462,7 @@ router.get('/belt-projects', async (req, res) => {
 });
 
 // POST /api/curriculum/belt-projects/seed — seed from defaults (admin only)
-router.post('/belt-projects/seed', requireAdmin, async (req, res) => {
+router.post('/belt-projects/seed', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const client = await pool.connect();
   try {
@@ -609,7 +609,7 @@ router.post('/belt-projects/seed', requireAdmin, async (req, res) => {
 });
 
 // POST /api/curriculum/belt-projects — add a project to a belt+sublevel
-router.post('/belt-projects', requireAdmin, async (req, res) => {
+router.post('/belt-projects', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const { belt_name, sublevel, project_name } = req.body;
   if (!belt_name || !sublevel || !project_name) return res.status(400).json({ error: 'belt_name, sublevel, and project_name are required' });
@@ -632,7 +632,7 @@ router.post('/belt-projects', requireAdmin, async (req, res) => {
 });
 
 // PATCH /api/curriculum/belt-projects/:id — rename a project
-router.patch('/belt-projects/:id', requireAdmin, async (req, res) => {
+router.patch('/belt-projects/:id', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const { project_name } = req.body;
   if (!project_name) return res.status(400).json({ error: 'project_name is required' });
@@ -650,7 +650,7 @@ router.patch('/belt-projects/:id', requireAdmin, async (req, res) => {
 });
 
 // DELETE /api/curriculum/belt-projects/:id
-router.delete('/belt-projects/:id', requireAdmin, async (req, res) => {
+router.delete('/belt-projects/:id', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   try {
     const { rowCount } = await pool.query('DELETE FROM belt_level_projects WHERE id = $1', [req.params.id]);

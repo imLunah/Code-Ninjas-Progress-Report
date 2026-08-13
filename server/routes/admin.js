@@ -1,27 +1,91 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
-const { requireAdmin } = require('../middleware/auth');
+const { requireAdmin, requireManager } = require('../middleware/auth');
 const { generateTempPassword } = require('../lib/tempPassword');
 const { validateUsername } = require('../lib/username');
 
 const SALT_ROUNDS = 10;
 
+// Directors reach this file now, scoped to their own centers.
+//
+// Everything here used to be requireAdmin, which meant a director could not add
+// a sensei or fix their own center's name without one. What opens up is bounded
+// three ways, and every route below states which of them it relies on:
+//
+//   1. A director only ever sees or touches centers they belong to. Creating and
+//      deleting a center stay with an admin: creating one makes a place nobody
+//      is responsible for, and deleting one cascades through students, staff,
+//      clubs and logs.
+//   2. Admin accounts are invisible and untouchable. The role that bypasses
+//      every location gate cannot be edited, reset, archived or created by
+//      somebody it outranks, and no director can mint one.
+//   3. A director cannot demote or remove themselves, so a center cannot end up
+//      with nobody who can administer it by one wrong press.
+//
+// Curriculum and app settings are GLOBAL and deliberately still reachable. A
+// director editing either changes it for every center, which the screens say
+// out loud, because the alternative was that only an admin could fix a typo in
+// a lesson name.
+function isAdmin(req) {
+  return req.session.role === 'admin';
+}
+
+// The centers this person may act on. Admins are unrestricted.
+function allowedLocationIds(req) {
+  if (isAdmin(req)) return null;
+  const ids = req.session.locationIds && req.session.locationIds.length
+    ? req.session.locationIds
+    : [req.session.homeLocationId];
+  return ids.filter((id) => Number.isInteger(id));
+}
+
+function mayTouchLocation(req, locationId) {
+  const allowed = allowedLocationIds(req);
+  return allowed === null || allowed.includes(Number(locationId));
+}
+
+// A director may only act on staff who share one of their centers, and never on
+// an admin. Returns the target row, or null if they may not see it at all.
+async function loadStaffTarget(req, pool, id) {
+  const { rows } = await pool.query(
+    `SELECT u.id, u.role, u.active, u.location_id,
+            COALESCE(ARRAY_AGG(ul.location_id) FILTER (WHERE ul.location_id IS NOT NULL), '{}') AS location_ids
+       FROM users u
+       LEFT JOIN user_locations ul ON ul.user_id = u.id
+      WHERE u.id = $1
+      GROUP BY u.id`,
+    [id]
+  );
+  const target = rows[0];
+  if (!target) return null;
+  if (target.role === 'admin') return null;
+  if (isAdmin(req)) return target;
+
+  const allowed = allowedLocationIds(req);
+  const shares = [target.location_id, ...(target.location_ids || [])]
+    .filter((v) => v != null)
+    .some((locId) => allowed.includes(Number(locId)));
+  return shares ? target : null;
+}
+
 // GET /api/admin/locations
-router.get('/locations', requireAdmin, async (req, res) => {
+router.get('/locations', requireManager, async (req, res) => {
   const pool = req.app.get('db');
+  const allowed = allowedLocationIds(req);
   try {
     const { rows } = await pool.query(`
-      SELECT l.id, l.name, l.slug, l.active, l.created_at,
+      SELECT l.id, l.name, l.slug, l.active, l.created_at, l.center_code,
              COUNT(DISTINCT s.id) FILTER (WHERE s.active = true)::int AS student_count,
              COUNT(DISTINCT u.id) FILTER (WHERE u.active = true AND u.role IN ('manager','sensei'))::int AS staff_count
       FROM locations l
       LEFT JOIN students s ON s.location_id = l.id
       LEFT JOIN user_locations ul ON ul.location_id = l.id
       LEFT JOIN users u ON u.id = ul.user_id
+      ${allowed ? 'WHERE l.id = ANY($1)' : ''}
       GROUP BY l.id
       ORDER BY l.created_at ASC
-    `);
+    `, allowed ? [allowed] : []);
     res.json(rows);
   } catch (err) {
     console.error('Error fetching locations:', err);
@@ -88,10 +152,21 @@ router.post('/locations', requireAdmin, async (req, res) => {
 });
 
 // PATCH /api/admin/locations/:id — rename or toggle active
-router.patch('/locations/:id', requireAdmin, async (req, res) => {
+router.patch('/locations/:id', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const { id } = req.params;
-  const { name, active } = req.body;
+  const { name, active, center_code } = req.body;
+
+  if (!mayTouchLocation(req, id)) {
+    return res.status(403).json({ error: 'You can only change your own center.' });
+  }
+
+  // Deactivating a center locks its staff out of their own writes and its
+  // parents out entirely. A director switching their own center off is a
+  // mistake nobody at that center could undo, so it stays with an admin.
+  if (active !== undefined && !isAdmin(req)) {
+    return res.status(403).json({ error: 'Only an admin can activate or deactivate a center.' });
+  }
 
   try {
     const { rows: existing } = await pool.query('SELECT * FROM locations WHERE id = $1', [id]);
@@ -104,13 +179,33 @@ router.patch('/locations/:id', requireAdmin, async (req, res) => {
       if (conflict[0]) return res.status(409).json({ error: 'A location with that name already exists' });
     }
 
+    // The code a parent types. Uppercased here as well as in the browser,
+    // because the browser is not the only way to reach this.
+    let code;
+    if (center_code !== undefined) {
+      code = String(center_code || '').trim().toUpperCase();
+      if (!/^[A-Z0-9]{1,10}$/.test(code)) {
+        return res.status(400).json({
+          error: 'A center code is 1 to 10 letters or digits, nothing else.',
+        });
+      }
+      const { rows: taken } = await pool.query(
+        'SELECT id FROM locations WHERE UPPER(center_code) = $1 AND id != $2',
+        [code, id]
+      );
+      if (taken[0]) {
+        return res.status(409).json({ error: 'Another center already uses that code.' });
+      }
+    }
+
     const { rows } = await pool.query(
       `UPDATE locations SET
-         name   = COALESCE($1, name),
-         active = COALESCE($2, active)
-       WHERE id = $3
-       RETURNING id, name, slug, active, created_at`,
-      [name?.trim() ?? null, active ?? null, id]
+         name        = COALESCE($1, name),
+         active      = COALESCE($2, active),
+         center_code = COALESCE($3, center_code)
+       WHERE id = $4
+       RETURNING id, name, slug, active, created_at, center_code`,
+      [name?.trim() ?? null, active ?? null, code ?? null, id]
     );
     res.json(rows[0]);
   } catch (err) {
@@ -171,10 +266,11 @@ router.delete('/locations/:id', requireAdmin, async (req, res) => {
 });
 
 // GET /api/admin/users
-router.get('/users', requireAdmin, async (req, res) => {
+router.get('/users', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const { location_id, role, inactive } = req.query;
   const showInactive = inactive === 'true';
+  const allowed = allowedLocationIds(req);
 
   try {
     let query = `
@@ -191,6 +287,13 @@ router.get('/users', requireAdmin, async (req, res) => {
     let p = 1;
 
     if (location_id) { p++; query += ` AND u.id IN (SELECT user_id FROM user_locations WHERE location_id = $${p})`; params.push(location_id); }
+    // A director never sees staff from a center they do not belong to, whatever
+    // the query string asks for. Admin accounts are already excluded above.
+    if (allowed) {
+      p++;
+      query += ` AND (u.location_id = ANY($${p}) OR u.id IN (SELECT user_id FROM user_locations WHERE location_id = ANY($${p})))`;
+      params.push(allowed);
+    }
     if (role && ['manager', 'sensei'].includes(role)) { p++; query += ` AND u.role = $${p}`; params.push(role); }
 
     query += ` GROUP BY u.id, l.name ORDER BY l.name ASC, u.role ASC, u.display_name ASC`;
@@ -203,7 +306,7 @@ router.get('/users', requireAdmin, async (req, res) => {
 });
 
 // POST /api/admin/users
-router.post('/users', requireAdmin, async (req, res) => {
+router.post('/users', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const { username, display_name, role, location_id, location_ids } = req.body;
 
@@ -215,8 +318,14 @@ router.post('/users', requireAdmin, async (req, res) => {
   if (!username?.trim() || !display_name?.trim() || !role || !requestedIds.length) {
     return res.status(400).json({ error: 'username, display_name, role, and at least one center are required' });
   }
+  // manager or sensei, never admin. A director minting an admin would hand
+  // themselves every center, which would make the rest of this file decorative.
   if (!['manager', 'sensei'].includes(role)) {
     return res.status(400).json({ error: 'Invalid role' });
+  }
+
+  if (!requestedIds.every((locId) => mayTouchLocation(req, locId))) {
+    return res.status(403).json({ error: 'You can only add staff to your own centers.' });
   }
 
   try {
@@ -261,16 +370,32 @@ router.post('/users', requireAdmin, async (req, res) => {
 });
 
 // PATCH /api/admin/users/:id
-router.patch('/users/:id', requireAdmin, async (req, res) => {
+router.patch('/users/:id', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const { id } = req.params;
   const { display_name, role, location_id, location_ids, active } = req.body;
+
+  // Losing your own manager role, or switching yourself off, is a door that
+  // locks from the outside: nobody left at that center could undo it.
+  if (!isAdmin(req) && Number(id) === Number(req.session.userId)) {
+    if (role !== undefined || active !== undefined) {
+      return res.status(403).json({ error: 'You cannot change your own role or archive yourself.' });
+    }
+  }
+
+  const target = await loadStaffTarget(req, req.app.get('db'), id);
+  if (!target) return res.status(404).json({ error: 'User not found' });
 
   // When a center list is supplied, replace the user's membership and reset home.
   let validIds = null;
   if (Array.isArray(location_ids)) {
     const requestedIds = [...new Set(location_ids.map(Number).filter(Boolean))];
     if (!requestedIds.length) return res.status(400).json({ error: 'Select at least one center' });
+    // A director cannot post somebody to a center they do not belong to
+    // themselves, which is how a manager could otherwise reach across.
+    if (!requestedIds.every((locId) => mayTouchLocation(req, locId))) {
+      return res.status(403).json({ error: 'You can only assign your own centers.' });
+    }
     const { rows: validLocs } = await pool.query('SELECT id FROM locations WHERE id = ANY($1)', [requestedIds]);
     validIds = validLocs.map((r) => r.id);
     if (!validIds.length) return res.status(400).json({ error: 'No valid centers selected' });
@@ -320,11 +445,14 @@ router.patch('/users/:id', requireAdmin, async (req, res) => {
 });
 
 // PATCH /api/admin/users/:id/reset-password
-router.patch('/users/:id/reset-password', requireAdmin, async (req, res) => {
+router.patch('/users/:id/reset-password', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const { id } = req.params;
 
   try {
+    if (!(await loadStaffTarget(req, pool, id))) {
+      return res.status(404).json({ error: 'User not found' });
+    }
     const { rows } = await pool.query("SELECT id, username FROM users WHERE id = $1 AND role != 'admin'", [id]);
     if (!rows[0]) return res.status(404).json({ error: 'User not found' });
 
@@ -338,12 +466,33 @@ router.patch('/users/:id/reset-password', requireAdmin, async (req, res) => {
   }
 });
 
-// DELETE /api/admin/users/:id — permanent hard delete, nullifies all FK references
-router.delete('/users/:id', requireAdmin, async (req, res) => {
+// DELETE /api/admin/users/:id
+//
+// An admin destroys the account. A director archives it.
+//
+// Different acts, deliberately behind one button. Archiving is reversible and
+// keeps the person's history attached to their name; the hard delete below
+// scrubs them out of every log they ever wrote and cannot be undone. A director
+// removing somebody from their center means "they do not work here any more",
+// which is archive, and giving them the other one would be handing an
+// irreversible operation to the role most likely to reach for it in a hurry.
+router.delete('/users/:id', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const { id } = req.params;
 
+  if (Number(id) === Number(req.session.userId)) {
+    return res.status(403).json({ error: 'You cannot remove your own account.' });
+  }
+
   try {
+    const target = await loadStaffTarget(req, pool, id);
+    if (!target) return res.status(404).json({ error: 'User not found' });
+
+    if (!isAdmin(req)) {
+      await pool.query('UPDATE users SET active = false WHERE id = $1', [id]);
+      return res.json({ ok: true, archived: true });
+    }
+
     const { rows } = await pool.query("SELECT id, username, role FROM users WHERE id = $1 AND role != 'admin'", [id]);
     if (!rows[0]) return res.status(404).json({ error: 'User not found' });
 
@@ -380,7 +529,7 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
 });
 
 // GET /api/admin/settings
-router.get('/settings', requireAdmin, async (req, res) => {
+router.get('/settings', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   try {
     const { rows } = await pool.query('SELECT key, value, updated_at FROM app_settings');
@@ -393,7 +542,9 @@ router.get('/settings', requireAdmin, async (req, res) => {
 });
 
 // PUT /api/admin/settings/:key
-router.put('/settings/:key', requireAdmin, async (req, res) => {
+// Global, across every center. A director editing the announcement changes
+// what Fullerton and Cerritos see too, which the screen says out loud.
+router.put('/settings/:key', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const { key } = req.params;
   const { value } = req.body;

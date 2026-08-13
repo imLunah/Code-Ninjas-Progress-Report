@@ -91,10 +91,10 @@ export default function App() {
             <Route path="/parent/students/:id" element={<ParentRoute><ParentStudentProfile /></ParentRoute>} />
 
             {/* Admin */}
-            <Route path="/admin/locations" element={<ProtectedRoute role="admin"><LocationsPage /></ProtectedRoute>} />
-            <Route path="/admin/users" element={<ProtectedRoute role="admin"><UsersPage /></ProtectedRoute>} />
-            <Route path="/admin/curriculum" element={<ProtectedRoute role="admin"><CurriculumPage /></ProtectedRoute>} />
-            <Route path="/admin/settings" element={<ProtectedRoute role="admin"><SettingsPage /></ProtectedRoute>} />
+            <Route path="/admin/locations" element={<ProtectedRoute role="manager"><LocationsPage /></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute role="manager"><UsersPage /></ProtectedRoute>} />
+            <Route path="/admin/curriculum" element={<ProtectedRoute role="manager"><CurriculumPage /></ProtectedRoute>} />
+            <Route path="/admin/settings" element={<ProtectedRoute role="manager"><SettingsPage /></ProtectedRoute>} />
 
             {/* Curriculum Roadmap */}
             <Route path="/curriculum-roadmap" element={<ProtectedRoute role="sensei"><CurriculumRoadmapPage /></ProtectedRoute>} />

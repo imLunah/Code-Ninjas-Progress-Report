@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import { api } from '../../api/client';
 import { SkeletonList } from '../../components/ui/Skeleton';
+import { useAuth } from '../../context/AuthContext';
 
 const ADMIN_NAV_LINKS = [
   { to: '/admin/locations', label: 'Locations' },
@@ -211,16 +212,25 @@ function AddLocationModal({ onClose, onAdded }) {
 
 function EditLocationModal({ loc, onClose, onSaved }) {
   const [name, setName] = useState(loc.name);
+  const [code, setCode] = useState(loc.center_code || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim() || name.trim() === loc.name) return onClose();
+    const nextName = name.trim();
+    const nextCode = code.trim().toUpperCase();
+    if (!nextName) return setError('Name cannot be empty.');
+    if (!nextCode) return setError('A center code is required.');
+    if (nextName === loc.name && nextCode === (loc.center_code || '')) return onClose();
+
     setSaving(true);
     setError('');
     try {
-      const result = await api.patch(`/admin/locations/${loc.id}`, { name: name.trim() });
+      const result = await api.patch(`/admin/locations/${loc.id}`, {
+        name: nextName,
+        center_code: nextCode,
+      });
       onSaved(result);
     } catch (err) {
       setError(err?.message || 'Failed to update location.');
@@ -236,7 +246,7 @@ function EditLocationModal({ loc, onClose, onSaved }) {
         animate={{ opacity: 1, scale: 1 }}
         className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
       >
-        <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-4">Rename Location</h2>
+        <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-4">Edit center</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1">Name</label>
@@ -247,6 +257,26 @@ function EditLocationModal({ loc, onClose, onSaved }) {
               autoFocus
               className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
             />
+          </div>
+          <div>
+            <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1">
+              Parent sign-in code
+            </label>
+            <input
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase())}
+              maxLength={10}
+              spellCheck={false}
+              className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-mono font-bold tracking-widest text-sm focus:outline-none focus:border-ninja-blue"
+            />
+            {/* Said plainly, because it decides how it should be treated: it is
+                a scoping key, not a password, and it will end up on a flyer. */}
+            <p className="text-ninja-muted font-ninja text-xs mt-1.5">
+              Parents type this with their email to sign in. Up to 10 letters or
+              digits. Share it freely — it decides which center a parent reaches,
+              it is not a password.
+            </p>
           </div>
           {error && <p className="text-ninja-red text-xs font-ninja">{error}</p>}
           <div className="flex gap-3">
@@ -329,6 +359,8 @@ function DeleteLocationModal({ loc, onClose, onDeleted }) {
 }
 
 export default function LocationsPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -375,15 +407,24 @@ export default function LocationsPage() {
         <AdminNav />
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-ninja-navy font-ninja font-bold text-2xl">Locations</h1>
-            <p className="text-ninja-muted font-ninja text-sm mt-0.5">Manage Code Ninjas centers</p>
+            <h1 className="text-ninja-navy font-ninja font-bold text-2xl">
+              {isAdmin ? 'Locations' : 'Your center'}
+            </h1>
+            <p className="text-ninja-muted font-ninja text-sm mt-0.5">
+              {isAdmin ? 'Manage Code Ninjas centers' : 'Your center\'s name and the code parents sign in with'}
+            </p>
           </div>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="bg-ninja-blue text-white font-ninja font-semibold rounded-xl px-4 py-2 text-sm hover:opacity-90 transition-opacity"
-          >
-            + Add Location
-          </button>
+          {/* Creating a center makes a place nobody is responsible for yet, and
+              deleting one takes its students, staff, clubs and logs with it.
+              Both stay with an admin; a director edits the center they run. */}
+          {isAdmin && (
+            <button
+              onClick={() => setShowAdd(true)}
+              className="bg-ninja-blue text-white font-ninja font-semibold rounded-xl px-4 py-2 text-sm hover:opacity-90 transition-opacity"
+            >
+              + Add Location
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -415,6 +456,16 @@ export default function LocationsPage() {
                       <span className="mx-2">·</span>
                       {loc.staff_count} staff
                     </p>
+                    {/* The code parents type to sign in, shown here because the
+                        person who has to tell them is the person on this page. */}
+                    {loc.center_code && (
+                      <p className="text-ninja-muted font-ninja text-xs mt-1">
+                        parent code:{' '}
+                        <span className="font-mono font-bold tracking-widest text-ninja-navy">
+                          {loc.center_code}
+                        </span>
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     <button
@@ -423,19 +474,23 @@ export default function LocationsPage() {
                     >
                       Edit
                     </button>
-                    <button
-                      onClick={() => handleToggleActive(loc)}
-                      disabled={togglingId === loc.id}
-                      className="text-xs font-ninja text-ninja-muted hover:text-ninja-navy transition-colors disabled:opacity-50"
-                    >
-                      {loc.active ? 'Deactivate' : 'Activate'}
-                    </button>
-                    <button
-                      onClick={() => setDeleteLoc(loc)}
-                      className="text-xs font-ninja text-ninja-muted hover:text-ninja-red transition-colors"
-                    >
-                      Delete
-                    </button>
+                    {isAdmin && (
+                      <>
+                        <button
+                          onClick={() => handleToggleActive(loc)}
+                          disabled={togglingId === loc.id}
+                          className="text-xs font-ninja text-ninja-muted hover:text-ninja-navy transition-colors disabled:opacity-50"
+                        >
+                          {loc.active ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button
+                          onClick={() => setDeleteLoc(loc)}
+                          className="text-xs font-ninja text-ninja-muted hover:text-ninja-red transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
                   </div>
                 </motion.div>
               ))}
