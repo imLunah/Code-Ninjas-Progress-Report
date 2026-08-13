@@ -693,23 +693,39 @@ export default function TaskBoard({
       if (face) {
         const capsule = Math.min(box.w, box.h) / 2;
         face.style.borderRadius = pull > 0 ? `${16 + (capsule - 16) * pull}px` : '';
+
+        // Two surfaces can never merge seamlessly while both keep their own
+        // edges — one of them has to stop being a surface. It is this one,
+        // because the goo union is the shape that knows about the neck. Once
+        // the pull is real the card dissolves into the pane: background,
+        // border and shadows hand over to the glass layer (the 200ms
+        // transition makes it a fade, not a switch), and what is left riding
+        // the merged shape is the text.
+        const molten = pull > 0.35;
+        face.style.backgroundColor = molten ? 'transparent' : '';
+        face.style.borderColor = molten ? 'transparent' : '';
+        face.style.boxShadow = molten ? 'none' : '';
+        face.style.backdropFilter = molten ? 'none' : '';
+        face.style.webkitBackdropFilter = molten ? 'none' : '';
       }
     }
 
-    // And the card's own liquid: the same bead-and-droplet the red runs, in
-    // the card's surface colour, welded by the same filter, drawn in the same
-    // places. The bead hides under the card face; what shows is the bridge —
-    // glass reaching out of the card and into the pool, merging with the bin
-    // by exactly the mechanism the red merges with the card. A hair smaller
-    // than the red's bridge, so the red rims it like a meniscus instead of
-    // being buried by it.
+    // The glass union: bead, droplet and the wall over the band, welded into
+    // one edge-lit pane by the filter. The bead wears the same taffy as the
+    // DOM card — same stretch, same thinning, same trailing-edge origin — so
+    // the silhouette and the text stay one thing while the card is molten.
     const glass = glassRef.current;
-    if (glass) glass.style.opacity = String(0.55 * pull);
-    put(glassBeadRef.current, bx, by, box.w, box.h, Math.min(box.w, box.h) / 2);
+    if (glass) glass.style.opacity = String(Math.min(1, pull * 1.6));
+    const gw = box.w * (1 + 0.14 * pull);
+    const gh = box.h * (1 - 0.07 * pull);
+    // Corners on the same ramp as the face's, so when the card's own paint
+    // fades out the silhouette underneath is the shape it just was.
+    put(glassBeadRef.current, bx, by + (box.h - gh) / 2, gw, gh, 16 + (gh / 2 - 16) * pull);
+    const gLead = bx + gw;
     const gBridge = bridge * 0.85;
     put(
       glassDropRef.current,
-      (lead + Math.max(lead, r.left)) / 2 - gBridge / 2,
+      (gLead + Math.max(gLead, r.left)) / 2 - gBridge / 2,
       by + box.h / 2 - gBridge / 2,
       gBridge, gBridge, gBridge / 2
     );
@@ -1140,6 +1156,39 @@ export default function TaskBoard({
                   values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 13 -5.5"
                 />
               </filter>
+              {/* The glass version: same blur-and-threshold union, but what
+                  comes out is drawn as a pane instead of a fill. The welded
+                  silhouette is kept almost empty — a breath of white so the
+                  page reads through it — and the silhouette minus an eroded
+                  copy of itself is the rim, a bright ~2px line tracing the
+                  whole merged outline, neck included. A second rim, dark and
+                  nudged down, is the glass's thickness and its contact
+                  shadow. The rim following ONE outline around both lobes is
+                  what says single object; everything inside it staying
+                  see-through is what says glass. */}
+              <filter id="taskGooGlass" x="-40%" y="-40%" width="180%" height="180%" colorInterpolationFilters="sRGB">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="22" result="soft" />
+                <feColorMatrix
+                  in="soft"
+                  type="matrix"
+                  values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 14 -6"
+                  result="shape"
+                />
+                <feMorphology in="shape" operator="erode" radius="2" result="inner" />
+                <feComposite in="shape" in2="inner" operator="out" result="rimA" />
+                <feOffset in="rimA" dy="1.5" result="rimLoA" />
+                <feFlood floodColor="#1e293b" floodOpacity="0.25" result="loC" />
+                <feComposite in="loC" in2="rimLoA" operator="in" result="rimLo" />
+                <feFlood floodColor="#ffffff" floodOpacity="0.14" result="fillC" />
+                <feComposite in="fillC" in2="shape" operator="in" result="fill" />
+                <feFlood floodColor="#ffffff" floodOpacity="0.9" result="hiC" />
+                <feComposite in="hiC" in2="rimA" operator="in" result="rimHi" />
+                <feMerge>
+                  <feMergeNode in="fill" />
+                  <feMergeNode in="rimLo" />
+                  <feMergeNode in="rimHi" />
+                </feMerge>
+              </filter>
             </defs>
           </svg>
           <div
@@ -1172,14 +1221,17 @@ export default function TaskBoard({
             <div ref={gooBeadRef} className="absolute top-0 left-0 bg-ninja-red" />
             <div ref={gooDropRef} className="absolute top-0 left-0 bg-ninja-red" />
           </div>
-          {/* The card's liquid: the same trick minus the pool, a bead riding
-              the card's box and the droplet that bridges, in the card's own
-              surface colour, welded by the same filter. Painted over the red,
-              so the red rims it rather than burying it. bg-white on purpose —
-              the `.dark .bg-white` override is exactly what keeps these blobs
-              the card's colour in both themes. No mask: unlike the band this
-              layer has no resting presence to fade towards the board, its
-              whole existence is the pull, so opacity does the fading. */}
+          {/* The glass itself: the same three blobs as the red — pool, bead,
+              droplet — through the glass filter above, so what is drawn is
+              one edge-lit pane whose silhouette is the card's box merging
+              with a wall of glass over the band. The red layer underneath
+              shows through the near-empty fill, which is what makes the band
+              read as a vessel of red liquid seen through glass rather than a
+              red panel. The blobs only contribute their alpha (the filter
+              reads SourceAlpha and floods its own colours), so bg-white here
+              is just "solid". Painted over the red; no mask, because unlike
+              the band this layer has no resting presence — its whole
+              existence is the pull, and opacity carries that. */}
           <div
             ref={glassRef}
             aria-hidden="true"
@@ -1189,10 +1241,14 @@ export default function TaskBoard({
               top: -BLEED,
               width: held.trash.w + GOO_REACH + BLEED,
               height: held.trash.h + BLEED * 2,
-              filter: 'url(#taskGoo)',
+              filter: 'url(#taskGooGlass)',
               opacity: 0,
             }}
           >
+            <div
+              className="absolute top-0 right-0 h-full bg-white"
+              style={{ width: held.trash.w + BLEED, borderRadius: '999px 0 0 999px' }}
+            />
             <div ref={glassBeadRef} className="absolute top-0 left-0 bg-white" />
             <div ref={glassDropRef} className="absolute top-0 left-0 bg-white" />
           </div>
