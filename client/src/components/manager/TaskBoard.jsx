@@ -654,21 +654,34 @@ export default function TaskBoard({
     // the left of the band and a bleed above the window.
     const originX = r.left - GOO_REACH;
     const originY = -BLEED;
-    const put = (el, left, top, w, h, radius) => {
+    const put = (el, left, top, w, h, radius, rot = 0) => {
       if (!el) return;
       el.style.width = `${w}px`;
       el.style.height = `${h}px`;
       el.style.borderRadius = `${radius}px`;
-      el.style.transform = `translate3d(${left - originX}px, ${top - originY}px, 0)`;
+      el.style.transform = `translate3d(${left - originX}px, ${top - originY}px, 0)${rot ? ` rotate(${rot}deg)` : ''}`;
     };
 
     // The card's silhouette this frame — the taffy stretch and thinning the
     // DOM card is wearing — computed here because both liquids need it: the
-    // glass draws all of it, and the red is allowed to touch only part of it.
-    const gw = box.w * (1 + 0.14 * pull);
-    const gh = box.h * (1 - 0.07 * pull);
+    // glass draws all of it, and the red is allowed to touch only part of
+    // it. The factors go through `reduce` because the wrapper's stretch does:
+    // a bead wearing a stretch the card is not is the same misalignment as a
+    // tilt the bead is not.
+    const sx = reduce ? 1 : 1 + 0.14 * pull;
+    const sy = reduce ? 1 : 1 - 0.07 * pull;
+    const gw = box.w * sx;
+    const gh = box.h * sy;
     const gLead = bx + gw;
     const gy = by + (box.h - gh) / 2;
+    // And the tilt it is carrying. The bead wears the SAME tilt as the card
+    // at every frame — matching only at the end is what a misalignment is —
+    // and the tilt itself levels on the corner ramp, because a liquid does
+    // not hold a lean. Under reduced motion the card never levels (paintGoo
+    // does not write its transform), so the bead holds the class's -1° to
+    // stay under it.
+    const level = reduce ? 0 : Math.min(1, pull * 1.8);
+    const tilt = -1 * (1 - level);
     // Corner radius for the card and its bead, on a ramp that runs AHEAD of
     // the pull. The goo filter rounds every corner it is given — 22px of
     // blur is a floor under how sharp the union can be — so a radius that
@@ -707,15 +720,22 @@ export default function TaskBoard({
     // stretch and neck, so the card does the same three things. Its corners
     // give first, easing from the resting radius toward the full capsule the
     // bead under it already is; the whole pane is pulled long and thin off
-    // its trailing edge, the way taffy goes narrow when it is pulled. The
-    // ring and tint at the arm line stay binary — that is the commitment
-    // signal, not the physics.
+    // its trailing edge, the way taffy goes narrow when it is pulled.
     if (!reduce) {
       const m = meltRef.current;
-      if (m) m.style.transform = pull > 0 ? `scaleX(${1 + 0.14 * pull}) scaleY(${1 - 0.07 * pull})` : '';
+      if (m) m.style.transform = pull > 0 ? `scaleX(${sx}) scaleY(${sy})` : '';
       const face = faceRef.current;
       if (face) {
         face.style.borderRadius = pull > 0 ? `${rampR(Math.min(box.w, box.h) / 2)}px` : '';
+
+        // The shared tilt from above, which the bead wears too. This inline
+        // write owns the card's rotation outright while there is any pull,
+        // which is why there is no over-the-bin rotate/scale class on the
+        // card any more — a transform the card wears and the bead does not
+        // is drawn on screen as two misaligned capsules, which is exactly
+        // what the old -rotate-3 scale-95 was: one degree of tilt displaces
+        // the ends of a wide card by real pixels.
+        face.style.transform = pull > 0 ? `rotate(${tilt}deg)` : '';
 
         // Two surfaces can never merge seamlessly while both keep their own
         // edges — one of them has to stop being a surface. It is this one,
@@ -741,9 +761,11 @@ export default function TaskBoard({
     // the silhouette and the text stay one thing while the card is molten.
     const glass = glassRef.current;
     if (glass) glass.style.opacity = String(Math.min(1, pull * 1.6));
-    // Corners on the same ramp as the face's, so when the card's own paint
-    // fades out the silhouette underneath is the shape it just was.
-    put(glassBeadRef.current, bx, gy, gw, gh, rampR(gh / 2));
+    // Corners on the same ramp as the face's, and the tilt the card is
+    // carrying, so when the card's own paint fades out the silhouette
+    // underneath is the shape it just was — same box, same corners, same
+    // lean, at every pull and not just the last one.
+    put(glassBeadRef.current, bx, gy, gw, gh, rampR(gh / 2), tilt);
     const gBridge = bridge * 0.85;
     put(
       glassDropRef.current,
@@ -1190,10 +1212,17 @@ export default function TaskBoard({
                   see-through is what says glass. */}
               <filter id="taskGooGlass" x="-40%" y="-40%" width="180%" height="180%" colorInterpolationFilters="sRGB">
                 <feGaussianBlur in="SourceAlpha" stdDeviation="22" result="soft" />
+                {/* Intercept chosen so the threshold crosses at exactly half
+                    alpha (7/14 = 0.5). Cheaper-looking slopes cross lower,
+                    which INFLATES every silhouette a few pixels past the box
+                    that produced it — and this silhouette has to sit exactly
+                    under a DOM card, where a few pixels is a visible halo of
+                    misalignment. The red's filters keep their looser slope on
+                    purpose; nothing has to line up with the red. */}
                 <feColorMatrix
                   in="soft"
                   type="matrix"
-                  values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 14 -6"
+                  values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 14 -7"
                   result="shape"
                 />
                 <feMorphology in="shape" operator="erode" radius="2" result="inner" />
@@ -1316,14 +1345,17 @@ export default function TaskBoard({
         >
           {/* Over the bin the card starts going soft before it is let go of:
               it rounds towards the capsule the blob underneath it already is,
-              tips further over and gives up its edges. By the time it is
-              dropped it is most of the way to being liquid, so the swallow has
-              something to finish rather than something to start.
+              levels out of its carrying tilt and gives up its edges. By the
+              time it is dropped it is most of the way to being liquid, so the
+              swallow has something to finish rather than something to start.
 
-              And that is ALL it does — no red ring, no red wash. The card
-              stays the card the whole way; the red seen through the pane and
-              the label saying so are what mean delete. Glass merging with
-              glass while turning a different colour is two stories at once. */}
+              And that is ALL it does — no red ring, no red wash, and no
+              over-the-bin rotate or shrink. The bead under the card is
+              axis-aligned and box-sized, so any transform the card wears
+              that the bead does not is drawn on screen as two misaligned
+              capsules. The card stays the card the whole way; the red seen
+              through the pane and the label saying so are what mean
+              delete. */}
           {/* The taffy wrapper. paintGoo writes the stretch to it as the card
               nears the band — kept off the card itself so its own classes and
               React's over-the-bin styling never fight the per-frame writes.
@@ -1334,14 +1366,17 @@ export default function TaskBoard({
             {/* No borderRadius here from React: the corners are paintGoo's,
                 eased continuously from the resting radius to the capsule on
                 the same pull as everything else, and a binary style prop
-                would clobber those writes every time the target flipped. The
-                card's transition-all smooths the per-frame values, which is
-                what makes the rounding read as viscous rather than tracked. */}
+                would clobber those writes every time the target flipped.
+
+                The transition list is exact, not transition-all, and shape is
+                deliberately NOT on it: the bead applies each frame's radius
+                and tilt instantly, so an eased copy on the card is a card
+                trailing 200ms behind its own silhouette. Pull is continuous —
+                the pointer is the easing. Only the paint fade (the molten
+                hand-over) is transitioned. */}
             <div
               ref={faceRef}
-              className={`${CARD} ${TASK_SURFACE} task-lensed p-3.5 shadow-xl relative transition-all duration-200 ease-[var(--ease-out)] ${
-                target?.trash ? '-rotate-3 scale-95' : '-rotate-1'
-              }`}
+              className={`${CARD} ${TASK_SURFACE} task-lensed p-3.5 shadow-xl relative transition-[background-color,border-color,box-shadow,backdrop-filter] duration-200 ease-[var(--ease-out)] -rotate-1`}
             >
               <TaskCardFace task={held.task} />
             </div>
