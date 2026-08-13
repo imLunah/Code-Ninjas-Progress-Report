@@ -640,9 +640,14 @@ export default function TaskBoard({
     // Eased so the reach is slow to start and quick to close, which is what
     // makes it read as something being pulled rather than something growing.
     const pull = t * t;
-    // The wall over the band is always faintly there — it is the drop target
-    // and needs a resting presence — and comes up to full as the card nears.
-    g.style.opacity = String(Math.min(1, 0.35 + pull * 1.3));
+    // The wall over the band is always there — it is the drop target and a
+    // pane of glass should read as one from the moment a drag starts — and
+    // comes up to full as the card nears.
+    g.style.opacity = String(Math.min(1, 0.45 + pull * 1.2));
+    // And it blushes while the card is actually over the bin: the armed
+    // filter is the same glass with a breath of red in the fill, which is
+    // the "letting go deletes" signal living in the liquid itself.
+    g.style.filter = targetRef.current?.trash ? 'url(#taskGooGlassRed)' : 'url(#taskGooGlass)';
 
     // Positions are viewport coordinates; the layer's own origin sits a reach to
     // the left of the band and a bleed above the window.
@@ -1139,10 +1144,40 @@ export default function TaskBoard({
                   <feMergeNode in="rimHi" />
                 </feMerge>
               </filter>
-              {/* The same pane with more blur to work with, swapped in for
-                  the swallow. More blur is more distance over which two
-                  shapes can find each other, which is what makes the stretch
-                  hold together instead of snapping the moment it is pulled. */}
+              {/* The same pane blushed: identical structure and rims, but the
+                  breath of white in the fill is a breath of the brand red
+                  instead. Swapped in while the card is actually over the bin,
+                  so the liquid itself says "letting go deletes" without
+                  changing material — glass that has coloured, not paint. */}
+              <filter id="taskGooGlassRed" x="-40%" y="-40%" width="180%" height="180%" colorInterpolationFilters="sRGB">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="22" result="soft" />
+                <feColorMatrix
+                  in="soft"
+                  type="matrix"
+                  values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 14 -6"
+                  result="shape"
+                />
+                <feMorphology in="shape" operator="erode" radius="2" result="inner" />
+                <feComposite in="shape" in2="inner" operator="out" result="rimA" />
+                <feOffset in="rimA" dy="1.5" result="rimLoA" />
+                <feFlood floodColor="#1e293b" floodOpacity="0.25" result="loC" />
+                <feComposite in="loC" in2="rimLoA" operator="in" result="rimLo" />
+                <feFlood floodColor="#e51520" floodOpacity="0.16" result="fillC" />
+                <feComposite in="fillC" in2="shape" operator="in" result="fill" />
+                <feFlood floodColor="#ffffff" floodOpacity="0.9" result="hiC" />
+                <feComposite in="hiC" in2="rimA" operator="in" result="rimHi" />
+                <feMerge>
+                  <feMergeNode in="fill" />
+                  <feMergeNode in="rimLo" />
+                  <feMergeNode in="rimHi" />
+                </feMerge>
+              </filter>
+              {/* The blushed pane with more blur to work with, swapped in for
+                  the swallow — which only ever happens from the armed state,
+                  so it inherits the red. More blur is more distance over
+                  which two shapes can find each other, which is what makes
+                  the stretch hold together instead of snapping the moment it
+                  is pulled. */}
               <filter id="taskGooGlassThick" x="-60%" y="-60%" width="220%" height="220%" colorInterpolationFilters="sRGB">
                 <feGaussianBlur in="SourceAlpha" stdDeviation="34" result="soft" />
                 <feColorMatrix
@@ -1156,7 +1191,7 @@ export default function TaskBoard({
                 <feOffset in="rimA" dy="1.5" result="rimLoA" />
                 <feFlood floodColor="#1e293b" floodOpacity="0.25" result="loC" />
                 <feComposite in="loC" in2="rimLoA" operator="in" result="rimLo" />
-                <feFlood floodColor="#ffffff" floodOpacity="0.14" result="fillC" />
+                <feFlood floodColor="#e51520" floodOpacity="0.16" result="fillC" />
                 <feComposite in="fillC" in2="shape" operator="in" result="fill" />
                 <feFlood floodColor="#ffffff" floodOpacity="0.9" result="hiC" />
                 <feComposite in="hiC" in2="rimA" operator="in" result="rimHi" />
