@@ -1172,8 +1172,11 @@ export default function TaskBoard({
               the card's box merging with the wall over the band. The blobs
               only contribute their alpha (the filter reads SourceAlpha and
               floods its own colours), so bg-white here is just "solid". The
-              wall hangs off the top, the right and the bottom, so the corners
-              the filter rounds are all outside the window. */}
+              wall is a plain rectangle on purpose: the filter keeps straight
+              edges straight and only rounds corners, and the wall hangs off
+              the top, the right and the bottom so the corners it would round
+              are all outside the window — what the card merges into is a
+              flat vertical edge of glass, not a lobe. */}
           <div
             ref={glassRef}
             aria-hidden="true"
@@ -1189,7 +1192,7 @@ export default function TaskBoard({
           >
             <div
               className="absolute top-0 right-0 h-full bg-white"
-              style={{ width: held.trash.w + BLEED, borderRadius: '999px 0 0 999px' }}
+              style={{ width: held.trash.w + BLEED }}
             />
             <div ref={glassBeadRef} className="absolute top-0 left-0 bg-white" />
             <div ref={glassDropRef} className="absolute top-0 left-0 bg-white" />
