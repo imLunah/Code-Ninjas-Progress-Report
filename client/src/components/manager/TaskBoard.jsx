@@ -64,12 +64,12 @@ const ARM_AT = 1 / 3;     // how much of the card has to be in before it commits
 // cover and hangs off all three edges: the rounding still happens, out of sight.
 const BLEED = 100;
 
-// How far the red sits inside the glass it is filling. The goo threshold
-// crosses at 0.464 alpha rather than half, so every shape comes back out of
-// the filter a couple of pixels larger than it went in — harmless for the
-// wall, but red spilling past the card's lit edge is the one overflow that
-// reads as a mistake.
-const INSET = 3;
+// The band's red, and it is a constant. It sat on a ramp from 0.07 to 0.26
+// with the card's approach, which meant the target got louder as you aimed at
+// it — the bin answering the card instead of waiting for it. Between the two
+// old ends, so the band is a real target from the first frame without ever
+// becoming an event.
+const RED_OPACITY = 0.17;
 
 // Solid across the band, then away to nothing over the reach, so the red thins
 // out towards the board instead of ending on a line. Measured from the layer's
@@ -522,21 +522,17 @@ export default function TaskBoard({
   const listRefs = useRef({});
   const cardRefs = useRef(new Map());
   const overlayRef = useRef(null);
-  // The red under the bin panel, drawn as three blobs through a goo filter: the
-  // pool over the nav, a bead on the card, and one droplet between them. Written
-  // by hand on every pointermove for the same reason the overlay is — this is a
-  // per-frame value, and state would re-render the board to carry it.
   const boardRef = useRef(null);
-  const gooRef = useRef(null);
-  const gooBeadRef = useRef(null);
-  const gooDropRef = useRef(null);
-  // The card's own morph. The red's physics is shape, not shimmer: it rounds,
-  // stretches and bridges. So the card gets the same three, written per frame
-  // like everything else here: a wrapper carrying the taffy stretch, the card
-  // shell whose corners give as it nears, and a second goo — a bead and a
-  // droplet in the card's own surface colour, under the same filter as the
-  // red — so a bridge of glass reaches out of the card and merges with the
-  // pool by exactly the mechanism the red uses.
+  // The morph, and all of it belongs to the card. The bin is a still red
+  // band with no ref of its own, because nothing writes to it: a wrapper
+  // carrying the taffy stretch, the card shell whose corners give as it
+  // nears, and the card's own glass drawn as three blobs under a goo filter
+  // — a wall over the band, a bead riding the card, and the droplet that
+  // bridges them. Blurred together and thresholded back to an edge, two
+  // shapes near each other stop being two shapes, and the card flows into
+  // the bin. Written by hand on every pointermove for the same reason the
+  // overlay is: per-frame values, and state would re-render the board to
+  // carry them.
   const meltRef = useRef(null);
   const faceRef = useRef(null);
   const glassRef = useRef(null);
@@ -628,15 +624,15 @@ export default function TaskBoard({
     setTargetIfChanged({ trash: false, key, index: s[key].mids.filter((m) => m < y).length });
   };
 
-  // Distance from the pointer to the bin, turned into how much the red reaches
-  // out. Inside the panel it is 1 and everything is merged; a screen away it is
-  // 0 and there is nothing but the resting pool.
+  // Distance from the pointer to the bin, turned into how far the card's glass
+  // reaches out. Inside the panel it is 1 and everything is merged; a screen
+  // away it is 0 and there is nothing but the still red band.
   const paintGoo = (x, y) => {
-    const g = gooRef.current;
+    const g = glassRef.current;
     const r = snap.current?.trash;
     if (!g || !r) return;
 
-    // The red takes hold of the card, not the cursor: the bead is the card's
+    // The glass takes hold of the card, not the cursor: the bead is the card's
     // own box in the card's own place, so what the band reaches out and grabs
     // is the thing being deleted rather than a dot the hand happens to be
     // dragging it by.
@@ -655,7 +651,6 @@ export default function TaskBoard({
     // Eased so the reach is slow to start and quick to close, which is what
     // makes it read as something being pulled rather than something growing.
     const pull = t * t;
-    g.style.opacity = String(0.09 + 0.17 * pull);
 
     // Positions are viewport coordinates; the layer's own origin sits a reach to
     // the left of the band and a bleed above the window.
@@ -709,64 +704,23 @@ export default function TaskBoard({
     // fade, not the fade being quick.
     const rampR = (cap) => 16 + (cap - 16) * Math.min(1, pull * 1.8);
 
-    // The red climbs INTO the card. Before this it was clipped at the band's
-    // edge, which drew it entirely inside the wall already covering that
-    // strip — so it contributed nothing, and the card crossed a red panel
-    // rather than filling with it.
-    //
-    // The bead is now the card's own silhouette, the exact box the glass bead
-    // draws, and a mask decides how much of it is filled, from the leading
-    // edge back. That is what makes it seamless: the red inside the card is
-    // bounded on three sides by the card's own outline, so it reads as the
-    // box filling with liquid instead of a red shape parked behind a
-    // transparent one — and because this bead sits under the same goo filter
-    // as the wall, the two weld, and the liquid in the card is continuous
-    // with the liquid in the band.
-    //
-    // Inset by the blur's own overshoot: the threshold crosses at 0.464
-    // rather than half, so a shape comes back out a couple of pixels bigger
-    // than it went in, and red is the one thing that must not spill past the
-    // glass. Liquid sits inside the vessel.
-    const enter = clamp((gLead - r.left) / gw, 0, 1);
-    const fill = Math.min(1, enter * 1.7);
-    const bead = gooBeadRef.current;
-    if (bead) {
-      if (fill <= 0) {
-        // Nothing has touched yet. The bridging droplet is the whole of the
-        // reach until the card is actually in.
-        bead.style.width = '0px';
-        bead.style.height = '0px';
-      } else {
-        put(bead, bx + INSET, gy + INSET, gw - INSET * 2, gh - INSET * 2, Math.max(0, rampR(gh / 2) - INSET), tilt);
-      }
-      // Feathered, because a liquid front is a meniscus and not a cut. The
-      // goo's threshold sharpens most of the feather back out, which is the
-      // point: what survives is a soft, slightly curved front rather than
-      // either a gradient or a straight edge.
-      const w = gw * fill;
-      const soft = Math.min(34, w);
-      bead.style.maskImage = fill <= 0 ? 'none'
-        : `linear-gradient(to left, rgb(0 0 0) 0px, rgb(0 0 0) ${w - soft}px, rgb(0 0 0 / 0) ${w}px)`;
-      bead.style.webkitMaskImage = bead.style.maskImage;
-    }
-
-    // And the drop that bridges the gap, sized off the card so a wide card gets
-    // a bridge to match. It is the only part that has to know about distance,
-    // because a bridge to nothing is just a blob in the middle of the page.
+    // The bridge, sized off the card so a wide card gets a bridge to match.
+    // It is the only part that has to know about distance, because a bridge
+    // to nothing is just a blob in the middle of the page.
     const bridge = Math.min(fh, 120) * pull;
-    put(
-      gooDropRef.current,
-      (lead + Math.max(lead, r.left)) / 2 - bridge / 2,
-      gMidY - bridge / 2,
-      bridge, bridge, bridge / 2
-    );
 
-    // The card morphs on the same dial, and by the same physics — shape, not
-    // shimmer. What the red does when something nears it is round off,
-    // stretch and neck, so the card does the same three things. Its corners
-    // give first, easing from the resting radius toward the full capsule the
-    // bead under it already is; the whole pane is pulled long and thin off
-    // its trailing edge, the way taffy goes narrow when it is pulled.
+    // The card morphs, and the red does not. Everything the liquid does here
+    // is the CARD's material doing it: the bin is a fixed red band, the same
+    // from the first frame of the drag to the last, and what happens when a
+    // card arrives is that the card flows into it. A band that also reached,
+    // filled and brightened made two things move towards each other and read
+    // as two things; leaving one of them still is what makes the other one
+    // read as arriving.
+    //
+    // So the card rounds off, stretches and necks — corners easing from the
+    // resting radius to the full capsule the glass bead under it already is,
+    // the whole pane pulled long and thin off its trailing edge, the way
+    // taffy goes narrow when it is pulled.
     if (!reduce) {
       const m = meltRef.current;
       if (m) m.style.transform = pull > 0 ? `scaleX(${sx}) scaleY(${sy})` : '';
@@ -813,8 +767,7 @@ export default function TaskBoard({
     // one edge-lit pane by the filter. The bead wears the same taffy as the
     // DOM card — same stretch, same thinning, same trailing-edge origin — so
     // the silhouette and the text stay one thing while the card is molten.
-    const glass = glassRef.current;
-    if (glass) glass.style.opacity = String(Math.min(1, pull * 1.6));
+    g.style.opacity = String(Math.min(1, pull * 1.6));
     // Corners on the same ramp as the face's, and the tilt the card is
     // carrying, so when the card's own paint fades out the silhouette
     // underneath is the shape it just was — same box, same corners, same
@@ -962,34 +915,13 @@ export default function TaskBoard({
               wrap.style.transform = 'scaleX(1.22) scaleY(0.82)';
             }
           }
-          const glass = glassRef.current;
-          if (glass) {
-            glass.style.transition = `opacity ${SWALLOW_MS * 0.45}ms var(--ease-out)`;
-            glass.style.opacity = '0';
-          }
-
-          // A step up while it is being swallowed, not a flood: the shape is
-          // what is worth watching here and a solid red panel only buries it.
-          // The swap to the heavier filter is the part that matters — it gives
-          // the stretch enough blur to hold together instead of snapping the
-          // moment it is pulled.
-          const g = gooRef.current;
-          if (g) {
-            g.style.filter = 'url(#taskGooThick)';
-            g.style.transition = `opacity ${SWALLOW_MS * 0.3}ms var(--ease-out)`;
-            g.style.opacity = '0.3';
-          }
-
-          // Then the blob does the whole thing in two moves, because one move
-          // is a shape travelling and two is a liquid being drawn in.
-          //
-          // It stretches first: the card's blob reaches into the band and
-          // squeezes thin doing it, the way something viscous goes narrow when
-          // it is pulled. Then it lets go of where it was and collapses into
-          // the pool. The bridge fattens on the way out and only breaks at the
-          // end, so the thread is the last thing left.
-          const bead = gooBeadRef.current;
-          const drop = gooDropRef.current;
+          // The swallow is the CARD's, so it is the card's glass that does it.
+          // The red is not touched here at all — no step up, no heavier
+          // filter, no flood. What gets drawn into the bin is the pane the
+          // card just handed its shape to, and the bin is the still thing it
+          // gets drawn into.
+          const bead = glassBeadRef.current;
+          const drop = glassDropRef.current;
           const originX = r.left - GOO_REACH;
           const bx = lastPoint.current.x - box.dx;
           const by = lastPoint.current.y - box.dy;
@@ -998,15 +930,14 @@ export default function TaskBoard({
             `width ${ms}ms ${curve}, height ${ms}ms ${curve}, ` +
             `border-radius ${ms}ms linear, transform ${ms}ms ${curve}`;
 
+          // Two moves, because one move is a shape travelling and two is a
+          // liquid being drawn in. It stretches first: the card's pane reaches
+          // into the band and squeezes thin doing it, the way something
+          // viscous goes narrow when it is pulled. Then it lets go of where it
+          // was and collapses into the wall. The bridge fattens on the way out
+          // and only breaks at the end, so the thread is the last thing left.
           const thin = Math.max(box.h * 0.52, 34);
           if (bead) {
-            // The fill mask goes with the card. While the card exists the red
-            // is only the part of it that is under, but the swallow is what
-            // happens after there is no card — the whole blob is liquid then,
-            // and a mask left behind would clip the stretch to the waterline
-            // of a shape that has stopped existing.
-            bead.style.maskImage = 'none';
-            bead.style.webkitMaskImage = 'none';
             bead.style.transition = ease(stretchMs, 'cubic-bezier(0.35, 0, 0.25, 1)');
             bead.style.width = `${Math.max(r.left + r.w * 0.4 - bx, box.w)}px`;
             bead.style.height = `${thin}px`;
@@ -1036,6 +967,14 @@ export default function TaskBoard({
               drop.style.transition = ease(collapse, 'cubic-bezier(0.6, 0, 0.2, 1)');
               drop.style.width = '0px';
               drop.style.height = '0px';
+            }
+            // The pane goes last and only at the very end, once the blob has
+            // arrived: fading it while it is still travelling would leave the
+            // shape half-there for most of the move it is the point of.
+            const glass = glassRef.current;
+            if (glass) {
+              glass.style.transition = `opacity ${collapse * 0.7}ms var(--ease-out)`;
+              glass.style.opacity = '0';
             }
           }, stretchMs);
         }
@@ -1221,16 +1160,19 @@ export default function TaskBoard({
         );
       })}
 
-      {/* The red itself, three blobs under one goo filter. A pool over the nav,
-          a bead riding the card, and a droplet between them: blurred together
-          and then thresholded back to a hard edge, two shapes near each other
-          stop being two shapes, and the pool reaches out and takes the card
-          rather than waiting for it to arrive. The droplet is what carries the
-          bridge across a gap wider than the blur alone could span.
+      {/* The red: one wall over the band, and it does not move.
+
+          It used to be three blobs that reached, bridged and brightened as a
+          card came near. Two things moving towards each other read as two
+          things negotiating; the bin holding still is what makes the card
+          read as arriving somewhere. So the red is the place, fixed from the
+          first frame of the drag to the last, and every bit of liquid
+          behaviour belongs to the card's glass over the top.
 
           Solid red inside the filter, with the tint applied to the whole layer
           afterwards — the threshold works on alpha, so a translucent blob would
-          come out of it either fully there or not at all. */}
+          come out of it either fully there or not at all. It keeps the filter
+          because the filter is what rounds the wall's corners off the screen. */}
       {held?.trash && createPortal(
         <>
           <svg width="0" height="0" aria-hidden="true" className="absolute pointer-events-none">
@@ -1247,18 +1189,6 @@ export default function TaskBoard({
                   in="soft"
                   type="matrix"
                   values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 14 -6"
-                />
-              </filter>
-              {/* The same thing with more blur to work with, swapped in for the
-                  swallow. More blur is more distance over which two shapes can
-                  find each other, which is what makes the stretch hold together
-                  instead of snapping the moment it is pulled. */}
-              <filter id="taskGooThick" x="-60%" y="-60%" width="220%" height="220%" colorInterpolationFilters="sRGB">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="34" result="soft" />
-                <feColorMatrix
-                  in="soft"
-                  type="matrix"
-                  values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 13 -5.5"
                 />
               </filter>
               {/* The glass version: same blur-and-threshold union, but what
@@ -1304,7 +1234,6 @@ export default function TaskBoard({
             </defs>
           </svg>
           <div
-            ref={gooRef}
             aria-hidden="true"
             className="fixed z-[58] pointer-events-none"
             style={{
@@ -1321,7 +1250,8 @@ export default function TaskBoard({
               // towards the board rather than stopping at a line.
               maskImage: maskFor(held.trash.w),
               WebkitMaskImage: maskFor(held.trash.w),
-              opacity: 0.07,
+              // Fixed. Nothing writes this any more.
+              opacity: RED_OPACITY,
             }}
           >
             {/* Hangs off the top, the right and the bottom, so the corners the
@@ -1330,8 +1260,6 @@ export default function TaskBoard({
               className="absolute top-0 right-0 h-full bg-ninja-red"
               style={{ width: held.trash.w + BLEED, borderRadius: '999px 0 0 999px' }}
             />
-            <div ref={gooBeadRef} className="absolute top-0 left-0 bg-ninja-red" />
-            <div ref={gooDropRef} className="absolute top-0 left-0 bg-ninja-red" />
           </div>
           {/* The glass itself: the same three blobs as the red — pool, bead,
               droplet — through the glass filter above, so what is drawn is
