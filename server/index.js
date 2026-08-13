@@ -83,18 +83,41 @@ const mystudioLimiter = rateLimit({
   message: { error: 'Too many MyStudio requests. Wait a moment and try again.' },
 });
 
-// Signing into MyStudio is throttled far harder than reading from it. These
-// routes hand an email and password to a third party's auth system, so a loose
-// cap here would turn DojoLink into a way to guess at a franchise login, and
-// every attempt also asks MyStudio to send a real person an email.
-const mystudioLoginLimiter = rateLimit({
+// Signing into MyStudio is throttled harder than reading from it, but the two
+// halves of it are not the same risk and were wrong to share one cap.
+//
+// Asking for a code is the expensive half: it carries a password to a third
+// party's auth system and it emails a real person. That stays tight.
+//
+// Entering a code is cheap, and a single sign-in legitimately takes several
+// goes: a mistyped digit, a code that timed out while its owner walked to their
+// inbox, a fresh code after that. One shared cap of eight locked out the first
+// real sign-in this app ever attempted, which is a worse outcome than the one
+// the cap exists to prevent. MyStudio validates the code itself and expires it,
+// so this is not the only thing standing between a guesser and an account.
+const otpRequestLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 8,
+  max: 5,
   standardHeaders: true,
   legacyHeaders: false,
   skip: () => process.env.NODE_ENV === 'test',
-  message: { error: 'Too many sign-in attempts. Try again in 15 minutes.' },
+  message: { error: 'Too many code requests. Try again in 15 minutes.' },
 });
+
+const otpVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test',
+  message: { error: 'Too many code attempts. Try again in 15 minutes.' },
+});
+
+// req.path is relative to the mount point.
+const mystudioLoginLimiter = (req, res, next) => {
+  const asksForACode = req.path === '/start' || req.path === '/resend';
+  return asksForACode ? otpRequestLimiter(req, res, next) : otpVerifyLimiter(req, res, next);
+};
 
 const sessionConfig = {
   store: new pgSession({ pool, tableName: 'session' }),
