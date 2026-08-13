@@ -135,6 +135,44 @@ function sendLoginError(res, err, context) {
   return res.status(502).json({ error: 'Could not reach MyStudio. Try again shortly.' });
 }
 
+// The upstream pull, briefly remembered.
+//
+// One pull is a request per booked class, so the cost is not in serving the
+// board, it is in asking MyStudio. Two directors with the board open, or one
+// person switching tabs, should not multiply that. Sixty seconds is short enough
+// that a sign-up shows up while somebody is still standing at the desk, and long
+// enough that the fan-out happens once no matter how many people are watching.
+//
+// Only the upstream half is cached. Roster matching and the "already on the
+// board" check are redone every time, because those change the moment a sensei
+// checks a ninja in and must never be stale.
+//
+// Per lambda instance, which is the right amount of reliable for a cache whose
+// worst failure is doing the work it would have done anyway.
+const PULL_TTL_MS = 60 * 1000;
+const pullCache = new Map();
+
+function cachedPull(locationId, date) {
+  const hit = pullCache.get(`${locationId}:${date}`);
+  return hit && hit.expiresAt > Date.now() ? hit.pulled : null;
+}
+
+function rememberPull(locationId, date, pulled) {
+  pullCache.set(`${locationId}:${date}`, { pulled, expiresAt: Date.now() + PULL_TTL_MS });
+  // The map is keyed by location and date, so it is bounded by the number of
+  // centers times the days anyone looked at, but a long-lived instance should
+  // not accumulate yesterday forever.
+  for (const [key, value] of pullCache) {
+    if (value.expiresAt <= Date.now()) pullCache.delete(key);
+  }
+}
+
+function forgetPull(locationId) {
+  for (const key of pullCache.keys()) {
+    if (key.startsWith(`${locationId}:`)) pullCache.delete(key);
+  }
+}
+
 async function markExpired(pool, id) {
   await pool.query(
     `UPDATE mystudio_connections SET status = 'expired' WHERE id = $1`,
@@ -248,6 +286,8 @@ router.post('/connect', requireManager, requireOwnLocation, async (req, res) => 
       cookie,
       login: null,
     });
+    // A new credential must not serve a pull taken with the old one.
+    forgetPull(req.session.activeLocationId);
     res.status(201).json({ configured: true, ...publicShape(row) });
   } catch (err) {
     console.error('Error saving MyStudio connection:', err.message);
@@ -373,6 +413,8 @@ router.post('/login/verify', requireManager, requireOwnLocation, async (req, res
     // Used, so it goes. The password lives in the row now, encrypted.
     clearPending(req);
 
+    // A new credential must not serve a pull taken with the old one.
+    forgetPull(req.session.activeLocationId);
     res.status(201).json({ configured: true, ...publicShape(row) });
   } catch (err) {
     console.error('Error saving MyStudio sign-in:', err.message);
@@ -405,6 +447,7 @@ router.delete('/login/saved', requireManager, requireOwnLocation, async (req, re
 router.delete('/connect', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   try {
+    forgetPull(req.session.activeLocationId);
     await pool.query('DELETE FROM mystudio_connections WHERE location_id = $1', [
       req.session.activeLocationId,
     ]);
@@ -442,10 +485,15 @@ router.get('/today', requireManager, async (req, res) => {
     // moment it was pasted while the real session moves on without it.
     let session;
 
-    let pulled;
+    let pulled = cachedPull(locationId, date);
+    const fromCache = Boolean(pulled);
+
     try {
-      session = ms.createSession(ms.decryptCookie(conn.session_cookie));
-      pulled = await ms.getExpectedForDate(session, conn.company_id, date);
+      if (!pulled) {
+        session = ms.createSession(ms.decryptCookie(conn.session_cookie));
+        pulled = await ms.getExpectedForDate(session, conn.company_id, date);
+        rememberPull(locationId, date, pulled);
+      }
     } catch (err) {
       if (err instanceof ms.MyStudioAuthError) {
         await markExpired(pool, conn.id);
@@ -538,6 +586,21 @@ router.get('/today', requireManager, async (req, res) => {
         alreadyOnBoard: student ? onBoard.has(student.id) : false,
       };
     });
+
+    // A cached read did not touch MyStudio, so it is not evidence the session is
+    // still good and must not restamp last_verified_at.
+    if (fromCache) {
+      return res.json({
+        connected: true,
+        configured: true,
+        status: 'connected',
+        companyName: conn.company_name,
+        date: pulled.date,
+        classCount: pulled.classCount,
+        bookedClassCount: pulled.bookedClassCount,
+        expected,
+      });
+    }
 
     // Fold a refreshed cookie into the same statement rather than adding a round
     // trip, and only when one actually arrived, so an ordinary pull stays a

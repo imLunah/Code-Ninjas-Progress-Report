@@ -23,25 +23,64 @@ import { CARD } from '../../lib/surfaces';
 // never opts in should not see an empty shelf explaining a feature it does not
 // have.
 
+// Slow on purpose: see the note on the refresh effect below.
+const REFRESH_MS = 5 * 60 * 1000;
+const MIN_REFRESH_MS = 60 * 1000;
+
 export default function ExpectedToday({ date, onAdded, existingStudentIds, readOnly }) {
   const [state, setState] = useState({ loading: true, data: null, error: '' });
   const [adding, setAdding] = useState(() => new Set());
   const [accepted, setAccepted] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
 
+  // Bookings happen during the day, so the strip cannot be a snapshot taken when
+  // the page happened to load.
+  //
+  // It is not a poll either. One pull is an upstream request per booked class,
+  // against a vendor API this app has no agreement with, so a fast interval
+  // would mean thousands of requests a day to catch a handful of late sign-ups.
+  //
+  // What matches how the board is actually used: refresh when someone comes back
+  // to the tab, and slowly while they are sitting on it. Nothing runs while the
+  // tab is hidden, and a minimum gap keeps flicking between tabs from turning
+  // into a pull each time.
   useEffect(() => {
     let cancelled = false;
-    setState({ loading: true, data: null, error: '' });
-    api
-      .get(`/mystudio/today?date=${date}`)
-      .then((data) => {
-        if (!cancelled) setState({ loading: false, data, error: '' });
-      })
-      .catch((err) => {
-        if (!cancelled) setState({ loading: false, data: null, error: err.message || 'failed' });
-      });
+    let lastLoad = 0;
+
+    const load = ({ quiet = false } = {}) => {
+      lastLoad = Date.now();
+      if (!quiet) setState({ loading: true, data: null, error: '' });
+      api
+        .get(`/mystudio/today?date=${date}`)
+        .then((data) => {
+          if (!cancelled) setState({ loading: false, data, error: '' });
+        })
+        .catch((err) => {
+          // A failed background refresh keeps whatever is on screen. The board
+          // being briefly stale beats it emptying out under someone's hands.
+          if (cancelled || quiet) return;
+          setState({ loading: false, data: null, error: err.message || 'failed' });
+        });
+    };
+
+    const refreshIfStale = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastLoad < MIN_REFRESH_MS) return;
+      load({ quiet: true });
+    };
+
+    load();
+
+    const interval = setInterval(refreshIfStale, REFRESH_MS);
+    document.addEventListener('visibilitychange', refreshIfStale);
+    window.addEventListener('focus', refreshIfStale);
+
     return () => {
       cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', refreshIfStale);
+      window.removeEventListener('focus', refreshIfStale);
     };
   }, [date]);
 
