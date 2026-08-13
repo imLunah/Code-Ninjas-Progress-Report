@@ -153,6 +153,31 @@ describe('a request copied from the wrong site', () => {
       `  -H 'cookie: companyId=480; kc_refresh=tok-r'`;
     expect(ms.readCookieIdentity(good).companyId).toBe('480');
   });
+
+  // cn.mystudio.io serves uploaded images. It is a real mystudio.io host, so a
+  // domain check waves it through, and it never receives the sign-in cookies, so
+  // what gets waved through is useless. The studio logo sits in the network list
+  // looking exactly as copyable as anything else.
+  it('tells apart the image host from the signed-in one', () => {
+    expect(ms.isMyStudioHost('codeninjas.mystudio.io')).toBe(true);
+    expect(ms.isMyStudioHost('cn.mystudio.io')).toBe(false);
+    expect(ms.isMyStudioAssetHost('cn.mystudio.io')).toBe(true);
+    expect(ms.isMyStudioAssetHost('codeninjas.mystudio.io')).toBe(false);
+    expect(ms.isMyStudioAssetHost('app.hubspot.com')).toBe(false);
+  });
+
+  it('explains the image host instead of calling it a missing companyId', () => {
+    const logoCurl = `curl 'https://cn.mystudio.io/uploads/Default/your_logo.png' -H 'accept: image/png'`;
+    let message = '';
+    try {
+      ms.readCookieIdentity(logoCurl);
+    } catch (e) {
+      message = e.message;
+    }
+    expect(message).toContain('cn.mystudio.io');
+    expect(message).toMatch(/mystudio\.io\/api/);
+    expect(message).not.toMatch(/missing companyId/i);
+  });
 });
 
 describe('credential encryption', () => {

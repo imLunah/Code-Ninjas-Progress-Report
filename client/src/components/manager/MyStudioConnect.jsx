@@ -39,17 +39,19 @@ const FIELD =
 // place people already right click, it always contains the cookie, and the
 // server pulls it out of whatever lands on the clipboard.
 //
-// The filter step is not padding. A MyStudio page also loads the support chat,
-// Stripe and analytics, so "copy any request" sent the first real attempt to
-// app.hubspot.com and produced a cookie that parsed fine and belonged to the
-// wrong company. Filtering makes every visible row the right one, and the server
-// names the host when a stray paste gets through anyway.
+// The filter is mystudio.io/api and not mystudio.io, which is the correction to
+// the correction. Filtering by domain leaves 89 rows across five hosts, because
+// the HubSpot and Stripe requests carry mystudio.io inside their own query
+// strings and referers, and because uploaded images come from cn.mystudio.io,
+// a host that never sees the sign-in. Both of those are rows you can copy in
+// good faith and get nothing. Adding /api narrows it to the ten calls that only
+// the signed-in origin answers, so every visible row is one that works.
 const STEPS = [
   'Sign in to MyStudio in another tab.',
   'Press F12 to open devtools, then click the Network tab.',
-  'Type mystudio.io in the filter box. This step matters.',
-  'Reload the page. A list of requests appears.',
-  'Right click the top row, choose Copy, then Copy as cURL.',
+  'Type mystudio.io/api in the filter box, exactly like that.',
+  'Reload the page. Rows appear as it loads.',
+  'Right click any row, choose Copy, then Copy as cURL.',
   'Paste the whole thing below. Only the cookie part is kept.',
 ];
 

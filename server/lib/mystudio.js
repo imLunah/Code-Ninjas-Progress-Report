@@ -199,8 +199,27 @@ function extractRequestHost(raw) {
   }
 }
 
+// Only the signed-in origin counts, not the whole of mystudio.io.
+//
+// Uploaded images come from cn.mystudio.io, which is a different host and so
+// never receives the sign-in cookies. A request copied from there looks exactly
+// like a MyStudio request and carries none of the credential, so accepting any
+// mystudio.io host would wave through the mis-copy most likely to happen: the
+// studio logo sitting at the bottom of the network list.
 function isMyStudioHost(host) {
-  return Boolean(host) && /(^|\.)mystudio\.io$/i.test(host);
+  if (!host) return false;
+  try {
+    return host.toLowerCase() === new URL(BASE).host.toLowerCase();
+  } catch {
+    return false;
+  }
+}
+
+// A mystudio.io host that is not the one that answers API calls. Worth telling
+// apart, because "that request went to MyStudio, not MyStudio" is not an error
+// message anybody can act on.
+function isMyStudioAssetHost(host) {
+  return Boolean(host) && /(^|\.)mystudio\.io$/i.test(String(host)) && !isMyStudioHost(host);
 }
 
 function parseCookie(raw) {
@@ -246,10 +265,16 @@ function readCookieIdentity(raw) {
   // someone looking for a fault that is not there.
   if (!companyId || (!access && !refresh)) {
     const host = extractRequestHost(raw);
+    if (isMyStudioAssetHost(host)) {
+      throw new MyStudioAuthError(
+        `${host} only serves images, so it never sees your sign-in. Type ` +
+          'mystudio.io/api in the Network tab filter box and copy one of those rows.'
+      );
+    }
     if (host && !isMyStudioHost(host)) {
       throw new MyStudioAuthError(
-        `That request went to ${host}, not MyStudio. Type mystudio.io in the ` +
-          'Network tab filter box, then copy one of the rows that appears.'
+        `That request went to ${host}, not MyStudio. Type mystudio.io/api in ` +
+          'the Network tab filter box, then copy one of the rows that appears.'
       );
     }
   }
@@ -523,6 +548,7 @@ module.exports = {
   extractCookie,
   extractRequestHost,
   isMyStudioHost,
+  isMyStudioAssetHost,
   parseCookie,
   readCookieIdentity,
   verifySession,
