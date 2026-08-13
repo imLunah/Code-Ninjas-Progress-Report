@@ -6,6 +6,7 @@ import {
   Loader2Icon,
   TriangleAlertIcon,
   UserRoundPlusIcon,
+  SparklesIcon,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
@@ -127,6 +128,7 @@ export default function ExpectedToday({
   const actionable = [];
   const queued = new Set();
   for (const row of expected) {
+    if (row.isClub) continue;
     if (!row.studentId || onBoard(row) || queued.has(row.studentId)) continue;
     queued.add(row.studentId);
     actionable.push(row);
@@ -204,6 +206,11 @@ export default function ExpectedToday({
               <span className="font-ninja text-xs text-ninja-muted truncate">
                 {group.className}
               </span>
+              {group.isClub && (
+                <span className="font-ninja text-[11px] text-ninja-muted rounded-full border border-ninja-border px-1.5 py-0.5 flex-shrink-0">
+                  Logged in Clubs
+                </span>
+              )}
               <span className="font-ninja text-xs text-ninja-muted ml-auto flex-shrink-0 tabular-nums">
                 {group.rows.length}
               </span>
@@ -214,7 +221,12 @@ export default function ExpectedToday({
                 {group.rows.map((row) => {
                   const done = onBoard(row);
                   const busy = Boolean(row.studentId) && adding.has(row.studentId);
-                  const canAdd = Boolean(row.studentId) && !done && !readOnly;
+                  // A club is not a curriculum session, so it is never a
+                  // check-in. Clubs live on the Clubs page with their own
+                  // sessions; filing one here would put the wrong kind of
+                  // attendance against a ninja.
+                  const canAdd =
+                    Boolean(row.studentId) && !done && !readOnly && !row.isClub;
 
                   return (
                     <motion.li
@@ -234,7 +246,13 @@ export default function ExpectedToday({
                         aria-label={
                           canAdd ? `Check in ${row.studentName || row.fullName}` : undefined
                         }
-                        title={row.studentId ? undefined : 'No matching ninja in DojoLink yet'}
+                        title={
+                          row.isClub
+                            ? 'Clubs are logged from the Clubs page, not checked in here'
+                            : row.studentId
+                              ? undefined
+                              : 'No matching ninja in DojoLink yet'
+                        }
                         // Already on the board is the resting state, not an
                         // achievement. Filling those rows green made a list of
                         // six settled ninjas look like six alarms, and drowned
@@ -262,6 +280,8 @@ export default function ExpectedToday({
                               size={14}
                               className="text-ninja-muted group-hover:text-ninja-blue"
                             />
+                          ) : row.isClub ? (
+                            <SparklesIcon size={13} />
                           ) : (
                             <TriangleAlertIcon size={13} />
                           )}
@@ -286,8 +306,8 @@ export default function ExpectedToday({
 
       {unmatched.length > 0 && (
         <p className="font-ninja text-xs text-ninja-muted mt-4">
-          Ninjas shown in grey have no match on this center's roster yet. Add them
-          to DojoLink and they will line up on the next pull.
+          Ninjas shown with a warning have no match on this center's roster yet.
+          Add them to DojoLink and they will line up on the next pull.
         </p>
       )}
     </div>

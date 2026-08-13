@@ -81,7 +81,13 @@ export function groupByClass(expected) {
     const key = `${row.startTime}|${row.className}`;
     let group = byKey.get(key);
     if (!group) {
-      group = { key, startTime: row.startTime, className: row.className, rows: [] };
+      group = {
+        key,
+        startTime: row.startTime,
+        className: row.className,
+        isClub: Boolean(row.isClub),
+        rows: [],
+      };
       byKey.set(key, group);
       groups.push(group);
     }

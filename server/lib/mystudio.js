@@ -940,6 +940,21 @@ function toMinutes(time) {
   return hour * 60 + Number(m[2]);
 }
 
+// A club is not a curriculum session.
+//
+// DojoLink tracks clubs as their own thing, with their own sessions and their
+// own notes, so filing one as a daily check-in would put the wrong kind of
+// attendance against a ninja and quietly inflate the check-in numbers. The
+// booking is still worth showing — a sensei needs to know who is coming to the
+// Roblox Club at five — it just is not something to accept from here.
+//
+// Matched on the title because that is all upstream gives us. Their classes are
+// named "Roblox Club", "Minecraft Club" and so on, and a title with "club" in it
+// has never meant anything else.
+function isClubClass(title) {
+  return /\bclubs?\b/i.test(String(title || ''));
+}
+
 function programForClass(title) {
   const raw = String(title || '').trim();
   if (!raw) return null;
@@ -968,6 +983,8 @@ function normalizeParticipant(p, cls) {
     className: String(cls.class_appointment_title || '').trim(),
     startTime: String(cls.start_time || '').trim(),
     program: programForClass(cls.class_appointment_title),
+    // Shown, but never offered as a check-in. See isClubClass.
+    isClub: isClubClass(cls.class_appointment_title),
   };
 }
 
@@ -1090,6 +1107,7 @@ module.exports = {
   getExpectedForDate,
   normalizeParticipant,
   programForClass,
+  isClubClass,
   toMinutes,
   PROGRAMS,
 };

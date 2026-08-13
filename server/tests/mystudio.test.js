@@ -368,6 +368,36 @@ describe('program mapping', () => {
   });
 });
 
+// A club booking is worth showing and must never be offered as a check-in.
+// DojoLink tracks clubs as their own sessions, so filing one as a daily
+// assignment puts the wrong kind of attendance against a ninja.
+describe('telling a club apart', () => {
+  it('recognises the club classes', () => {
+    expect(ms.isClubClass('Roblox Club')).toBe(true);
+    expect(ms.isClubClass('Minecraft Clubs')).toBe(true);
+    expect(ms.isClubClass('club')).toBe(true);
+  });
+
+  it('leaves the curriculum classes alone', () => {
+    expect(ms.isClubClass('CREATE')).toBe(false);
+    expect(ms.isClubClass('Academies')).toBe(false);
+    expect(ms.isClubClass('Robotics Academy')).toBe(false);
+    expect(ms.isClubClass('')).toBe(false);
+  });
+
+  it('does not match a word that merely contains club', () => {
+    expect(ms.isClubClass('Clubhouse')).toBe(false);
+  });
+
+  it('marks the flag on the participant the strip renders', () => {
+    const cls = { class_appointment_title: 'Roblox Club', start_time: '05:00 PM' };
+    const row = ms.normalizeParticipant({ participant_id: 'PID-2' }, cls);
+    expect(row.isClub).toBe(true);
+    // Clubs are not in PROGRAMS either, so nothing tries to file one.
+    expect(row.program).toBe(null);
+  });
+});
+
 describe('participant normalisation', () => {
   // Shaped like an upstream row, including the fields that must not survive.
   // Every value is invented: this repo is public, and a fixture copied from the
