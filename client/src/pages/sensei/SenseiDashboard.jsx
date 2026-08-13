@@ -104,17 +104,6 @@ export default function SenseiDashboard() {
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* The sidebar carries this too, but a phone never renders the
-                sidebar, so without it here Curriculum is unreachable mid
-                session, which is when the passcodes are wanted. */}
-            <Link
-              to="/curriculum-roadmap"
-              aria-label="Open curriculum"
-              className={`${CARD} w-11 h-11 flex items-center justify-center text-ninja-muted hover:text-ninja-blue hover:border-ninja-blue/50 transition-colors`}
-            >
-              <BookOpenIcon className="w-5 h-5" />
-            </Link>
-
             {/* Only when somebody is actually booked. An icon that opens an
                 empty box teaches people to stop pressing it. */}
             {showBooked && (
@@ -141,6 +130,17 @@ export default function SenseiDashboard() {
                 )}
               </button>
             )}
+
+            {/* The sidebar carries this too, but a phone never renders the
+                sidebar, so without it here Curriculum is unreachable mid
+                session, which is when the passcodes are wanted. */}
+            <Link
+              to="/curriculum-roadmap"
+              aria-label="Open curriculum"
+              className={`${CARD} w-11 h-11 flex items-center justify-center text-ninja-muted hover:text-ninja-blue hover:border-ninja-blue/50 transition-colors`}
+            >
+              <BookOpenIcon className="w-5 h-5" />
+            </Link>
 
             {/* Opens over the page rather than pushing the board down, since the
                 calendar is a reference, not part of the check-in flow. */}
