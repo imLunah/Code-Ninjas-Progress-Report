@@ -89,6 +89,24 @@ export function countNinjas(expected) {
   return new Set((expected || []).map((row) => row.participantId)).size;
 }
 
+// The belt colour behind a rank string, when there is one.
+//
+// MyStudio's rank is free text: "White Belt 3" is a belt, "ScratchJR" is not.
+// A swatch where one can be read makes a list of names scannable by belt without
+// asking anybody to read the word.
+const BELT_COLORS = {
+  white: '#ffffff', yellow: '#fbbf24', orange: '#f97316', green: '#22c55e',
+  blue: '#3b82f6', purple: '#a855f7', brown: '#92400e', red: '#cc0000',
+  black: '#111111', bronze: '#cd7f32', silver: '#c0c0c0', gold: '#f59e0b',
+  platinum: '#e5e4e2',
+};
+
+export function beltColor(rankName) {
+  const text = String(rankName || '').toLowerCase();
+  const hit = Object.keys(BELT_COLORS).find((name) => text.includes(name));
+  return hit ? BELT_COLORS[hit] : null;
+}
+
 // "04:00 PM" reads as a timetable entry; "4:00 PM" reads as a time.
 export function prettyTime(value) {
   return String(value || '').replace(/^0/, '');

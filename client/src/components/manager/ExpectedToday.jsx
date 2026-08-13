@@ -12,7 +12,12 @@ import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { CARD } from '../../lib/surfaces';
 import BouncingDots from '../ui/BouncingDots';
-import useExpectedToday, { groupByClass, prettyTime, countNinjas } from '../../lib/useExpectedToday';
+import useExpectedToday, {
+  groupByClass,
+  prettyTime,
+  countNinjas,
+  beltColor,
+} from '../../lib/useExpectedToday';
 
 // Who MyStudio says is booked in today, offered as suggestions above the board.
 //
@@ -148,74 +153,69 @@ export default function ExpectedToday({
 
   const unmatched = expected.filter((r) => !r.studentId);
   const ninjaCount = countNinjas(expected);
+  const classCount = groupByClass(expected).length;
+  const summary =
+    `${ninjaCount} ${ninjaCount === 1 ? 'ninja' : 'ninjas'} across ` +
+    `${classCount} ${classCount === 1 ? 'class' : 'classes'}` +
+    (unmatched.length > 0 && !readOnly ? `, ${unmatched.length} not matched yet` : '');
 
   const groups = groupByClass(expected);
 
   return (
     <div className={bare ? '' : `${CARD} p-4`}>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2.5 min-w-0">
-          {!bare && (
-            <span
-              aria-hidden
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-ninja-blue-ink bg-ninja-blue/10 flex-shrink-0"
-            >
-              <UsersIcon size={16} />
-            </span>
-          )}
+      {!bare && (
+        <div className="flex items-center gap-2.5 mb-4">
+          <span
+            aria-hidden
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-ninja-blue-ink bg-ninja-blue/10 flex-shrink-0"
+          >
+            <UsersIcon size={16} />
+          </span>
           <div className="min-w-0">
-            {!bare && (
-              <p className="font-ninja text-sm font-semibold text-ninja-navy">
-                Booked in MyStudio
-              </p>
-            )}
-            <p className="font-ninja text-xs text-ninja-muted">
-              {ninjaCount} {ninjaCount === 1 ? 'ninja' : 'ninjas'} across{' '}
-              {data.bookedClassCount} {data.bookedClassCount === 1 ? 'class' : 'classes'}
-              {unmatched.length > 0 && `, ${unmatched.length} not matched yet`}
+            <p className="font-ninja text-sm font-semibold text-ninja-navy">
+              Booked in MyStudio
             </p>
+            <p className="font-ninja text-xs text-ninja-muted">{summary}</p>
           </div>
         </div>
+      )}
 
-      </div>
+      {bare && <p className="font-ninja text-xs text-ninja-muted mb-3">{summary}</p>}
 
-      {/* By class, because "who is coming" is really "who is coming to what".
-          A flat run of names hid the thing a sensei actually needs: which of
-          them are in the four o'clock, and which turn up two hours later. */}
-      <div className="space-y-4">
+      {/* One block per class, so the day reads as a timetable rather than as a
+          column of names with headings floating in it. */}
+      <div className="space-y-2.5 max-h-[60vh] overflow-y-auto -mx-1 px-1">
         {groups.map((group) => (
-          <div key={group.key}>
-            <div className="flex items-baseline gap-2 mb-1.5">
-              <span className="font-ninja text-sm font-semibold text-ninja-navy tabular-nums">
+          <div
+            key={group.key}
+            className="rounded-xl border border-ninja-border overflow-hidden"
+          >
+            <div className="flex items-center gap-2 px-3 py-2 bg-ninja-bg">
+              <span className="font-ninja text-sm font-bold text-ninja-navy tabular-nums flex-shrink-0">
                 {prettyTime(group.startTime)}
               </span>
               <span className="font-ninja text-xs text-ninja-muted truncate">
                 {group.className}
               </span>
               {group.isClub && (
-                <span className="font-ninja text-[11px] text-ninja-muted rounded-full border border-ninja-border px-1.5 py-0.5 flex-shrink-0">
-                  Logged in Clubs
+                <span className="font-ninja text-[10px] uppercase tracking-wide text-ninja-muted border border-ninja-border rounded-full px-1.5 py-0.5 flex-shrink-0">
+                  Club
                 </span>
               )}
-              <span className="font-ninja text-xs text-ninja-muted ml-auto flex-shrink-0 tabular-nums">
+              <span className="ml-auto font-ninja text-xs text-ninja-muted tabular-nums flex-shrink-0">
                 {group.rows.length}
               </span>
             </div>
 
-            <ul className="space-y-1">
+            <ul className="divide-y divide-ninja-border">
               <AnimatePresence initial={false}>
                 {group.rows.map((row) => {
                   const done = onBoard(row);
                   const busy = Boolean(row.studentId) && adding.has(row.studentId);
-                  // A club is not a curriculum session, so it is never a
-                  // check-in. Clubs live on the Clubs page with their own
-                  // sessions; filing one here would put the wrong kind of
-                  // attendance against a ninja.
                   const canAdd =
                     Boolean(row.studentId) && !done && !readOnly && !row.isClub;
-                  // A missing roster match is only worth flagging to somebody
-                  // who could act on it.
                   const needsMatch = !row.studentId && !readOnly;
+                  const swatch = beltColor(row.rankName);
 
                   return (
                     <motion.li
@@ -228,9 +228,6 @@ export default function ExpectedToday({
                       <button
                         type="button"
                         onClick={canAdd ? () => checkIn(row) : undefined}
-                        // A row for a ninja already on the board, or with no
-                        // DojoLink record to attach to, is information rather
-                        // than a control, so it does not pretend to be pressable.
                         disabled={!canAdd}
                         aria-label={
                           canAdd ? `Check in ${row.studentName || row.fullName}` : undefined
@@ -242,57 +239,54 @@ export default function ExpectedToday({
                               ? 'No matching ninja in DojoLink yet'
                               : undefined
                         }
-                        // Already on the board is the resting state, not an
-                        // achievement. Filling those rows green made a list of
-                        // six settled ninjas look like six alarms, and drowned
-                        // out the only rows that wanted anything: the ones still
-                        // to check in. So done recedes and actionable stands out.
                         className={[
-                          'group w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 font-ninja text-sm text-left transition-colors duration-150',
-                          done
-                            ? 'text-ninja-muted cursor-default'
-                            : canAdd
-                              ? 'text-ninja-navy hover:bg-ninja-blue/10 hover:text-ninja-blue'
-                              : readOnly
-                                // Reading, not deciding. Nothing on this row is
-                                // wrong, so it reads as ordinary text.
-                                ? 'text-ninja-navy cursor-default'
-                                : 'text-ninja-muted cursor-default',
+                          'group w-full flex items-center gap-2.5 px-3 py-2 font-ninja text-sm text-left transition-colors duration-150',
+                          canAdd
+                            ? 'text-ninja-navy hover:bg-ninja-blue/10 hover:text-ninja-blue'
+                            : 'text-ninja-navy cursor-default',
                         ].join(' ')}
                       >
-                        {/* Fixed width whatever is in it, so the names line up
-                            down the column even when a row has no glyph. */}
-                        <span aria-hidden className="flex-shrink-0 w-3.5 flex justify-center">
-                          {busy ? (
-                            <Loader2Icon size={14} className="animate-spin" />
-                          ) : done ? (
-                            <CheckIcon size={14} className="text-emerald-600/70 dark:text-emerald-400/70" />
-                          ) : canAdd ? (
-                            // Adding a person to the board, not going somewhere.
-                            // A chevron promised navigation and delivered a
-                            // check-in.
-                            <UserRoundPlusIcon
-                              size={14}
-                              className="text-ninja-muted group-hover:text-ninja-blue"
-                            />
-                          ) : row.isClub ? (
-                            <SparklesIcon size={13} />
-                          ) : needsMatch ? (
-                            // Only where it means something. This used to appear
-                            // on every row a viewer could not check in, which for
-                            // a sensei was all of them, warning about ninjas who
-                            // were perfectly fine.
-                            <TriangleAlertIcon size={13} />
-                          ) : null}
-                        </span>
-                        <span className={done ? 'truncate' : 'font-semibold truncate'}>
-                          {row.studentName || row.fullName}
-                        </span>
+                        {/* The belt, as a colour. A rank that is not a belt
+                            ("ScratchJR") gets a hollow ring rather than a
+                            misleading swatch. */}
+                        <span
+                          aria-hidden
+                          className="w-2.5 h-2.5 rounded-full flex-shrink-0 border"
+                          style={
+                            swatch
+                              ? { backgroundColor: swatch, borderColor: 'rgba(0,0,0,0.25)' }
+                              : { backgroundColor: 'transparent', borderColor: 'currentColor', opacity: 0.35 }
+                          }
+                        />
+
+                        <span className="truncate">{row.studentName || row.fullName}</span>
+
                         {row.rankName && (
-                          <span className="text-xs text-ninja-muted truncate ml-auto flex-shrink-0">
+                          <span className="text-xs text-ninja-muted truncate flex-shrink-0 ml-auto">
                             {row.rankName}
                           </span>
                         )}
+
+                        {/* Status sits last and quiet. Everyone in this list is
+                            expected; the only news is who has not arrived, and
+                            a tick against all eight said nothing at all. */}
+                        <span aria-hidden className="flex-shrink-0 w-4 flex justify-center">
+                          {busy ? (
+                            <Loader2Icon size={13} className="animate-spin" />
+                          ) : done ? (
+                            <CheckIcon
+                              size={13}
+                              className="text-emerald-600/60 dark:text-emerald-400/60"
+                            />
+                          ) : canAdd ? (
+                            <UserRoundPlusIcon
+                              size={13}
+                              className="text-ninja-muted group-hover:text-ninja-blue"
+                            />
+                          ) : needsMatch ? (
+                            <TriangleAlertIcon size={12} className="text-amber-500" />
+                          ) : null}
+                        </span>
                       </button>
                     </motion.li>
                   );
@@ -304,8 +298,8 @@ export default function ExpectedToday({
       </div>
 
       {!readOnly && unmatched.length > 0 && (
-        <p className="font-ninja text-xs text-ninja-muted mt-4">
-          Ninjas shown with a warning have no match on this center's roster yet.
+        <p className="font-ninja text-xs text-ninja-muted mt-3">
+          Ninjas marked with a warning have no match on this center's roster yet.
           Add them to DojoLink and they will line up on the next pull.
         </p>
       )}
