@@ -125,6 +125,9 @@ function sendLoginError(res, err, context) {
     return res.status(503).json({ error: err.message, signInUnavailable: true });
   }
   if (err instanceof ms.MyStudioAuthError) {
+    // Logged as well as returned. A 400 in a browser console says nothing about
+    // which of these went wrong, and the body is the only place the answer was.
+    console.error(`MyStudio ${context} rejected:`, err.message);
     return res.status(400).json({ error: err.message });
   }
   // Never the body: an upstream error can quote back what was sent to it, and

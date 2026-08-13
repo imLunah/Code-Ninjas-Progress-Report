@@ -723,6 +723,25 @@ function actionRejected(payload) {
   return /error|fail/i.test(status);
 }
 
+// An address in a log is still an address, and these messages quote the one the
+// code was sent to.
+function redactEmails(text) {
+  return String(text || '').replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, '<email>');
+}
+
+// What the upstream response looked like, in a form that is safe to keep.
+//
+// Only the field names, the status and a redacted message. Enough to tell a
+// rejected password from a shape that changed, which is the thing that cannot be
+// worked out from a 400 in a browser console.
+function describePayload(payload) {
+  if (!payload || typeof payload !== 'object') return `non-object (${typeof payload})`;
+  const keys = Object.keys(payload).join(',');
+  const status = typeof payload.status === 'string' ? payload.status : '(none)';
+  const message = redactEmails(payload.message).slice(0, 200);
+  return `keys=[${keys}] status=${status} message=${message}`;
+}
+
 // Asks MyStudio to email the six digit code.
 //
 // rememberMe is always on. It is the difference between the ten hour session
@@ -743,6 +762,7 @@ async function startLogin({ email, password }) {
   }
 
   if (actionRejected(result.payload)) {
+    console.error('MyStudio sign-in rejected:', describePayload(result.payload));
     // The action's own message is the same generic sentence for a wrong password
     // and an unknown address, so the resend route is asked instead: it is a plain
     // JSON endpoint that says which one it was. It also sends the code, so on the
@@ -750,6 +770,7 @@ async function startLogin({ email, password }) {
     throw new MyStudioAuthError(await explainLoginFailure({ email, password }));
   }
 
+  console.log('MyStudio sign-in accepted:', describePayload(result.payload));
   return { otpSent: true };
 }
 
@@ -799,11 +820,19 @@ async function completeLogin({ email, password, otpCode, preferredCompanyId = nu
 
   const { payload, res } = result;
   if (actionRejected(payload)) {
+    console.error('MyStudio code exchange rejected:', describePayload(payload));
     throw new MyStudioAuthError(
       (payload && String(payload.message || '').trim()) ||
         'That code was not accepted. Ask for a new one and try again.'
     );
   }
+
+  console.log(
+    'MyStudio code accepted:',
+    describePayload(payload),
+    'setCookieCount=' +
+      (typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie().length : -1)
+  );
 
   const jar = {};
   const lines = typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : [];
