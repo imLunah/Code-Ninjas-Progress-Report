@@ -13,10 +13,16 @@
 // dark variant.
 export const CARD =
   'bg-white border border-ninja-border rounded-2xl shadow-sm ' +
-  'dark:shadow-[0_10px_34px_rgb(0_0_0/0.32)] ring-1 ring-transparent dark:ring-white/[0.05]';
+  'dark:shadow-[0_10px_34px_rgb(0_0_0/0.32)] ring-1 ring-transparent dark:ring-white/[0.05] ' +
+  'glass-card glass-clear';
 
-// Tighter radius, no lift. For surfaces nested inside a CARD, and for the
-// denser list/form panels that predate the 2xl card.
+// Tighter radius, no lift, and NOT glass. For surfaces nested inside a CARD,
+// and for the denser list/form panels that predate the 2xl card.
+//
+// The deliberate exception, and the reason the glass reads as a material at
+// all: a pane inside a pane is two sheets of glass with nothing between them,
+// and if everything on the page is glass then nothing on it is. What is behind
+// a nested panel is the card it is sitting in, which is not worth bending.
 export const PANEL = 'bg-white border border-ninja-border rounded-xl shadow-sm';
 
 // Clear glass, over the top of CARD. A translucent pane with its saturation
@@ -28,3 +34,9 @@ export const PANEL = 'bg-white border border-ninja-border rounded-xl shadow-sm';
 // something behind it worth bending: a card on a column, a panel on a page. A
 // field inside a card has nothing behind it but the card.
 export const GLASS = 'glass-card glass-clear';
+
+// The app's own edges: the nav, dialogs, the side panel. Between the cards and
+// the menus — translucent enough to show the page as colour, blurred enough
+// that none of it can be read, and flat, because chrome is not sitting on the
+// page, it is the edge of it.
+export const CHROME = 'glass-chrome glass-edge';

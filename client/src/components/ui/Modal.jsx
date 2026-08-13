@@ -67,7 +67,10 @@ export default function Modal({ isOpen, onClose, title, children, subheader, wid
 
   return createPortal(
     <div
-      className="modal-backdrop fixed inset-0 z-[100] flex flex-col bg-ninja-bg sm:bg-black/50 sm:items-center sm:justify-center sm:p-6"
+      // The page behind a dialog goes soft as well as dark. Dimming alone
+      // leaves it legible, and a page you can still read behind the thing
+      // asking you a question is a page still competing with it.
+      className="modal-backdrop fixed inset-0 z-[100] flex flex-col bg-ninja-bg sm:bg-black/40 sm:backdrop-blur-[3px] sm:items-center sm:justify-center sm:p-6"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       onTouchStart={(e) => e.stopPropagation()}
       onTouchEnd={(e) => e.stopPropagation()}
@@ -78,7 +81,7 @@ export default function Modal({ isOpen, onClose, title, children, subheader, wid
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : undefined}
         tabIndex={-1}
-        className={`modal-panel w-full flex-1 flex flex-col overflow-hidden focus:outline-none sm:flex-none sm:max-h-[90dvh] sm:rounded-2xl sm:bg-ninja-bg sm:shadow-xl sm:border sm:border-ninja-border ${width}`}
+        className={`modal-panel w-full flex-1 flex flex-col overflow-hidden focus:outline-none sm:flex-none sm:max-h-[90dvh] sm:rounded-2xl sm:bg-ninja-bg glass-chrome glass-edge sm:shadow-xl sm:border sm:border-ninja-border ${width}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Desktop header with × */}

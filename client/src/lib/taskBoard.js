@@ -1,5 +1,3 @@
-import { GLASS } from './surfaces';
-
 // One definition of the director task board's vocabulary.
 //
 // The dashboard summary card and the full board page both need the column
@@ -26,15 +24,14 @@ export const COLUMN_KEYS = COLUMNS.map((c) => c.key);
 
 export const COLUMN_LABEL = Object.fromEntries(COLUMNS.map((c) => [c.key, c.label]));
 
-// Every task card is the same pane of glass, so the surface is one string
-// rather than a per-task decision. The glass itself is shared with the
-// dashboard's panels now — `task-card` stays on the front because the drag lens
-// and the raised-while-its-menu-is-open rule are the board's alone.
+// The glass moved into CARD, which every card in the app now wears. What is
+// left here is the board's own: the drag lens, and the rule that lifts a card
+// above its siblings while its menu is open.
 //
 // Tasks still carry a `color` in the database. Nothing draws it: three passes
 // at a coloured card all read as paint on glass, and the board is quieter
 // without it. The column is left alone so the choice can come back.
-export const TASK_SURFACE = `task-card ${GLASS}`;
+export const TASK_SURFACE = 'task-card';
 
 /* ------------------------------------------------------------ grouping -- */
 

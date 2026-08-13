@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import Modal from '../ui/Modal';
 import SidePanel from '../ui/SidePanel';
 import useIsDesktop from '../../lib/useIsDesktop';
-import { CARD, GLASS } from '../../lib/surfaces';
+import { CARD } from '../../lib/surfaces';
 import { CakeIcon as Cake, ChevronLeftIcon as ChevL, ChevronRightIcon as ChevR } from 'lucide-react';
 
 
@@ -230,7 +230,7 @@ export default function EventCalendar({ canManage = true, bare = false }) {
   const formShell = isDesktop ? { width: 'w-[25rem]' } : { width: 'max-w-md' };
 
   return (
-    <div className={bare ? '' : `${CARD} ${GLASS} p-5`}>
+    <div className={bare ? '' : `${CARD} p-5`}>
       {!bare && (
         <div className="flex items-center justify-between mb-4">
           <div>

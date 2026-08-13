@@ -93,7 +93,7 @@ export default function Sidebar({ onOpenBug }) {
       initial={false}
       animate={{ width: collapsed ? COLLAPSED_W : EXPANDED_W }}
       transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-      className="hidden lg:flex flex-col bg-white border-r border-ninja-border flex-shrink-0 sticky top-0 h-screen z-40"
+      className="hidden lg:flex flex-col bg-white glass-chrome glass-edge border-r border-ninja-border flex-shrink-0 sticky top-0 h-screen z-40"
     >
       {/* Collapse toggle — floats on the sidebar edge */}
       <button

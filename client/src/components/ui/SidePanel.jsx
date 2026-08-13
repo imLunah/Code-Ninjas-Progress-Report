@@ -71,7 +71,7 @@ export default function SidePanel({ isOpen, onClose, title, children, width = 'w
           animate={reduce ? { opacity: 1 } : { x: 0 }}
           exit={reduce ? { opacity: 0 } : { x: '100%' }}
           transition={{ duration: 0.28, ease: EASE }}
-          className={`fixed top-0 right-0 z-[100] h-[100dvh] ${width} max-w-[92vw] flex flex-col bg-ninja-bg border-l border-ninja-border shadow-[-18px_0_40px_-24px_rgb(0_0_0/0.35)] dark:shadow-[-18px_0_48px_-20px_rgb(0_0_0/0.6)] focus:outline-none`}
+          className={`fixed top-0 right-0 z-[100] h-[100dvh] ${width} max-w-[92vw] flex flex-col bg-ninja-bg glass-chrome glass-edge border-l border-ninja-border shadow-[-18px_0_40px_-24px_rgb(0_0_0/0.35)] dark:shadow-[-18px_0_48px_-20px_rgb(0_0_0/0.6)] focus:outline-none`}
         >
           <div className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-3.5 border-b border-ninja-border">
             <h2 className="font-ninja text-lg font-bold text-ninja-navy truncate">{title}</h2>
