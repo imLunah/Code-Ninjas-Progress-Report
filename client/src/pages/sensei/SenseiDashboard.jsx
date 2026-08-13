@@ -8,10 +8,13 @@ import BoardStats from '../../components/shared/BoardStats';
 import ClubSessionsPanel from '../../components/shared/ClubSessionsPanel';
 import EventCalendar from '../../components/manager/EventCalendar';
 import Modal from '../../components/ui/Modal';
-import { CalendarIcon, BookOpenIcon } from 'lucide-react';
+import { CalendarIcon, BookOpenIcon, UsersIcon } from 'lucide-react';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import ExpectedToday from '../../components/manager/ExpectedToday';
+import useExpectedToday from '../../lib/useExpectedToday';
 import { CARD } from '../../lib/surfaces';
 
 const fadeUp = {
@@ -32,8 +35,16 @@ export default function SenseiDashboard() {
   const [statusFilter, setStatusFilter] = useState('unlogged');
   const [programFilter, setProgramFilter] = useState(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [bookedOpen, setBookedOpen] = useState(false);
   const { user } = useAuth();
+  const { experimental } = useTheme();
   const todayStr = today();
+
+  // Read-only for senseis: they need to know who is coming, not to manage the
+  // connection. The feed is held here rather than inside the panel so the icon
+  // only appears when there is something behind it.
+  const bookedFeed = useExpectedToday(todayStr, { enabled: experimental });
+  const bookedCount = bookedFeed.data?.expected?.length || 0;
 
   const refresh = () => setRefreshKey(k => k + 1);
 
@@ -100,6 +111,27 @@ export default function SenseiDashboard() {
               <BookOpenIcon className="w-5 h-5" />
             </Link>
 
+            {/* Only when somebody is actually booked. An icon that opens an
+                empty box teaches people to stop pressing it. */}
+            {bookedCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setBookedOpen(true)}
+                aria-label={`Who is booked in today, ${bookedCount} ninjas`}
+                aria-haspopup="dialog"
+                aria-expanded={bookedOpen}
+                className={`${CARD} relative w-11 h-11 flex items-center justify-center text-ninja-muted hover:text-ninja-blue hover:border-ninja-blue/50 transition-colors`}
+              >
+                <UsersIcon className="w-5 h-5" />
+                <span
+                  aria-hidden
+                  className="absolute -top-1 -right-1 min-w-[1.15rem] h-[1.15rem] px-1 rounded-full bg-ninja-blue text-white font-ninja text-[11px] font-bold flex items-center justify-center tabular-nums"
+                >
+                  {bookedCount}
+                </span>
+              </button>
+            )}
+
             {/* Opens over the page rather than pushing the board down, since the
                 calendar is a reference, not part of the check-in flow. */}
             <button
@@ -122,6 +154,15 @@ export default function SenseiDashboard() {
           width="max-w-2xl"
         >
           <EventCalendar canManage={false} bare />
+        </Modal>
+
+        <Modal
+          isOpen={bookedOpen}
+          onClose={() => setBookedOpen(false)}
+          title="Booked in today"
+          width="max-w-md"
+        >
+          <ExpectedToday feed={bookedFeed} date={todayStr} readOnly bare />
         </Modal>
 
         {!loading && !error && assignments.length > 0 && (

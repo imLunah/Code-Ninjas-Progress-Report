@@ -10,6 +10,7 @@ import {
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { CARD } from '../../lib/surfaces';
+import useExpectedToday, { groupByClass, prettyTime } from '../../lib/useExpectedToday';
 
 // Who MyStudio says is booked in today, offered as suggestions above the board.
 //
@@ -23,66 +24,23 @@ import { CARD } from '../../lib/surfaces';
 // never opts in should not see an empty shelf explaining a feature it does not
 // have.
 
-// Slow on purpose: see the note on the refresh effect below.
-const REFRESH_MS = 5 * 60 * 1000;
-const MIN_REFRESH_MS = 60 * 1000;
-
-export default function ExpectedToday({ date, onAdded, existingStudentIds, readOnly }) {
-  const [state, setState] = useState({ loading: true, data: null, error: '' });
+export default function ExpectedToday({
+  date,
+  onAdded,
+  existingStudentIds,
+  readOnly,
+  // A parent that already asked for this feed passes it in rather than starting
+  // a second one. The sensei panel does, because it has to know whether there is
+  // anything to show before it offers to show it.
+  feed,
+  // Inside a dialog the surrounding card is the dialog.
+  bare,
+}) {
+  const own = useExpectedToday(date, { enabled: !feed });
+  const state = feed || own;
   const [adding, setAdding] = useState(() => new Set());
   const [accepted, setAccepted] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
-
-  // Bookings happen during the day, so the strip cannot be a snapshot taken when
-  // the page happened to load.
-  //
-  // It is not a poll either. One pull is an upstream request per booked class,
-  // against a vendor API this app has no agreement with, so a fast interval
-  // would mean thousands of requests a day to catch a handful of late sign-ups.
-  //
-  // What matches how the board is actually used: refresh when someone comes back
-  // to the tab, and slowly while they are sitting on it. Nothing runs while the
-  // tab is hidden, and a minimum gap keeps flicking between tabs from turning
-  // into a pull each time.
-  useEffect(() => {
-    let cancelled = false;
-    let lastLoad = 0;
-
-    const load = ({ quiet = false } = {}) => {
-      lastLoad = Date.now();
-      if (!quiet) setState({ loading: true, data: null, error: '' });
-      api
-        .get(`/mystudio/today?date=${date}`)
-        .then((data) => {
-          if (!cancelled) setState({ loading: false, data, error: '' });
-        })
-        .catch((err) => {
-          // A failed background refresh keeps whatever is on screen. The board
-          // being briefly stale beats it emptying out under someone's hands.
-          if (cancelled || quiet) return;
-          setState({ loading: false, data: null, error: err.message || 'failed' });
-        });
-    };
-
-    const refreshIfStale = () => {
-      if (document.visibilityState !== 'visible') return;
-      if (Date.now() - lastLoad < MIN_REFRESH_MS) return;
-      load({ quiet: true });
-    };
-
-    load();
-
-    const interval = setInterval(refreshIfStale, REFRESH_MS);
-    document.addEventListener('visibilitychange', refreshIfStale);
-    window.addEventListener('focus', refreshIfStale);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', refreshIfStale);
-      window.removeEventListener('focus', refreshIfStale);
-    };
-  }, [date]);
 
   const data = state.data;
 
@@ -173,20 +131,26 @@ export default function ExpectedToday({ date, onAdded, existingStudentIds, readO
     setBulkBusy(false);
   };
 
+  const groups = groupByClass(expected);
+
   return (
-    <div className={`${CARD} p-4`}>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+    <div className={bare ? '' : `${CARD} p-4`}>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span
-            aria-hidden
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-ninja-blue-ink bg-ninja-blue/10 flex-shrink-0"
-          >
-            <UsersIcon size={16} />
-          </span>
+          {!bare && (
+            <span
+              aria-hidden
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-ninja-blue-ink bg-ninja-blue/10 flex-shrink-0"
+            >
+              <UsersIcon size={16} />
+            </span>
+          )}
           <div className="min-w-0">
-            <p className="font-ninja text-sm font-semibold text-ninja-navy">
-              Booked in MyStudio
-            </p>
+            {!bare && (
+              <p className="font-ninja text-sm font-semibold text-ninja-navy">
+                Booked in MyStudio
+              </p>
+            )}
             <p className="font-ninja text-xs text-ninja-muted">
               {expected.length} {expected.length === 1 ? 'ninja' : 'ninjas'} across{' '}
               {data.bookedClassCount} {data.bookedClassCount === 1 ? 'class' : 'classes'}
@@ -214,76 +178,95 @@ export default function ExpectedToday({ date, onAdded, existingStudentIds, readO
         )}
       </div>
 
-      <ul className="flex flex-wrap gap-2">
-        <AnimatePresence initial={false}>
-          {expected.map((row) => {
-            const done = onBoard(row);
-            const busy = adding.has(row.participantId);
-            const canAdd = Boolean(row.studentId) && !done && !readOnly;
+      {/* By class, because "who is coming" is really "who is coming to what".
+          A flat run of names hid the thing a sensei actually needs: which of
+          them are in the four o'clock, and which turn up two hours later. */}
+      <div className="space-y-4">
+        {groups.map((group) => (
+          <div key={group.key}>
+            <div className="flex items-baseline gap-2 mb-1.5">
+              <span className="font-ninja text-sm font-semibold text-ninja-navy tabular-nums">
+                {prettyTime(group.startTime)}
+              </span>
+              <span className="font-ninja text-xs text-ninja-muted truncate">
+                {group.className}
+              </span>
+              <span className="font-ninja text-xs text-ninja-muted ml-auto flex-shrink-0 tabular-nums">
+                {group.rows.length}
+              </span>
+            </div>
 
-            return (
-              <motion.li
-                key={row.participantId}
-                layout
-                initial={{ opacity: 0, scale: 0.96 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-              >
-                <button
-                  type="button"
-                  onClick={canAdd ? () => checkIn(row) : undefined}
-                  // A pill for a ninja who is already on the board, or who has no
-                  // DojoLink record to attach to, is information rather than a
-                  // control, so it does not pretend to be pressable.
-                  disabled={!canAdd}
-                  aria-label={
-                    canAdd
-                      ? `Check in ${row.studentName || row.fullName}`
-                      : undefined
-                  }
-                  title={
-                    row.studentId
-                      ? undefined
-                      : 'No matching ninja in DojoLink yet'
-                  }
-                  className={[
-                    'group flex items-center gap-2 rounded-full border pl-2.5 pr-3 py-1.5 font-ninja text-sm transition-colors duration-150',
-                    done
-                      ? 'border-transparent bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                      : canAdd
-                        ? 'border-ninja-border text-ninja-navy hover:border-ninja-blue hover:text-ninja-blue'
-                        : 'border-dashed border-ninja-border text-ninja-muted cursor-default',
-                  ].join(' ')}
-                >
-                  <span aria-hidden className="flex-shrink-0">
-                    {busy ? (
-                      <Loader2Icon size={14} className="animate-spin" />
-                    ) : done ? (
-                      <CheckIcon size={14} />
-                    ) : canAdd ? (
-                      <ChevronRightIcon
-                        size={14}
-                        className="text-ninja-muted group-hover:text-ninja-blue"
-                      />
-                    ) : (
-                      <TriangleAlertIcon size={13} />
-                    )}
-                  </span>
-                  <span className="font-semibold truncate max-w-[11rem]">
-                    {row.studentName || row.fullName}
-                  </span>
-                  <span className="text-xs text-ninja-muted">{row.startTime}</span>
-                </button>
-              </motion.li>
-            );
-          })}
-        </AnimatePresence>
-      </ul>
+            <ul className="space-y-1">
+              <AnimatePresence initial={false}>
+                {group.rows.map((row) => {
+                  const done = onBoard(row);
+                  const busy = adding.has(row.participantId);
+                  const canAdd = Boolean(row.studentId) && !done && !readOnly;
+
+                  return (
+                    <motion.li
+                      key={row.participantId}
+                      layout
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+                    >
+                      <button
+                        type="button"
+                        onClick={canAdd ? () => checkIn(row) : undefined}
+                        // A row for a ninja already on the board, or with no
+                        // DojoLink record to attach to, is information rather
+                        // than a control, so it does not pretend to be pressable.
+                        disabled={!canAdd}
+                        aria-label={
+                          canAdd ? `Check in ${row.studentName || row.fullName}` : undefined
+                        }
+                        title={row.studentId ? undefined : 'No matching ninja in DojoLink yet'}
+                        className={[
+                          'group w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 font-ninja text-sm text-left transition-colors duration-150',
+                          done
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                            : canAdd
+                              ? 'text-ninja-navy hover:bg-ninja-blue/10 hover:text-ninja-blue'
+                              : 'text-ninja-muted cursor-default',
+                        ].join(' ')}
+                      >
+                        <span aria-hidden className="flex-shrink-0">
+                          {busy ? (
+                            <Loader2Icon size={14} className="animate-spin" />
+                          ) : done ? (
+                            <CheckIcon size={14} />
+                          ) : canAdd ? (
+                            <ChevronRightIcon
+                              size={14}
+                              className="text-ninja-muted group-hover:text-ninja-blue"
+                            />
+                          ) : (
+                            <TriangleAlertIcon size={13} />
+                          )}
+                        </span>
+                        <span className="font-semibold truncate">
+                          {row.studentName || row.fullName}
+                        </span>
+                        {row.rankName && (
+                          <span className="text-xs text-ninja-muted truncate ml-auto flex-shrink-0">
+                            {row.rankName}
+                          </span>
+                        )}
+                      </button>
+                    </motion.li>
+                  );
+                })}
+              </AnimatePresence>
+            </ul>
+          </div>
+        ))}
+      </div>
 
       {unmatched.length > 0 && (
-        <p className="font-ninja text-xs text-ninja-muted mt-3">
-          Ninjas shown with a dashed outline have no match on this center's roster
-          yet. Add them to DojoLink and they will line up on the next pull.
+        <p className="font-ninja text-xs text-ninja-muted mt-4">
+          Ninjas shown in grey have no match on this center's roster yet. Add them
+          to DojoLink and they will line up on the next pull.
         </p>
       )}
     </div>

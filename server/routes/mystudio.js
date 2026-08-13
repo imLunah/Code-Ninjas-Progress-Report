@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { requireManager, requireOwnLocation } = require('../middleware/auth');
+const { requireManager, requireSensei, requireOwnLocation } = require('../middleware/auth');
 const ms = require('../lib/mystudio');
 
 // Experimental: read today's booked roster out of the studio management system
@@ -462,7 +462,11 @@ router.delete('/connect', requireManager, requireOwnLocation, async (req, res) =
 //
 // Returns who is booked upstream, already matched against this center's roster
 // and against today's board, so the client only has to render and post.
-router.get('/today', requireManager, async (req, res) => {
+// Senseis too: knowing who is coming to the four o'clock is the whole point
+// of the thing for the person actually teaching it. Reading the roster is not
+// a director's privilege. Managing the connection still is, so every other
+// route in this file stays requireManager.
+router.get('/today', requireSensei, async (req, res) => {
   const pool = req.app.get('db');
   const locationId = req.session.activeLocationId;
 
