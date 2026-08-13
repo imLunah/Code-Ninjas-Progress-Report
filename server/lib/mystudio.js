@@ -336,9 +336,12 @@ function toSession(cookieOrSession) {
   return createSession(cookieOrSession);
 }
 
+function getSetCookie(res) {
+  return typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : [];
+}
+
 function absorbCookies(session, res) {
-  const lines =
-    typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : [];
+  const lines = getSetCookie(res);
   if (!lines.length) return;
 
   const jar = parseJar(session.cookie);
@@ -689,7 +692,11 @@ async function resolveLoginActions({ force = false } = {}) {
 
 // Calls one of the login actions and hands back both the payload and the
 // response, because on the success path the credential is in the headers.
-async function callLoginAction(actionId, fields) {
+//
+// `cookie` carries whatever the previous step was given. A browser would send it
+// without being asked; these are two separate fetches, so it has to be threaded
+// by hand, and the code exchange fails without it.
+async function callLoginAction(actionId, fields, { cookie } = {}) {
   let res;
   try {
     res = await fetch(new URL(LOGIN_PATH, BASE), {
@@ -698,6 +705,7 @@ async function callLoginAction(actionId, fields) {
         'Next-Action': actionId,
         accept: ACTION_ACCEPT,
         'user-agent': USER_AGENT,
+        ...(cookie ? { cookie } : {}),
       },
       body: encodeActionForm(fields),
       redirect: 'manual',
@@ -764,80 +772,81 @@ function describePayload(payload) {
   return `keys=[${keys}] status=${status} message=${message}`;
 }
 
-// Asks MyStudio to email the six digit code.
+// Asks MyStudio to email the six digit code, through the action their own form
+// uses.
 //
-// This uses their plain resendOtp route rather than the loginAction the sign-in
-// form uses, and the difference is not a preference. loginAction is a Server
-// Action, and every call we made to it came back with the same generic
-// "Something went wrong", including calls carrying a password MyStudio accepted
-// moments later on this route. Its arguments are bound and encrypted into hidden
-// fields on their page, which is the likeliest reason a hand-built call cannot
-// satisfy it, and none of that is anything we can reproduce reliably.
+// This was briefly done through the plain resendOtp route instead, on the
+// grounds that loginAction always failed. loginAction was in fact fine; the
+// encoding was wrong. The distinction turned out to matter: a code from
+// resendOtp arrives in the inbox and then cannot be exchanged, because the code
+// exchange completes a sign-in that loginAction is what starts. Entering a
+// perfectly good code returned a generic error, while a wrong one was correctly
+// named, which is the tell — the code was being accepted and the step after it
+// had nothing to finish.
 //
-// resendOtp does the whole job: it checks the credential, it emails the code,
-// and it answers in plain JSON with a message worth showing someone. The name
-// says resend, but it sends the first one just as happily.
-//
-// Do not set a content-type. Their handler runs JSON.parse on the raw body, so
-// declaring JSON makes Next parse it first and the handler throws on the object
-// it gets, leaking a stack trace. Their own client omits it for the same reason.
-async function requestOtp({ email, password }) {
-  let res;
+// So the code request has to be this call, and whatever it is handed back has to
+// travel with it. rememberMe is always on: it is the difference between a ten
+// hour session and a thirty day one, and no director wants the short one.
+async function startLogin({ email, password }) {
+  const ids = await resolveLoginActions();
+  const fields = { email, password, rememberMe: 'on' };
+
+  let result;
   try {
-    res = await fetch(new URL('/api/legacy/login/resendOtp', BASE), {
-      method: 'POST',
-      headers: { 'user-agent': USER_AGENT },
-      body: JSON.stringify({ email, password }),
-      signal: AbortSignal.timeout(20000),
-    });
+    result = await callLoginAction(ids.loginAction, fields);
   } catch (err) {
-    throw new MyStudioError(
-      err && err.name === 'TimeoutError' ? 'MyStudio timed out' : 'Could not reach MyStudio'
+    if (!(err instanceof MyStudioSignInUnavailable)) throw err;
+    const fresh = await resolveLoginActions({ force: true });
+    result = await callLoginAction(fresh.loginAction, fields);
+  }
+
+  if (actionRejected(result.payload)) {
+    console.error('MyStudio sign-in rejected:', describePayload(result.payload));
+    const message = String((result.payload && result.payload.message) || '').trim();
+    throw new MyStudioAuthError(
+      message || 'MyStudio did not accept that email and password.'
     );
   }
 
-  let data;
-  try {
-    data = await res.json();
-  } catch {
-    throw new MyStudioSignInUnavailable();
-  }
+  const jar = {};
+  mergeSetCookie(jar, getSetCookie(result.res));
+  console.log(
+    'MyStudio sign-in accepted:',
+    describePayload(result.payload),
+    `cookies=${Object.keys(jar).length}`
+  );
 
-  const status = String((data && data.status) || '');
-  const msg = String((data && data.msg) || '').trim();
-
-  if (/fail|error/i.test(status)) {
-    console.error('MyStudio sign-in rejected:', redactEmails(msg) || `status=${status}`);
-    throw new MyStudioAuthError(msg || 'MyStudio did not accept that email and password.');
-  }
-
-  console.log('MyStudio sign-in accepted:', redactEmails(msg) || `status=${status}`);
-  return { otpSent: true, message: msg };
+  return { otpSent: true, cookie: serializeJar(jar) };
 }
 
-async function startLogin({ email, password }) {
-  return requestOtp({ email, password });
-}
-
+// Same call. A resend is a fresh start, which also renews the state the code
+// exchange needs; asking the resendOtp route instead would email a code that
+// cannot be completed.
 async function resendOtp({ email, password }) {
-  return requestOtp({ email, password });
+  return startLogin({ email, password });
 }
 
 // Exchanges the six digit code for a session.
 //
 // The credential arrives as Set-Cookie on this response and nowhere else, which
 // is why the response object is kept rather than just its payload.
-async function completeLogin({ email, password, otpCode, preferredCompanyId = null }) {
+async function completeLogin({
+  email,
+  password,
+  otpCode,
+  preferredCompanyId = null,
+  cookie = '',
+}) {
   const ids = await resolveLoginActions();
   const fields = { email, password, otpCode, rememberMe: 'on' };
 
   let result;
   try {
-    result = await callLoginAction(ids.otpAction, fields);
+    result = await callLoginAction(ids.otpAction, fields, { cookie });
   } catch (err) {
     if (!(err instanceof MyStudioSignInUnavailable)) throw err;
     const fresh = await resolveLoginActions({ force: true });
-    result = await callLoginAction(fresh.otpAction, fields);
+    result = await callLoginAction(fresh.otpAction, fields, { cookie });
   }
 
   const { payload, res } = result;
@@ -856,9 +865,10 @@ async function completeLogin({ email, password, otpCode, preferredCompanyId = nu
       (typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie().length : -1)
   );
 
-  const jar = {};
-  const lines = typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : [];
-  mergeSetCookie(jar, lines);
+  // Everything the sign-in was given, plus whatever the exchange adds. The
+  // session is assembled across both calls, not just the last one.
+  const jar = parseJar(cookie);
+  mergeSetCookie(jar, getSetCookie(res));
 
   if (!jar.kc_access && !jar.kc_refresh) {
     // The code was accepted but no session came back, which means the sign-in

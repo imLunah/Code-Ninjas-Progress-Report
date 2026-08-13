@@ -96,9 +96,8 @@ async function saveConnection(pool, { locationId, userId, companyId, companyName
   return rows[0];
 }
 
-// The email and password to sign in with: whatever was typed, falling back to
-// what was saved. This is what makes a renewal six digits instead of a form.
 // Whatever was typed, else the sign-in already in flight, else what was saved.
+// This is what makes a renewal six digits instead of a form.
 //
 // The pending entry has to come before the saved password: during a first
 // connect there is no saved password at all, and it is the only thing that
@@ -157,10 +156,13 @@ async function markExpired(pool, id) {
 // JSON as plaintext, and it is thrown away the moment it is used.
 const PENDING_TTL_MS = 15 * 60 * 1000;
 
-function setPending(req, { email, password }) {
+// `cookie` is what MyStudio handed back when it sent the code. The exchange that
+// follows completes the sign-in that call started, and fails without it.
+function setPending(req, { email, password, cookie = '' }) {
   req.session.mystudioPending = {
     email,
     secret: ms.encryptCookie(password),
+    cookie,
     locationId: req.session.activeLocationId,
     expiresAt: Date.now() + PENDING_TTL_MS,
   };
@@ -273,10 +275,10 @@ router.post('/login/start', requireManager, requireOwnLocation, async (req, res)
       return res.status(400).json({ error: 'Enter your MyStudio email and password.' });
     }
 
-    await ms.startLogin({ email, password });
+    const started = await ms.startLogin({ email, password });
     // Only once MyStudio has actually sent the code, so a rejected password
     // does not leave a sign-in hanging around waiting for one.
-    setPending(req, { email, password });
+    setPending(req, { email, password, cookie: started.cookie });
     res.json({ otpSent: true, email });
   } catch (err) {
     sendLoginError(res, err, 'sign-in');
@@ -293,8 +295,8 @@ router.post('/login/resend', requireManager, requireOwnLocation, async (req, res
       return res.status(400).json({ error: 'Enter your MyStudio email and password.' });
     }
 
-    await ms.resendOtp({ email, password });
-    setPending(req, { email, password });
+    const resent = await ms.resendOtp({ email, password });
+    setPending(req, { email, password, cookie: resent.cookie });
     res.json({ otpSent: true, email });
   } catch (err) {
     sendLoginError(res, err, 'code resend');
@@ -359,7 +361,8 @@ router.post('/login/verify', requireManager, requireOwnLocation, async (req, res
 
   try {
     const conn = await loadConnection(pool, req.session.activeLocationId);
-    const { email, password } = loginCredentials(conn, req.body, readPending(req));
+    const pending = readPending(req);
+    const { email, password } = loginCredentials(conn, req.body, pending);
     if (!email || !password) {
       return res.status(400).json({
         error: 'That sign-in timed out. Enter your MyStudio password and ask for a new code.',
@@ -373,6 +376,9 @@ router.post('/login/verify', requireManager, requireOwnLocation, async (req, res
         email,
         password,
         otpCode: code,
+        // What the code request was handed back. This exchange completes the
+        // sign-in that call started, and a correct code fails without it.
+        cookie: pending ? pending.cookie : '',
         // Reconnecting should land on the same center the roster is matched
         // against, not on whichever one the account happens to list first.
         preferredCompanyId: conn ? conn.company_id : null,
