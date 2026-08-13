@@ -523,6 +523,11 @@ export default function TaskBoard({
   const gooRef = useRef(null);
   const gooBeadRef = useRef(null);
   const gooDropRef = useRef(null);
+  // The pieces of the held card the drop writes to by hand: the shell to level
+  // its tilt, the wash to flood it red. Same reason as the overlay — these are
+  // drop-time values, and state would re-render the board to carry them.
+  const meltRef = useRef(null);
+  const washRef = useRef(null);
   // Where the pointer was last, so the drop can send the card into the band at
   // the height it was let go of rather than at some fixed point on it.
   const lastPoint = useRef({ x: 0, y: 0 });
@@ -771,21 +776,44 @@ export default function TaskBoard({
         if (o && r) {
           const box = info.current;
           const y = lastPoint.current.y;
-          // Where the card already is, so it fades in place rather than making
-          // a trip of its own across the blob that is standing in for it.
-          const bxCard = lastPoint.current.x - box.dx;
+          // Where the card already is: the melt happens in place, card and
+          // bead sharing a left edge and a centreline the whole way down.
+          const bx = lastPoint.current.x - box.dx;
+          const by = lastPoint.current.y - box.dy;
+          const stretchMs = Math.round(SWALLOW_MS * 0.45);
+          const thin = Math.max(box.h * 0.52, 34);
 
-          // The card goes first and quickly, rounding off as it goes. What is
-          // left behind is the blob that has been standing in for it under the
-          // filter all along, so the card does not vanish — it stops being a
-          // card and carries on as liquid.
-          // The card hands over early — it is gone before the stretch is, so
-          // what is being pulled into the bin is liquid and not a picture of a
-          // card being dragged there.
-          o.style.transition = `transform ${SWALLOW_MS * 0.45}ms var(--ease-out), opacity ${SWALLOW_MS * 0.26}ms linear`;
+          // The card does not fade where it stands and leave the blob to do
+          // the moving — it melts along the blob's own path. Same curve, same
+          // beat, same shape as the bead's stretch underneath it: squashed to
+          // the bead's height, pulled the bead's distance into the band,
+          // flooding red and losing its edges as it goes. The glass and the
+          // liquid are one shape for the whole stretch, and what dissolves at
+          // the end of it is already liquid-coloured and liquid-shaped, so the
+          // pane reads as becoming the red rather than being replaced by it.
+          // The opacity eases in — the card holds while the red floods it,
+          // then goes all at once into the blob it is by then lying on.
+          const stretchW = Math.max(r.left + r.w * 0.4 - bx, box.w);
+          o.style.transformOrigin = 'left center';
+          o.style.transition =
+            `transform ${stretchMs}ms cubic-bezier(0.35, 0, 0.25, 1), ` +
+            `opacity ${stretchMs}ms cubic-bezier(0.55, 0, 1, 0.45), ` +
+            `filter ${stretchMs}ms linear`;
           o.style.transform =
-            `translate3d(${bxCard}px, ${y - box.h / 2}px, 0) scale(0.88)`;
+            `translate3d(${bx}px, ${by}px, 0) scale(${stretchW / box.w}, ${thin / box.h})`;
           o.style.opacity = '0';
+          o.style.filter = 'blur(7px)';
+
+          // Rigidity goes first: the armed tilt levels out on the shell's own
+          // 200ms transition, and the wash floods ahead of the dissolve so the
+          // last visible thing of the card is the colour it is turning into.
+          const shell = meltRef.current;
+          if (shell) shell.style.transform = 'rotate(0deg) scale(1)';
+          const wash = washRef.current;
+          if (wash) {
+            wash.style.transition = `opacity ${Math.round(stretchMs * 0.6)}ms var(--ease-out)`;
+            wash.style.opacity = '0.85';
+          }
 
           // A step up while it is being swallowed, not a flood: the shape is
           // what is worth watching here and a solid red panel only buries it.
@@ -810,17 +838,13 @@ export default function TaskBoard({
           const bead = gooBeadRef.current;
           const drop = gooDropRef.current;
           const originX = r.left - GOO_REACH;
-          const bx = lastPoint.current.x - box.dx;
-          const by = lastPoint.current.y - box.dy;
-          const stretchMs = Math.round(SWALLOW_MS * 0.45);
           const ease = (ms, curve) =>
             `width ${ms}ms ${curve}, height ${ms}ms ${curve}, ` +
             `border-radius ${ms}ms linear, transform ${ms}ms ${curve}`;
 
-          const thin = Math.max(box.h * 0.52, 34);
           if (bead) {
             bead.style.transition = ease(stretchMs, 'cubic-bezier(0.35, 0, 0.25, 1)');
-            bead.style.width = `${Math.max(r.left + r.w * 0.4 - bx, box.w)}px`;
+            bead.style.width = `${stretchW}px`;
             bead.style.height = `${thin}px`;
             bead.style.borderRadius = `${thin / 2}px`;
             bead.style.transform =
@@ -1155,16 +1179,21 @@ export default function TaskBoard({
               dropped it is most of the way to being liquid, so the swallow has
               something to finish rather than something to start. */}
           <div
+            ref={meltRef}
             className={`${CARD} ${TASK_SURFACE} task-lensed p-3.5 shadow-xl relative transition-all duration-200 ease-[var(--ease-out)] ${
               target?.trash ? 'ring-2 ring-ninja-red -rotate-3 scale-95' : '-rotate-1'
             }`}
             style={target?.trash ? { borderRadius: `${Math.min(held.w, held.h) / 2}px` } : undefined}
           >
+            {/* Solid red at 15% via opacity, not bg-ninja-red/15 — the drop
+                floods it to nearly 1 by writing the span's opacity, which an
+                alpha baked into the class would cap. */}
             {target?.trash && (
               <span
+                ref={washRef}
                 aria-hidden="true"
-                className="absolute inset-0 bg-ninja-red/15 pointer-events-none"
-                style={{ borderRadius: `${Math.min(held.w, held.h) / 2}px` }}
+                className="absolute inset-0 bg-ninja-red pointer-events-none"
+                style={{ borderRadius: `${Math.min(held.w, held.h) / 2}px`, opacity: 0.15 }}
               />
             )}
             <TaskCardFace task={held.task} />
