@@ -68,6 +68,12 @@ const BLEED = 100;
 // space a lifted card frees up is its own height plus one gap.
 const GAP = 12; // matches space-y-3
 
+// The resting corner radius of a task card — .task-card in index.css, chosen
+// to sit at the goo filter's rounding floor so the card's silhouette and the
+// liquid's agree from the first frame. The morph ramps from here, not from
+// CARD's 16px.
+const REST_R = 28;
+
 // How far the pointer travels before a press becomes a drag. Below this it is
 // a click, and the card opens instead of moving.
 const DRAG_THRESHOLD = 5;
@@ -372,7 +378,7 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, lea
         <div
           ref={aheadRef}
           aria-hidden="true"
-          className={`absolute inset-0 rounded-2xl flex items-center justify-start px-5 opacity-0 pointer-events-none ${
+          className={`absolute inset-0 rounded-[1.75rem] flex items-center justify-start px-5 opacity-0 pointer-events-none ${
             armed ? 'bg-ninja-red/10' : ''
           }`}
         >
@@ -389,7 +395,7 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, lea
         <div
           ref={backRef}
           aria-hidden="true"
-          className={`absolute inset-0 rounded-2xl flex items-center justify-end px-5 opacity-0 pointer-events-none ${
+          className={`absolute inset-0 rounded-[1.75rem] flex items-center justify-end px-5 opacity-0 pointer-events-none ${
             armed ? 'bg-ninja-red/10' : ''
           }`}
         >
@@ -658,16 +664,13 @@ export default function TaskBoard({
     const gLead = bx + gw;
     const gy = by + (box.h - gh) / 2;
     // Corner radius for the card and its bead, on a ramp that runs AHEAD of
-    // the pull. The goo filter rounds every corner it is given — 22px of
-    // blur is a floor under how sharp the union can be — so a radius that
-    // only reached the capsule at the band would disagree with the
-    // silhouette the whole way in, and the hand-over would visibly cut from
-    // rectangle to blob. Ahead of the pull, but not far ahead: the card is a
-    // full capsule by pull ≈ 0.8, right at the band, so the whole morph
-    // belongs to the merge instead of starting out on the open board — and
-    // only then does the paint fade. Seamless is the shapes agreeing BEFORE
-    // the fade, not the fade being quick.
-    const rampR = (cap) => 16 + (cap - 16) * Math.min(1, pull * 1.25);
+    // the pull. The card RESTS at the goo filter's rounding floor (REST_R),
+    // so the silhouette and the liquid agree from the first frame; this ramp
+    // only closes the remaining distance to the full capsule, finishing by
+    // pull ≈ 0.8, right at the band — and only then does the paint fade.
+    // Seamless is the shapes agreeing BEFORE the fade, not the fade being
+    // quick.
+    const rampR = (cap) => REST_R + (cap - REST_R) * Math.min(1, pull * 1.25);
 
     // The card morphs on the same dial as the reach, and by the same physics
     // — shape, not shimmer. Its corners give first; the whole pane is pulled
@@ -965,7 +968,7 @@ export default function TaskBoard({
             layoutId="task-drop-placeholder"
             layout={reduce ? false : true}
             transition={{ duration: 0.2, ease: EASE }}
-            className="rounded-2xl border-2 border-dashed border-ninja-blue/40 bg-ninja-blue/[0.05]"
+            className="rounded-[1.75rem] border-2 border-dashed border-ninja-blue/40 bg-ninja-blue/[0.05]"
             style={{ height: held?.h }}
           />
         );
