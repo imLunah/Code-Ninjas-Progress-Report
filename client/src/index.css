@@ -274,17 +274,6 @@ textarea:focus-visible {
   backdrop-filter: url(#liquidGlass) blur(2px) saturate(1.8);
 }
 
-/* A task card rests at the corner radius the bin's goo filter can actually
-   draw. 22px of blur puts a floor under how sharp a corner the welded liquid
-   can have, so a card that starts at that floor hands its silhouette to the
-   glass without the shape ever changing family — the morph into the bin is
-   "a little rounder", never "rectangle becomes blob". Wins over CARD's
-   rounded-2xl on source order (equal specificity, this file loads after the
-   utilities). Every other card in the app keeps the 2xl. */
-.task-card {
-  border-radius: 1.75rem;
-}
-
 /* A dropped card is a fresh mount in its new slot, so it has no old position to
    travel from and would simply be there. This is the last of the drop: it
    arrives a hair small and overshoots very slightly on the way to its size,

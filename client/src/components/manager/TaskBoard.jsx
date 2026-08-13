@@ -36,7 +36,7 @@ const TRASH_MS = 200;
 // to read as anything but a disappearance.
 const SWALLOW_MS = 520;
 
-// How near the bin a card has to be before the glass starts reaching for it, and
+// How near the bin a card has to be before the red starts reaching for it, and
 // how much blur the goo filter has to work with. The two are related: the
 // stretch only forms while the gap between two blobs is within a couple of
 // standard deviations, which is what the droplet in between is for.
@@ -46,14 +46,14 @@ const GOO_REACH = 260;
 // used to occupy, which the grid still reserves. It went there when the board
 // dropped to three columns: the left margin belongs to the nav, and how wide it
 // was depended on whether the sidebar happened to be open, so a collapsed
-// sidebar put the band inside the To do column. The space past Done belongs to
+// sidebar put the red inside the To do column. The space past Done belongs to
 // nothing and does not move.
 //
 // Measured off the last column's own rect, not off the window or the grid: the
 // grid stretches the full width whether it has three children or four, so its
 // right edge says nothing about where the columns actually stop.
-const TRASH_MIN_W = 116;  // never thinner than this, even on a cramped window
-const TRASH_MAX_W = 200;  // and never wider, however much room the track leaves
+const TRASH_MIN_W = 88;   // never thinner than this, even on a cramped window
+const TRASH_MAX_W = 148;  // and never wider, however much room the track leaves
 const TRASH_GAP = 12;     // breathing room between the last column and the band
 const ARM_AT = 1 / 3;     // how much of the card has to be in before it commits
 
@@ -64,15 +64,16 @@ const ARM_AT = 1 / 3;     // how much of the card has to be in before it commits
 // cover and hangs off all three edges: the rounding still happens, out of sight.
 const BLEED = 100;
 
+// Solid across the band, then away to nothing over the reach, so the red thins
+// out towards the board instead of ending on a line. Measured from the layer's
+// own left edge, which starts a bleed to the left of the window's, and built
+// per drag now that the band's width is whatever the gutter turned out to be.
+const maskFor = (w) =>
+  `linear-gradient(to left, rgb(0 0 0) 0px, rgb(0 0 0) ${BLEED + w * 0.7}px, rgb(0 0 0 / 0) ${BLEED + w + GOO_REACH}px)`;
+
 // Vertical rhythm between cards. The drop maths has to know it, because the
 // space a lifted card frees up is its own height plus one gap.
 const GAP = 12; // matches space-y-3
-
-// The resting corner radius of a task card — .task-card in index.css, chosen
-// to sit at the goo filter's rounding floor so the card's silhouette and the
-// liquid's agree from the first frame. The morph ramps from here, not from
-// CARD's 16px.
-const REST_R = 28;
 
 // How far the pointer travels before a press becomes a drag. Below this it is
 // a click, and the card opens instead of moving.
@@ -378,7 +379,7 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, lea
         <div
           ref={aheadRef}
           aria-hidden="true"
-          className={`absolute inset-0 rounded-[1.75rem] flex items-center justify-start px-5 opacity-0 pointer-events-none ${
+          className={`absolute inset-0 rounded-2xl flex items-center justify-start px-5 opacity-0 pointer-events-none ${
             armed ? 'bg-ninja-red/10' : ''
           }`}
         >
@@ -395,7 +396,7 @@ function TaskCard({ task, canManage, grabbable, swipeable, settling, landed, lea
         <div
           ref={backRef}
           aria-hidden="true"
-          className={`absolute inset-0 rounded-[1.75rem] flex items-center justify-end px-5 opacity-0 pointer-events-none ${
+          className={`absolute inset-0 rounded-2xl flex items-center justify-end px-5 opacity-0 pointer-events-none ${
             armed ? 'bg-ninja-red/10' : ''
           }`}
         >
@@ -514,14 +515,21 @@ export default function TaskBoard({
   const listRefs = useRef({});
   const cardRefs = useRef(new Map());
   const overlayRef = useRef(null);
+  // The red under the bin panel, drawn as three blobs through a goo filter: the
+  // pool over the nav, a bead on the card, and one droplet between them. Written
+  // by hand on every pointermove for the same reason the overlay is — this is a
+  // per-frame value, and state would re-render the board to carry it.
   const boardRef = useRef(null);
-  // The liquid is one material now: clear glass, drawn as three blobs — a
-  // wall over the band, a bead riding the card, and the droplet that bridges
-  // them — welded into a single edge-lit pane by the goo filter. Written by
-  // hand on every pointermove for the same reason the overlay is: per-frame
-  // values, and state would re-render the board to carry them. meltRef is
-  // the wrapper the card's taffy stretch goes to; faceRef is the card shell
-  // whose corners and paint the morph takes over.
+  const gooRef = useRef(null);
+  const gooBeadRef = useRef(null);
+  const gooDropRef = useRef(null);
+  // The card's own morph. The red's physics is shape, not shimmer: it rounds,
+  // stretches and bridges. So the card gets the same three, written per frame
+  // like everything else here: a wrapper carrying the taffy stretch, the card
+  // shell whose corners give as it nears, and a second goo — a bead and a
+  // droplet in the card's own surface colour, under the same filter as the
+  // red — so a bridge of glass reaches out of the card and merges with the
+  // pool by exactly the mechanism the red uses.
   const meltRef = useRef(null);
   const faceRef = useRef(null);
   const glassRef = useRef(null);
@@ -574,7 +582,7 @@ export default function TaskBoard({
 
   // The card is what is being deleted, so the card is what has to arrive: the
   // bin takes it once a third of it is inside the band. Half meant pushing a
-  // wide card most of the way off the screen before the bin would commit.
+  // wide card most of the way off the screen before the red would commit.
   //
   // Not the pointer. Where the pointer sits on a card is an accident of where
   // it was picked up — grab a card by its left edge and a pointer test asks you
@@ -613,18 +621,18 @@ export default function TaskBoard({
     setTargetIfChanged({ trash: false, key, index: s[key].mids.filter((m) => m < y).length });
   };
 
-  // Distance from the pointer to the bin, turned into how much the glass
-  // reaches out. Inside the panel it is 1 and everything is merged; a screen
-  // away it is 0 and there is nothing but the resting wall.
+  // Distance from the pointer to the bin, turned into how much the red reaches
+  // out. Inside the panel it is 1 and everything is merged; a screen away it is
+  // 0 and there is nothing but the resting pool.
   const paintGoo = (x, y) => {
-    const g = glassRef.current;
+    const g = gooRef.current;
     const r = snap.current?.trash;
     if (!g || !r) return;
 
-    // The liquid takes hold of the card, not the cursor: the bead is the
-    // card's own box in the card's own place, so what the band reaches out
-    // and grabs is the thing being deleted rather than a dot the hand
-    // happens to be dragging it by.
+    // The red takes hold of the card, not the cursor: the bead is the card's
+    // own box in the card's own place, so what the band reaches out and grabs
+    // is the thing being deleted rather than a dot the hand happens to be
+    // dragging it by.
     const box = info.current;
     if (!box) return;
     const bx = x - box.dx;
@@ -640,14 +648,7 @@ export default function TaskBoard({
     // Eased so the reach is slow to start and quick to close, which is what
     // makes it read as something being pulled rather than something growing.
     const pull = t * t;
-    // The real pane under this layer carries the band's resting material, so
-    // the goo — the weld, the rim, the neck — only needs a quiet presence at
-    // rest, coming up to full as the card nears.
-    g.style.opacity = String(Math.min(1, 0.35 + pull * 1.3));
-    // And it blushes while the card is actually over the bin: the armed
-    // filter is the same glass with a breath of red in the fill, which is
-    // the "letting go deletes" signal living in the liquid itself.
-    g.style.filter = targetRef.current?.trash ? 'url(#taskGooGlassRed)' : 'url(#taskGooGlass)';
+    g.style.opacity = String(0.09 + 0.17 * pull);
 
     // Positions are viewport coordinates; the layer's own origin sits a reach to
     // the left of the band and a bleed above the window.
@@ -662,25 +663,53 @@ export default function TaskBoard({
     };
 
     // The card's silhouette this frame — the taffy stretch and thinning the
-    // DOM card is wearing — which the glass bead has to wear too, so the
-    // silhouette and the text stay one thing while the card is molten.
+    // DOM card is wearing — computed here because both liquids need it: the
+    // glass draws all of it, and the red is allowed to touch only part of it.
     const gw = box.w * (1 + 0.14 * pull);
     const gh = box.h * (1 - 0.07 * pull);
     const gLead = bx + gw;
     const gy = by + (box.h - gh) / 2;
     // Corner radius for the card and its bead, on a ramp that runs AHEAD of
-    // the pull. The card RESTS at the goo filter's rounding floor (REST_R),
-    // so the silhouette and the liquid agree from the first frame; this ramp
-    // only closes the remaining distance to the full capsule, finishing by
-    // pull ≈ 0.8, right at the band — and only then does the paint fade.
-    // Seamless is the shapes agreeing BEFORE the fade, not the fade being
-    // quick.
-    const rampR = (cap) => REST_R + (cap - REST_R) * Math.min(1, pull * 1.25);
+    // the pull. The goo filter rounds every corner it is given — 22px of
+    // blur is a floor under how sharp the union can be — so a radius that
+    // only reached the capsule at the band would disagree with the
+    // silhouette the whole way in, and the hand-over would visibly cut from
+    // rectangle to blob. Ahead of the pull, the card is a full capsule by
+    // pull ≈ 0.55 — the shape the goo has been drawing all along — and only
+    // then does the paint fade. Seamless is the shapes agreeing BEFORE the
+    // fade, not the fade being quick.
+    const rampR = (cap) => 16 + (cap - 16) * Math.min(1, pull * 1.8);
 
-    // The card morphs on the same dial as the reach, and by the same physics
-    // — shape, not shimmer. Its corners give first; the whole pane is pulled
-    // long and thin off its trailing edge, the way taffy goes narrow when it
-    // is pulled.
+    // The red used to ride the whole card as a hidden bead, there purely so
+    // the pool had something to reach for. The card is see-through when it
+    // is molten, so a full-card bead reads as the card filling with red
+    // before the red has arrived. Now the red only wets what it has actually
+    // reached: the slice of the card past the band's edge, growing from the
+    // leading edge as the card pushes in, and nothing at all while there is
+    // still a gap.
+    const wetX = Math.max(bx, r.left);
+    const wetW = Math.max(0, gLead - wetX);
+    put(gooBeadRef.current, wetX, gy, wetW, gh, Math.min(wetW, gh) / 2);
+
+    // And the drop that bridges the gap, sized off the card so a wide card gets
+    // a bridge to match. It is the only part that has to know about distance,
+    // because a bridge to nothing is just a blob in the middle of the page.
+    const bridge = Math.min(box.h, 120) * pull;
+    put(
+      gooDropRef.current,
+      (lead + Math.max(lead, r.left)) / 2 - bridge / 2,
+      by + box.h / 2 - bridge / 2,
+      bridge, bridge, bridge / 2
+    );
+
+    // The card morphs on the same dial, and by the same physics — shape, not
+    // shimmer. What the red does when something nears it is round off,
+    // stretch and neck, so the card does the same three things. Its corners
+    // give first, easing from the resting radius toward the full capsule the
+    // bead under it already is; the whole pane is pulled long and thin off
+    // its trailing edge, the way taffy goes narrow when it is pulled. The
+    // ring and tint at the arm line stay binary — that is the commitment
+    // signal, not the physics.
     if (!reduce) {
       const m = meltRef.current;
       if (m) m.style.transform = pull > 0 ? `scaleX(${1 + 0.14 * pull}) scaleY(${1 - 0.07 * pull})` : '';
@@ -697,7 +726,7 @@ export default function TaskBoard({
         // left riding the merged shape is the text. The threshold sits just
         // past where rampR tops out, so the fade only ever crosses between
         // two copies of the same shape.
-        const molten = pull > 0.82;
+        const molten = pull > 0.55;
         face.style.backgroundColor = molten ? 'transparent' : '';
         face.style.borderColor = molten ? 'transparent' : '';
         face.style.boxShadow = molten ? 'none' : '';
@@ -706,20 +735,21 @@ export default function TaskBoard({
       }
     }
 
-    // The glass union: the bead in the card's place, the droplet that
-    // bridges, and the wall over the band, welded into one edge-lit pane by
-    // the filter. The droplet is the only part that has to know about
-    // distance, because a bridge to nothing is just a blob in the middle of
-    // the page.
+    // The glass union: bead, droplet and the wall over the band, welded into
+    // one edge-lit pane by the filter. The bead wears the same taffy as the
+    // DOM card — same stretch, same thinning, same trailing-edge origin — so
+    // the silhouette and the text stay one thing while the card is molten.
+    const glass = glassRef.current;
+    if (glass) glass.style.opacity = String(Math.min(1, pull * 1.6));
     // Corners on the same ramp as the face's, so when the card's own paint
     // fades out the silhouette underneath is the shape it just was.
     put(glassBeadRef.current, bx, gy, gw, gh, rampR(gh / 2));
-    const bridge = Math.min(box.h, 120) * pull;
+    const gBridge = bridge * 0.85;
     put(
       glassDropRef.current,
-      (gLead + Math.max(gLead, r.left)) / 2 - bridge / 2,
-      by + box.h / 2 - bridge / 2,
-      bridge, bridge, bridge / 2
+      (gLead + Math.max(gLead, r.left)) / 2 - gBridge / 2,
+      by + box.h / 2 - gBridge / 2,
+      gBridge, gBridge, gBridge / 2
     );
   };
 
@@ -749,10 +779,9 @@ export default function TaskBoard({
 
     // Read once, like everything else here: where the last column stops is where
     // the bin starts, taken at the same instant as every other rect below.
-    // The empty track can be a quarter of a wide board, which is more band
-    // than a drop target needs to be. The band takes the outer part of it:
-    // pinned to the window's edge, capped, and never crossing into the last
-    // column.
+    // The empty track can be a quarter of a wide board, which is more red than
+    // a drop target needs to be. The band takes the outer part of it: pinned to
+    // the window's edge, capped, and never crossing into the last column.
     const lastCol = colRefs.current[COLUMN_KEYS[COLUMN_KEYS.length - 1]];
     const edge = (lastCol?.getBoundingClientRect().right ?? window.innerWidth - TRASH_MIN_W) + TRASH_GAP;
     const left = Math.min(
@@ -819,7 +848,7 @@ export default function TaskBoard({
 
       // Dropped off the board. No confirm, by the same call as the swipe: the
       // card was carried the whole width of the page onto a target that has
-      // been labelled since the drag began. The overlay is kept a moment longer and
+      // been red since the drag began. The overlay is kept a moment longer and
       // sent into the bin, because a card that simply stops existing under the
       // pointer leaves nothing to connect the drop to the thing that happened.
       if (t?.trash) {
@@ -845,9 +874,11 @@ export default function TaskBoard({
           o.style.opacity = '0';
 
           // The taffy finishes what the approach started: the stretch is
-          // pushed on toward the band while the card's face fades, so the
-          // last frames of card are the longest and thinnest ones. The glass
-          // stays — it IS the thing being swallowed now.
+          // pushed on toward the band while the card fades, so the last
+          // frames of card are the longest and thinnest ones. And the card's
+          // glass goes with it — the red is stepping up at the same moment,
+          // so what gets drawn into the pool is one liquid, not two liquids
+          // arguing about the same shape.
           if (!reduce) {
             const wrap = meltRef.current;
             if (wrap) {
@@ -855,13 +886,22 @@ export default function TaskBoard({
               wrap.style.transform = 'scaleX(1.22) scaleY(0.82)';
             }
           }
-
-          // The swap to the heavier filter gives the stretch enough blur to
-          // hold together instead of snapping the moment it is pulled.
           const glass = glassRef.current;
           if (glass) {
-            glass.style.filter = 'url(#taskGooGlassThick)';
-            glass.style.opacity = '1';
+            glass.style.transition = `opacity ${SWALLOW_MS * 0.45}ms var(--ease-out)`;
+            glass.style.opacity = '0';
+          }
+
+          // A step up while it is being swallowed, not a flood: the shape is
+          // what is worth watching here and a solid red panel only buries it.
+          // The swap to the heavier filter is the part that matters — it gives
+          // the stretch enough blur to hold together instead of snapping the
+          // moment it is pulled.
+          const g = gooRef.current;
+          if (g) {
+            g.style.filter = 'url(#taskGooThick)';
+            g.style.transition = `opacity ${SWALLOW_MS * 0.3}ms var(--ease-out)`;
+            g.style.opacity = '0.3';
           }
 
           // Then the blob does the whole thing in two moves, because one move
@@ -870,10 +910,10 @@ export default function TaskBoard({
           // It stretches first: the card's blob reaches into the band and
           // squeezes thin doing it, the way something viscous goes narrow when
           // it is pulled. Then it lets go of where it was and collapses into
-          // the wall. The bridge fattens on the way out and only breaks at the
+          // the pool. The bridge fattens on the way out and only breaks at the
           // end, so the thread is the last thing left.
-          const bead = glassBeadRef.current;
-          const drop = glassDropRef.current;
+          const bead = gooBeadRef.current;
+          const drop = gooDropRef.current;
           const originX = r.left - GOO_REACH;
           const bx = lastPoint.current.x - box.dx;
           const by = lastPoint.current.y - box.dy;
@@ -973,7 +1013,7 @@ export default function TaskBoard({
             layoutId="task-drop-placeholder"
             layout={reduce ? false : true}
             transition={{ duration: 0.2, ease: EASE }}
-            className="rounded-[1.75rem] border-2 border-dashed border-ninja-blue/40 bg-ninja-blue/[0.05]"
+            className="rounded-2xl border-2 border-dashed border-ninja-blue/40 bg-ninja-blue/[0.05]"
             style={{ height: held?.h }}
           />
         );
@@ -1098,29 +1138,56 @@ export default function TaskBoard({
         );
       })}
 
-      {/* The liquid, three blobs under one goo filter: a wall over the band,
-          a bead riding the card, and a droplet between them. Blurred together
+      {/* The red itself, three blobs under one goo filter. A pool over the nav,
+          a bead riding the card, and a droplet between them: blurred together
           and then thresholded back to a hard edge, two shapes near each other
-          stop being two shapes, and the wall reaches out and takes the card
-          rather than waiting for it to arrive. The droplet is what carries
-          the bridge across a gap wider than the blur alone could span.
+          stop being two shapes, and the pool reaches out and takes the card
+          rather than waiting for it to arrive. The droplet is what carries the
+          bridge across a gap wider than the blur alone could span.
 
-          One material, deliberately: the liquid is the same clear glass the
-          card is, so the merge is glass into glass with nothing to clash at
-          the seam. Red belongs to the label, not the liquid. */}
+          Solid red inside the filter, with the tint applied to the whole layer
+          afterwards — the threshold works on alpha, so a translucent blob would
+          come out of it either fully there or not at all. */}
       {held?.trash && createPortal(
         <>
           <svg width="0" height="0" aria-hidden="true" className="absolute pointer-events-none">
             <defs>
-              {/* Blur-and-threshold union drawn as a pane instead of a fill.
-                  The welded silhouette is kept almost empty — a breath of
-                  white so the page reads through it — and the silhouette
-                  minus an eroded copy of itself is the rim, a bright ~2px
-                  line tracing the whole merged outline, neck included. A
-                  second rim, dark and nudged down, is the glass's thickness
-                  and its contact shadow. The rim following ONE outline around
-                  both lobes is what says single object; everything inside it
-                  staying see-through is what says glass. */}
+              {/* A softer blur and a gentler slope on the alpha than a goo
+                  filter usually runs. Steep is what gives the effect its
+                  cartoon snap — everything either fully there or not — and the
+                  cost is a hard edge on every shape. Easing the slope lets the
+                  blur keep some of its own falloff, so the blobs round off and
+                  meet each other rather than clicking together. */}
+              <filter id="taskGoo" x="-40%" y="-40%" width="180%" height="180%" colorInterpolationFilters="sRGB">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="22" result="soft" />
+                <feColorMatrix
+                  in="soft"
+                  type="matrix"
+                  values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 14 -6"
+                />
+              </filter>
+              {/* The same thing with more blur to work with, swapped in for the
+                  swallow. More blur is more distance over which two shapes can
+                  find each other, which is what makes the stretch hold together
+                  instead of snapping the moment it is pulled. */}
+              <filter id="taskGooThick" x="-60%" y="-60%" width="220%" height="220%" colorInterpolationFilters="sRGB">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="34" result="soft" />
+                <feColorMatrix
+                  in="soft"
+                  type="matrix"
+                  values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 13 -5.5"
+                />
+              </filter>
+              {/* The glass version: same blur-and-threshold union, but what
+                  comes out is drawn as a pane instead of a fill. The welded
+                  silhouette is kept almost empty — a breath of white so the
+                  page reads through it — and the silhouette minus an eroded
+                  copy of itself is the rim, a bright ~2px line tracing the
+                  whole merged outline, neck included. A second rim, dark and
+                  nudged down, is the glass's thickness and its contact
+                  shadow. The rim following ONE outline around both lobes is
+                  what says single object; everything inside it staying
+                  see-through is what says glass. */}
               <filter id="taskGooGlass" x="-40%" y="-40%" width="180%" height="180%" colorInterpolationFilters="sRGB">
                 <feGaussianBlur in="SourceAlpha" stdDeviation="22" result="soft" />
                 <feColorMatrix
@@ -1144,96 +1211,49 @@ export default function TaskBoard({
                   <feMergeNode in="rimHi" />
                 </feMerge>
               </filter>
-              {/* The same pane blushed: identical structure and rims, but the
-                  breath of white in the fill is a breath of the brand red
-                  instead. Swapped in while the card is actually over the bin,
-                  so the liquid itself says "letting go deletes" without
-                  changing material — glass that has coloured, not paint. */}
-              <filter id="taskGooGlassRed" x="-40%" y="-40%" width="180%" height="180%" colorInterpolationFilters="sRGB">
-                <feGaussianBlur in="SourceAlpha" stdDeviation="22" result="soft" />
-                <feColorMatrix
-                  in="soft"
-                  type="matrix"
-                  values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 14 -6"
-                  result="shape"
-                />
-                <feMorphology in="shape" operator="erode" radius="2" result="inner" />
-                <feComposite in="shape" in2="inner" operator="out" result="rimA" />
-                <feOffset in="rimA" dy="1.5" result="rimLoA" />
-                <feFlood floodColor="#1e293b" floodOpacity="0.25" result="loC" />
-                <feComposite in="loC" in2="rimLoA" operator="in" result="rimLo" />
-                <feFlood floodColor="#e51520" floodOpacity="0.07" result="fillC" />
-                <feComposite in="fillC" in2="shape" operator="in" result="fill" />
-                <feFlood floodColor="#ffffff" floodOpacity="0.9" result="hiC" />
-                <feComposite in="hiC" in2="rimA" operator="in" result="rimHi" />
-                <feMerge>
-                  <feMergeNode in="fill" />
-                  <feMergeNode in="rimLo" />
-                  <feMergeNode in="rimHi" />
-                </feMerge>
-              </filter>
-              {/* The blushed pane with more blur to work with, swapped in for
-                  the swallow — which only ever happens from the armed state,
-                  so it inherits the red. More blur is more distance over
-                  which two shapes can find each other, which is what makes
-                  the stretch hold together instead of snapping the moment it
-                  is pulled. */}
-              <filter id="taskGooGlassThick" x="-60%" y="-60%" width="220%" height="220%" colorInterpolationFilters="sRGB">
-                <feGaussianBlur in="SourceAlpha" stdDeviation="34" result="soft" />
-                <feColorMatrix
-                  in="soft"
-                  type="matrix"
-                  values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 13 -5.5"
-                  result="shape"
-                />
-                <feMorphology in="shape" operator="erode" radius="2" result="inner" />
-                <feComposite in="shape" in2="inner" operator="out" result="rimA" />
-                <feOffset in="rimA" dy="1.5" result="rimLoA" />
-                <feFlood floodColor="#1e293b" floodOpacity="0.25" result="loC" />
-                <feComposite in="loC" in2="rimLoA" operator="in" result="rimLo" />
-                <feFlood floodColor="#e51520" floodOpacity="0.07" result="fillC" />
-                <feComposite in="fillC" in2="shape" operator="in" result="fill" />
-                <feFlood floodColor="#ffffff" floodOpacity="0.9" result="hiC" />
-                <feComposite in="hiC" in2="rimA" operator="in" result="rimHi" />
-                <feMerge>
-                  <feMergeNode in="fill" />
-                  <feMergeNode in="rimLo" />
-                  <feMergeNode in="rimHi" />
-                </feMerge>
-              </filter>
             </defs>
           </svg>
-          {/* The band in the app's OWN glass. The goo layer above draws the
-              welded silhouette, but its fill is flooded pixels — it cannot
-              bend or blur what is behind it, and a bin that does not bend the
-              page is not the same material as the cards. So the material
-              comes from here: a real pane over the band with the exact
-              backdrop treatment the dragged card wears, refraction included.
-              It blushes red when the card is over the bin — a colour change
-              in the pane, smoothed by the transition, while the goo above
-              adds only a breath of the same red so the neck matches. */}
           <div
+            ref={gooRef}
             aria-hidden="true"
-            className={`fixed top-0 z-[57] pointer-events-none transition-colors duration-200 ease-[var(--ease-out)] ${
-              target?.trash ? 'bg-ninja-red/15' : 'bg-white/40 dark:bg-[#252c3e]/45'
-            }`}
+            className="fixed z-[58] pointer-events-none"
             style={{
-              left: held.trash.left,
-              width: held.trash.w,
-              height: held.trash.h,
-              backdropFilter: 'url(#liquidGlass) blur(2px) saturate(1.8)',
-              WebkitBackdropFilter: 'blur(2px) saturate(1.8)',
+              left: held.trash.left - GOO_REACH,
+              top: -BLEED,
+              width: held.trash.w + GOO_REACH + BLEED,
+              height: held.trash.h + BLEED * 2,
+              filter: 'url(#taskGoo)',
+              // The fade cannot live inside the filter: the threshold that
+              // welds the blobs together works on alpha, so a gradient handed
+              // to it comes back as a hard edge in a slightly different place.
+              // It goes on the whole layer afterwards instead, which fades the
+              // reaching bead along with the band and is why the red thins out
+              // towards the board rather than stopping at a line.
+              maskImage: maskFor(held.trash.w),
+              WebkitMaskImage: maskFor(held.trash.w),
+              opacity: 0.07,
             }}
-          />
-          {/* The welded silhouette: one edge-lit sheet whose outline is the
-              card's box merging with the wall over the band. The blobs only
-              contribute their alpha (the filter reads SourceAlpha and floods
-              its own colours), so bg-white here is just "solid". The wall is
-              a plain rectangle on purpose: the filter keeps straight edges
-              straight and only rounds corners, and the wall hangs off the
-              top, the right and the bottom so the corners it would round are
-              all outside the window — what the card merges into is a flat
-              vertical edge of glass, not a lobe. */}
+          >
+            {/* Hangs off the top, the right and the bottom, so the corners the
+                filter rounds are all outside the window. */}
+            <div
+              className="absolute top-0 right-0 h-full bg-ninja-red"
+              style={{ width: held.trash.w + BLEED, borderRadius: '999px 0 0 999px' }}
+            />
+            <div ref={gooBeadRef} className="absolute top-0 left-0 bg-ninja-red" />
+            <div ref={gooDropRef} className="absolute top-0 left-0 bg-ninja-red" />
+          </div>
+          {/* The glass itself: the same three blobs as the red — pool, bead,
+              droplet — through the glass filter above, so what is drawn is
+              one edge-lit pane whose silhouette is the card's box merging
+              with a wall of glass over the band. The red layer underneath
+              shows through the near-empty fill, which is what makes the band
+              read as a vessel of red liquid seen through glass rather than a
+              red panel. The blobs only contribute their alpha (the filter
+              reads SourceAlpha and floods its own colours), so bg-white here
+              is just "solid". Painted over the red; no mask, because unlike
+              the band this layer has no resting presence — its whole
+              existence is the pull, and opacity carries that. */}
           <div
             ref={glassRef}
             aria-hidden="true"
@@ -1249,7 +1269,7 @@ export default function TaskBoard({
           >
             <div
               className="absolute top-0 right-0 h-full bg-white"
-              style={{ width: held.trash.w + BLEED }}
+              style={{ width: held.trash.w + BLEED, borderRadius: '999px 0 0 999px' }}
             />
             <div ref={glassBeadRef} className="absolute top-0 left-0 bg-white" />
             <div ref={glassDropRef} className="absolute top-0 left-0 bg-white" />
@@ -1268,9 +1288,9 @@ export default function TaskBoard({
           initial={reduce ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.22, ease: EASE }}
-          // No fill here — the pane underneath is the liquid. This is the
-          // icon and the words, the only red left on the bin and the part
-          // that has to stay legible whatever the glass is doing.
+          // No fill here any more — the goo layer underneath is the red. This
+          // is the dashed edge and the words, which is the part that has to
+          // stay legible whatever the liquid is doing.
           className="fixed top-0 z-[59] pointer-events-none flex items-center justify-center"
           style={{ left: held.trash.left, width: held.trash.w, height: held.trash.h }}
         >
@@ -1301,14 +1321,14 @@ export default function TaskBoard({
               something to finish rather than something to start.
 
               And that is ALL it does — no red ring, no red wash. The card
-              stays the card the whole way; the label is what says delete.
-              Glass merging with glass while turning a different colour is
-              two stories at once. */}
+              stays the card the whole way; the red seen through the pane and
+              the label saying so are what mean delete. Glass merging with
+              glass while turning a different colour is two stories at once. */}
           {/* The taffy wrapper. paintGoo writes the stretch to it as the card
               nears the band — kept off the card itself so its own classes and
               React's over-the-bin styling never fight the per-frame writes.
               Origin on the trailing edge, so the stretch elongates the card
-              toward the band the way the bead is pulled, not equally in both
+              toward the red the way the bead is pulled, not equally in both
               directions. */}
           <div ref={meltRef} style={{ transformOrigin: 'left center', willChange: 'transform' }}>
             {/* No borderRadius here from React: the corners are paintGoo's,
