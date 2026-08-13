@@ -104,6 +104,57 @@ describe('accepting what people actually paste', () => {
   });
 });
 
+// A MyStudio page also loads the support chat, Stripe and analytics, so "copy
+// any request" is not good enough advice: the first real attempt copied the
+// embedded HubSpot chat widget and got HubSpot's cookies. The paste parses
+// perfectly and is simply the wrong site, which is the one failure the error
+// text has to explain rather than blame on MyStudio.
+describe('a request copied from the wrong site', () => {
+  // Same shape as the real mis-paste, with invented token values.
+  const hubspotCurl =
+    `curl --url 'https://app.hubspot.com/api/livechat-public/v1/feedback/survey/CSAT/4?hs_static_app=conversations-visitor-ui' \\\n` +
+    `  -H 'accept: application/json' \\\n` +
+    `  -b 'hubspotapi-prefs=1; hubspotapi=FAKE-TOKEN; csrf.app=FAKE-CSRF' \\\n` +
+    `  -H 'referer: https://app.hubspot.com/conversations-visitor/22638569/threads/utk/abc'`;
+
+  it('reads the host out of the pasted command', () => {
+    expect(ms.extractRequestHost(hubspotCurl)).toBe('app.hubspot.com');
+    expect(ms.isMyStudioHost('app.hubspot.com')).toBe(false);
+    expect(ms.isMyStudioHost('codeninjas.mystudio.io')).toBe(true);
+  });
+
+  it('names the wrong site and says how to filter for the right one', () => {
+    let message = '';
+    try {
+      ms.readCookieIdentity(hubspotCurl);
+    } catch (e) {
+      message = e.message;
+    }
+    expect(message).toContain('app.hubspot.com');
+    expect(message).toMatch(/mystudio\.io/);
+    // Must not read as a MyStudio fault, which is what "missing companyId" did.
+    expect(message).not.toMatch(/missing companyId/i);
+  });
+
+  it('is not fooled by a mystudio.io referer on another host', () => {
+    // The chat widget's referer mentions codeninjas.mystudio.io, so matching the
+    // first mystudio string anywhere in the paste would call this the right site.
+    const withMyStudioReferer =
+      `curl --url 'https://app.hubspot.com/api/x' \\\n` +
+      `  -H 'referer: https://app.hubspot.com/c?domain=codeninjas.mystudio.io&url=https%3A%2F%2Fcodeninjas.mystudio.io%2Fhome' \\\n` +
+      `  -b 'hubspotapi=FAKE'`;
+    expect(ms.extractRequestHost(withMyStudioReferer)).toBe('app.hubspot.com');
+    expect(() => ms.readCookieIdentity(withMyStudioReferer)).toThrow(/app\.hubspot\.com/);
+  });
+
+  it('accepts the real thing on a mystudio.io host', () => {
+    const good =
+      `curl 'https://codeninjas.mystudio.io/api/features/attendance/class-list?selected_date=2026-08-13' \\\n` +
+      `  -H 'cookie: companyId=480; kc_refresh=tok-r'`;
+    expect(ms.readCookieIdentity(good).companyId).toBe('480');
+  });
+});
+
 describe('credential encryption', () => {
   const raw = 'PHPSESSID=abc123; ms_u_em=a%40b.com; companyId=480';
 

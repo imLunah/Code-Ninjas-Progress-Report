@@ -177,6 +177,32 @@ function extractCookie(raw) {
   return sanitizeCookie(text);
 }
 
+// The host a pasted cURL was aimed at, when it can be told.
+//
+// This exists to answer one specific confusion. A MyStudio page also loads the
+// support chat, a payment script and analytics, so "copy any request" hands back
+// somebody else's cookies and a connection that cannot work. Knowing the host
+// lets the error name the mistake instead of reporting a missing companyId,
+// which reads like MyStudio's fault.
+function extractRequestHost(raw) {
+  const text = String(raw || '');
+  const m =
+    /(?:--url|--location)\s+(?:'([^']+)'|"([^"]+)"|(\S+))/.exec(text) ||
+    /(?:^|\s)curl\s+(?:-\S+\s+)*?(?:'(https?:\/\/[^']+)'|"(https?:\/\/[^"]+)"|(https?:\/\/\S+))/i.exec(text) ||
+    /(https?:\/\/[^\s'"]+)/.exec(text);
+  const url = m && (m[1] ?? m[2] ?? m[3]);
+  if (!url) return null;
+  try {
+    return new URL(url).host;
+  } catch {
+    return null;
+  }
+}
+
+function isMyStudioHost(host) {
+  return Boolean(host) && /(^|\.)mystudio\.io$/i.test(host);
+}
+
 function parseCookie(raw) {
   const out = {};
   for (const pair of extractCookie(raw).split(';')) {
@@ -214,13 +240,30 @@ function readCookieIdentity(raw) {
   const access = jar.kc_access;
   const refresh = jar.kc_refresh;
 
+  // Wrong request before missing value. A MyStudio page also loads the support
+  // chat, Stripe and analytics, so the likeliest reason nothing is here is that
+  // the copied row belonged to one of them, and saying "missing companyId" sends
+  // someone looking for a fault that is not there.
+  if (!companyId || (!access && !refresh)) {
+    const host = extractRequestHost(raw);
+    if (host && !isMyStudioHost(host)) {
+      throw new MyStudioAuthError(
+        `That request went to ${host}, not MyStudio. Type mystudio.io in the ` +
+          'Network tab filter box, then copy one of the rows that appears.'
+      );
+    }
+  }
+
   if (!companyId) {
-    throw new MyStudioAuthError('That cookie is missing companyId');
+    throw new MyStudioAuthError(
+      'That cookie has no companyId, so it did not come from a signed-in ' +
+        'MyStudio page. Sign in, then copy a mystudio.io request.'
+    );
   }
   if (!access && !refresh) {
     throw new MyStudioAuthError(
-      'That cookie is missing the kc_access and kc_refresh values. Copy the ' +
-        'whole cookie header from the network tab, not from the console.'
+      'That cookie is missing the kc_access and kc_refresh values. Copy a ' +
+        'mystudio.io request with Copy as cURL, not the cookie from the console.'
     );
   }
 
@@ -478,6 +521,8 @@ module.exports = {
   decryptCookie,
   sanitizeCookie,
   extractCookie,
+  extractRequestHost,
+  isMyStudioHost,
   parseCookie,
   readCookieIdentity,
   verifySession,

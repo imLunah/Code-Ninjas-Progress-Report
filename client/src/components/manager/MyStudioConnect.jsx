@@ -38,11 +38,18 @@ const FIELD =
 // is fair: that is a developer's instruction. Copy as cURL is one menu item in a
 // place people already right click, it always contains the cookie, and the
 // server pulls it out of whatever lands on the clipboard.
+//
+// The filter step is not padding. A MyStudio page also loads the support chat,
+// Stripe and analytics, so "copy any request" sent the first real attempt to
+// app.hubspot.com and produced a cookie that parsed fine and belonged to the
+// wrong company. Filtering makes every visible row the right one, and the server
+// names the host when a stray paste gets through anyway.
 const STEPS = [
   'Sign in to MyStudio in another tab.',
   'Press F12 to open devtools, then click the Network tab.',
+  'Type mystudio.io in the filter box. This step matters.',
   'Reload the page. A list of requests appears.',
-  'Right click any row, choose Copy, then Copy as cURL.',
+  'Right click the top row, choose Copy, then Copy as cURL.',
   'Paste the whole thing below. Only the cookie part is kept.',
 ];
 

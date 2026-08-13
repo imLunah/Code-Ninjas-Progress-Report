@@ -90,8 +90,14 @@ router.post('/connect', requireManager, requireOwnLocation, async (req, res) => 
     session = await ms.verifySession(cookie);
   } catch (err) {
     if (err instanceof ms.MyStudioAuthError) {
+      // Pass the message through. Every MyStudioAuthError message is written
+      // here for the person connecting, and the useful ones say which mistake
+      // was made: a request copied from the embedded chat widget rather than
+      // from MyStudio, a cookie with no companyId, a paste missing the httpOnly
+      // tokens. Replacing all of that with "that cookie did not work" was the
+      // difference between a fixable problem and a dead end.
       return res.status(400).json({
-        error: 'That cookie did not work. Sign in to MyStudio, copy it again, then retry.',
+        error: err.message || 'That cookie did not work. Copy it again, then retry.',
       });
     }
     console.error('MyStudio connect failed:', err.message);
