@@ -70,6 +70,19 @@ const bugLimiter = rateLimit({
   message: { error: 'Too many reports submitted. Please wait a bit before sending another.' },
 });
 
+// The MyStudio routes are the only GETs in the app worth throttling: a single
+// /today fans out to one third-party request per booked class, so a polling
+// client or a stuck retry loop would hammer a vendor API rather than our own
+// database. writeLimiter deliberately skips reads, hence a separate cap here.
+const mystudioLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test',
+  message: { error: 'Too many MyStudio requests. Wait a moment and try again.' },
+});
+
 const sessionConfig = {
   store: new pgSession({ pool, tableName: 'session' }),
   secret: SESSION_SECRET,
@@ -109,6 +122,7 @@ app.use('/api/events', require('./routes/events'));
 app.use('/api/releases', require('./routes/releases'));
 app.use('/api/storage', require('./routes/storage'));
 app.use('/api/onboarding', require('./routes/onboarding'));
+app.use('/api/mystudio', mystudioLimiter, require('./routes/mystudio'));
 // Bug reports — staff or parent session accepted; try staff first, fall back to parent
 app.use('/api/bugs',
   (req, res, next) => staffSession(req, res, () => {

@@ -5,16 +5,19 @@ import TodayBoard from '../../components/manager/TodayBoard';
 import DashboardFilters from '../../components/shared/DashboardFilters';
 import BoardStats from '../../components/shared/BoardStats';
 import AddStudentToday from '../../components/manager/AddStudentToday';
+import ExpectedToday from '../../components/manager/ExpectedToday';
 import CheckInClubModal from '../../components/manager/CheckInClubModal';
 import ClubSessionsPanel from '../../components/shared/ClubSessionsPanel';
 import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { SkeletonList } from '../../components/ui/Skeleton';
 
 export default function ManagerDashboard() {
   const { user, isReadOnly } = useAuth();
+  const { experimental } = useTheme();
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -97,6 +100,17 @@ export default function ManagerDashboard() {
             </Button>
           )}
         </div>
+
+        {/* Experimental: who MyStudio says is booked in today. Renders nothing
+            when this center has no connection. */}
+        {experimental && (
+          <ExpectedToday
+            date={todayStr}
+            onAdded={handleAdded}
+            existingStudentIds={new Set(assignments.map((a) => a.student_id))}
+            readOnly={isReadOnly}
+          />
+        )}
 
         {/* Stat cards — also the board's status filter */}
         {!loading && !error && assignments.length > 0 && (

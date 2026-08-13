@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../components/layout/Layout';
@@ -10,6 +10,7 @@ import { PRESET_AVATARS } from '../lib/avatars';
 import { CARD } from '../lib/surfaces';
 import useIsDesktop from '../lib/useIsDesktop';
 import { MoonIcon, SunIcon } from '../components/ui/icons';
+import MyStudioConnect, { MyStudioRow } from '../components/manager/MyStudioConnect';
 import {
   UserIcon,
   LockIcon,
@@ -44,6 +45,22 @@ export default function AccountPage() {
   const [avatarError, setAvatarError] = useState('');
 
   const [section, setSection] = useState('profile');
+
+  // Experimental MyStudio connection for this center. Only fetched once the
+  // toggle is on, so a user who never opts in never calls the endpoint.
+  const isManager = ['manager', 'admin'].includes(user?.role);
+  const [mystudio, setMystudio] = useState(null);
+  const [showMyStudio, setShowMyStudio] = useState(false);
+
+  useEffect(() => {
+    if (!experimental || !isManager) return;
+    let cancelled = false;
+    api
+      .get('/mystudio/status')
+      .then((data) => { if (!cancelled) setMystudio(data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [experimental, isManager, user?.activeLocation?.id]);
 
   const handlePresetSelect = async (src) => {
     setSavingAvatar(true);
@@ -268,11 +285,31 @@ export default function AccountPage() {
               </div>
               <Chevron width="18" height="18" className="text-ninja-muted" />
             </button>
+
+            {/* Directors only: the connection belongs to a center, and a sensei
+                has no center to connect. */}
+            {isManager && (
+              <MyStudioRow
+                status={mystudio}
+                onOpen={() => setShowMyStudio(true)}
+              />
+            )}
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
+
+  // Portals to the body, so it goes in whichever layout is rendering rather
+  // than into the experimental card's own subtree.
+  const myStudioPanel = isManager ? (
+    <MyStudioConnect
+      isOpen={showMyStudio}
+      onClose={() => setShowMyStudio(false)}
+      status={mystudio}
+      onChanged={setMystudio}
+    />
+  ) : null;
 
   // Desktop-only setting, so it only appears in the desktop layout's rail.
   // Picked from little window previews rather than a switch, so you can see
@@ -626,6 +663,7 @@ export default function AccountPage() {
             </motion.section>
           </div>
         </div>
+        {myStudioPanel}
       </Layout>
     );
   }
@@ -653,6 +691,7 @@ export default function AccountPage() {
 
         {signOut}
       </div>
+      {myStudioPanel}
     </Layout>
   );
 }

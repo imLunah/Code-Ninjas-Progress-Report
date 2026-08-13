@@ -7,3 +7,8 @@ process.env.DATABASE_URL =
   process.env.TEST_DATABASE_URL ||
   'postgresql://postgres:testpass@localhost:55432/dojolink_test';
 process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-secret';
+// lib/mystudio.js captures this at module scope, so it has to exist before the
+// first import. Fixed value: these tests assert round-tripping, not secrecy.
+process.env.MYSTUDIO_ENC_KEY =
+  process.env.MYSTUDIO_ENC_KEY ||
+  '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
