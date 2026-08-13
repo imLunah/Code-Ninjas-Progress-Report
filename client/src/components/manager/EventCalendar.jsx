@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import Modal from '../ui/Modal';
+import SidePanel from '../ui/SidePanel';
+import useIsDesktop from '../../lib/useIsDesktop';
 import { CARD, GLASS } from '../../lib/surfaces';
 import { CakeIcon as Cake, ChevronLeftIcon as ChevL, ChevronRightIcon as ChevR } from 'lucide-react';
 
@@ -137,6 +139,7 @@ export default function EventCalendar({ canManage = true, bare = false }) {
   const [loading, setLoading] = useState(true);
   const [cursor, setCursor] = useState(() => { const n = new Date(); return { y: n.getFullYear(), m: n.getMonth() }; });
   const [modal, setModal] = useState(null); // { event } — add uses a bare {event_date}
+  const isDesktop = useIsDesktop();
   const [dayView, setDayView] = useState(null); // ISO date whose full list is open
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -221,6 +224,10 @@ export default function EventCalendar({ canManage = true, bare = false }) {
       setModal(null);
     } catch { /* ignore */ } finally { setBusy(false); }
   };
+
+  const Shell = isDesktop ? SidePanel : Modal;
+  const dayShell = isDesktop ? { width: 'w-[22rem]' } : { width: 'max-w-sm' };
+  const formShell = isDesktop ? { width: 'w-[25rem]' } : { width: 'max-w-md' };
 
   return (
     <div className={bare ? '' : `${CARD} ${GLASS} p-5`}>
@@ -347,7 +354,13 @@ export default function EventCalendar({ canManage = true, bare = false }) {
         })}
       </div>
 
-      <Modal isOpen={!!dayView} onClose={() => setDayView(null)} title={dayView ? longDate(dayView) : ''} width="max-w-sm">
+      {/* A day, and an event, open beside the calendar rather than over it: the
+          month is the context for both, and covering it to show one day of it
+          is the dialog getting in the way of its own subject. Pressing anywhere
+          off the panel closes it, which is what a panel that is not blocking
+          the page ought to do. Below the desktop line there is no beside, so
+          both fall back to the full-screen dialog. */}
+      <Shell isOpen={!!dayView} onClose={() => setDayView(null)} title={dayView ? longDate(dayView) : ''} {...dayShell}>
         <div className="space-y-1.5">
           {(byDay.get(dayView) || []).map((ev) => (
             <button
@@ -375,9 +388,9 @@ export default function EventCalendar({ canManage = true, bare = false }) {
             </button>
           ))}
         </div>
-      </Modal>
+      </Shell>
 
-      <Modal isOpen={!!modal} onClose={() => setModal(null)} title={modal?.event?.id ? 'Edit event' : 'New event'} width="max-w-md">
+      <Shell isOpen={!!modal} onClose={() => setModal(null)} title={modal?.event?.id ? 'Edit event' : 'New event'} {...formShell}>
         {modal && (
           <EventForm
             initial={modal.event}
@@ -388,7 +401,7 @@ export default function EventCalendar({ canManage = true, bare = false }) {
             busy={busy}
           />
         )}
-      </Modal>
+      </Shell>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../components/layout/Layout';
@@ -8,6 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import { ONBOARDING_ENABLED } from '../lib/features';
 import { PRESET_AVATARS } from '../lib/avatars';
 import { CARD } from '../lib/surfaces';
+import useIsDesktop from '../lib/useIsDesktop';
 import { MoonIcon, SunIcon } from '../components/ui/icons';
 import {
   UserIcon,
@@ -20,21 +21,6 @@ import {
   PanelTopIcon,
   GhostIcon,
 } from 'lucide-react';
-
-// Desktop gets a settings rail + pane; the phone keeps the single scroll.
-// Matched in JS rather than with `lg:hidden` on both layouts, so only one of
-// them is ever in the DOM — two copies would mean two sets of form inputs.
-function useIsDesktop() {
-  const [isDesktop, setIsDesktop] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px)');
-    const onChange = (e) => setIsDesktop(e.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-  return isDesktop;
-}
 
 const FIELD =
   'w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue';

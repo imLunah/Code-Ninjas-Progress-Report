@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ArchiveRestoreIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
 import Modal from '../ui/Modal';
 import SidePanel from '../ui/SidePanel';
+import useIsDesktop from '../../lib/useIsDesktop';
 import Button from '../ui/Button';
 import LazyMarkdownEditor from '../shared/LazyMarkdownEditor';
 import { useAuth } from '../../context/AuthContext';
@@ -9,21 +10,6 @@ import { COLUMNS } from '../../lib/taskBoard';
 
 const TITLE_MAX = 200;
 
-// Which shell the card opens in. Decided in JS rather than with `lg:hidden` on
-// both, so only one is ever mounted: two copies would be two sets of form
-// inputs bound to one piece of state, which is the bug the Account page's
-// layout switch exists to avoid.
-function useIsDesktop() {
-  const [isDesktop, setIsDesktop] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px)');
-    const onChange = (e) => setIsDesktop(e.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-  return isDesktop;
-}
 
 // Create and edit are the same form. `task` null means create; `column` is the
 // column a new card lands in.
