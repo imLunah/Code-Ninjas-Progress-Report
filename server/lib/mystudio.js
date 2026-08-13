@@ -696,10 +696,30 @@ async function callLoginAction(actionId, fields) {
 }
 
 // The actions answer 200 for a rejected password as readily as an accepted one,
-// so the verdict is the status inside the payload.
+// so the verdict is inside the payload.
+//
+// This used to treat a payload without a `status` as a rejection, which was
+// exactly backwards: a successful sign-in returns a plain message and no status
+// at all. The cost of that guess was not a bad error message. Believing a
+// working sign-in had failed sent the code back through the resend endpoint to
+// ask what went wrong, and asking issues a NEW code, so the one already sitting
+// in the person's inbox was cancelled by the act of misreading the success. Only
+// call something a failure when it actually says so.
+// A rejection always says so in `status`: a wrong password came back as
+// {"status":"error","message":"Something went wrong. Please try again."} when
+// this was tested against the live app. A success carries no status at all.
+//
+// Sniffing the message for failure words was tried and thrown away. It read
+// "invalid" out of the address the code had just been sent to and called a
+// working sign-in a failure, which is the same bug in a new place: the whole
+// point here is that only an explicit failure counts as one.
+//
+// If a failure ever does arrive without a status, this treats it as sent and the
+// code simply never turns up, which the person fixes with "Send a new code". The
+// opposite mistake cancels a code they are already holding.
 function actionRejected(payload) {
-  const status = payload && typeof payload.status === 'string' ? payload.status : null;
-  if (!status) return true;
+  if (!payload || typeof payload !== 'object') return true;
+  const status = typeof payload.status === 'string' ? payload.status : '';
   return /error|fail/i.test(status);
 }
 
@@ -978,6 +998,7 @@ module.exports = {
   MyStudioError,
   MyStudioSignInUnavailable,
   parseFlightResult,
+  actionRejected,
   resolveLoginActions,
   startLogin,
   completeLogin,

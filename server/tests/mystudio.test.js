@@ -266,6 +266,61 @@ describe('rotating the session cookie', () => {
   });
 });
 
+// Reading a successful sign-in as a failure is not a cosmetic mistake. The
+// failure path asks the resend endpoint what went wrong, and asking issues a new
+// code, so a misread success cancels the code already sitting in the inbox.
+describe('judging a sign-in response', () => {
+  it('accepts a success that carries only a message', () => {
+    // The shape that caused the bug: no status field at all.
+    expect(
+      ms.actionRejected({ message: 'One time passcode has been send to a@b.invalid' })
+    ).toBe(false);
+  });
+
+  it('accepts an explicit success status', () => {
+    expect(ms.actionRejected({ status: 'Success' })).toBe(false);
+    expect(ms.actionRejected({ status: 'ok', message: 'anything' })).toBe(false);
+  });
+
+  it('rejects an explicit failure status', () => {
+    expect(ms.actionRejected({ status: 'error', message: 'Something went wrong.' })).toBe(true);
+    expect(ms.actionRejected({ status: 'Login Failed' })).toBe(true);
+  });
+
+  it('does not read failure out of the message text', () => {
+    // This is the trap. "One time passcode has been send to a@b.invalid" is a
+    // success whose message contains the word invalid, inside the address the
+    // code was just sent to. Only an explicit status counts.
+    expect(ms.actionRejected({ message: 'sent to someone@example.invalid' })).toBe(false);
+  });
+
+  it('rejects nothing at all', () => {
+    expect(ms.actionRejected(null)).toBe(true);
+    expect(ms.actionRejected('not an object')).toBe(true);
+  });
+});
+
+describe('reading an action response', () => {
+  it('follows the pointer on line 0 rather than assuming line 1', () => {
+    const stream =
+      '0:{"a":"$@2","f":"","b":"abc"}\n' +
+      '1:{"not":"the answer"}\n' +
+      '2:{"status":"error","message":"nope"}\n';
+    expect(ms.parseFlightResult(stream)).toEqual({ status: 'error', message: 'nope' });
+  });
+
+  it('falls back to the last JSON row when there is no pointer', () => {
+    expect(ms.parseFlightResult('0:{"f":""}\n1:{"message":"hello"}\n')).toEqual({
+      message: 'hello',
+    });
+  });
+
+  it('survives a body that is not a flight stream', () => {
+    expect(ms.parseFlightResult('<!DOCTYPE html><html></html>')).toBe(null);
+    expect(ms.parseFlightResult('')).toBe(null);
+  });
+});
+
 describe('program mapping', () => {
   it('maps the titles that are unambiguous', () => {
     expect(ms.programForClass('CREATE')).toBe('CREATE');
