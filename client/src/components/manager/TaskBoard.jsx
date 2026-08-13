@@ -662,10 +662,34 @@ export default function TaskBoard({
       el.style.transform = `translate3d(${left - originX}px, ${top - originY}px, 0)`;
     };
 
-    // The card, at its own size, but drawn as a capsule rather than a card:
-    // a rounded rectangle merging with a rounded rectangle reads as two shapes
-    // that have been glued, where two capsules read as one thing that flowed.
-    put(gooBeadRef.current, bx, by, box.w, box.h, Math.min(box.w, box.h) / 2);
+    // The card's silhouette this frame — the taffy stretch and thinning the
+    // DOM card is wearing — computed here because both liquids need it: the
+    // glass draws all of it, and the red is allowed to touch only part of it.
+    const gw = box.w * (1 + 0.14 * pull);
+    const gh = box.h * (1 - 0.07 * pull);
+    const gLead = bx + gw;
+    const gy = by + (box.h - gh) / 2;
+    // Corner radius for the card and its bead, on a ramp that runs AHEAD of
+    // the pull. The goo filter rounds every corner it is given — 22px of
+    // blur is a floor under how sharp the union can be — so a radius that
+    // only reached the capsule at the band would disagree with the
+    // silhouette the whole way in, and the hand-over would visibly cut from
+    // rectangle to blob. Ahead of the pull, the card is a full capsule by
+    // pull ≈ 0.55 — the shape the goo has been drawing all along — and only
+    // then does the paint fade. Seamless is the shapes agreeing BEFORE the
+    // fade, not the fade being quick.
+    const rampR = (cap) => 16 + (cap - 16) * Math.min(1, pull * 1.8);
+
+    // The red used to ride the whole card as a hidden bead, there purely so
+    // the pool had something to reach for. The card is see-through when it
+    // is molten, so a full-card bead reads as the card filling with red
+    // before the red has arrived. Now the red only wets what it has actually
+    // reached: the slice of the card past the band's edge, growing from the
+    // leading edge as the card pushes in, and nothing at all while there is
+    // still a gap.
+    const wetX = Math.max(bx, r.left);
+    const wetW = Math.max(0, gLead - wetX);
+    put(gooBeadRef.current, wetX, gy, wetW, gh, Math.min(wetW, gh) / 2);
 
     // And the drop that bridges the gap, sized off the card so a wide card gets
     // a bridge to match. It is the only part that has to know about distance,
@@ -691,17 +715,18 @@ export default function TaskBoard({
       if (m) m.style.transform = pull > 0 ? `scaleX(${1 + 0.14 * pull}) scaleY(${1 - 0.07 * pull})` : '';
       const face = faceRef.current;
       if (face) {
-        const capsule = Math.min(box.w, box.h) / 2;
-        face.style.borderRadius = pull > 0 ? `${16 + (capsule - 16) * pull}px` : '';
+        face.style.borderRadius = pull > 0 ? `${rampR(Math.min(box.w, box.h) / 2)}px` : '';
 
         // Two surfaces can never merge seamlessly while both keep their own
         // edges — one of them has to stop being a surface. It is this one,
         // because the goo union is the shape that knows about the neck. Once
-        // the pull is real the card dissolves into the pane: background,
-        // border and shadows hand over to the glass layer (the 200ms
-        // transition makes it a fade, not a switch), and what is left riding
-        // the merged shape is the text.
-        const molten = pull > 0.35;
+        // the card has finished becoming a capsule it dissolves into the
+        // pane: background, border and shadows hand over to the glass layer
+        // (the 200ms transition makes it a fade, not a switch), and what is
+        // left riding the merged shape is the text. The threshold sits just
+        // past where rampR tops out, so the fade only ever crosses between
+        // two copies of the same shape.
+        const molten = pull > 0.55;
         face.style.backgroundColor = molten ? 'transparent' : '';
         face.style.borderColor = molten ? 'transparent' : '';
         face.style.boxShadow = molten ? 'none' : '';
@@ -716,12 +741,9 @@ export default function TaskBoard({
     // the silhouette and the text stay one thing while the card is molten.
     const glass = glassRef.current;
     if (glass) glass.style.opacity = String(Math.min(1, pull * 1.6));
-    const gw = box.w * (1 + 0.14 * pull);
-    const gh = box.h * (1 - 0.07 * pull);
     // Corners on the same ramp as the face's, so when the card's own paint
     // fades out the silhouette underneath is the shape it just was.
-    put(glassBeadRef.current, bx, by + (box.h - gh) / 2, gw, gh, 16 + (gh / 2 - 16) * pull);
-    const gLead = bx + gw;
+    put(glassBeadRef.current, bx, gy, gw, gh, rampR(gh / 2));
     const gBridge = bridge * 0.85;
     put(
       glassDropRef.current,
