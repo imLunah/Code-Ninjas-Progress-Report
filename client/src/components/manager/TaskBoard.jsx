@@ -523,11 +523,14 @@ export default function TaskBoard({
   const gooRef = useRef(null);
   const gooBeadRef = useRef(null);
   const gooDropRef = useRef(null);
-  // The pieces of the held card the drop writes to by hand: the shell to level
-  // its tilt, the wash to flood it red. Same reason as the overlay — these are
-  // drop-time values, and state would re-render the board to carry them.
+  // The card's own melt: a wrapper the displacement filter and the stretch are
+  // written to, the noise it reads, and the map whose scale is the how-molten
+  // dial. Same per-frame rule as the goo — refs, never state.
   const meltRef = useRef(null);
-  const washRef = useRef(null);
+  const meltMapRef = useRef(null);
+  const meltNoiseRef = useRef(null);
+  // The last reach paintGoo computed, kept where the simmer loop can read it.
+  const pullRef = useRef(0);
   // Where the pointer was last, so the drop can send the card into the band at
   // the height it was let go of rather than at some fixed point on it.
   const lastPoint = useRef({ x: 0, y: 0 });
@@ -565,6 +568,29 @@ export default function TaskBoard({
   }, []);
 
   useEffect(() => () => { document.body.style.userSelect = ''; }, []);
+
+  // Liquid does not hold still. The displacement reads a fixed noise field, so
+  // a card parked over the band would freeze mid-wobble — a picture of molten,
+  // not molten. While the red has any grip, the noise is breathed through a
+  // slow cycle and the surface swims in place. Runs only for the length of a
+  // drag, and does nothing per frame until the card is inside the reach.
+  useEffect(() => {
+    if (!held || reduce) return undefined;
+    let raf;
+    const tick = (now) => {
+      const n = meltNoiseRef.current;
+      if (n && pullRef.current > 0) {
+        const t = now / 1400;
+        n.setAttribute(
+          'baseFrequency',
+          `${(0.016 + 0.004 * Math.sin(t)).toFixed(4)} ${(0.028 + 0.006 * Math.cos(t * 0.9)).toFixed(4)}`
+        );
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [held, reduce]);
 
   const setTargetIfChanged = (next) => {
     const prev = targetRef.current;
@@ -670,6 +696,31 @@ export default function TaskBoard({
       by + box.h / 2 - bridge / 2,
       bridge, bridge, bridge / 2
     );
+
+    // The card melts on the same dial the red reaches on. The pane is glass,
+    // and what the red does to glass it gets near should be what heat does:
+    // noise displaces the card's pixels — a shimmer at the edge of the reach,
+    // a slump at the band — and the whole pane stretches toward the bin the
+    // way the bead underneath it already does, thinning as it goes.
+    //
+    // The filter only goes on while there is any pull. An ancestor filter is
+    // a backdrop root, so while it is on the card's own refraction has
+    // nothing behind it to sample — molten glass giving up its see-through is
+    // the right trade at the band and a pointless one out on the board.
+    pullRef.current = pull;
+    if (!reduce) {
+      const m = meltRef.current;
+      if (m) {
+        if (pull > 0) {
+          m.style.filter = 'url(#taskMelt)';
+          m.style.transform = `scaleX(${1 + 0.1 * pull}) scaleY(${1 - 0.05 * pull})`;
+        } else {
+          m.style.filter = '';
+          m.style.transform = '';
+        }
+      }
+      meltMapRef.current?.setAttribute('scale', String(Math.round(26 * pull)));
+    }
   };
 
   const beginDrag = (task, rect, startX, startY) => {
@@ -711,6 +762,7 @@ export default function TaskBoard({
 
     snap.current = s;
     info.current = { id: task.id, dx: startX - rect.left, dy: startY - rect.top, w: rect.width, h: rect.height };
+    pullRef.current = 0;
     document.body.style.userSelect = 'none';
     setHeld({ task, w: rect.width, h: rect.height, x: rect.left, y: rect.top, trash: s.trash });
     readTarget(startX, startY);
@@ -776,43 +828,43 @@ export default function TaskBoard({
         if (o && r) {
           const box = info.current;
           const y = lastPoint.current.y;
-          // Where the card already is: the melt happens in place, card and
-          // bead sharing a left edge and a centreline the whole way down.
-          const bx = lastPoint.current.x - box.dx;
-          const by = lastPoint.current.y - box.dy;
-          const stretchMs = Math.round(SWALLOW_MS * 0.45);
-          const thin = Math.max(box.h * 0.52, 34);
+          // Where the card already is, so it fades in place rather than making
+          // a trip of its own across the blob that is standing in for it.
+          const bxCard = lastPoint.current.x - box.dx;
 
-          // The card does not fade where it stands and leave the blob to do
-          // the moving — it melts along the blob's own path. Same curve, same
-          // beat, same shape as the bead's stretch underneath it: squashed to
-          // the bead's height, pulled the bead's distance into the band,
-          // flooding red and losing its edges as it goes. The glass and the
-          // liquid are one shape for the whole stretch, and what dissolves at
-          // the end of it is already liquid-coloured and liquid-shaped, so the
-          // pane reads as becoming the red rather than being replaced by it.
-          // The opacity eases in — the card holds while the red floods it,
-          // then goes all at once into the blob it is by then lying on.
-          const stretchW = Math.max(r.left + r.w * 0.4 - bx, box.w);
-          o.style.transformOrigin = 'left center';
-          o.style.transition =
-            `transform ${stretchMs}ms cubic-bezier(0.35, 0, 0.25, 1), ` +
-            `opacity ${stretchMs}ms cubic-bezier(0.55, 0, 1, 0.45), ` +
-            `filter ${stretchMs}ms linear`;
+          // The card goes first and quickly, rounding off as it goes. What is
+          // left behind is the blob that has been standing in for it under the
+          // filter all along, so the card does not vanish — it stops being a
+          // card and carries on as liquid.
+          // The card hands over early — it is gone before the stretch is, so
+          // what is being pulled into the bin is liquid and not a picture of a
+          // card being dragged there.
+          o.style.transition = `transform ${SWALLOW_MS * 0.45}ms var(--ease-out), opacity ${SWALLOW_MS * 0.26}ms linear`;
           o.style.transform =
-            `translate3d(${bx}px, ${by}px, 0) scale(${stretchW / box.w}, ${thin / box.h})`;
+            `translate3d(${bxCard}px, ${y - box.h / 2}px, 0) scale(0.88)`;
           o.style.opacity = '0';
-          o.style.filter = 'blur(7px)';
 
-          // Rigidity goes first: the armed tilt levels out on the shell's own
-          // 200ms transition, and the wash floods ahead of the dissolve so the
-          // last visible thing of the card is the colour it is turning into.
-          const shell = meltRef.current;
-          if (shell) shell.style.transform = 'rotate(0deg) scale(1)';
-          const wash = washRef.current;
-          if (wash) {
-            wash.style.transition = `opacity ${Math.round(stretchMs * 0.6)}ms var(--ease-out)`;
-            wash.style.opacity = '0.85';
+          // The melt finishes what the approach started: the displacement is
+          // cranked while the card fades and the stretch is pushed on toward
+          // the band, so the last frames of card are the most liquid ones and
+          // the blob it hands over to is a continuation, not a replacement.
+          if (!reduce) {
+            const wrap = meltRef.current;
+            if (wrap) {
+              wrap.style.transition = `transform ${SWALLOW_MS * 0.45}ms var(--ease-out)`;
+              wrap.style.transform = 'scaleX(1.22) scaleY(0.82)';
+            }
+            const map = meltMapRef.current;
+            if (map) {
+              const from = 26 * pullRef.current;
+              const t0 = performance.now();
+              const step = (now) => {
+                const k = Math.min(1, (now - t0) / (SWALLOW_MS * 0.45));
+                map.setAttribute('scale', String(Math.round(from + (64 - from) * k)));
+                if (k < 1 && meltMapRef.current === map) requestAnimationFrame(step);
+              };
+              requestAnimationFrame(step);
+            }
           }
 
           // A step up while it is being swallowed, not a flood: the shape is
@@ -838,13 +890,17 @@ export default function TaskBoard({
           const bead = gooBeadRef.current;
           const drop = gooDropRef.current;
           const originX = r.left - GOO_REACH;
+          const bx = lastPoint.current.x - box.dx;
+          const by = lastPoint.current.y - box.dy;
+          const stretchMs = Math.round(SWALLOW_MS * 0.45);
           const ease = (ms, curve) =>
             `width ${ms}ms ${curve}, height ${ms}ms ${curve}, ` +
             `border-radius ${ms}ms linear, transform ${ms}ms ${curve}`;
 
+          const thin = Math.max(box.h * 0.52, 34);
           if (bead) {
             bead.style.transition = ease(stretchMs, 'cubic-bezier(0.35, 0, 0.25, 1)');
-            bead.style.width = `${stretchW}px`;
+            bead.style.width = `${Math.max(r.left + r.w * 0.4 - bx, box.w)}px`;
             bead.style.height = `${thin}px`;
             bead.style.borderRadius = `${thin / 2}px`;
             bead.style.transform =
@@ -1097,6 +1153,20 @@ export default function TaskBoard({
                   values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 13 -5.5"
                 />
               </filter>
+              {/* The card's melt. Not a goo — the card has writing on it, so
+                  it cannot survive a threshold — but the same species of
+                  thing: noise displaces the card's pixels, softened first so
+                  the warp rolls instead of tearing. The map's scale starts at
+                  0 (no displacement at all) and paintGoo turns it up with the
+                  same pull that stretches the red. Kin to #liquidGlass in
+                  Layout, and it degrades the same way: a browser that will
+                  not run url() filters on HTML just shows the undistorted
+                  card. */}
+              <filter id="taskMelt" x="-25%" y="-45%" width="150%" height="190%" colorInterpolationFilters="sRGB">
+                <feTurbulence ref={meltNoiseRef} type="fractalNoise" baseFrequency="0.016 0.028" numOctaves="2" seed="7" result="noise" />
+                <feGaussianBlur in="noise" stdDeviation="1.6" result="softNoise" />
+                <feDisplacementMap ref={meltMapRef} in="SourceGraphic" in2="softNoise" scale="0" xChannelSelector="R" yChannelSelector="G" />
+              </filter>
             </defs>
           </svg>
           <div
@@ -1178,25 +1248,28 @@ export default function TaskBoard({
               tips further over and gives up its edges. By the time it is
               dropped it is most of the way to being liquid, so the swallow has
               something to finish rather than something to start. */}
-          <div
-            ref={meltRef}
-            className={`${CARD} ${TASK_SURFACE} task-lensed p-3.5 shadow-xl relative transition-all duration-200 ease-[var(--ease-out)] ${
-              target?.trash ? 'ring-2 ring-ninja-red -rotate-3 scale-95' : '-rotate-1'
-            }`}
-            style={target?.trash ? { borderRadius: `${Math.min(held.w, held.h) / 2}px` } : undefined}
-          >
-            {/* Solid red at 15% via opacity, not bg-ninja-red/15 — the drop
-                floods it to nearly 1 by writing the span's opacity, which an
-                alpha baked into the class would cap. */}
-            {target?.trash && (
-              <span
-                ref={washRef}
-                aria-hidden="true"
-                className="absolute inset-0 bg-ninja-red pointer-events-none"
-                style={{ borderRadius: `${Math.min(held.w, held.h) / 2}px`, opacity: 0.15 }}
-              />
-            )}
-            <TaskCardFace task={held.task} />
+          {/* The melt wrapper. paintGoo writes the #taskMelt filter and a
+              stretch to it as the card nears the band — kept off the card
+              itself so its own classes and React's over-the-bin styling never
+              fight the per-frame writes. Origin on the trailing edge, so the
+              stretch elongates the card toward the red the way the bead is
+              pulled, not equally in both directions. */}
+          <div ref={meltRef} style={{ transformOrigin: 'left center', willChange: 'filter, transform' }}>
+            <div
+              className={`${CARD} ${TASK_SURFACE} task-lensed p-3.5 shadow-xl relative transition-all duration-200 ease-[var(--ease-out)] ${
+                target?.trash ? 'ring-2 ring-ninja-red -rotate-3 scale-95' : '-rotate-1'
+              }`}
+              style={target?.trash ? { borderRadius: `${Math.min(held.w, held.h) / 2}px` } : undefined}
+            >
+              {target?.trash && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-0 bg-ninja-red/15 pointer-events-none"
+                  style={{ borderRadius: `${Math.min(held.w, held.h) / 2}px` }}
+                />
+              )}
+              <TaskCardFace task={held.task} />
+            </div>
           </div>
         </div>,
         document.body
