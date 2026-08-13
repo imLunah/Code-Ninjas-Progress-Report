@@ -92,6 +92,8 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [cookieOpen, setCookieOpen] = useState(false);
+  // Opening the sign-in on a connection that is already working.
+  const [showSignIn, setShowSignIn] = useState(false);
 
   const savedEmail = status?.loginEmail || '';
   const hasSavedPassword = Boolean(status?.hasSavedPassword);
@@ -116,6 +118,7 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
     setPassword('');
     setCode('');
     setCookieOpen(false);
+    setShowSignIn(false);
   }, [isOpen]);
 
   // Reopen where the sign-in actually is, not where it started.
@@ -282,6 +285,8 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
 
   const connected = status?.connected;
   const expired = connected && status.status === 'expired';
+  // Connected and pulling. Nothing needs doing, so nothing should be asked for.
+  const healthy = connected && !expired;
   const lastSynced = formatWhen(status?.lastSyncedAt);
 
   const body = (
@@ -395,24 +400,31 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
             </button>
           </div>
         </div>
+      ) : healthy && !showSignIn ? (
+        // Working connections are not asked to sign in.
+        //
+        // This block used to sit open on a healthy connection, offering to email
+        // a code for no stated reason, which reads as a step somebody forgot to
+        // finish rather than the repair it is. Signing in again is only ever a
+        // repair, so it waits behind a quiet link until something is wrong or
+        // somebody goes looking for it.
+        <button
+          type="button"
+          onClick={() => setShowSignIn(true)}
+          className="font-ninja text-sm text-ninja-muted hover:text-ninja-navy transition-colors"
+        >
+          Sign in again
+        </button>
       ) : (
         <div>
           <p className="font-ninja text-xs font-semibold uppercase tracking-wide text-ninja-muted mb-2">
-            {connected ? 'Sign in again' : 'Sign in to MyStudio'}
-          </p>
-
-          {/* Say what is about to happen. Without this the panel is two fields
-              and a button, the code box only appears at the next step, and
-              somebody holding a code has nowhere to put it and no idea why. */}
-          <p className="font-ninja text-sm text-ninja-muted mb-3">
-            MyStudio emails a six digit code every time. Enter your details here
-            and the box for that code comes next.
+            {expired ? 'Reconnect' : connected ? 'Sign in again' : 'Sign in to MyStudio'}
           </p>
 
           {hasSavedPassword ? (
             <p className="font-ninja text-sm text-ninja-navy mb-3">
-              Your MyStudio password is saved, so this only needs the code they
-              email you.
+              Your password is saved, so this only needs the code MyStudio emails
+              you.
             </p>
           ) : (
             <div className="space-y-2 mb-3">
@@ -426,7 +438,7 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="username"
-                  placeholder="Your MyStudio email"
+                  placeholder="Email"
                   className={FIELD}
                   disabled={busy || !status?.configured}
                 />
@@ -444,15 +456,14 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
                     if (e.key === 'Enter') sendCode();
                   }}
                   autoComplete="current-password"
-                  placeholder="Your MyStudio password"
+                  placeholder="Password"
                   className={FIELD}
                   disabled={busy || !status?.configured}
                 />
               </div>
               <p className="font-ninja text-xs text-ninja-muted">
                 Saved encrypted so renewing later only needs the emailed code. You
-                can forget it at any time. DojoLink only ever reads your class
-                schedule, and never writes anything back to MyStudio.
+                can forget it at any time.
               </p>
             </div>
           )}
@@ -488,48 +499,21 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
               I already have a code
             </button>
 
-            {hasSavedPassword && (
-              <AnimatePresence mode="wait" initial={false}>
-                {confirmingForget ? (
-                  <motion.div
-                    key="confirm-forget"
-                    initial={{ opacity: 0, x: -4 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                    className="flex items-center gap-2"
-                  >
-                    <button
-                      type="button"
-                      onClick={forgetPassword}
-                      disabled={busy}
-                      className="font-ninja text-sm font-semibold rounded-lg px-3 py-2 bg-ninja-red text-white transition-colors hover:brightness-95 disabled:opacity-60"
-                    >
-                      Forget password
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingForget(false)}
-                      className="font-ninja text-sm text-ninja-muted hover:text-ninja-navy transition-colors"
-                    >
-                      Keep it
-                    </button>
-                  </motion.div>
-                ) : (
-                  <motion.button
-                    key="ask-forget"
-                    type="button"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                    onClick={() => setConfirmingForget(true)}
-                    className="font-ninja text-sm text-ninja-muted hover:text-ninja-navy transition-colors"
-                  >
-                    Forget saved password
-                  </motion.button>
-                )}
-              </AnimatePresence>
+            {/* Only when this was opened by choice. There is nothing to back out
+                of when the connection is the thing that needs fixing. */}
+            {healthy && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSignIn(false);
+                  setPassword('');
+                  setError('');
+                  setNotice('');
+                }}
+                className="font-ninja text-sm text-ninja-muted hover:text-ninja-navy transition-colors"
+              >
+                Cancel
+              </button>
             )}
           </div>
         </div>
@@ -596,7 +580,53 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
         </p>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Housekeeping for the connection itself, kept together and kept away
+          from the sign-in: forgetting a password is not a step in signing in. */}
+      <div className="flex flex-wrap items-center gap-4">
+        {hasSavedPassword && (
+          <AnimatePresence mode="wait" initial={false}>
+            {confirmingForget ? (
+              <motion.div
+                key="confirm-forget"
+                initial={{ opacity: 0, x: -4 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="flex items-center gap-2"
+              >
+                <button
+                  type="button"
+                  onClick={forgetPassword}
+                  disabled={busy}
+                  className="font-ninja text-sm font-semibold rounded-lg px-3 py-2 bg-ninja-red text-white transition-colors hover:brightness-95 disabled:opacity-60"
+                >
+                  Forget password
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingForget(false)}
+                  className="font-ninja text-sm text-ninja-muted hover:text-ninja-navy transition-colors"
+                >
+                  Keep it
+                </button>
+              </motion.div>
+            ) : (
+              <motion.button
+                key="ask-forget"
+                type="button"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                onClick={() => setConfirmingForget(true)}
+                className="font-ninja text-sm text-ninja-muted hover:text-ninja-navy transition-colors"
+              >
+                Forget saved password
+              </motion.button>
+            )}
+          </AnimatePresence>
+        )}
+
         {connected && (
           <AnimatePresence mode="wait" initial={false}>
             {confirmingDisconnect ? (
