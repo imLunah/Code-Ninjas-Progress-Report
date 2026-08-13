@@ -1019,23 +1019,58 @@ async function getRegisteredForClass(session, companyId, date, cls) {
   return registered.map((p) => normalizeParticipant(p, cls));
 }
 
+function cleanText(value) {
+  return String(value ?? '').trim() || null;
+}
+
+// MyStudio sends dates in more than one shape, and a date column will take
+// whatever it is given and be wrong later.
+function toDateOnly(value) {
+  const text = String(value ?? '').trim();
+  if (!text) return null;
+  const iso = /^(\d{4}-\d{2}-\d{2})/.exec(text);
+  if (iso) return iso[1];
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
+}
+
 // Everything the roster import needs, and nothing else.
 //
-// Same PII boundary as normalizeParticipant, for the same reason: these rows
-// carry a child's check-in PIN, date of birth, contact details and parent names,
-// and none of it is needed to create a DojoLink ninja. Membership and category
-// are kept because they are the only clue to which program somebody is in.
+// This carries more than normalizeParticipant does, on purpose, and the
+// difference between the two is the whole point of having two.
+//
+// The board matches a booking to a ninja who already exists, so it needs a name
+// and nothing else, and it strips date of birth and contact details at the
+// boundary. The roster import CREATES that ninja, and a DojoLink student record
+// has a birthday and a parent to fill in — the same fields the CSV import has
+// always carried, from the same families, for the same reason.
+//
+// What still never comes across: `real_pin`, which is a child's check-in code
+// for somebody else's system and has no field here to land in, and the postal
+// code, which has no field either. And none of this is ever returned to a
+// client: it goes from the pull straight into the insert, and the preview
+// describes which fields would be filled without quoting any of them.
 function normalizeMember(p) {
   const first = String(p.participant_first_name || '').trim();
   const last = String(p.participant_last_name || '').trim();
+  const parentName = [cleanText(p.buyer_first_name), cleanText(p.buyer_last_name)]
+    .filter(Boolean)
+    .join(' ');
+
   return {
     participantId: String(p.participant_id || ''),
     firstName: first,
     lastName: last,
     fullName: [first, last].filter(Boolean).join(' '),
-    rankName: String(p.rank_name || '').trim() || null,
-    membershipTitle: String(p.membership_title || '').trim() || null,
-    categoryTitle: String(p.category_title || '').trim() || null,
+    rankName: cleanText(p.rank_name),
+    membershipTitle: cleanText(p.membership_title),
+    categoryTitle: cleanText(p.category_title),
+    birthday: toDateOnly(p.date_of_birth),
+    parentName: parentName || null,
+    // Named defensively: the buyer fields are the parent's where they exist, and
+    // the student ones are what a child's record actually carries.
+    parentEmail: cleanText(p.buyer_email) || cleanText(p.student_email),
+    parentPhone: cleanText(p.buyer_mobile) || cleanText(p.student_mobile),
   };
 }
 
@@ -1096,6 +1131,12 @@ async function getCenterRoster(cookieOrSession, companyId, date) {
   );
 
   const all = Array.isArray(data && data.all) ? data.all : [];
+
+  // Field NAMES only, never a value. Their contact fields are named by
+  // guesswork here, and this is what lets the next person tighten the mapping
+  // without reading a live row full of children's details to do it.
+  if (all.length) console.log('MyStudio roster fields:', Object.keys(all[0]).sort().join(','));
+
   const members = all.map(normalizeMember).filter((m) => m.participantId && m.fullName);
 
   // One row per person. The same member can appear more than once when they hold

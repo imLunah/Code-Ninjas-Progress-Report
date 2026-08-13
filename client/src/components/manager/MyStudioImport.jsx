@@ -16,6 +16,15 @@ import { api } from '../../api/client';
 // archiving everyone absent from the file, and a live pull that behaved the same
 // way would empty a roster the first time MyStudio had a bad morning.
 
+// The preview names the fields it would fill and never their values, so a
+// child's date of birth is not sent to a browser to say one was found.
+const FIELD_LABELS = {
+  birthday: 'birthday',
+  parent_name: 'parent name',
+  parent_email: 'email',
+  parent_phone: 'phone',
+};
+
 const CHECKBOX =
   'w-4 h-4 rounded border-ninja-border accent-ninja-blue flex-shrink-0 cursor-pointer';
 
@@ -39,6 +48,7 @@ export default function MyStudioImport({ onImported }) {
   const [result, setResult] = useState(null);
   const [beltIds, setBeltIds] = useState(() => new Set());
   const [enrollIds, setEnrollIds] = useState(() => new Set());
+  const [detailIds, setDetailIds] = useState(() => new Set());
 
   const reset = () => {
     setPreview(null);
@@ -46,6 +56,7 @@ export default function MyStudioImport({ onImported }) {
     setError('');
     setBeltIds(new Set());
     setEnrollIds(new Set());
+    setDetailIds(new Set());
   };
 
   const loadPreview = useCallback(async () => {
@@ -81,6 +92,7 @@ export default function MyStudioImport({ onImported }) {
       const res = await api.post('/mystudio/import', {
         belt_ids: [...beltIds],
         enroll_ids: [...enrollIds],
+        detail_ids: [...detailIds],
       });
       setResult(res);
       setPreview(null);
@@ -95,9 +107,14 @@ export default function MyStudioImport({ onImported }) {
   const toAdd = preview?.to_add || [];
   const beltChanges = preview?.belt_changes || [];
   const newEnrollments = preview?.new_enrollments || [];
+  const detailFills = preview?.detail_fills || [];
   const ambiguous = preview?.ambiguous || [];
   const nothingToDo =
-    preview && !toAdd.length && !beltChanges.length && !newEnrollments.length;
+    preview &&
+    !toAdd.length &&
+    !beltChanges.length &&
+    !newEnrollments.length &&
+    !detailFills.length;
 
   return (
     <>
@@ -128,10 +145,11 @@ export default function MyStudioImport({ onImported }) {
                 Added {result.added} {result.added === 1 ? 'ninja' : 'ninjas'} from{' '}
                 {result.member_count} at this center.
               </p>
-              {(result.enrolled > 0 || result.belts_changed > 0) && (
+              {(result.enrolled > 0 || result.belts_changed > 0 || result.details_filled > 0) && (
                 <p className="font-ninja text-sm text-ninja-muted">
                   {result.enrolled > 0 && `${result.enrolled} new enrollment${result.enrolled === 1 ? '' : 's'}. `}
-                  {result.belts_changed > 0 && `${result.belts_changed} belt${result.belts_changed === 1 ? '' : 's'} updated.`}
+                  {result.belts_changed > 0 && `${result.belts_changed} belt${result.belts_changed === 1 ? '' : 's'} updated. `}
+                  {result.details_filled > 0 && `${result.details_filled} ninja${result.details_filled === 1 ? '' : 's'} had missing details filled in.`}
                 </p>
               )}
             </div>
@@ -166,6 +184,7 @@ export default function MyStudioImport({ onImported }) {
                         <span className="ml-auto text-xs text-ninja-muted flex-shrink-0">
                           {row.program || 'No program yet'}
                           {row.belt ? ` · ${row.belt}` : ''}
+                          {row.fills?.length ? ` · +${row.fills.length} details` : ''}
                         </span>
                       </li>
                     ))}
@@ -191,6 +210,32 @@ export default function MyStudioImport({ onImported }) {
                           <span className="truncate">{row.full_name}</span>
                           <span className="ml-auto text-xs text-ninja-muted flex-shrink-0">
                             {row.program}
+                          </span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </Section>
+              )}
+
+              {detailFills.length > 0 && (
+                <Section
+                  title="Fill in missing details"
+                  hint="MyStudio has a birthday or parent contact where DojoLink has a blank. Only blanks are filled, never anything already entered here."
+                >
+                  <ul className="space-y-1">
+                    {detailFills.map((row) => (
+                      <li key={row.id}>
+                        <label className="flex items-center gap-2.5 font-ninja text-sm text-ninja-navy cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className={CHECKBOX}
+                            checked={detailIds.has(row.id)}
+                            onChange={() => toggle(setDetailIds)(row.id)}
+                          />
+                          <span className="truncate">{row.full_name}</span>
+                          <span className="ml-auto text-xs text-ninja-muted flex-shrink-0">
+                            {row.fields.map((f) => FIELD_LABELS[f] || f).join(', ')}
                           </span>
                         </label>
                       </li>

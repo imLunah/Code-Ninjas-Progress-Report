@@ -374,6 +374,11 @@ describe('program mapping', () => {
 // The roster import reads `all[]`, which every other path in this file is
 // forbidden to touch, so its boundary gets checked as carefully as the board's.
 describe('roster members', () => {
+  // Every value invented, and deliberately distinctive from every other value:
+  // an earlier version used '00000' for the postal code and '5550000000' for the
+  // phone, so the assertion that the postal code never crosses passed and failed
+  // on the phone number containing it. A leak check that cannot tell two fields
+  // apart is not a leak check.
   const upstream = {
     participant_id: 'PID-9',
     participant_first_name: 'Testy',
@@ -381,26 +386,58 @@ describe('roster members', () => {
     rank_name: 'White Belt 3',
     membership_title: 'CREATE Monthly',
     category_title: 'Member',
-    real_pin: 'PIN-0000',
+    real_pin: 'PIN-4417',
     date_of_birth: '1999-01-01',
-    student_email: 'nobody@example.invalid',
-    student_mobile: '5550000000',
+    student_email: 'nobody@example.test',
+    student_mobile: '5551234567',
     buyer_first_name: 'Guardian',
-    buyer_postal_code: '00000',
+    buyer_last_name: 'McExample',
+    buyer_postal_code: '90210',
   };
 
-  it('drops every sensitive field', () => {
+  // Unlike the board's participants, a roster member DOES carry a birthday and
+  // parent contact: the import creates the DojoLink record those fields live in,
+  // and the CSV import has always carried the same ones. The line is drawn at
+  // what has nowhere to land here.
+  it('carries the details a new ninja record is made of', () => {
+    const member = ms.normalizeMember(upstream);
+    expect(member.birthday).toBe('1999-01-01');
+    expect(member.parentName).toBe('Guardian McExample');
+    expect(member.parentEmail).toBe('nobody@example.test');
+    expect(member.parentPhone).toBe('5551234567');
+  });
+
+  it('never carries the check-in PIN or the postal code', () => {
+    // The PIN is a child's code for somebody else's system and the postal code
+    // has no field here. Neither has any business crossing.
     const json = JSON.stringify(ms.normalizeMember(upstream));
+    expect(json).not.toContain('PIN-4417');
+    expect(json).not.toContain('90210');
+  });
+
+  it('keeps all of it away from the check-in board', () => {
+    // The board matches a booking to a ninja who already exists, so it needs a
+    // name and nothing else. Widening THIS is what the standing rule forbids.
+    const json = JSON.stringify(
+      ms.normalizeParticipant(upstream, { class_appointment_title: 'CREATE' })
+    );
     for (const secret of [
-      'PIN-0000',
+      'PIN-4417',
       '1999-01-01',
-      'nobody@example.invalid',
-      '5550000000',
+      'nobody@example.test',
+      '5551234567',
       'Guardian',
-      '00000',
+      '90210',
     ]) {
       expect(json).not.toContain(secret);
     }
+  });
+
+  it('normalises whatever shape a date of birth arrives in', () => {
+    expect(ms.normalizeMember({ ...upstream, date_of_birth: '1999-01-01 00:00:00' }).birthday)
+      .toBe('1999-01-01');
+    expect(ms.normalizeMember({ ...upstream, date_of_birth: '' }).birthday).toBe(null);
+    expect(ms.normalizeMember({ ...upstream, date_of_birth: 'not a date' }).birthday).toBe(null);
   });
 
   it('builds a name that can match a DojoLink full_name', () => {

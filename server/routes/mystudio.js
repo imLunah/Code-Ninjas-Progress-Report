@@ -679,6 +679,7 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
   // nothing existing is touched.
   const beltIds = new Set((req.body && req.body.belt_ids) || []);
   const enrollIds = new Set((req.body && req.body.enroll_ids) || []);
+  const detailIds = new Set((req.body && req.body.detail_ids) || []);
 
   const date = todayDate();
 
@@ -705,6 +706,7 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
     // The center's ninjas, by upstream id and by name, in one pass.
     const { rows: students } = await pool.query(
       `SELECT s.id, s.full_name, s.mystudio_participant_id,
+              s.birthday, s.parent_name, s.parent_email, s.parent_phone,
               COALESCE(
                 json_agg(json_build_object('program', sp.program, 'belt', sp.belt_level))
                   FILTER (WHERE sp.program IS NOT NULL),
@@ -731,6 +733,7 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
     const linkTargets = [];
     const beltChanges = [];
     const newEnrollments = [];
+    const detailFills = [];
     const unchanged = [];
     const ambiguous = [];
 
@@ -757,6 +760,13 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
           program,
           belt,
           membership: member.membershipTitle,
+          // Not sent to the client. See the note on the preview below.
+          _details: {
+            birthday: member.birthday,
+            parent_name: member.parentName,
+            parent_email: member.parentEmail,
+            parent_phone: member.parentPhone,
+          },
         });
         continue;
       }
@@ -764,6 +774,26 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
       // Whoever this member turned out to be, remember which upstream row
       // they are, so the next pull does not have to match on a name again.
       linkTargets.push({ id: student.id, participant_id: member.participantId });
+
+      // Blanks MyStudio can fill. Only blanks: a value already in DojoLink was
+      // put there by somebody at this center and is not ours to replace.
+      const fillable = {};
+      if (!student.birthday && member.birthday) fillable.birthday = member.birthday;
+      if (!student.parent_name && member.parentName) fillable.parent_name = member.parentName;
+      if (!student.parent_email && member.parentEmail) fillable.parent_email = member.parentEmail;
+      if (!student.parent_phone && member.parentPhone) fillable.parent_phone = member.parentPhone;
+
+      if (Object.keys(fillable).length) {
+        detailFills.push({
+          id: student.id,
+          full_name: student.full_name,
+          // The names of the fields, never the values. A preview does not need
+          // to quote a child's date of birth back over the wire to say it found
+          // one, and this response goes to a browser.
+          fields: Object.keys(fillable),
+          _values: fillable,
+        });
+      }
 
       const enrolled = (student.programs || []).find((p) => p.program === program);
 
@@ -794,9 +824,16 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
         preview: true,
         date,
         member_count: members.length,
-        to_add: toAdd,
+        // _details and _values never leave the server.
+        to_add: toAdd.map(({ _details, ...row }) => ({
+          ...row,
+          fills: Object.entries(_details)
+            .filter(([, value]) => value)
+            .map(([field]) => field),
+        })),
         belt_changes: beltChanges,
         new_enrollments: newEnrollments,
+        detail_fills: detailFills.map(({ _values, ...row }) => row),
         unchanged_count: unchanged.length,
         ambiguous,
       });
@@ -806,6 +843,7 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
     let added = 0;
     let enrolled = 0;
     let belted = 0;
+    let filled = 0;
     let linkedCount = 0;
 
     try {
@@ -813,9 +851,19 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
 
       for (const row of toAdd) {
         const { rows: inserted } = await client.query(
-          `INSERT INTO students (full_name, location_id, mystudio_participant_id)
-           VALUES ($1, $2, $3) RETURNING id`,
-          [row.full_name, locationId, row.participant_id]
+          `INSERT INTO students
+             (full_name, location_id, mystudio_participant_id,
+              birthday, parent_name, parent_email, parent_phone)
+           VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+          [
+            row.full_name,
+            locationId,
+            row.participant_id,
+            row._details.birthday,
+            row._details.parent_name,
+            row._details.parent_email,
+            row._details.parent_phone,
+          ]
         );
         added += 1;
 
@@ -839,6 +887,23 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
           [row.id, row.program, row.belt, row.belt ? 1 : null]
         );
         enrolled += 1;
+      }
+
+      // Ticked only, and COALESCE so a value somebody typed here always wins
+      // over the one upstream. This can fill a blank and can never overwrite.
+      for (const row of detailFills) {
+        if (!detailIds.has(row.id)) continue;
+        const v = row._values;
+        await client.query(
+          `UPDATE students
+              SET birthday = COALESCE(birthday, $2),
+                  parent_name = COALESCE(NULLIF(parent_name, ''), $3),
+                  parent_email = COALESCE(NULLIF(parent_email, ''), $4),
+                  parent_phone = COALESCE(NULLIF(parent_phone, ''), $5)
+            WHERE id = $1 AND location_id = $6`,
+          [row.id, v.birthday || null, v.parent_name || null, v.parent_email || null, v.parent_phone || null, locationId]
+        );
+        filled += 1;
       }
 
       for (const row of beltChanges) {
@@ -878,6 +943,7 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
       added,
       enrolled,
       belts_changed: belted,
+      details_filled: filled,
       linked: linkedCount,
       member_count: members.length,
     });
