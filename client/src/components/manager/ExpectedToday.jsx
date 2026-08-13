@@ -7,6 +7,7 @@ import {
   TriangleAlertIcon,
   ChevronRightIcon,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { CARD } from '../../lib/surfaces';
 
@@ -94,10 +95,20 @@ export default function ExpectedToday({ date, onAdded, existingStudentIds, readO
           <span aria-hidden className="mt-0.5 text-amber-600 dark:text-amber-400 flex-shrink-0">
             <TriangleAlertIcon size={17} />
           </span>
-          <p className="font-ninja text-sm text-ninja-navy">
-            The MyStudio connection ran out, so today's classes are not being
-            pulled. Reconnect from your account settings to start it again.
-          </p>
+          <div className="min-w-0">
+            <p className="font-ninja text-sm text-ninja-navy">
+              The MyStudio connection ran out, so today's classes are not being
+              pulled.
+            </p>
+            {/* Was a dead end that described where to go. Signing in again is
+                a code from an email now, so it is worth one tap from here. */}
+            <Link
+              to="/account?mystudio=1"
+              className="inline-block mt-1.5 font-ninja text-sm font-semibold text-ninja-blue hover:underline"
+            >
+              Sign in again
+            </Link>
+          </div>
         </div>
       </div>
     );

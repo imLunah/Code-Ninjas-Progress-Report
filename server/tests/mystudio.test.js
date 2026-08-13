@@ -207,6 +207,65 @@ describe('credential encryption', () => {
   });
 });
 
+// MyStudio refreshes the Keycloak tokens for us and returns them in Set-Cookie.
+// Throwing those away is why a connection used to die within hours of being
+// pasted, so this is the part that keeps one alive.
+describe('rotating the session cookie', () => {
+  const stored =
+    'PHPSESSID=abc123; ms_u_em=director%40example.invalid; companyId=480; ' +
+    'kc_access=tok-a; kc_refresh=tok-r';
+
+  it('replaces a refreshed value and leaves the rest alone', () => {
+    const jar = ms.parseJar(stored);
+    expect(ms.mergeSetCookie(jar, ['kc_access=tok-a2; Path=/; HttpOnly'])).toBe(true);
+    expect(jar.kc_access).toBe('tok-a2');
+    expect(jar.kc_refresh).toBe('tok-r');
+    expect(jar.companyId).toBe('480');
+  });
+
+  it('reports no change when the response repeats what we already hold', () => {
+    // The difference between a pull that writes to the database and one that
+    // does not.
+    const jar = ms.parseJar(stored);
+    expect(ms.mergeSetCookie(jar, ['kc_access=tok-a; Path=/'])).toBe(false);
+  });
+
+  it('keeps values the response never mentions', () => {
+    const jar = ms.parseJar(stored);
+    ms.mergeSetCookie(jar, ['kc_access=tok-a2']);
+    // companyId is ours, chosen when the center was picked. Nothing upstream
+    // resends it, and losing it makes every later request unaddressable.
+    expect(ms.serializeJar(jar)).toContain('companyId=480');
+  });
+
+  it('ignores a deletion instead of emptying the credential', () => {
+    // A cleared cookie means the session is ending. The next request fails with
+    // an auth error and the connection flips to expired, which is legible.
+    // Erasing the stored value here would instead look like a corrupt paste.
+    const jar = ms.parseJar(stored);
+    expect(ms.mergeSetCookie(jar, ['kc_refresh=; Max-Age=0; Path=/'])).toBe(false);
+    expect(jar.kc_refresh).toBe('tok-r');
+  });
+
+  it('skips malformed lines', () => {
+    const jar = ms.parseJar(stored);
+    expect(ms.mergeSetCookie(jar, ['', 'nonsense', '=novalue', null])).toBe(false);
+    expect(ms.serializeJar(jar)).toBe(stored);
+  });
+
+  it('round-trips an untouched jar byte for byte', () => {
+    // parseCookie decodes percent-encoding because it reads identity; this path
+    // must not, or ms_u_em goes back out re-encoded.
+    expect(ms.serializeJar(ms.parseJar(stored))).toBe(stored);
+  });
+
+  it('starts a session from any shape a person pasted', () => {
+    const session = ms.createSession(`curl 'https://codeninjas.mystudio.io/home' -H 'cookie: ${stored}'`);
+    expect(session.cookie).toBe(stored);
+    expect(session.rotated).toBe(false);
+  });
+});
+
 describe('program mapping', () => {
   it('maps the titles that are unambiguous', () => {
     expect(ms.programForClass('CREATE')).toBe('CREATE');

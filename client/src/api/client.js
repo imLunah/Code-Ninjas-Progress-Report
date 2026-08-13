@@ -15,7 +15,12 @@ async function request(path, options = {}) {
       window.dispatchEvent(new CustomEvent('session_expired'));
     }
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || 'Request failed');
+    const error = new Error(err.error || 'Request failed');
+    // The message is what gets shown; these are for the callers that need to
+    // branch on which kind of failure it was rather than just report it.
+    error.status = res.status;
+    error.data = err;
+    throw error;
   }
   return res.json();
 }

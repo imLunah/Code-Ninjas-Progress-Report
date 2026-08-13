@@ -24,6 +24,7 @@ async function loadConnection(pool, locationId) {
   const { rows } = await pool.query(
     `SELECT c.id, c.location_id, c.company_id, c.company_name, c.session_cookie,
             c.status, c.last_verified_at, c.last_synced_at,
+            c.login_email, c.login_secret, c.login_saved_at,
             u.display_name AS connected_by_name
        FROM mystudio_connections c
        LEFT JOIN users u ON u.id = c.connected_by
@@ -34,6 +35,10 @@ async function loadConnection(pool, locationId) {
 }
 
 // What the client is allowed to know about a connection.
+//
+// login_secret is absent by construction rather than by deletion: nothing that
+// leaves this file is built from the row wholesale, so a column added later
+// cannot leak by being forgotten here.
 function publicShape(conn) {
   if (!conn) return { connected: false };
   return {
@@ -44,7 +49,81 @@ function publicShape(conn) {
     connectedByName: conn.connected_by_name || null,
     lastVerifiedAt: conn.last_verified_at,
     lastSyncedAt: conn.last_synced_at,
+    loginEmail: conn.login_email || null,
+    hasSavedPassword: Boolean(conn.login_secret),
   };
+}
+
+const SAVE_RETURNING = `RETURNING id, location_id, company_id, company_name, status,
+                 last_verified_at, last_synced_at, login_email, login_secret`;
+
+// One place that writes a connection, used by both ways of making one.
+//
+// `login` is only present when the credential came from a sign-in here. Passing
+// it null leaves any saved password untouched, so reconnecting with a pasted
+// cookie does not silently forget the password that makes renewals quick.
+async function saveConnection(pool, { locationId, userId, companyId, companyName, cookie, login }) {
+  const { rows } = await pool.query(
+    `INSERT INTO mystudio_connections
+       (location_id, connected_by, company_id, company_name, session_cookie,
+        status, last_verified_at, login_email, login_secret, login_saved_at)
+     VALUES ($1, $2, $3, $4, $5, 'connected', now(), $6, $7,
+             CASE WHEN $7::text IS NULL THEN NULL ELSE now() END)
+     ON CONFLICT (location_id) DO UPDATE SET
+       connected_by = EXCLUDED.connected_by,
+       company_id = EXCLUDED.company_id,
+       company_name = EXCLUDED.company_name,
+       session_cookie = EXCLUDED.session_cookie,
+       status = 'connected',
+       last_verified_at = now(),
+       login_email = COALESCE(EXCLUDED.login_email, mystudio_connections.login_email),
+       login_secret = COALESCE(EXCLUDED.login_secret, mystudio_connections.login_secret),
+       login_saved_at = CASE
+         WHEN EXCLUDED.login_secret IS NULL THEN mystudio_connections.login_saved_at
+         ELSE now()
+       END
+     ${SAVE_RETURNING}`,
+    [
+      locationId,
+      userId,
+      companyId,
+      companyName,
+      ms.encryptCookie(cookie),
+      login ? login.email : null,
+      login ? ms.encryptCookie(login.password) : null,
+    ]
+  );
+  return rows[0];
+}
+
+// The email and password to sign in with: whatever was typed, falling back to
+// what was saved. This is what makes a renewal six digits instead of a form.
+function loginCredentials(conn, body) {
+  const typedEmail = String((body && body.email) || '').trim();
+  const typedPassword = String((body && body.password) || '');
+
+  const email = typedEmail || (conn && conn.login_email) || '';
+  const password =
+    typedPassword ||
+    (conn && conn.login_secret ? ms.decryptCookie(conn.login_secret) : '');
+
+  return { email, password, typed: Boolean(typedPassword) };
+}
+
+// Sign-in failures are told apart so the UI can react differently: a wrong
+// password is the person's to fix, a changed login page is ours.
+function sendLoginError(res, err, context) {
+  if (err instanceof ms.MyStudioSignInUnavailable) {
+    console.error(`MyStudio ${context} unavailable:`, err.message);
+    return res.status(503).json({ error: err.message, signInUnavailable: true });
+  }
+  if (err instanceof ms.MyStudioAuthError) {
+    return res.status(400).json({ error: err.message });
+  }
+  // Never the body: an upstream error can quote back what was sent to it, and
+  // what was sent to it here is a password.
+  console.error(`MyStudio ${context} failed:`, err.message);
+  return res.status(502).json({ error: 'Could not reach MyStudio. Try again shortly.' });
 }
 
 async function markExpired(pool, id) {
@@ -105,32 +184,140 @@ router.post('/connect', requireManager, requireOwnLocation, async (req, res) => 
   }
 
   try {
-    const { rows } = await pool.query(
-      `INSERT INTO mystudio_connections
-         (location_id, connected_by, company_id, company_name, session_cookie,
-          status, last_verified_at)
-       VALUES ($1, $2, $3, $4, $5, 'connected', now())
-       ON CONFLICT (location_id) DO UPDATE SET
-         connected_by = EXCLUDED.connected_by,
-         company_id = EXCLUDED.company_id,
-         company_name = EXCLUDED.company_name,
-         session_cookie = EXCLUDED.session_cookie,
-         status = 'connected',
-         last_verified_at = now()
-       RETURNING id, location_id, company_id, company_name, status,
-                 last_verified_at, last_synced_at`,
-      [
-        req.session.activeLocationId,
-        req.session.userId,
-        session.companyId,
-        session.companyName,
-        ms.encryptCookie(cookie),
-      ]
-    );
-    res.status(201).json({ configured: true, ...publicShape(rows[0]) });
+    const row = await saveConnection(pool, {
+      locationId: req.session.activeLocationId,
+      userId: req.session.userId,
+      companyId: session.companyId,
+      companyName: session.companyName,
+      cookie,
+      login: null,
+    });
+    res.status(201).json({ configured: true, ...publicShape(row) });
   } catch (err) {
     console.error('Error saving MyStudio connection:', err.message);
     res.status(500).json({ error: 'Failed to save connection' });
+  }
+});
+
+// POST /api/mystudio/login/start  { email?, password? }
+//
+// Asks MyStudio to email the six digit code. Both fields fall back to what was
+// saved, so the everyday case is an empty body and a button.
+router.post('/login/start', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+
+  if (!ms.isConfigured()) {
+    return res.status(503).json({
+      error: 'MyStudio is not set up on the server yet. MYSTUDIO_ENC_KEY is missing.',
+    });
+  }
+
+  try {
+    const conn = await loadConnection(pool, req.session.activeLocationId);
+    const { email, password } = loginCredentials(conn, req.body);
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Enter your MyStudio email and password.' });
+    }
+
+    await ms.startLogin({ email, password });
+    res.json({ otpSent: true, email });
+  } catch (err) {
+    sendLoginError(res, err, 'sign-in');
+  }
+});
+
+// POST /api/mystudio/login/resend  { email?, password? }
+router.post('/login/resend', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  try {
+    const conn = await loadConnection(pool, req.session.activeLocationId);
+    const { email, password } = loginCredentials(conn, req.body);
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Enter your MyStudio email and password.' });
+    }
+
+    await ms.resendOtp({ email, password });
+    res.json({ otpSent: true, email });
+  } catch (err) {
+    sendLoginError(res, err, 'code resend');
+  }
+});
+
+// POST /api/mystudio/login/verify  { code, email?, password? }
+//
+// Exchanges the code for a session and stores it. The password is written only
+// once the session it produced has been proven to work, so a typo is never kept.
+router.post('/login/verify', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+
+  if (!ms.isConfigured()) {
+    return res.status(503).json({
+      error: 'MyStudio is not set up on the server yet. MYSTUDIO_ENC_KEY is missing.',
+    });
+  }
+
+  const code = String((req.body && req.body.code) || '').trim();
+  if (!/^\d{4,8}$/.test(code)) {
+    return res.status(400).json({ error: 'Enter the code MyStudio emailed you.' });
+  }
+
+  try {
+    const conn = await loadConnection(pool, req.session.activeLocationId);
+    const { email, password } = loginCredentials(conn, req.body);
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Enter your MyStudio email and password.' });
+    }
+
+    let signedIn;
+    let verified;
+    try {
+      signedIn = await ms.completeLogin({
+        email,
+        password,
+        otpCode: code,
+        // Reconnecting should land on the same center the roster is matched
+        // against, not on whichever one the account happens to list first.
+        preferredCompanyId: conn ? conn.company_id : null,
+      });
+      verified = await ms.verifySession(signedIn.cookie);
+    } catch (err) {
+      return sendLoginError(res, err, 'code exchange');
+    }
+
+    const row = await saveConnection(pool, {
+      locationId: req.session.activeLocationId,
+      userId: req.session.userId,
+      companyId: verified.companyId,
+      companyName: verified.companyName,
+      cookie: signedIn.cookie,
+      login: { email, password },
+    });
+
+    res.status(201).json({ configured: true, ...publicShape(row) });
+  } catch (err) {
+    console.error('Error saving MyStudio sign-in:', err.message);
+    res.status(500).json({ error: 'Failed to save connection' });
+  }
+});
+
+// DELETE /api/mystudio/login/saved
+//
+// Forgets the password without touching the connection. Renewals go back to
+// asking for it; today's roster keeps working.
+router.delete('/login/saved', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  try {
+    await pool.query(
+      `UPDATE mystudio_connections
+          SET login_email = NULL, login_secret = NULL, login_saved_at = NULL
+        WHERE location_id = $1`,
+      [req.session.activeLocationId]
+    );
+    const conn = await loadConnection(pool, req.session.activeLocationId);
+    res.json({ configured: ms.isConfigured(), ...publicShape(conn) });
+  } catch (err) {
+    console.error('Error clearing MyStudio sign-in:', err.message);
+    res.status(500).json({ error: 'Failed to forget the saved password' });
   }
 });
 
@@ -170,13 +357,15 @@ router.get('/today', requireManager, async (req, res) => {
       return res.json({ connected: true, configured: false, expected: [] });
     }
 
+    // Held across the pull so any token MyStudio refreshes along the way can be
+    // written back below. Without this the stored cookie stays frozen at the
+    // moment it was pasted while the real session moves on without it.
+    let session;
+
     let pulled;
     try {
-      pulled = await ms.getExpectedForDate(
-        ms.decryptCookie(conn.session_cookie),
-        conn.company_id,
-        date
-      );
+      session = ms.createSession(ms.decryptCookie(conn.session_cookie));
+      pulled = await ms.getExpectedForDate(session, conn.company_id, date);
     } catch (err) {
       if (err instanceof ms.MyStudioAuthError) {
         await markExpired(pool, conn.id);
@@ -270,12 +459,25 @@ router.get('/today', requireManager, async (req, res) => {
       };
     });
 
-    await pool.query(
-      `UPDATE mystudio_connections
-          SET last_synced_at = now(), last_verified_at = now(), status = 'connected'
-        WHERE id = $1`,
-      [conn.id]
-    );
+    // Fold a refreshed cookie into the same statement rather than adding a round
+    // trip, and only when one actually arrived, so an ordinary pull stays a
+    // timestamp update.
+    if (session.rotated) {
+      await pool.query(
+        `UPDATE mystudio_connections
+            SET last_synced_at = now(), last_verified_at = now(),
+                status = 'connected', session_cookie = $2
+          WHERE id = $1`,
+        [conn.id, ms.encryptCookie(session.cookie)]
+      );
+    } else {
+      await pool.query(
+        `UPDATE mystudio_connections
+            SET last_synced_at = now(), last_verified_at = now(), status = 'connected'
+          WHERE id = $1`,
+        [conn.id]
+      );
+    }
 
     res.json({
       connected: true,

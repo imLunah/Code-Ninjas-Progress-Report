@@ -75,6 +75,22 @@ class MyStudioError extends Error {
   }
 }
 
+// The sign-in form no longer works the way it did when it was read.
+//
+// Its own category because it has its own answer. The credential itself may be
+// perfectly fine; what broke is our copy of an undocumented login flow, so the
+// honest thing to tell someone is to fall back to pasting a cookie rather than
+// to imply their password is wrong.
+class MyStudioSignInUnavailable extends MyStudioError {
+  constructor(
+    message = 'MyStudio changed their sign-in page, so signing in from here is ' +
+      'not working. Paste a cookie instead, and this will need updating.'
+  ) {
+    super(message);
+    this.name = 'MyStudioSignInUnavailable';
+  }
+}
+
 function isConfigured() {
   return /^[0-9a-f]{64}$/i.test(ENC_KEY_HEX);
 }
@@ -240,6 +256,98 @@ function parseCookie(raw) {
   return out;
 }
 
+// The same split as parseCookie, but the values are left exactly as they arrived.
+//
+// parseCookie decodes, because it exists to read identity out of a paste. This
+// one exists to hand the string back to MyStudio, so a value that round trips
+// through decode and encode is a value that can change on the way: an address in
+// ms_u_em is stored percent-encoded and would go back out re-encoded, and any
+// name we did not think about carries the same risk. Keeping the wire form
+// verbatim means a jar nothing rotated serializes back byte for byte.
+function parseJar(cookieString) {
+  const out = {};
+  for (const pair of String(cookieString || '').split(';')) {
+    const eq = pair.indexOf('=');
+    if (eq < 1) continue;
+    const name = pair.slice(0, eq).trim();
+    if (name) out[name] = pair.slice(eq + 1).trim();
+  }
+  return out;
+}
+
+function serializeJar(jar) {
+  return Object.entries(jar)
+    .map(([name, value]) => `${name}=${value}`)
+    .join('; ');
+}
+
+// Folds a response's Set-Cookie headers into a jar. Returns whether anything
+// actually moved, so a pull that changed nothing does not write to the database.
+//
+// Deletions are deliberately ignored. A Set-Cookie clearing kc_access with
+// Max-Age=0 means the session is ending, and a browser would drop the value; we
+// do not, because the next request will then fail with a proper auth error and
+// flip the connection to expired. Honouring the deletion would instead empty a
+// stored credential in place, turning a legible "reconnect" into a paste that
+// looks corrupted.
+function mergeSetCookie(jar, lines) {
+  let changed = false;
+  for (const line of lines || []) {
+    const [pair, ...attrs] = String(line || '').split(';');
+    const eq = pair.indexOf('=');
+    if (eq < 1) continue;
+    const name = pair.slice(0, eq).trim();
+    const value = pair.slice(eq + 1).trim();
+    if (!name) continue;
+
+    const expiring =
+      attrs.some((a) => /^\s*max-age\s*=\s*0\s*$/i.test(a)) || value === '';
+    if (expiring) continue;
+
+    if (jar[name] !== value) {
+      jar[name] = value;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+// A cookie jar that requests can update in place.
+//
+// MyStudio refreshes the Keycloak tokens for us: a jar carrying only kc_refresh
+// works, which means their server exchanges it and hands back a fresh kc_access
+// in Set-Cookie. Until this existed we read two things off each response and
+// threw the rest away, so our stored copy stayed frozen at whatever the browser
+// held the day it was pasted while the real session rolled forward without us.
+// That is most of why a connection died within hours instead of lasting.
+//
+// Holding the jar in one mutable object is what makes rotation safe under the
+// request pool in getExpectedForDate: four calls share this object, and each
+// folds its own response in with no await between read and write, so the last
+// answer wins rather than two of them interleaving.
+function createSession(rawCookie) {
+  return { cookie: extractCookie(rawCookie), rotated: false };
+}
+
+function toSession(cookieOrSession) {
+  if (cookieOrSession && typeof cookieOrSession === 'object' && 'cookie' in cookieOrSession) {
+    return cookieOrSession;
+  }
+  return createSession(cookieOrSession);
+}
+
+function absorbCookies(session, res) {
+  const lines =
+    typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : [];
+  if (!lines.length) return;
+
+  const jar = parseJar(session.cookie);
+  if (mergeSetCookie(jar, lines)) {
+    session.cookie = serializeJar(jar);
+    session.rotated = true;
+  }
+}
+
 // What a usable paste has to contain.
 //
 // `companyId` says which center to ask about. `kc_access` and `kc_refresh` are
@@ -302,9 +410,10 @@ function readCookieIdentity(raw) {
 function buildHeaders(cookie, companyId, extra = {}) {
   return {
     accept: 'application/json',
-    // extract rather than sanitize: a stored value that came from a pasted cURL
-    // must go out as the cookie header, not as the whole command.
-    cookie: extractCookie(cookie),
+    // Already extracted when the session was created, and re-read from the
+    // session on every call so a rotation lands on the next request rather than
+    // the next pull.
+    cookie,
     // Only companyId is actually required. The vendor's client also sends
     // stripeAcc, userId, userEmail and isStaffRequest, all of which the read
     // endpoints ignore, and two of which we deliberately do not store.
@@ -316,13 +425,14 @@ function buildHeaders(cookie, companyId, extra = {}) {
   };
 }
 
-async function request(cookie, companyId, method, path, { params, body } = {}) {
+async function request(cookieOrSession, companyId, method, path, { params, body } = {}) {
+  const session = toSession(cookieOrSession);
   const url = new URL(path, BASE);
   for (const [k, v] of Object.entries(params || {})) {
     if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v));
   }
 
-  const headers = buildHeaders(cookie, companyId);
+  const headers = buildHeaders(session.cookie, companyId);
   if (body) headers['content-type'] = 'application/json';
 
   let res;
@@ -342,6 +452,10 @@ async function request(cookie, companyId, method, path, { params, body } = {}) {
       err && err.name === 'TimeoutError' ? 'MyStudio timed out' : 'Could not reach MyStudio'
     );
   }
+
+  // Before the throws on purpose. A refreshed token can arrive on a response we
+  // are about to reject, and keeping it costs nothing.
+  absorbCookies(session, res);
 
   if (res.status >= 300 && res.status < 400) throw new MyStudioAuthError();
   if (res.status === 401 || res.status === 403) throw new MyStudioAuthError();
@@ -376,11 +490,11 @@ async function request(cookie, companyId, method, path, { params, body } = {}) {
 // though, which expires independently of the Keycloak tokens: a perfectly usable
 // cookie regularly gets "Expired" here while every read endpoint still answers.
 // So the name is a nicety and never a verdict. Failure returns null.
-async function fetchCompanyName(rawCookie, companyId, sessionId, email) {
+async function fetchCompanyName(session, companyId, sessionId, email) {
   if (!sessionId || !email) return null;
   try {
     const data = await request(
-      rawCookie,
+      session,
       companyId,
       'POST',
       '/api/v1SessionLogin/v1SessionLogin',
@@ -402,10 +516,11 @@ async function fetchCompanyName(rawCookie, companyId, sessionId, email) {
 // shorter-lived session. Verifying with the real capability is the only check
 // that cannot pass while the feature is broken, or fail while it works.
 async function verifySession(rawCookie, date) {
-  const { companyId, sessionId, email } = readCookieIdentity(rawCookie);
+  const session = toSession(rawCookie);
+  const { companyId, sessionId, email } = readCookieIdentity(session.cookie);
   const probeDate = date || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
 
-  const data = await request(rawCookie, companyId, 'GET', '/api/features/attendance/class-list', {
+  const data = await request(session, companyId, 'GET', '/api/features/attendance/class-list', {
     params: { selected_date: probeDate },
   });
 
@@ -414,9 +529,326 @@ async function verifySession(rawCookie, date) {
 
   return {
     companyId: String(companyId),
-    companyName: await fetchCompanyName(rawCookie, companyId, sessionId, email),
+    companyName: await fetchCompanyName(session, companyId, sessionId, email),
     classCount: data.classList.length,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Signing in
+//
+// Everything above holds a session somebody else established. This part
+// establishes one, so that reconnecting is a form in DojoLink rather than a trip
+// through devtools.
+//
+// Why it is worth the trouble: the pasted cookie turned out to last hours, not
+// the month the feature was designed around, which makes "copy a request as
+// cURL" a daily chore rather than a monthly one.
+//
+// Why it can never be unattended: MyStudio emails a six digit code at every
+// sign-in. That is the whole point of the code, and working around it would mean
+// reading the director's mailbox. So the best available shape is what this does
+// — ask MyStudio to send the code, then exchange it — leaving the human with six
+// digits to type instead of a network tab to navigate.
+//
+// The sign-in is two Next.js Server Actions on the login page. They are not a
+// documented API and their ids are build artifacts that change whenever MyStudio
+// deploys, which is why the ids are read off the live page instead of pinned
+// here, and why the cookie paste stays in the UI as the path that still works
+// when this stops working.
+// ---------------------------------------------------------------------------
+
+const LOGIN_PATH = '/login?goTo=%2Fhome';
+
+// Chrome sends this on an action POST and their edge stack expects a browser.
+const ACTION_ACCEPT = 'text/x-component';
+
+let actionIdCache = null;
+
+// A React server action call is a POST to the page carrying the action id in a
+// header, with the arguments encoded as multipart form data: field "0" is the
+// argument list, in which "$K1" stands for a FormData, and that FormData's
+// entries arrive as "1_<name>".
+function encodeActionForm(fields) {
+  const form = new FormData();
+  form.set('0', '["$K1"]');
+  for (const [name, value] of Object.entries(fields)) {
+    form.set(`1_${name}`, String(value));
+  }
+  return form;
+}
+
+// An action response is a flight stream: numbered lines of JSON, where line 0
+// points at the line holding the return value.
+//
+//   0:{"a":"$@1", ...}
+//   1:{"status":"error","message":"..."}
+//
+// The pointer is followed rather than assuming line 1, because the numbering is
+// an implementation detail of how much the page streamed.
+function parseFlightResult(text) {
+  const lines = String(text || '').split('\n');
+  const byId = new Map();
+  for (const line of lines) {
+    const at = line.indexOf(':');
+    if (at < 1) continue;
+    const id = line.slice(0, at);
+    try {
+      byId.set(id, JSON.parse(line.slice(at + 1)));
+    } catch {
+      // Rows that are not JSON are the stream's own scaffolding.
+    }
+  }
+
+  const root = byId.get('0');
+  const pointer = root && typeof root.a === 'string' && /^\$@(\w+)$/.exec(root.a);
+  if (pointer && byId.has(pointer[1])) return byId.get(pointer[1]);
+
+  // No pointer: the last JSON row is the best remaining guess.
+  const values = [...byId.entries()].filter(([id]) => id !== '0');
+  return values.length ? values[values.length - 1][1] : null;
+}
+
+// The two action ids, read out of the login page's own JavaScript.
+//
+// They sit in a chunk as createServerReference("<id>", …, "loginAction"), so the
+// page is fetched, its scripts are collected, and they are scanned until both
+// turn up. Cached for the life of the process and re-read on demand, because a
+// MyStudio deploy invalidates them without warning.
+async function resolveLoginActions({ force = false } = {}) {
+  if (actionIdCache && !force) return actionIdCache;
+
+  const pageUrl = new URL(LOGIN_PATH, BASE);
+  let html;
+  try {
+    const res = await fetch(pageUrl, {
+      headers: { 'user-agent': USER_AGENT, accept: 'text/html' },
+      signal: AbortSignal.timeout(20000),
+    });
+    html = await res.text();
+  } catch {
+    throw new MyStudioError('Could not reach MyStudio');
+  }
+
+  const scripts = [...new Set(
+    [...html.matchAll(/src="(\/_next\/static\/chunks\/[^"]+\.js)"/g)].map((m) => m[1])
+  )];
+  if (!scripts.length) throw new MyStudioSignInUnavailable();
+
+  const found = {};
+  const read = (source) => {
+    for (const name of ['loginAction', 'otpAction']) {
+      if (found[name]) continue;
+      const hit = new RegExp(
+        `createServerReference\\)?\\(\\s*"([0-9a-f]{20,})"[^)]*"${name}"\\s*\\)`
+      ).exec(source);
+      if (hit) found[name] = hit[1];
+    }
+  };
+
+  await mapPooled(scripts, 6, async (src) => {
+    if (found.loginAction && found.otpAction) return;
+    try {
+      const res = await fetch(new URL(src, BASE), {
+        headers: { 'user-agent': USER_AGENT },
+        signal: AbortSignal.timeout(20000),
+      });
+      read(await res.text());
+    } catch {
+      // One unreadable chunk is not fatal; the ids live in one of the others.
+    }
+  });
+
+  if (!found.loginAction || !found.otpAction) throw new MyStudioSignInUnavailable();
+
+  actionIdCache = found;
+  return found;
+}
+
+// Calls one of the login actions and hands back both the payload and the
+// response, because on the success path the credential is in the headers.
+async function callLoginAction(actionId, fields) {
+  let res;
+  try {
+    res = await fetch(new URL(LOGIN_PATH, BASE), {
+      method: 'POST',
+      headers: {
+        'Next-Action': actionId,
+        accept: ACTION_ACCEPT,
+        'user-agent': USER_AGENT,
+      },
+      body: encodeActionForm(fields),
+      redirect: 'manual',
+      signal: AbortSignal.timeout(30000),
+    });
+  } catch (err) {
+    throw new MyStudioError(
+      err && err.name === 'TimeoutError' ? 'MyStudio timed out' : 'Could not reach MyStudio'
+    );
+  }
+
+  const text = await res.text();
+  // A stale action id gets the page back instead of a stream, which is the
+  // signal that MyStudio has deployed since the ids were read.
+  if (!/^\s*\d+:/.test(text)) throw new MyStudioSignInUnavailable();
+
+  return { payload: parseFlightResult(text), res };
+}
+
+// The actions answer 200 for a rejected password as readily as an accepted one,
+// so the verdict is the status inside the payload.
+function actionRejected(payload) {
+  const status = payload && typeof payload.status === 'string' ? payload.status : null;
+  if (!status) return true;
+  return /error|fail/i.test(status);
+}
+
+// Asks MyStudio to email the six digit code.
+//
+// rememberMe is always on. It is the difference between the ten hour session
+// that made this worth building and a thirty day one, and there is no case where
+// a center director wants the short version.
+async function startLogin({ email, password }) {
+  const ids = await resolveLoginActions();
+  const fields = { email, password, rememberMe: 'on' };
+
+  let result;
+  try {
+    result = await callLoginAction(ids.loginAction, fields);
+  } catch (err) {
+    if (!(err instanceof MyStudioSignInUnavailable)) throw err;
+    // Re-read the ids once in case MyStudio deployed, then give up.
+    const fresh = await resolveLoginActions({ force: true });
+    result = await callLoginAction(fresh.loginAction, fields);
+  }
+
+  if (actionRejected(result.payload)) {
+    // The action's own message is the same generic sentence for a wrong password
+    // and an unknown address, so the resend route is asked instead: it is a plain
+    // JSON endpoint that says which one it was. It also sends the code, so on the
+    // paths where it succeeds the sign-in is still moving forward.
+    throw new MyStudioAuthError(await explainLoginFailure({ email, password }));
+  }
+
+  return { otpSent: true };
+}
+
+// Turns a rejected sign-in into something a person can act on.
+//
+// Deliberately does not set a content-type. Their handler runs JSON.parse on the
+// raw body, so declaring JSON makes Next parse it first and the handler throws on
+// the object it gets. Their own client omits the header for the same reason.
+async function explainLoginFailure({ email, password }) {
+  try {
+    const res = await fetch(new URL('/api/legacy/login/resendOtp', BASE), {
+      method: 'POST',
+      headers: { 'user-agent': USER_AGENT },
+      body: JSON.stringify({ email, password }),
+      signal: AbortSignal.timeout(20000),
+    });
+    const data = await res.json();
+    const msg = String((data && data.msg) || '').trim();
+    if (msg) return msg;
+  } catch {
+    // Fall through to the generic sentence.
+  }
+  return 'MyStudio did not accept that email and password.';
+}
+
+async function resendOtp({ email, password }) {
+  const message = await explainLoginFailure({ email, password });
+  return { otpSent: true, message };
+}
+
+// Exchanges the six digit code for a session.
+//
+// The credential arrives as Set-Cookie on this response and nowhere else, which
+// is why the response object is kept rather than just its payload.
+async function completeLogin({ email, password, otpCode, preferredCompanyId = null }) {
+  const ids = await resolveLoginActions();
+  const fields = { email, password, otpCode, rememberMe: 'on' };
+
+  let result;
+  try {
+    result = await callLoginAction(ids.otpAction, fields);
+  } catch (err) {
+    if (!(err instanceof MyStudioSignInUnavailable)) throw err;
+    const fresh = await resolveLoginActions({ force: true });
+    result = await callLoginAction(fresh.otpAction, fields);
+  }
+
+  const { payload, res } = result;
+  if (actionRejected(payload)) {
+    throw new MyStudioAuthError(
+      (payload && String(payload.message || '').trim()) ||
+        'That code was not accepted. Ask for a new one and try again.'
+    );
+  }
+
+  const jar = {};
+  const lines = typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : [];
+  mergeSetCookie(jar, lines);
+
+  if (!jar.kc_access && !jar.kc_refresh) {
+    // The code was accepted but no session came back, which means the sign-in
+    // works differently than it did when this was written.
+    throw new MyStudioSignInUnavailable();
+  }
+
+  // MyStudio's own client picks the center after signing in and posts it back to
+  // set the companyId cookie. We set it in our own jar instead: it is a cookie
+  // the browser holds, every request re-sends it, and writing it here avoids
+  // asking the vendor to change anything about the account.
+  const companyId = await resolveCompanyId({ jar, payload, preferredCompanyId });
+  jar.companyId = String(companyId);
+  jar.keepCache = 'true';
+
+  return { cookie: serializeJar(jar), companyId: String(companyId) };
+}
+
+// Which center this session is for.
+//
+// One MyStudio account covers one center, so this is normally a list of one.
+// Preferring an already-known id matters when reconnecting: whatever the center
+// was before is what the roster is matched against.
+async function resolveCompanyId({ jar, payload, preferredCompanyId }) {
+  const listFrom = (value) => {
+    const list = value && Array.isArray(value.company_list) ? value.company_list : null;
+    return list && list.length ? list : null;
+  };
+
+  let companies = listFrom(payload) || listFrom(payload && payload.data);
+
+  if (!companies && jar.PHPSESSID && jar.ms_u_em) {
+    // Right after a sign-in the legacy session is brand new, so this is the one
+    // moment it can be relied on. Everywhere else in this file it cannot.
+    try {
+      const session = createSession(serializeJar(jar));
+      const data = await request(session, '', 'POST', '/api/v1SessionLogin/v1SessionLogin', {
+        body: {
+          session_id: jar.PHPSESSID,
+          email: decodeURIComponent(jar.ms_u_em),
+        },
+      });
+      companies = listFrom(data);
+    } catch {
+      // Falls through to the preferred id.
+    }
+  }
+
+  if (companies) {
+    if (preferredCompanyId) {
+      const match = companies.find((c) => String(c.company_id) === String(preferredCompanyId));
+      if (match) return match.company_id;
+    }
+    return companies[0].company_id;
+  }
+
+  if (preferredCompanyId) return preferredCompanyId;
+
+  throw new MyStudioError(
+    'Signed in, but MyStudio did not say which center this account belongs to.'
+  );
 }
 
 function toMinutes(time) {
@@ -458,17 +890,17 @@ function normalizeParticipant(p, cls) {
   };
 }
 
-async function getClassList(cookie, companyId, date) {
-  const data = await request(cookie, companyId, 'GET', '/api/features/attendance/class-list', {
+async function getClassList(session, companyId, date) {
+  const data = await request(session, companyId, 'GET', '/api/features/attendance/class-list', {
     params: { selected_date: date },
   });
   return Array.isArray(data && data.classList) ? data.classList : [];
 }
 
 // `registered` only. See rule 1 at the top of this file.
-async function getRegisteredForClass(cookie, companyId, date, cls) {
+async function getRegisteredForClass(session, companyId, date, cls) {
   const data = await request(
-    cookie,
+    session,
     companyId,
     'GET',
     '/api/features/attendance/class-participants',
@@ -504,12 +936,15 @@ async function mapPooled(items, limit, fn) {
 }
 
 // Who is booked into a class at this center on `date`.
-async function getExpectedForDate(cookie, companyId, date) {
-  const classes = await getClassList(cookie, companyId, date);
+async function getExpectedForDate(cookieOrSession, companyId, date) {
+  // One session for the whole pull, so a token refreshed on the class list is
+  // already in hand for the participant calls that follow it.
+  const session = toSession(cookieOrSession);
+  const classes = await getClassList(session, companyId, date);
   const booked = classes.filter((c) => Number(c.registration_count) > 0);
 
   const perClass = await mapPooled(booked, 4, (cls) =>
-    getRegisteredForClass(cookie, companyId, date, cls)
+    getRegisteredForClass(session, companyId, date, cls)
   );
 
   // A ninja booked into two classes on one day is one person to check in, so
@@ -541,6 +976,12 @@ async function getExpectedForDate(cookie, companyId, date) {
 module.exports = {
   MyStudioAuthError,
   MyStudioError,
+  MyStudioSignInUnavailable,
+  parseFlightResult,
+  resolveLoginActions,
+  startLogin,
+  completeLogin,
+  resendOtp,
   isConfigured,
   encryptCookie,
   decryptCookie,
@@ -550,6 +991,10 @@ module.exports = {
   isMyStudioHost,
   isMyStudioAssetHost,
   parseCookie,
+  parseJar,
+  serializeJar,
+  mergeSetCookie,
+  createSession,
   readCookieIdentity,
   verifySession,
   fetchCompanyName,

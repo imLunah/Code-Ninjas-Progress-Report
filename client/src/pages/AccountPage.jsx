@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import { api } from '../api/client';
@@ -61,6 +61,18 @@ export default function AccountPage() {
       .catch(() => {});
     return () => { cancelled = true; };
   }, [experimental, isManager, user?.activeLocation?.id]);
+
+  // ?mystudio=1 opens the connection panel straight away, so the board's
+  // "connection ran out" notice can lead somewhere instead of describing where
+  // to go. The parameter is dropped once used so a refresh does not reopen it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (!isManager || searchParams.get('mystudio') !== '1') return;
+    setShowMyStudio(true);
+    setSection('experimental');
+    searchParams.delete('mystudio');
+    setSearchParams(searchParams, { replace: true });
+  }, [isManager, searchParams, setSearchParams]);
 
   const handlePresetSelect = async (src) => {
     setSavingAvatar(true);

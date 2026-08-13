@@ -15,12 +15,19 @@ import useIsDesktop from '../../lib/useIsDesktop';
 
 // Connecting a center to the studio management system it already uses.
 //
-// The upstream product has no API keys and no OAuth, so the only credential
-// there is to hand over is a signed-in session. That is why this asks for a
-// cookie rather than a password: a password would have to be stored to be
-// useful, and the sign-in needs an emailed code anyway, so storing it would buy
-// nothing and risk everything. The cookie goes straight to the server, is
-// encrypted before it is written down, and is never sent back.
+// This used to ask only for a cookie copied out of devtools, on the reasoning
+// that a session lasts a month and a password would have to be stored to be
+// worth anything. The first half turned out to be wrong: a pasted session died
+// the same day it was made, which turns a monthly errand into a daily one.
+//
+// So the normal path is now signing in here. MyStudio emails a six digit code
+// every time, which no amount of engineering removes, but with the password held
+// encrypted on the server a renewal is one button and six digits instead of a
+// trip through the network tab.
+//
+// The cookie paste stays, below the fold. The sign-in copies two undocumented
+// actions out of MyStudio's own login page, and the day they change it, pasting
+// a cookie is still going to work.
 //
 // A connection belongs to the center, not to the person who set it up. Upstream
 // accounts are scoped to one center each, so a director connecting their account
@@ -75,17 +82,48 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
   const [cookie, setCookie] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [confirmingDisconnect, setConfirmingDisconnect] = useState(false);
+  const [confirmingForget, setConfirmingForget] = useState(false);
 
-  // A closed panel keeps nothing. The field held a live credential, and the
-  // confirm should not still be armed the next time this opens.
+  // 'signin' collects an email and password, 'code' collects the six digits.
+  const [step, setStep] = useState('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [cookieOpen, setCookieOpen] = useState(false);
+
+  const savedEmail = status?.loginEmail || '';
+  const hasSavedPassword = Boolean(status?.hasSavedPassword);
+
+  // A closed panel keeps nothing. Those fields held a live credential, and no
+  // confirm should still be armed the next time this opens.
   useEffect(() => {
     if (isOpen) return;
     setCookie('');
     setError('');
+    setNotice('');
     setBusy(false);
     setConfirmingDisconnect(false);
+    setConfirmingForget(false);
+    setStep('signin');
+    setEmail('');
+    setPassword('');
+    setCode('');
+    setCookieOpen(false);
   }, [isOpen]);
+
+  // Prefill the address so a renewal does not ask for something already known.
+  useEffect(() => {
+    if (isOpen && savedEmail) setEmail(savedEmail);
+  }, [isOpen, savedEmail]);
+
+  // When the sign-in itself is broken rather than the credential, the fallback
+  // has to be visible, not folded away behind a disclosure nobody opens.
+  const handleAuthError = useCallback((err, fallback) => {
+    if (err?.data?.signInUnavailable) setCookieOpen(true);
+    setError(err?.message || fallback);
+  }, []);
 
   const connect = useCallback(async () => {
     if (!cookie.trim() || busy) return;
@@ -102,6 +140,68 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
       setBusy(false);
     }
   }, [cookie, busy, onChanged, onClose]);
+
+  // Asks MyStudio to email the code. With a password on file the body is empty
+  // and the server uses what it has.
+  const sendCode = useCallback(
+    async ({ resend = false } = {}) => {
+      if (busy) return;
+      setBusy(true);
+      setError('');
+      setNotice('');
+      try {
+        const body = hasSavedPassword && !password ? {} : { email: email.trim(), password };
+        const path = resend ? '/mystudio/login/resend' : '/mystudio/login/start';
+        const res = await api.post(path, body);
+        setStep('code');
+        setNotice(`We asked MyStudio to email a code to ${res.email || email || savedEmail}.`);
+      } catch (err) {
+        handleAuthError(err, 'Could not start the sign-in.');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [busy, email, password, hasSavedPassword, savedEmail, handleAuthError]
+  );
+
+  const verifyCode = useCallback(async () => {
+    if (busy || !code.trim()) return;
+    setBusy(true);
+    setError('');
+    try {
+      const body = { code: code.trim() };
+      if (!hasSavedPassword || password) {
+        body.email = email.trim();
+        body.password = password;
+      }
+      const next = await api.post('/mystudio/login/verify', body);
+      setPassword('');
+      setCode('');
+      onChanged?.(next);
+      onClose();
+    } catch (err) {
+      handleAuthError(err, 'That code did not work.');
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, code, email, password, hasSavedPassword, onChanged, onClose, handleAuthError]);
+
+  const forgetPassword = useCallback(async () => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const next = await api.delete('/mystudio/login/saved');
+      onChanged?.(next);
+      setConfirmingForget(false);
+      setNotice('Password forgotten. Renewing will ask for it again.');
+    } catch (err) {
+      setError(err.message || 'Could not forget the password.');
+      setConfirmingForget(false);
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, onChanged]);
 
   const disconnect = useCallback(async () => {
     if (busy) return;
@@ -154,11 +254,16 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
               </p>
               <p className="font-ninja text-xs text-ninja-muted">
                 {expired
-                  ? 'The MyStudio session ran out. Paste a fresh cookie to pick it back up.'
+                  ? 'The MyStudio session ran out. Sign in again to pick it back up.'
                   : lastSynced
                     ? `Last checked ${lastSynced}`
                     : 'Connected. Nothing pulled yet.'}
               </p>
+              {savedEmail && (
+                <p className="font-ninja text-xs text-ninja-muted mt-0.5">
+                  Signed in as {savedEmail}
+                </p>
+              )}
               {status.connectedByName && (
                 <p className="font-ninja text-xs text-ninja-muted mt-0.5">
                   Set up by {status.connectedByName}
@@ -169,41 +274,244 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
         </div>
       )}
 
-      <div>
-        <p className="font-ninja text-xs font-semibold uppercase tracking-wide text-ninja-muted mb-2">
-          {connected ? 'Replace the cookie' : 'How to find your cookie'}
-        </p>
-        <ol className="space-y-1.5 mb-3">
-          {STEPS.map((step, i) => (
-            <li key={step} className="flex gap-2.5 font-ninja text-xs text-ninja-muted">
-              <span className="flex-shrink-0 w-4 h-4 rounded-full bg-ninja-bg border border-ninja-border grid place-items-center text-[10px] font-semibold text-ninja-navy">
-                {i + 1}
-              </span>
-              {step}
-            </li>
-          ))}
-        </ol>
+      {/* The sign-in. Two steps, because MyStudio emails a code between them. */}
+      {step === 'code' ? (
+        <div>
+          <p className="font-ninja text-xs font-semibold uppercase tracking-wide text-ninja-muted mb-2">
+            Enter the code
+          </p>
+          <p className="font-ninja text-sm text-ninja-navy mb-3">
+            MyStudio emailed a six digit code to{' '}
+            <span className="font-semibold">{email || savedEmail}</span>. It expires
+            quickly, and asking for another one cancels this one.
+          </p>
 
-        <label htmlFor="mystudio-cookie" className="sr-only">
-          MyStudio cookie
-        </label>
-        <textarea
-          id="mystudio-cookie"
-          value={cookie}
-          onChange={(e) => setCookie(e.target.value)}
-          rows={4}
-          spellCheck={false}
-          autoComplete="off"
-          placeholder={"curl 'https://codeninjas.mystudio.io/...' \\\n  -H 'cookie: companyId=...; kc_refresh=...'"}
-          className={`${FIELD} resize-none font-mono text-xs`}
-          disabled={busy || !status?.configured}
-        />
-        <p className="font-ninja text-xs text-ninja-muted mt-1.5">
-          Treated like a password: encrypted on the server, never shown again, and
-          only used to read your class schedule. DojoLink never writes anything
-          back to MyStudio.
-        </p>
-      </div>
+          <label htmlFor="mystudio-code" className="sr-only">
+            MyStudio code
+          </label>
+          <input
+            id="mystudio-code"
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') verifyCode();
+            }}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={8}
+            placeholder="123456"
+            autoFocus
+            className={`${FIELD} font-mono tracking-[0.3em] text-center text-base`}
+            disabled={busy}
+          />
+
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            <Button onClick={verifyCode} disabled={busy || !code.trim()}>
+              {busy ? (
+                <span className="flex items-center gap-2">
+                  <Loader2Icon size={15} className="animate-spin" aria-hidden />
+                  Checking
+                </span>
+              ) : (
+                'Finish connecting'
+              )}
+            </Button>
+            <button
+              type="button"
+              onClick={() => sendCode({ resend: true })}
+              disabled={busy}
+              className="font-ninja text-sm text-ninja-muted hover:text-ninja-navy transition-colors disabled:opacity-60"
+            >
+              Send a new code
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStep('signin');
+                setCode('');
+                setError('');
+                setNotice('');
+              }}
+              className="font-ninja text-sm text-ninja-muted hover:text-ninja-navy transition-colors"
+            >
+              Back
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <p className="font-ninja text-xs font-semibold uppercase tracking-wide text-ninja-muted mb-2">
+            {connected ? 'Sign in again' : 'Sign in to MyStudio'}
+          </p>
+
+          {hasSavedPassword ? (
+            <p className="font-ninja text-sm text-ninja-navy mb-3">
+              Your MyStudio password is saved, so this only needs the code they
+              email you.
+            </p>
+          ) : (
+            <div className="space-y-2 mb-3">
+              <div>
+                <label htmlFor="mystudio-email" className="sr-only">
+                  MyStudio email
+                </label>
+                <input
+                  id="mystudio-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="username"
+                  placeholder="Your MyStudio email"
+                  className={FIELD}
+                  disabled={busy || !status?.configured}
+                />
+              </div>
+              <div>
+                <label htmlFor="mystudio-password" className="sr-only">
+                  MyStudio password
+                </label>
+                <input
+                  id="mystudio-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') sendCode();
+                  }}
+                  autoComplete="current-password"
+                  placeholder="Your MyStudio password"
+                  className={FIELD}
+                  disabled={busy || !status?.configured}
+                />
+              </div>
+              <p className="font-ninja text-xs text-ninja-muted">
+                Saved encrypted so renewing later only needs the emailed code. You
+                can forget it at any time. DojoLink only ever reads your class
+                schedule, and never writes anything back to MyStudio.
+              </p>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={() => sendCode()}
+              disabled={
+                busy ||
+                !status?.configured ||
+                (!hasSavedPassword && (!email.trim() || !password))
+              }
+            >
+              {busy ? (
+                <span className="flex items-center gap-2">
+                  <Loader2Icon size={15} className="animate-spin" aria-hidden />
+                  Contacting MyStudio
+                </span>
+              ) : (
+                'Send me a code'
+              )}
+            </Button>
+
+            {hasSavedPassword && (
+              <AnimatePresence mode="wait" initial={false}>
+                {confirmingForget ? (
+                  <motion.div
+                    key="confirm-forget"
+                    initial={{ opacity: 0, x: -4 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="flex items-center gap-2"
+                  >
+                    <button
+                      type="button"
+                      onClick={forgetPassword}
+                      disabled={busy}
+                      className="font-ninja text-sm font-semibold rounded-lg px-3 py-2 bg-ninja-red text-white transition-colors hover:brightness-95 disabled:opacity-60"
+                    >
+                      Forget password
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingForget(false)}
+                      className="font-ninja text-sm text-ninja-muted hover:text-ninja-navy transition-colors"
+                    >
+                      Keep it
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.button
+                    key="ask-forget"
+                    type="button"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    onClick={() => setConfirmingForget(true)}
+                    className="font-ninja text-sm text-ninja-muted hover:text-ninja-navy transition-colors"
+                  >
+                    Forget saved password
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Kept, and kept working, because the sign-in above leans on two
+          undocumented actions in MyStudio's login page. When those change this
+          is the path that still connects a center. */}
+      <details
+        open={cookieOpen}
+        onToggle={(e) => setCookieOpen(e.currentTarget.open)}
+        className="rounded-xl border border-ninja-border"
+      >
+        <summary className="cursor-pointer select-none px-3 py-2 font-ninja text-sm text-ninja-navy">
+          Paste a cookie instead
+        </summary>
+        <div className="px-3 pb-3 pt-1">
+          <ol className="space-y-1.5 mb-3">
+            {STEPS.map((text, i) => (
+              <li key={text} className="flex gap-2.5 font-ninja text-xs text-ninja-muted">
+                <span className="flex-shrink-0 w-4 h-4 rounded-full bg-ninja-bg border border-ninja-border grid place-items-center text-[10px] font-semibold text-ninja-navy">
+                  {i + 1}
+                </span>
+                {text}
+              </li>
+            ))}
+          </ol>
+
+          <label htmlFor="mystudio-cookie" className="sr-only">
+            MyStudio cookie
+          </label>
+          <textarea
+            id="mystudio-cookie"
+            value={cookie}
+            onChange={(e) => setCookie(e.target.value)}
+            rows={4}
+            spellCheck={false}
+            autoComplete="off"
+            placeholder={"curl 'https://codeninjas.mystudio.io/...' \\\n  -H 'cookie: companyId=...; kc_refresh=...'"}
+            className={`${FIELD} resize-none font-mono text-xs`}
+            disabled={busy || !status?.configured}
+          />
+          <p className="font-ninja text-xs text-ninja-muted mt-1.5">
+            Treated like a password: encrypted on the server, never shown again,
+            and only used to read your class schedule.
+          </p>
+          <Button
+            onClick={connect}
+            className="mt-3"
+            disabled={!cookie.trim() || busy || !status?.configured}
+          >
+            {connected ? 'Save new cookie' : 'Connect'}
+          </Button>
+        </div>
+      </details>
+
+      {notice && !error && (
+        <p className="font-ninja text-sm text-ninja-navy">{notice}</p>
+      )}
 
       {error && (
         <p role="alert" className="font-ninja text-sm text-ninja-red">
@@ -212,19 +520,6 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={connect} disabled={!cookie.trim() || busy || !status?.configured}>
-          {busy ? (
-            <span className="flex items-center gap-2">
-              <Loader2Icon size={15} className="animate-spin" aria-hidden />
-              Checking
-            </span>
-          ) : connected ? (
-            'Save new cookie'
-          ) : (
-            'Connect'
-          )}
-        </Button>
-
         {connected && (
           <AnimatePresence mode="wait" initial={false}>
             {confirmingDisconnect ? (
@@ -307,7 +602,7 @@ export function MyStudioRow({ status, onOpen, centerName }) {
           <p className="text-ninja-navy font-ninja font-semibold text-sm">MyStudio schedule</p>
           <p className="text-ninja-muted font-ninja text-xs truncate">
             {expired
-              ? 'Session ran out. Reconnect to keep pulling.'
+              ? 'Session ran out. Sign in again to keep pulling.'
               : connected
                 ? `${status.companyName || centerName || 'Connected'}. Today's classes appear on the board.`
                 : "Pull today's booked ninjas onto the board"}

@@ -83,6 +83,19 @@ const mystudioLimiter = rateLimit({
   message: { error: 'Too many MyStudio requests. Wait a moment and try again.' },
 });
 
+// Signing into MyStudio is throttled far harder than reading from it. These
+// routes hand an email and password to a third party's auth system, so a loose
+// cap here would turn DojoLink into a way to guess at a franchise login, and
+// every attempt also asks MyStudio to send a real person an email.
+const mystudioLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test',
+  message: { error: 'Too many sign-in attempts. Try again in 15 minutes.' },
+});
+
 const sessionConfig = {
   store: new pgSession({ pool, tableName: 'session' }),
   secret: SESSION_SECRET,
@@ -122,6 +135,7 @@ app.use('/api/events', require('./routes/events'));
 app.use('/api/releases', require('./routes/releases'));
 app.use('/api/storage', require('./routes/storage'));
 app.use('/api/onboarding', require('./routes/onboarding'));
+app.use('/api/mystudio/login', mystudioLoginLimiter);
 app.use('/api/mystudio', mystudioLimiter, require('./routes/mystudio'));
 // Bug reports — staff or parent session accepted; try staff first, fall back to parent
 app.use('/api/bugs',
