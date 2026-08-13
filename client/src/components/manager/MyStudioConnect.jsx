@@ -95,9 +95,16 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
 
   const savedEmail = status?.loginEmail || '';
   const hasSavedPassword = Boolean(status?.hasSavedPassword);
+  // A sign-in already waiting on its code, remembered by the server.
+  const awaitingCode = Boolean(status?.awaitingCode);
+  const awaitingEmail = status?.awaitingCodeEmail || '';
 
-  // A closed panel keeps nothing. Those fields held a live credential, and no
-  // confirm should still be armed the next time this opens.
+  // A closed panel keeps no credential and leaves no confirm armed.
+  //
+  // The step is deliberately NOT reset here. Fetching the emailed code means
+  // leaving this panel, and on desktop clicking outside closes it, so wiping
+  // the step on close is what left the first person to try this holding a code
+  // with nowhere to put it. Where the flow is up to lives on the server now.
   useEffect(() => {
     if (isOpen) return;
     setCookie('');
@@ -106,17 +113,22 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
     setBusy(false);
     setConfirmingDisconnect(false);
     setConfirmingForget(false);
-    setStep('signin');
-    setEmail('');
     setPassword('');
     setCode('');
     setCookieOpen(false);
   }, [isOpen]);
 
-  // Prefill the address so a renewal does not ask for something already known.
+  // Reopen where the sign-in actually is, not where it started.
   useEffect(() => {
-    if (isOpen && savedEmail) setEmail(savedEmail);
-  }, [isOpen, savedEmail]);
+    if (!isOpen) return;
+    if (awaitingCode) {
+      setStep('code');
+      setEmail((prev) => prev || awaitingEmail || savedEmail || '');
+    } else {
+      setStep('signin');
+      setEmail((prev) => prev || savedEmail || '');
+    }
+  }, [isOpen, awaitingCode, awaitingEmail, savedEmail]);
 
   // When the sign-in itself is broken rather than the credential, the fallback
   // has to be visible, not folded away behind a disclosure nobody opens.
@@ -154,6 +166,13 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
         const path = resend ? '/mystudio/login/resend' : '/mystudio/login/start';
         const res = await api.post(path, body);
         setStep('code');
+        // Tell the page a sign-in is in flight, so closing the panel to go and
+        // read the email and reopening it lands back on the code box.
+        onChanged?.({
+          ...(status || {}),
+          awaitingCode: true,
+          awaitingCodeEmail: res.email || email || savedEmail,
+        });
         setNotice(`We asked MyStudio to email a code to ${res.email || email || savedEmail}.`);
       } catch (err) {
         handleAuthError(err, 'Could not start the sign-in.');
@@ -161,16 +180,34 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
         setBusy(false);
       }
     },
-    [busy, email, password, hasSavedPassword, savedEmail, handleAuthError]
+    [busy, email, password, hasSavedPassword, savedEmail, status, onChanged, handleAuthError]
   );
+
+  // Backing out. Clears the half-finished sign-in on the server too, so the
+  // panel does not keep reopening on a code that is no longer wanted.
+  const cancelCode = useCallback(async () => {
+    setStep('signin');
+    setCode('');
+    setError('');
+    setNotice('');
+    try {
+      await api.delete('/mystudio/login/pending');
+    } catch {
+      // The entry expires on its own; failing to clear it early is not worth
+      // reporting to someone who just pressed Back.
+    }
+    onChanged?.({ ...(status || {}), awaitingCode: false, awaitingCodeEmail: null });
+  }, [status, onChanged]);
 
   const verifyCode = useCallback(async () => {
     if (busy || !code.trim()) return;
     setBusy(true);
     setError('');
     try {
+      // Only what was actually typed. An empty password here is not a blank
+      // credential, it is "use the sign-in you already have in flight".
       const body = { code: code.trim() };
-      if (!hasSavedPassword || password) {
+      if (password) {
         body.email = email.trim();
         body.password = password;
       }
@@ -282,8 +319,9 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
           </p>
           <p className="font-ninja text-sm text-ninja-navy mb-3">
             MyStudio emailed a six digit code to{' '}
-            <span className="font-semibold">{email || savedEmail}</span>. It expires
-            quickly, and asking for another one cancels this one.
+            <span className="font-semibold">{email || awaitingEmail || savedEmail}</span>.
+            Go and read it — this will still be here when you come back. Asking
+            for another code cancels the one you have.
           </p>
 
           <label htmlFor="mystudio-code" className="sr-only">
@@ -326,12 +364,7 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
             </button>
             <button
               type="button"
-              onClick={() => {
-                setStep('signin');
-                setCode('');
-                setError('');
-                setNotice('');
-              }}
+              onClick={cancelCode}
               className="font-ninja text-sm text-ninja-muted hover:text-ninja-navy transition-colors"
             >
               Back

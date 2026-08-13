@@ -98,16 +98,23 @@ async function saveConnection(pool, { locationId, userId, companyId, companyName
 
 // The email and password to sign in with: whatever was typed, falling back to
 // what was saved. This is what makes a renewal six digits instead of a form.
-function loginCredentials(conn, body) {
+// Whatever was typed, else the sign-in already in flight, else what was saved.
+//
+// The pending entry has to come before the saved password: during a first
+// connect there is no saved password at all, and it is the only thing that
+// remembers what was typed before the person left to fetch their code.
+function loginCredentials(conn, body, pending) {
   const typedEmail = String((body && body.email) || '').trim();
   const typedPassword = String((body && body.password) || '');
 
-  const email = typedEmail || (conn && conn.login_email) || '';
-  const password =
-    typedPassword ||
-    (conn && conn.login_secret ? ms.decryptCookie(conn.login_secret) : '');
+  const email =
+    typedEmail || (pending && pending.email) || (conn && conn.login_email) || '';
 
-  return { email, password, typed: Boolean(typedPassword) };
+  let password = typedPassword;
+  if (!password && pending) password = ms.decryptCookie(pending.secret);
+  if (!password && conn && conn.login_secret) password = ms.decryptCookie(conn.login_secret);
+
+  return { email, password };
 }
 
 // Sign-in failures are told apart so the UI can react differently: a wrong
@@ -133,12 +140,56 @@ async function markExpired(pool, id) {
   );
 }
 
+// A sign-in waiting on its emailed code.
+//
+// This has to outlive the panel. The code arrives by email, so the flow demands
+// the one thing that used to destroy it: leaving the page. The panel closes on
+// an outside click, closing reset the step back to the form, and the first
+// person to try it came back holding a code with nowhere to type it.
+//
+// So the half-finished sign-in lives in the DojoLink session instead of in
+// component state, and survives closing the panel, navigating away and
+// reloading. It is server side (the session table), the password inside it is
+// encrypted with the same key as everything else rather than sitting in session
+// JSON as plaintext, and it is thrown away the moment it is used.
+const PENDING_TTL_MS = 15 * 60 * 1000;
+
+function setPending(req, { email, password }) {
+  req.session.mystudioPending = {
+    email,
+    secret: ms.encryptCookie(password),
+    locationId: req.session.activeLocationId,
+    expiresAt: Date.now() + PENDING_TTL_MS,
+  };
+}
+
+// Only for the center it was started for: switching centers mid-flow should not
+// aim a half-finished sign-in at a different studio.
+function readPending(req) {
+  const pending = req.session.mystudioPending;
+  if (!pending) return null;
+  if (pending.locationId !== req.session.activeLocationId) return null;
+  if (!pending.expiresAt || pending.expiresAt < Date.now()) return null;
+  return pending;
+}
+
+function clearPending(req) {
+  delete req.session.mystudioPending;
+}
+
 // GET /api/mystudio/status
 router.get('/status', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   try {
     const conn = await loadConnection(pool, req.session.activeLocationId);
-    res.json({ configured: ms.isConfigured(), ...publicShape(conn) });
+    const pending = readPending(req);
+    res.json({
+      configured: ms.isConfigured(),
+      ...publicShape(conn),
+      // Lets the panel reopen on the code step rather than back at the form.
+      awaitingCode: Boolean(pending),
+      awaitingCodeEmail: pending ? pending.email : null,
+    });
   } catch (err) {
     console.error('Error reading MyStudio connection:', err.message);
     res.status(500).json({ error: 'Failed to read connection' });
@@ -214,12 +265,15 @@ router.post('/login/start', requireManager, requireOwnLocation, async (req, res)
 
   try {
     const conn = await loadConnection(pool, req.session.activeLocationId);
-    const { email, password } = loginCredentials(conn, req.body);
+    const { email, password } = loginCredentials(conn, req.body, readPending(req));
     if (!email || !password) {
       return res.status(400).json({ error: 'Enter your MyStudio email and password.' });
     }
 
     await ms.startLogin({ email, password });
+    // Only once MyStudio has actually sent the code, so a rejected password
+    // does not leave a sign-in hanging around waiting for one.
+    setPending(req, { email, password });
     res.json({ otpSent: true, email });
   } catch (err) {
     sendLoginError(res, err, 'sign-in');
@@ -231,16 +285,26 @@ router.post('/login/resend', requireManager, requireOwnLocation, async (req, res
   const pool = req.app.get('db');
   try {
     const conn = await loadConnection(pool, req.session.activeLocationId);
-    const { email, password } = loginCredentials(conn, req.body);
+    const { email, password } = loginCredentials(conn, req.body, readPending(req));
     if (!email || !password) {
       return res.status(400).json({ error: 'Enter your MyStudio email and password.' });
     }
 
     await ms.resendOtp({ email, password });
+    setPending(req, { email, password });
     res.json({ otpSent: true, email });
   } catch (err) {
     sendLoginError(res, err, 'code resend');
   }
+});
+
+// DELETE /api/mystudio/login/pending
+//
+// Backing out of a half-finished sign-in. Without this, closing the panel would
+// leave it waiting and every reopen would land on the code step.
+router.delete('/login/pending', requireManager, requireOwnLocation, (req, res) => {
+  clearPending(req);
+  res.json({ awaitingCode: false });
 });
 
 // POST /api/mystudio/login/verify  { code, email?, password? }
@@ -263,9 +327,11 @@ router.post('/login/verify', requireManager, requireOwnLocation, async (req, res
 
   try {
     const conn = await loadConnection(pool, req.session.activeLocationId);
-    const { email, password } = loginCredentials(conn, req.body);
+    const { email, password } = loginCredentials(conn, req.body, readPending(req));
     if (!email || !password) {
-      return res.status(400).json({ error: 'Enter your MyStudio email and password.' });
+      return res.status(400).json({
+        error: 'That sign-in timed out. Enter your MyStudio password and ask for a new code.',
+      });
     }
 
     let signedIn;
@@ -292,6 +358,9 @@ router.post('/login/verify', requireManager, requireOwnLocation, async (req, res
       cookie: signedIn.cookie,
       login: { email, password },
     });
+
+    // Used, so it goes. The password lives in the row now, encrypted.
+    clearPending(req);
 
     res.status(201).json({ configured: true, ...publicShape(row) });
   } catch (err) {
