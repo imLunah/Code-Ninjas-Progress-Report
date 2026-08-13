@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ChevronDownIcon, ChevronUpIcon, Trash2Icon } from 'lucide-react';
+import { ChevronDownIcon, ChevronUpIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import TaskActionsMenu from './TaskActionsMenu';
 import { CARD } from '../../lib/surfaces';
 import { COLUMNS, COLUMN_KEYS, DUE_TONE, dueMeta, plainPreview, taskHolder } from '../../lib/taskBoard';
@@ -61,10 +61,9 @@ function SortHeader({ label, sortKey, sort, onSort, className = '' }) {
   );
 }
 
-export default function TaskList({ tasks, canManage, directors = [], centerName, onEdit, onDelete, onPurge, onRestore, onPatch, onQuickAdd }) {
+export default function TaskList({ tasks, canManage, directors = [], centerName, onEdit, onDelete, onPurge, onRestore, onPatch, onAdd }) {
   const [sort, setSort] = useState({ key: 'due', dir: 'asc' });
   const [picked, setPicked] = useState(() => new Set());
-  const [adding, setAdding] = useState('');
 
   const togglePicked = (id) => setPicked((p) => {
     const next = new Set(p);
@@ -97,30 +96,24 @@ export default function TaskList({ tasks, canManage, directors = [], centerName,
   const live = rows.filter((t) => picked.has(t.id));
   const allPicked = rows.length > 0 && live.length === rows.length;
 
-  const quickAdd = (e) => {
-    e.preventDefault();
-    const text = adding.trim();
-    if (!text) return;
-    setAdding('');
-    onQuickAdd?.('todo', text);
-  };
-
-  // Typing a task straight into the list, the way each column does at its foot.
-  // It lands in To do, because the list has no column to be at the bottom of
-  // and anything typed in one breath is a thing to do rather than a thing being
-  // done.
-  const addRow = canManage && onQuickAdd && (
-    <form onSubmit={quickAdd} className="px-4 lg:px-5 py-2 border-t border-ninja-border/50">
-      <input
-        type="text"
-        value={adding}
-        onChange={(e) => setAdding(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Escape') { setAdding(''); e.currentTarget.blur(); } }}
-        placeholder="+ Quick add to To do"
-        aria-label="Quick add a task to To do"
-        className="w-full px-2 py-1.5 -mx-2 rounded-lg bg-transparent border border-transparent hover:border-ninja-border focus:border-ninja-blue focus:bg-white dark:focus:bg-white/5 font-ninja text-sm text-ninja-navy placeholder:text-ninja-muted transition-colors duration-150"
-      />
-    </form>
+  // Adding from the list opens the same editor the board's + does, rather than
+  // the board's type-and-enter field. A column has a foot to type at and a
+  // stage already decided by which column you typed in; the list has neither,
+  // so a bare text box here produced a task with a title and nothing else,
+  // sitting in a table whose other four columns are the reason to be in this
+  // view at all. The dialog asks for those up front. It still lands in To do
+  // unless the dialog is told otherwise.
+  const addRow = canManage && onAdd && (
+    <div className="px-4 lg:px-5 py-2 border-t border-ninja-border/50">
+      <button
+        type="button"
+        onClick={() => onAdd('todo')}
+        className="flex items-center gap-1.5 px-2 py-1.5 -mx-2 rounded-lg font-ninja text-sm font-semibold text-ninja-muted hover:text-ninja-blue hover:bg-white dark:hover:bg-white/5 transition-colors duration-150"
+      >
+        <PlusIcon size={16} strokeWidth={2.5} aria-hidden="true" />
+        Add task
+      </button>
+    </div>
   );
 
   // Sits above the table rather than floating over it: the count is the point,

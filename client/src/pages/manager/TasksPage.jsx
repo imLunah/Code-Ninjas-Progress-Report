@@ -317,7 +317,7 @@ export default function TasksPage() {
             onPurge={purge}
             onRestore={restore}
             onPatch={patchTask}
-            onQuickAdd={quickAdd}
+            onAdd={(column) => setEditor({ column })}
           />
         ) : (
           <TaskBoard
