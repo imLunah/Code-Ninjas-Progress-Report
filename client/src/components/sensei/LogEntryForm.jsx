@@ -474,11 +474,10 @@ export default function LogEntryForm({ student, program, enrollment, onLogged, o
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-ninja-red rounded-lg p-3 text-sm font-ninja">
-          {error}
-        </div>
-      )}
+      {/* Same treatment as the confirmation, for the same reason: a banner
+          above the form pushes the fields down to tell you about one of them,
+          and "Notes are required" is about a box you are already looking at. */}
+      <Toast message={error} show={Boolean(error)} variant="error" onDone={() => setError('')} />
       {/* The form stays put and the confirmation arrives from the bottom.
           Swapping the form for a green banner made the thing you had just
           finished disappear in order to tell you it had worked, and then asked

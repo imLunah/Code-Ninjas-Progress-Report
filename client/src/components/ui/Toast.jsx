@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckIcon } from 'lucide-react';
+import { CheckIcon, TriangleAlertIcon } from 'lucide-react';
 import { PANEL } from '../../lib/surfaces';
 
 // A short confirmation that gets out of the way.
@@ -16,7 +16,30 @@ import { PANEL } from '../../lib/surfaces';
 //
 // The motion is in index.css: it arrives a little past its resting place and
 // settles back, which is what makes it read as placed rather than drawn.
-export default function Toast({ message, show, duration = 2200, onDone }) {
+// Success leaves quickly because the person already knows what they did and
+// the toast is only confirming it. A problem has to be read before it can be
+// acted on, so it stays roughly twice as long and announces itself assertively
+// rather than politely.
+const VARIANTS = {
+  success: {
+    Icon: CheckIcon,
+    tone: 'text-emerald-600 dark:text-emerald-400',
+    duration: 2200,
+    role: 'status',
+    live: 'polite',
+  },
+  error: {
+    Icon: TriangleAlertIcon,
+    tone: 'text-ninja-red',
+    duration: 4500,
+    role: 'alert',
+    live: 'assertive',
+  },
+};
+
+export default function Toast({ message, show, variant = 'success', duration, onDone }) {
+  const style = VARIANTS[variant] || VARIANTS.success;
+  const life = duration ?? style.duration;
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
@@ -26,12 +49,12 @@ export default function Toast({ message, show, duration = 2200, onDone }) {
     setVisible(true);
     setLeaving(false);
 
-    const hide = setTimeout(() => setLeaving(true), duration);
+    const hide = setTimeout(() => setLeaving(true), life);
     // Long enough for the exit to finish; the state is what actually unmounts.
     const done = setTimeout(() => {
       setVisible(false);
       onDone?.();
-    }, duration + 260);
+    }, life + 260);
 
     return () => {
       clearTimeout(hide);
@@ -40,15 +63,15 @@ export default function Toast({ message, show, duration = 2200, onDone }) {
     // onDone deliberately absent: a parent passing a fresh closure each render
     // would restart the timer on every keystroke elsewhere on the page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [show, duration, message]);
+  }, [show, life, message, variant]);
 
   if (!visible || !message) return null;
 
   return createPortal(
     <div
       className="fixed inset-x-0 bottom-24 lg:bottom-8 z-[100] flex justify-center px-4 pointer-events-none"
-      role="status"
-      aria-live="polite"
+      role={style.role}
+      aria-live={style.live}
     >
       <div
         // The app's own solid panel, with the app's own text colour.
@@ -65,11 +88,7 @@ export default function Toast({ message, show, duration = 2200, onDone }) {
       >
         {/* The one spot of colour, and it carries the meaning. A whole panel
             tinted green shouts; a check does the same job at a glance. */}
-        <CheckIcon
-          size={16}
-          className="text-emerald-600 dark:text-emerald-400 flex-shrink-0"
-          aria-hidden
-        />
+        <style.Icon size={16} className={`${style.tone} flex-shrink-0`} aria-hidden />
         <span>{message}</span>
       </div>
     </div>,
