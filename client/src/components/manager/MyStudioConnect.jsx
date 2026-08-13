@@ -189,30 +189,6 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
     [busy, email, password, hasSavedPassword, savedEmail, status, onChanged, handleAuthError]
   );
 
-  // For someone already holding a code. Deliberately does not call MyStudio:
-  // asking for a code cancels the previous one, so the person who has just gone
-  // and fetched theirs would be sent back to their inbox for another.
-  const useExistingCode = useCallback(async () => {
-    if (busy) return;
-    setBusy(true);
-    setError('');
-    setNotice('');
-    try {
-      const body = password ? { email: email.trim(), password } : {};
-      const res = await api.post('/mystudio/login/pending', body);
-      setStep('code');
-      onChanged?.({
-        ...(status || {}),
-        awaitingCode: true,
-        awaitingCodeEmail: res.email || email || savedEmail,
-      });
-    } catch (err) {
-      setError(err.message || 'Could not continue the sign-in.');
-    } finally {
-      setBusy(false);
-    }
-  }, [busy, email, password, savedEmail, status, onChanged]);
-
   // Backing out. Clears the half-finished sign-in on the server too, so the
   // panel does not keep reopening on a code that is no longer wanted.
   const cancelCode = useCallback(async () => {
@@ -473,8 +449,7 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
                 />
               </div>
               <p className="font-ninja text-xs text-ninja-muted">
-                Saved encrypted so renewing later only needs the emailed code. You
-                can forget it at any time.
+                Your details are stored encrypted.
               </p>
             </div>
           )}
@@ -491,24 +466,12 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
               {busy ? (
                 <span className="flex items-center gap-2">
                   <Loader2Icon size={15} className="animate-spin" aria-hidden />
-                  Contacting MyStudio
+                  Signing in
                 </span>
               ) : (
-                'Send me a code'
+                'Log in'
               )}
             </Button>
-
-            {/* Asking for a code cancels the one before it, so anybody who
-                already has one needs a way past this that does not send a new
-                one and start them over. */}
-            <button
-              type="button"
-              onClick={useExistingCode}
-              disabled={busy || (!hasSavedPassword && (!email.trim() || !password))}
-              className="font-ninja text-sm text-ninja-muted hover:text-ninja-navy transition-colors disabled:opacity-60"
-            >
-              I already have a code
-            </button>
 
             {/* Only when this was opened by choice. There is nothing to back out
                 of when the connection is the thing that needs fixing. */}
