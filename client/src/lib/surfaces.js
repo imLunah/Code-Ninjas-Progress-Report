@@ -35,8 +35,13 @@ export const PANEL = 'bg-white border border-ninja-border rounded-xl shadow-sm';
 // field inside a card has nothing behind it but the card.
 export const GLASS = 'glass-card glass-clear';
 
-// The app's own edges: the nav, dialogs, the side panel. Between the cards and
-// the menus — translucent enough to show the page as colour, blurred enough
-// that none of it can be read, and flat, because chrome is not sitting on the
-// page, it is the edge of it.
+// The app's own edges — the nav, and nothing that opens. Between the cards and
+// the menus: translucent enough to show the page as colour, blurred enough that
+// none of it can be read, and flat, because chrome is not sitting on the page,
+// it is the edge of it.
+//
+// Deliberately not on dialogs or the side panel. A surface that has come up to
+// be dealt with cannot be see-through: what shows through it is the page it is
+// covering, and the two read as one grey thing with the answer somewhere
+// inside it. Glass is for what stays, not for what interrupts.
 export const CHROME = 'glass-chrome glass-edge';

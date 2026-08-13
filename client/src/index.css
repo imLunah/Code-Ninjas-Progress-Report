@@ -218,9 +218,14 @@ textarea:focus-visible {
 
 /* ── Chrome: the app's own edges ──
    The third material, and the last. Cards are clear, menus are frosted, and
-   the things that hold the app — the nav down the side, the dialog over the
-   page, the panel beside it — are between the two: translucent enough that the
-   page shows through as colour, blurred enough that none of it can be read.
+   the nav is between the two: translucent enough that the page shows through
+   as colour, blurred enough that none of it can be read.
+
+   The nav, and only the nav. Dialogs and the side panel wore this for one
+   commit and it was wrong: a surface that has come up to be dealt with cannot
+   be see-through, because what shows through it is the page it is covering,
+   and the two read as one grey thing with the answer somewhere inside it. They
+   are solid. Glass is for what stays, not for what interrupts.
 
    Chrome is not a card and must not look like one. It has no lift and no drop
    shadow, because it is not sitting on the page, it is the edge of it. What it

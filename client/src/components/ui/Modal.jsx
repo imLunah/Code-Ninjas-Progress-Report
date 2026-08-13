@@ -81,7 +81,7 @@ export default function Modal({ isOpen, onClose, title, children, subheader, wid
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : undefined}
         tabIndex={-1}
-        className={`modal-panel w-full flex-1 flex flex-col overflow-hidden focus:outline-none sm:flex-none sm:max-h-[90dvh] sm:rounded-2xl sm:bg-ninja-bg glass-chrome glass-edge sm:shadow-xl sm:border sm:border-ninja-border ${width}`}
+        className={`modal-panel w-full flex-1 flex flex-col overflow-hidden focus:outline-none sm:flex-none sm:max-h-[90dvh] sm:rounded-2xl sm:bg-ninja-bg sm:shadow-xl sm:border sm:border-ninja-border ${width}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Desktop header with × */}
