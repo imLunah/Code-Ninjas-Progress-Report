@@ -229,6 +229,26 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
     }
   }, [busy, code, email, password, hasSavedPassword, onChanged, onClose, handleAuthError]);
 
+  // What this connection is allowed to power here. Server-enforced; this only
+  // asks.
+  const setFeature = useCallback(
+    async (key, value) => {
+      // Optimistic: a switch that waits on a round trip feels broken.
+      const previous = status;
+      onChanged?.({
+        ...(status || {}),
+        features: { ...(status?.features || {}), [key]: value },
+      });
+      try {
+        onChanged?.(await api.patch('/mystudio/features', { [key]: value }));
+      } catch (err) {
+        onChanged?.(previous);
+        setError(err.message || 'Could not change that setting.');
+      }
+    },
+    [status, onChanged]
+  );
+
   const forgetPassword = useCallback(async () => {
     if (busy) return;
     setBusy(true);
@@ -266,6 +286,7 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
   const expired = connected && status.status === 'expired';
   // Connected and pulling. Nothing needs doing, so nothing should be asked for.
   const healthy = connected && !expired;
+  const features = status?.features || { booked: true, import: true };
   const lastSynced = formatWhen(status?.lastSyncedAt);
 
   const body = (
@@ -489,6 +510,53 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
                 Cancel
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {connected && (
+        <div>
+          <p className="font-ninja text-xs font-semibold uppercase tracking-wide text-ninja-muted mb-2">
+            What this connection does here
+          </p>
+          <div className="rounded-xl border border-ninja-border divide-y divide-ninja-border">
+            {[
+              {
+                key: 'booked',
+                title: "Today's bookings on the board",
+                hint: 'Shows who MyStudio says is coming, for directors and senseis.',
+              },
+              {
+                key: 'import',
+                title: 'Roster import',
+                hint: 'Lets a director pull this center\'s ninjas from MyStudio.',
+              },
+            ].map((row) => (
+              <div key={row.key} className="flex items-center gap-3 p-3">
+                <div className="min-w-0">
+                  <p className="font-ninja text-sm text-ninja-navy">{row.title}</p>
+                  <p className="font-ninja text-xs text-ninja-muted">{row.hint}</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={features[row.key] !== false}
+                  aria-label={row.title}
+                  onClick={() => setFeature(row.key, features[row.key] === false)}
+                  className={`relative ml-auto w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${
+                    features[row.key] !== false ? 'bg-ninja-blue' : 'bg-ninja-border'
+                  }`}
+                >
+                  <motion.span
+                    layout
+                    transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+                    className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${
+                      features[row.key] !== false ? 'right-1' : 'left-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}

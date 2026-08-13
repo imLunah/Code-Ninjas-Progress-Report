@@ -25,6 +25,7 @@ async function loadConnection(pool, locationId) {
     `SELECT c.id, c.location_id, c.company_id, c.company_name, c.session_cookie,
             c.status, c.last_verified_at, c.last_synced_at,
             c.login_email, c.login_secret, c.login_saved_at,
+            c.feature_booked, c.feature_import,
             u.display_name AS connected_by_name
        FROM mystudio_connections c
        LEFT JOIN users u ON u.id = c.connected_by
@@ -51,11 +52,17 @@ function publicShape(conn) {
     lastSyncedAt: conn.last_synced_at,
     loginEmail: conn.login_email || null,
     hasSavedPassword: Boolean(conn.login_secret),
+    // What this connection is allowed to power at this center.
+    features: {
+      booked: conn.feature_booked !== false,
+      import: conn.feature_import !== false,
+    },
   };
 }
 
 const SAVE_RETURNING = `RETURNING id, location_id, company_id, company_name, status,
-                 last_verified_at, last_synced_at, login_email, login_secret`;
+                 last_verified_at, last_synced_at, login_email, login_secret,
+                 feature_booked, feature_import`;
 
 // One place that writes a connection, used by both ways of making one.
 //
@@ -483,6 +490,11 @@ router.get('/today', requireSensei, async (req, res) => {
     if (!ms.isConfigured()) {
       return res.json({ connected: true, configured: false, expected: [] });
     }
+    // Enforced here rather than only hidden in the UI, so a tab left open
+    // before a director switched it off cannot keep pulling.
+    if (conn.feature_booked === false) {
+      return res.json({ connected: true, configured: true, disabled: true, expected: [] });
+    }
 
     // Held across the pull so any token MyStudio refreshes along the way can be
     // written back below. Without this the stored cookie stays frozen at the
@@ -656,6 +668,48 @@ function parseBeltName(raw) {
   return BELT_NAMES.find((name) => text.includes(name.toLowerCase())) || null;
 }
 
+// PATCH /api/mystudio/features  { booked?, import? }
+//
+// Which parts of a connection are live at this center. Separate from the user's
+// own experimental toggle, which answers whether somebody wants to see
+// in-progress work at all; these answer whether a piece is trusted enough to
+// leave switched on here, and one director's answer applies to their center.
+router.patch('/features', requireManager, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const body = req.body || {};
+
+  const updates = [];
+  const values = [req.session.activeLocationId];
+  for (const [key, column] of [['booked', 'feature_booked'], ['import', 'feature_import']]) {
+    if (typeof body[key] !== 'boolean') continue;
+    values.push(body[key]);
+    updates.push(`${column} = $${values.length}`);
+  }
+
+  if (!updates.length) {
+    return res.status(400).json({ error: 'Nothing to change.' });
+  }
+
+  try {
+    const { rowCount } = await pool.query(
+      `UPDATE mystudio_connections SET ${updates.join(', ')} WHERE location_id = $1`,
+      values
+    );
+    if (!rowCount) {
+      return res.status(400).json({ error: 'This center is not connected to MyStudio.' });
+    }
+
+    // A switched-off feature must stop immediately, not in up to a minute.
+    forgetPull(req.session.activeLocationId);
+
+    const conn = await loadConnection(pool, req.session.activeLocationId);
+    res.json({ configured: ms.isConfigured(), ...publicShape(conn) });
+  } catch (err) {
+    console.error('Error updating MyStudio features:', err.message);
+    res.status(500).json({ error: 'Failed to update' });
+  }
+});
+
 // POST /api/mystudio/import   { dryRun } | { belt_ids, enroll_ids }
 //
 // Pulls this center's member list from MyStudio and adds the ninjas DojoLink
@@ -694,6 +748,9 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
     if (!conn) return res.status(400).json({ error: 'This center is not connected to MyStudio.' });
     if (!ms.isConfigured()) {
       return res.status(503).json({ error: 'MyStudio is not set up on the server yet.' });
+    }
+    if (conn.feature_import === false) {
+      return res.status(403).json({ error: 'The MyStudio roster import is switched off for this center.' });
     }
 
     let members;

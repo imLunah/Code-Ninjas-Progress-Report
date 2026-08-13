@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Loader2Icon, TriangleAlertIcon } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
@@ -41,6 +41,10 @@ function Section({ title, hint, children }) {
 }
 
 export default function MyStudioImport({ onImported }) {
+  // Self-gating rather than gated by the page: whether this center wants a
+  // roster import is a property of the connection, and the roster page has no
+  // business knowing about MyStudio to find out.
+  const [available, setAvailable] = useState(false);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -53,6 +57,19 @@ export default function MyStudioImport({ onImported }) {
   const [beltIds, setBeltIds] = useState(() => new Set());
   const [enrollIds, setEnrollIds] = useState(() => new Set());
   const [detailIds, setDetailIds] = useState(() => new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get('/mystudio/status')
+      .then((s) => {
+        if (!cancelled) setAvailable(Boolean(s.connected) && s.features?.import !== false);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const reset = () => {
     setPreview(null);
@@ -128,6 +145,8 @@ export default function MyStudioImport({ onImported }) {
     !beltChanges.length &&
     !newEnrollments.length &&
     !detailFills.length;
+
+  if (!available) return null;
 
   return (
     <>

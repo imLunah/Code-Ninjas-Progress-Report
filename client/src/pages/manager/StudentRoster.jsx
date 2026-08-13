@@ -406,9 +406,10 @@ export default function StudentRoster() {
                   <Button variant="secondary" onClick={() => { setImportModal(true); setImportResult(null); setImportError(''); setPendingStudents(null); setKeepIds(new Set()); setOverrideKeys(new Set()); }}>
                     Import CSV
                   </Button>
-                  {/* Experimental, and beside the CSV rather than instead of it:
-                      a roster is not something to have only one way of loading,
-                      and this one depends on an undocumented vendor API. */}
+                  {/* Beside the CSV rather than instead of it: a roster is not
+                      something to have only one way of loading, and this one
+                      depends on an undocumented vendor API. It renders nothing
+                      unless this center is connected and wants it. */}
                   {experimental && <MyStudioImport onImported={() => loadStudents(0)} />}
                   <Button onClick={() => navigate('/manager/students/new')}>+ Add Ninja</Button>
                 </>
