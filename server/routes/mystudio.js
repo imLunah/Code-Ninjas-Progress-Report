@@ -680,6 +680,12 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
   const beltIds = new Set((req.body && req.body.belt_ids) || []);
   const enrollIds = new Set((req.body && req.body.enroll_ids) || []);
   const detailIds = new Set((req.body && req.body.detail_ids) || []);
+  // Which of the new ninjas to actually create. Absent means all of them, so
+  // a caller that does not care still works; an empty array means none, which
+  // is a director having unticked every one and must not be read as all.
+  const addIds = Array.isArray(req.body && req.body.add_ids)
+    ? new Set(req.body.add_ids.map(String))
+    : null;
 
   const date = todayDate();
 
@@ -850,6 +856,7 @@ router.post('/import', requireManager, requireOwnLocation, async (req, res) => {
       await client.query('BEGIN');
 
       for (const row of toAdd) {
+        if (addIds && !addIds.has(String(row.participant_id))) continue;
         const { rows: inserted } = await client.query(
           `INSERT INTO students
              (full_name, location_id, mystudio_participant_id,

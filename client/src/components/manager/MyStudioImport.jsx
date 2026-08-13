@@ -46,6 +46,10 @@ export default function MyStudioImport({ onImported }) {
   const [error, setError] = useState('');
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
+  // Everyone new starts ticked: adding them is what the button is for. The
+  // checkboxes are for the exceptions — a kid who left, a duplicate under a
+  // different spelling, a name the director knows is wrong.
+  const [addIds, setAddIds] = useState(() => new Set());
   const [beltIds, setBeltIds] = useState(() => new Set());
   const [enrollIds, setEnrollIds] = useState(() => new Set());
   const [detailIds, setDetailIds] = useState(() => new Set());
@@ -54,6 +58,7 @@ export default function MyStudioImport({ onImported }) {
     setPreview(null);
     setResult(null);
     setError('');
+    setAddIds(new Set());
     setBeltIds(new Set());
     setEnrollIds(new Set());
     setDetailIds(new Set());
@@ -63,7 +68,9 @@ export default function MyStudioImport({ onImported }) {
     setBusy(true);
     setError('');
     try {
-      setPreview(await api.post('/mystudio/import', { dryRun: true }));
+      const next = await api.post('/mystudio/import', { dryRun: true });
+      setPreview(next);
+      setAddIds(new Set((next.to_add || []).map((row) => row.participant_id)));
     } catch (err) {
       setError(err.message || 'Could not read the MyStudio roster.');
     } finally {
@@ -90,6 +97,7 @@ export default function MyStudioImport({ onImported }) {
     setError('');
     try {
       const res = await api.post('/mystudio/import', {
+        add_ids: [...addIds],
         belt_ids: [...beltIds],
         enroll_ids: [...enrollIds],
         detail_ids: [...detailIds],
@@ -109,6 +117,11 @@ export default function MyStudioImport({ onImported }) {
   const newEnrollments = preview?.new_enrollments || [];
   const detailFills = preview?.detail_fills || [];
   const ambiguous = preview?.ambiguous || [];
+  const selectedCount = addIds.size + beltIds.size + enrollIds.size + detailIds.size;
+  const nothingSelected = selectedCount === 0;
+  const applyLabel = addIds.size
+    ? `Add ${addIds.size} ${addIds.size === 1 ? 'ninja' : 'ninjas'}`
+    : 'Apply changes';
   const nothingToDo =
     preview &&
     !toAdd.length &&
@@ -171,21 +184,41 @@ export default function MyStudioImport({ onImported }) {
 
               {toAdd.length > 0 && (
                 <Section
-                  title={`Add ${toAdd.length} new ${toAdd.length === 1 ? 'ninja' : 'ninjas'}`}
-                  hint="Ninjas MyStudio has and DojoLink does not."
+                  title={`Add ${addIds.size} of ${toAdd.length} new ${toAdd.length === 1 ? 'ninja' : 'ninjas'}`}
+                  hint="Ninjas MyStudio has and DojoLink does not. Untick anyone you do not want."
                 >
+                  {toAdd.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAddIds(
+                          addIds.size === toAdd.length
+                            ? new Set()
+                            : new Set(toAdd.map((row) => row.participant_id))
+                        )
+                      }
+                      className="font-ninja text-xs text-ninja-muted hover:text-ninja-navy transition-colors mb-2"
+                    >
+                      {addIds.size === toAdd.length ? 'Deselect all' : 'Select all'}
+                    </button>
+                  )}
                   <ul className="max-h-52 overflow-y-auto rounded-xl border border-ninja-border divide-y divide-ninja-border">
                     {toAdd.map((row) => (
-                      <li
-                        key={row.participant_id}
-                        className="flex items-center gap-2 px-3 py-2 font-ninja text-sm text-ninja-navy"
-                      >
-                        <span className="truncate">{row.full_name}</span>
-                        <span className="ml-auto text-xs text-ninja-muted flex-shrink-0">
-                          {row.program || 'No program yet'}
-                          {row.belt ? ` · ${row.belt}` : ''}
-                          {row.fills?.length ? ` · +${row.fills.length} details` : ''}
-                        </span>
+                      <li key={row.participant_id}>
+                        <label className="flex items-center gap-2.5 px-3 py-2 font-ninja text-sm text-ninja-navy cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className={CHECKBOX}
+                            checked={addIds.has(row.participant_id)}
+                            onChange={() => toggle(setAddIds)(row.participant_id)}
+                          />
+                          <span className="truncate">{row.full_name}</span>
+                          <span className="ml-auto text-xs text-ninja-muted flex-shrink-0">
+                            {row.program || 'No program yet'}
+                            {row.belt ? ` · ${row.belt}` : ''}
+                            {row.fills?.length ? ` · +${row.fills.length} details` : ''}
+                          </span>
+                        </label>
                       </li>
                     ))}
                   </ul>
@@ -287,14 +320,14 @@ export default function MyStudioImport({ onImported }) {
 
           <div className="flex flex-wrap items-center gap-2 pt-1">
             {preview && !nothingToDo && (
-              <Button onClick={apply} disabled={busy}>
+              <Button onClick={apply} disabled={busy || nothingSelected}>
                 {busy ? (
                   <span className="flex items-center gap-2">
                     <Loader2Icon size={15} className="animate-spin" aria-hidden />
                     Importing
                   </span>
                 ) : (
-                  `Add ${toAdd.length} ${toAdd.length === 1 ? 'ninja' : 'ninjas'}`
+                  applyLabel
                 )}
               </Button>
             )}
