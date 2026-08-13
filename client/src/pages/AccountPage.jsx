@@ -19,7 +19,6 @@ import {
   ChevronRightIcon as Chevron,
   MapPinIcon,
   PanelTopIcon,
-  GhostIcon,
 } from 'lucide-react';
 
 const FIELD =
@@ -28,7 +27,7 @@ const LABEL = 'block text-ninja-muted text-xs font-ninja font-semibold uppercase
 
 export default function AccountPage() {
   const { user, setUser, logout, switchLocation } = useAuth();
-  const { dark, toggle, experimental, setExperimental, horizontalNav, setHorizontalNav, halloween, setHalloween } = useTheme();
+  const { dark, toggle, experimental, setExperimental, horizontalNav, setHorizontalNav } = useTheme();
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
 
@@ -269,26 +268,6 @@ export default function AccountPage() {
               </div>
               <Chevron width="18" height="18" className="text-ninja-muted" />
             </button>
-
-            <div className="mt-3 flex items-center justify-between rounded-xl border border-ninja-border p-3">
-              <div className="flex items-center gap-3">
-                <span className={`w-9 h-9 rounded-xl flex items-center justify-center ${halloween ? 'text-ninja-blue-ink bg-ninja-blue/10' : 'text-ninja-muted bg-ninja-bg'}`}>
-                  <GhostIcon width="17" height="17" />
-                </span>
-                <div>
-                  <p className="text-ninja-navy font-ninja font-semibold text-sm">Halloween mode</p>
-                  <p className="text-ninja-muted font-ninja text-xs">Pumpkin colours, cobwebs and a resident spider.</p>
-                </div>
-              </div>
-              <button
-                type="button" role="switch" aria-checked={halloween} aria-label="Toggle Halloween mode"
-                onClick={() => setHalloween(!halloween)}
-                className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors duration-200 ${halloween ? 'bg-ninja-blue' : 'bg-ninja-border'}`}
-              >
-                <motion.span layout transition={{ type: 'spring', stiffness: 500, damping: 32 }}
-                  className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md ${halloween ? 'right-1' : 'left-1'}`} />
-              </button>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>

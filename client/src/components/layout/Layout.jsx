@@ -5,7 +5,6 @@ import Sidebar from './Sidebar';
 import TopNav from './TopNav';
 import MobileNav from './MobileNav';
 import BugReportButton from '../ui/BugReportButton';
-import HalloweenDecor from '../theme/HalloweenDecor';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { api } from '../../api/client';
@@ -112,7 +111,7 @@ export default function Layout({ children }) {
   const isPreview = useContext(LayoutPreviewContext);
   const { user, viewAs } = useAuth();
   // Desktop-only display setting: nav runs along the top instead of the sidebar.
-  const { horizontalNav: useTopNav, halloween } = useTheme();
+  const { horizontalNav: useTopNav } = useTheme();
   const [bugOpen, setBugOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -365,7 +364,6 @@ export default function Layout({ children }) {
           <feDisplacementMap in="SourceGraphic" in2="softNoise" scale="22" xChannelSelector="R" yChannelSelector="G" />
         </filter>
       </svg>
-      {halloween && <HalloweenDecor />}
       {useTopNav
         ? <TopNav onOpenBug={() => setBugOpen(true)} />
         : <Sidebar onOpenBug={() => setBugOpen(true)} />}
