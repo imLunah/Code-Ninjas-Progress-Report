@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  PlugZapIcon,
   CircleCheckIcon,
   TriangleAlertIcon,
   Trash2Icon,
@@ -744,11 +743,15 @@ export function MyStudioRow({ status, onOpen, centerName }) {
       className="mt-3 w-full flex items-center justify-between rounded-xl border border-ninja-border p-3 text-left transition-[transform,border-color] duration-150 ease-[var(--ease-out)] hover:border-ninja-blue/50 active:scale-[0.98]"
     >
       <div className="flex items-center gap-3 min-w-0">
-        <span className="w-9 h-9 rounded-xl flex items-center justify-center text-ninja-blue-ink bg-ninja-blue/10 flex-shrink-0">
-          <PlugZapIcon size={17} />
-        </span>
+        <img
+          src="/logo/mystudio.png"
+          alt=""
+          width={36}
+          height={36}
+          className="w-9 h-9 rounded-xl flex-shrink-0"
+        />
         <div className="min-w-0">
-          <p className="text-ninja-navy font-ninja font-semibold text-sm">MyStudio schedule</p>
+          <p className="text-ninja-navy font-ninja font-semibold text-sm">MyStudio Integration</p>
           <p className="text-ninja-muted font-ninja text-xs truncate">
             {expired
               ? 'Session ran out. Sign in again to keep pulling.'

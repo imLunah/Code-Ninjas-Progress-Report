@@ -457,7 +457,7 @@ export default function LocationsPage() {
                         person who has to tell them is the person on this page. */}
                     {loc.center_code && (
                       <p className="text-ninja-muted font-ninja text-xs mt-1">
-                        parent code:{' '}
+                        class code:{' '}
                         <span className="font-mono font-bold tracking-widest text-ninja-navy">
                           {loc.center_code}
                         </span>
