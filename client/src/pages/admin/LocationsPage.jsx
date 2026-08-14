@@ -270,12 +270,9 @@ function EditLocationModal({ loc, onClose, onSaved }) {
               spellCheck={false}
               className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-mono font-bold tracking-widest text-sm focus:outline-none focus:border-ninja-blue"
             />
-            {/* Said plainly, because it decides how it should be treated: it is
-                a scoping key, not a password, and it will end up on a flyer. */}
             <p className="text-ninja-muted font-ninja text-xs mt-1.5">
               Parents type this with their email to sign in. Up to 10 letters or
-              digits. Share it freely — it decides which center a parent reaches,
-              it is not a password.
+              digits.
             </p>
           </div>
           {error && <p className="text-ninja-red text-xs font-ninja">{error}</p>}
