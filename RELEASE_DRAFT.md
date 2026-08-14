@@ -1,19 +1,17 @@
-# Update v1.8
+# Update v1.9
 
 ## New
-- Since I did not want to use the Code Ninjas logo, I re-designed the branding with Illustrator to have DojoLink as a seperate brand that isn't affliated with Code Ninjas. 
-- Added horizontal navbar into display settings 
-- Removed sticky notes and added kanban tasks for CDs
-- You can now edit ninja sessions either by clicking on the Logged Today filter or on ninja profile
+- Integrated MyStudio to Dojolink. I spent the entire night reverse engineering their crappy website for this to even be possible. It might break it might not.. It was not easy.. Note that this setting is labeled as unstable due to the way I got this to work. To access this feature, it will be on the experimental settings and Center Director's must sign in with their credentials or use paste a cURL below. I recommend signing in due to the nature of 2FA and cookies expiring in the future. 
+- Senseis are not able to view live data on which ninjas are scheduled for the day.
+- Center Directors have the ability to import ninja roster straight from MyStudio.
+- Center Directors can now manage their own centers inside admin settings.
+- To add more security layers, Parent Portal includes having to enter in a center code now (CDs Please update your center code inside settings)
 
 ## Changes
-- Slightly improved staff page UI
-- Improved archived page UI
-- Deleting a staff member for good no longer deletes what they logged. Their name will be labeled as a generic
-- Logging a session, editing, or submitting reports keeps you on the same page instead of going back to homepage.
-- Hovering over reactions mentions the user who left them.
-- Improved session history hovering design
-- Added liquid glass towards parts of the assets
+- The check in board refreshes every 30 seconds to show updated values
+- Improved logging session submission / edit / invalid feedback ui
+
+
 
 
 
