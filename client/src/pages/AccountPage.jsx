@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import { api } from '../api/client';
@@ -18,6 +18,7 @@ import {
   CircleQuestionMarkIcon as HelpIcon,
   PaletteIcon,
   ChevronRightIcon as Chevron,
+  SettingsIcon,
   MapPinIcon,
   PanelTopIcon,
 } from 'lucide-react';
@@ -467,6 +468,26 @@ export default function AccountPage() {
     </a>
   );
 
+  // The same entry the desktop rail carries, in the shape the phone uses.
+  // Without it a director on a phone has no way into their center's settings at
+  // all, which is where they are most likely to be when they need one.
+  const adminSettings = isManager && (
+    <Link to="/admin/locations" className={`block ${CARD} p-5 hover:border-ninja-blue/50 transition-colors`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="w-9 h-9 rounded-xl flex items-center justify-center text-ninja-blue-ink bg-ninja-blue/10">
+            <SettingsIcon width="17" height="17" />
+          </span>
+          <div>
+            <p className="text-ninja-navy font-ninja font-semibold text-sm">Admin settings</p>
+            <p className="text-ninja-muted font-ninja text-xs">Your center, staff and curriculum</p>
+          </div>
+        </div>
+        <Chevron width="18" height="18" className="text-ninja-muted" />
+      </div>
+    </Link>
+  );
+
   const messages = (
     <>
       {error && <p className="text-ninja-red font-ninja text-sm">{error}</p>}
@@ -572,6 +593,14 @@ export default function AccountPage() {
         { key: 'preferences', label: 'Experimental', Icon: FlaskIcon },
         ...(ONBOARDING_ENABLED ? [{ key: 'help', label: 'Getting started', Icon: HelpIcon }] : []),
       ] },
+      // Leaves this page rather than switching a section, so it renders as a
+      // link. Managing a center is settings work and belongs with the settings,
+      // not hidden behind a gear beside somebody's name.
+      ...(isManager
+        ? [{ title: 'Center', items: [
+            { key: 'admin', label: 'Admin settings', Icon: SettingsIcon, to: '/admin/locations' },
+          ] }]
+        : []),
     ];
 
     const HEADINGS = {
@@ -612,9 +641,19 @@ export default function AccountPage() {
                     {group.title}
                   </p>
                   <div className="space-y-0.5">
-                    {group.items.map(({ key, label, Icon }) => {
+                    {group.items.map(({ key, label, Icon, to }) => {
                       const active = section === key;
                       return (
+                        to ? (
+                          <Link
+                            key={key}
+                            to={to}
+                            className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left font-ninja text-sm font-semibold text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg/60 transition-colors"
+                          >
+                            <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+                            {label}
+                          </Link>
+                        ) : (
                         <button
                           key={key}
                           type="button"
@@ -629,6 +668,7 @@ export default function AccountPage() {
                           <Icon className="w-[18px] h-[18px] flex-shrink-0" />
                           {label}
                         </button>
+                        )
                       );
                     })}
                   </div>
@@ -693,6 +733,7 @@ export default function AccountPage() {
         {appearanceCard}
         {experimentalCard}
         {locationCard}
+        {adminSettings}
         {gettingStarted}
 
         <form onSubmit={handleSave} className={`${CARD} p-6 space-y-5`}>

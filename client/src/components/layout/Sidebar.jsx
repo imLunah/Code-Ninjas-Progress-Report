@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import ThemeToggle from '../ui/ThemeToggle';
 import Logo from '../ui/Logo';
 import { RocketIcon } from '../ui/icons';
-import { LogOutIcon, SettingsIcon } from 'lucide-react';
+import { LogOutIcon } from 'lucide-react';
 import { LayoutGridIcon, BookOpenIcon } from 'lucide-react';
 
 const EXPANDED_W = 224; // matches w-56
@@ -217,18 +217,6 @@ export default function Sidebar({ onOpenBug }) {
                 <p className="font-ninja text-ninja-muted text-xs capitalize">{user?.role === 'manager' ? 'Center Director' : user?.role === 'admin' ? 'Admin' : user?.role}</p>
               </div>
             </Link>
-            {/* A director's way into their center's settings. Admins already
-                have the view switcher; directors had no door at all, and the
-                pages they can now use were unreachable without typing a URL. */}
-            {user?.role === 'manager' && (
-              <Link
-                to="/admin/locations"
-                title="Center settings"
-                className="text-ninja-muted hover:text-ninja-blue transition-colors flex-shrink-0 p-1"
-              >
-                <SettingsIcon className="w-4 h-4" />
-              </Link>
-            )}
             <button
               onClick={onOpenBug}
               title="Report a bug or suggest a feature"

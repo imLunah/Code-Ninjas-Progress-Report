@@ -45,7 +45,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (tab === 'parent') {
-        await parentLogin(parentCode.trim(), parentEmail.trim());
+        await parentLogin(parentCode.trim(), parentEmail.trim(), keepSignedIn);
         navigate('/parent/dashboard');
       } else {
         const user = await login(username, password, keepSignedIn);
@@ -193,43 +193,6 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {/* Keep me signed in */}
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <div className="relative flex-shrink-0">
-                    <input
-                      id="keep-signed-in"
-                      name="keepSignedIn"
-                      type="checkbox"
-                      checked={keepSignedIn}
-                      onChange={(e) => setKeepSignedIn(e.target.checked)}
-                      className="sr-only"
-                    />
-                    <motion.div
-                      className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
-                        keepSignedIn ? 'bg-ninja-blue border-ninja-blue' : 'border-ninja-border bg-white'
-                      }`}
-                      whileTap={{ scale: 0.85 }}
-                    >
-                      <AnimatePresence>
-                        {keepSignedIn && (
-                          <motion.svg
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{   scale: 0, opacity: 0 }}
-                            transition={{ type: 'spring', damping: 16, stiffness: 400 }}
-                            className="w-3 h-3 text-white"
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
-                          </motion.svg>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-                  </div>
-                  <span className="font-ninja text-sm text-ninja-navy group-hover:text-ninja-blue transition-colors">
-                    Keep me signed in on this device
-                  </span>
-                </label>
               </motion.div>
             ) : (
               <motion.div
@@ -257,7 +220,7 @@ export default function LoginPage() {
                   maxLength={10}
                   value={parentCode}
                   onChange={(e) => setParentCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase())}
-                  placeholder="Ask your center"
+                  placeholder="ABC123"
                   required
                   autoFocus
                   className="w-full border border-ninja-border text-ninja-navy rounded-xl px-4 py-3 sm:py-3.5 font-ninja font-semibold tracking-[0.2em] text-base focus:outline-none focus:border-ninja-blue focus:ring-2 focus:ring-ninja-blue/10 transition-all bg-white"
@@ -280,6 +243,46 @@ export default function LoginPage() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Keep me signed in. Outside the tabs: a parent on the family iPad
+              has the same reason to want it as a sensei on the front desk, and
+              the control is the same control. */}
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <div className="relative flex-shrink-0">
+              <input
+                id="keep-signed-in"
+                name="keepSignedIn"
+                type="checkbox"
+                checked={keepSignedIn}
+                onChange={(e) => setKeepSignedIn(e.target.checked)}
+                className="sr-only"
+              />
+              <motion.div
+                className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
+                  keepSignedIn ? 'bg-ninja-blue border-ninja-blue' : 'border-ninja-border bg-white'
+                }`}
+                whileTap={{ scale: 0.85 }}
+              >
+                <AnimatePresence>
+                  {keepSignedIn && (
+                    <motion.svg
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{   scale: 0, opacity: 0 }}
+                      transition={{ type: 'spring', damping: 16, stiffness: 400 }}
+                      className="w-3 h-3 text-white"
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
+                    </motion.svg>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </div>
+            <span className="font-ninja text-sm text-ninja-navy group-hover:text-ninja-blue transition-colors">
+              Keep me signed in on this device
+            </span>
+          </label>
 
           <AnimatePresence>
             {error && (

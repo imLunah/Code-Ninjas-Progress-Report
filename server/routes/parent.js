@@ -89,6 +89,12 @@ router.post('/login', loginLimiter, async (req, res) => {
     req.session.parentName = rows[0].parent_name || null;
     req.session.parentLocationId = center.id;
     req.session.parentLocationName = center.name;
+    // Same rule as staff: thirty days when asked for, otherwise the cookie
+    // dies with the browser. A family checking progress on a shared tablet
+    // is exactly who should be able to say no to this.
+    req.session.cookie.maxAge = req.body && req.body.keep_signed_in
+      ? 30 * 24 * 60 * 60 * 1000
+      : null;
 
     await new Promise((resolve, reject) => {
       req.session.save((err) => (err ? reject(err) : resolve()));

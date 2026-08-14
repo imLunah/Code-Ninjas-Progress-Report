@@ -14,8 +14,12 @@ export function ParentAuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  async function login(centerCode, email) {
-    const data = await api.post('/parent/login', { centerCode, email });
+  async function login(centerCode, email, keepSignedIn = false) {
+    const data = await api.post('/parent/login', {
+      centerCode,
+      email,
+      keep_signed_in: keepSignedIn,
+    });
     setParent(data);
     return data;
   }
