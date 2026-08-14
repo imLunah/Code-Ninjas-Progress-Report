@@ -2,8 +2,18 @@
 <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
     <style>
+      /* The mark is black, and the tab strip it sits in is not always light.
+         A single flat fill would vanish against a dark tab, so the glyph
+         flips to white when the browser reports a dark UI. The PNG icons
+         next to this file cannot do that, which is why they ship with a
+         white plate behind them instead. */
       .cls-1 {
-        fill: #fff;
+        fill: #000;
+      }
+      @media (prefers-color-scheme: dark) {
+        .cls-1 {
+          fill: #fff;
+        }
       }
     </style>
   </defs>

@@ -7,6 +7,16 @@
     <meta name="description" content="Private studio management app. Staff check in ninjas, track belt progress, and run clubs. Parents follow their child's journey. Sign in required." />
     <link rel="canonical" href="https://www.dojolink.app/" />
     <link rel="icon" type="image/svg+xml" href="/logo/favicon.svg" />
+    <!-- An installed shortcut takes its icon from the manifest, not from the
+         favicon, and it captures that icon once at install time. Chrome looks
+         for manifest icons first, then apple-touch-icon, then the favicon, so
+         without these three lines a home screen tile falls back to whatever
+         the browser can scrape and iOS ignores an SVG favicon outright. An
+         already-installed shortcut keeps its old art until it is removed and
+         re-added; nothing here can refresh one in place. -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/logo/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/logo/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <!-- Nunito is NOT preloaded, on purpose. The tag was correct — right `as`,
          right type, crossorigin, same URL the stylesheet asks for — but a
          preload counts as used only if something consumes it within a few
