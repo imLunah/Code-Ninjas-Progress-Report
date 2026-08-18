@@ -731,8 +731,12 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
   );
 }
 
-// The row that lives in the account page's experimental block.
-export function MyStudioRow({ status, onOpen, centerName }) {
+// The row on the account page that opens the panel above.
+//
+// Directors only, and reachable whether or not they have Experimental on once
+// their center is connected: the connection is the center's, and the screen
+// that switches it off cannot be behind a preference belonging to one browser.
+export function MyStudioRow({ status, onOpen, centerName, className = 'mt-3' }) {
   const connected = status?.connected;
   const expired = connected && status.status === 'expired';
 
@@ -740,7 +744,7 @@ export function MyStudioRow({ status, onOpen, centerName }) {
     <button
       type="button"
       onClick={onOpen}
-      className="mt-3 w-full flex items-center justify-between rounded-xl border border-ninja-border p-3 text-left transition-[transform,border-color] duration-150 ease-[var(--ease-out)] hover:border-ninja-blue/50 active:scale-[0.98]"
+      className={`${className} w-full flex items-center justify-between rounded-xl border border-ninja-border p-3 text-left transition-[transform,border-color] duration-150 ease-[var(--ease-out)] hover:border-ninja-blue/50 active:scale-[0.98]`}
     >
       <div className="flex items-center gap-3 min-w-0">
         <img

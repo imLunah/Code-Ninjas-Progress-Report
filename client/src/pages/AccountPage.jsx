@@ -47,21 +47,24 @@ export default function AccountPage() {
 
   const [section, setSection] = useState('profile');
 
-  // Experimental MyStudio connection for this center. Only fetched once the
-  // toggle is on, so a user who never opts in never calls the endpoint.
+  // The MyStudio connection for this center. Fetched for any director, not
+  // only one who has the Experimental toggle on: the connection belongs to the
+  // center and keeps running whatever this director's own display preferences
+  // say, so whether there is one to manage cannot be answered by a flag living
+  // in this browser.
   const isManager = ['manager', 'admin'].includes(user?.role);
   const [mystudio, setMystudio] = useState(null);
   const [showMyStudio, setShowMyStudio] = useState(false);
 
   useEffect(() => {
-    if (!experimental || !isManager) return;
+    if (!isManager) return;
     let cancelled = false;
     api
       .get('/mystudio/status')
       .then((data) => { if (!cancelled) setMystudio(data); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [experimental, isManager, user?.activeLocation?.id]);
+  }, [isManager, user?.activeLocation?.id]);
 
   // ?mystudio=1 opens the connection panel straight away, so the board's
   // "connection ran out" notice can lead somewhere instead of describing where
@@ -253,7 +256,7 @@ export default function AccountPage() {
     </div>
   );
 
-  const experimentalCard = (
+  const experimentalPrefs = (
     <div className={`${CARD} p-5`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -302,8 +305,10 @@ export default function AccountPage() {
             </button>
 
             {/* Directors only: the connection belongs to a center, and a sensei
-                has no center to connect. */}
-            {isManager && (
+                has no center to connect. Hidden here once it is connected,
+                because it moves below and showing it twice is worse than
+                showing it in the less obvious of the two places. */}
+            {isManager && !mystudio?.connected && (
               <MyStudioRow
                 status={mystudio}
                 centerName={user?.activeLocation?.name}
@@ -313,7 +318,36 @@ export default function AccountPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
     </div>
+  );
+
+  // A card of its own once the center is connected, rather than a row under the
+  // Experimental switch.
+  //
+  // Two reasons, and the second is the load bearing one. Turning Experimental
+  // off is a preference about what this director wants to see; it no longer
+  // stops the center's bookings arriving for everyone else, so it must not be
+  // the thing that hides the only screen where they can switch those bookings
+  // off or disconnect. And a row sitting under a switch that is off reads as
+  // something that switch controls, which is the misunderstanding this whole
+  // change exists to remove. Undiscovered until you connect, permanent after.
+  const myStudioCard = isManager && mystudio?.connected ? (
+    <div className={`${CARD} p-5`}>
+      <MyStudioRow
+        status={mystudio}
+        centerName={user?.activeLocation?.name}
+        onOpen={() => setShowMyStudio(true)}
+        className=""
+      />
+    </div>
+  ) : null;
+
+  const experimentalCard = (
+    <>
+      {experimentalPrefs}
+      {myStudioCard}
+    </>
   );
 
   // Portals to the body, so it goes in whichever layout is rendering rather

@@ -12,7 +12,6 @@ import { CalendarIcon, BookOpenIcon, UsersIcon } from 'lucide-react';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
 import ExpectedToday from '../../components/manager/ExpectedToday';
 import useExpectedToday, { countNinjas } from '../../lib/useExpectedToday';
 import useLiveRefresh from '../../lib/useLiveRefresh';
@@ -38,13 +37,19 @@ export default function SenseiDashboard() {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [bookedOpen, setBookedOpen] = useState(false);
   const { user } = useAuth();
-  const { experimental } = useTheme();
   const todayStr = today();
 
   // Read-only for senseis: they need to know who is coming, not to manage the
   // connection. The feed is held here rather than inside the panel so the icon
   // only appears when there is something behind it.
-  const bookedFeed = useExpectedToday(todayStr, { enabled: experimental });
+  //
+  // Not gated on anything this sensei has to switch on. Whether their center
+  // uses the booked list is their director's decision, made once by connecting
+  // and left on, and the server answers { connected: false } or
+  // { disabled: true } for a center that has not made it. A per-device flag
+  // here meant every sensei had to find the same toggle on every browser they
+  // ever signed in on, which is not a decision any of them were making.
+  const bookedFeed = useExpectedToday(todayStr);
   const bookedCount = countNinjas(bookedFeed.data?.expected);
   // Shown while the answer is still coming, so the header does not
   // reshuffle a couple of seconds after the page settles. It only goes

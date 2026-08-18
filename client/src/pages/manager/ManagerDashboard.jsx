@@ -12,7 +12,6 @@ import Button from '../../components/ui/Button';
 import { api } from '../../api/client';
 import { today, formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
 import { SkeletonList } from '../../components/ui/Skeleton';
 import Modal from '../../components/ui/Modal';
 import { UsersIcon } from 'lucide-react';
@@ -22,7 +21,6 @@ import useLiveRefresh from '../../lib/useLiveRefresh';
 
 export default function ManagerDashboard() {
   const { user, isReadOnly } = useAuth();
-  const { experimental } = useTheme();
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -37,7 +35,13 @@ export default function ManagerDashboard() {
 
   // Held here rather than inside the panel, so the icon knows whether there
   // is anything behind it before it offers to open.
-  const bookedFeed = useExpectedToday(todayStr, { enabled: experimental });
+  //
+  // Driven by the center's connection, the same as the sensei board. A
+  // director's own Experimental toggle is a display preference for their
+  // account page; switching it off should not quietly stop the center's
+  // bookings arriving. The off switch for that is feature_booked, which is per
+  // center and enforced server side.
+  const bookedFeed = useExpectedToday(todayStr);
   const bookedCount = countNinjas(bookedFeed.data?.expected);
   // Shown while the answer is still coming, so the header does not
   // reshuffle a couple of seconds after the page settles. It only goes
