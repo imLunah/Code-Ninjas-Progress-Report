@@ -355,8 +355,15 @@ function BeltJourney({ enrollment }) {
             short names stay tight and long ones simply take the room they need.
             The connector keeps its own margin-top rather than being centred by
             the flex row, because the row is now as tall as an icon plus a label
-            and centring would drop the line down among the words. */}
-        <div className="overflow-x-auto no-scrollbar" style={{ margin: '20px -4px 0', padding: '4px' }}>
+            and centring would drop the line down among the words.
+
+            overflow-x: auto clips vertically as well, so the container needs
+            headroom for the current belt's glow: a 6px blur reaches about ten
+            pixels out, and with four of padding it was sliced flat along the
+            top. The top margin comes down by the same amount so the ladder
+            sits where it did. Both live in the one shorthand, because an inline
+            margin silently zeroes a Tailwind mt-* class beside it. */}
+        <div className="overflow-x-auto no-scrollbar" style={{ margin: '14px -4px 0', padding: '10px 4px 4px' }}>
           <div className="flex items-start" style={{ minWidth: 'max-content' }}>
             {BELTS.map((belt, i) => {
               const reached = i <= currentIndex;
