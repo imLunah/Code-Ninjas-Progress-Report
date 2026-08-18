@@ -16,7 +16,15 @@
          re-added; nothing here can refresh one in place. -->
     <link rel="icon" type="image/png" sizes="192x192" href="/logo/icon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/logo/apple-touch-icon.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- use-credentials because a manifest is otherwise fetched with cookies
+         omitted, which is the one request Vercel's preview protection cannot
+         recognise. It answers that fetch with a redirect to vercel.com, CSP
+         judges the final URL, and default-src 'self' blocks it. Sending the
+         cookie means no redirect and nothing to block. Same origin in
+         production, so it changes nothing there. Do NOT instead widen the
+         policy with a manifest-src allowing vercel.com: that weakens the real
+         site to quieten a console message that only exists on previews. -->
+    <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
     <!-- Nunito is NOT preloaded, on purpose. The tag was correct — right `as`,
          right type, crossorigin, same URL the stylesheet asks for — but a
          preload counts as used only if something consumes it within a few
