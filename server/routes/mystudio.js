@@ -35,6 +35,20 @@ async function loadConnection(pool, locationId) {
   return rows[0] || null;
 }
 
+// When this connection's credential runs out, or null if it cannot be read.
+//
+// kc_refresh carries a hard twenty four hour expiry that nothing on our side
+// can extend, so this is the single most useful thing we know about a
+// connection and until now we were not looking at it.
+function expiryOf(conn) {
+  if (!conn || !conn.session_cookie) return null;
+  try {
+    return ms.readCookieExpiry(ms.decryptCookie(conn.session_cookie));
+  } catch {
+    return null;
+  }
+}
+
 // What the client is allowed to know about a connection.
 //
 // login_secret is absent by construction rather than by deletion: nothing that
@@ -42,9 +56,14 @@ async function loadConnection(pool, locationId) {
 // cannot leak by being forgotten here.
 function publicShape(conn) {
   if (!conn) return { connected: false };
+  // Read off the stored token rather than a column, so it cannot drift from the
+  // credential it describes. Null means unreadable, which the UI shows as
+  // nothing rather than as trouble.
+  const expiresAt = expiryOf(conn);
   return {
     connected: true,
-    status: conn.status,
+    status: expiresAt && expiresAt <= new Date() ? 'expired' : conn.status,
+    expiresAt: expiresAt ? expiresAt.toISOString() : null,
     companyName: conn.company_name,
     companyId: conn.company_id,
     connectedByName: conn.connected_by_name || null,
@@ -495,6 +514,15 @@ router.get('/today', requireSensei, async (req, res) => {
     if (conn.feature_booked === false) {
       return res.json({ connected: true, configured: true, disabled: true, expected: [] });
     }
+    // The credential states its own expiry, so a dead one is knowable here
+    // rather than by asking MyStudio and being bounced to a sign-in page. Saves
+    // a round trip and, more to the point, gives the board an instant and
+    // correct answer instead of a spinner that resolves into a shrug.
+    const expiresAt = expiryOf(conn);
+    if (expiresAt && expiresAt <= new Date()) {
+      if (conn.status !== 'expired') await markExpired(pool, conn.id);
+      return res.json({ connected: true, status: 'expired', expiresAt: expiresAt.toISOString(), expected: [] });
+    }
 
     // Held across the pull so any token MyStudio refreshes along the way can be
     // written back below. Without this the stored cookie stays frozen at the
@@ -611,6 +639,7 @@ router.get('/today', requireSensei, async (req, res) => {
         configured: true,
         status: 'connected',
         companyName: conn.company_name,
+        expiresAt: expiresAt ? expiresAt.toISOString() : null,
         date: pulled.date,
         classCount: pulled.classCount,
         bookedClassCount: pulled.bookedClassCount,
@@ -643,6 +672,9 @@ router.get('/today', requireSensei, async (req, res) => {
       configured: true,
       status: 'connected',
       companyName: conn.company_name,
+      // Recomputed: a rotation would have moved it, and this is the response
+      // the board decides on.
+      expiresAt: (session.rotated ? ms.readCookieExpiry(session.cookie) : expiresAt)?.toISOString() || null,
       date: pulled.date,
       classCount: pulled.classCount,
       bookedClassCount: pulled.bookedClassCount,

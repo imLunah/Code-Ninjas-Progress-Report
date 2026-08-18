@@ -565,3 +565,50 @@ describe('class time ordering', () => {
     expect(ms.toMinutes('Drop-in')).toBeGreaterThan(ms.toMinutes('11:59 PM'));
   });
 });
+
+// The credential states its own expiry, and that is now the only warning a
+// director gets before the connection stops. A parse that quietly returns the
+// wrong answer either nags every day or never warns at all, so the shapes that
+// are NOT a usable expiry matter as much as the one that is.
+describe('credential expiry', () => {
+  const jwt = (payload) =>
+    'hdr.' + Buffer.from(JSON.stringify(payload)).toString('base64url') + '.sig';
+  const withRefresh = (token) => `companyId=480; kc_access=a; kc_refresh=${token}`;
+
+  it('reads the expiry off kc_refresh', () => {
+    const at = ms.readCookieExpiry(withRefresh(jwt({ exp: 1800000000, typ: 'Refresh' })));
+    expect(at).toBeInstanceOf(Date);
+    expect(at.toISOString()).toBe('2027-01-15T08:00:00.000Z');
+  });
+
+  it('reads the twenty four hour lifespan the live tokens actually carry', () => {
+    const iat = 1755545461;
+    const at = ms.readCookieExpiry(withRefresh(jwt({ iat, exp: iat + 24 * 3600 })));
+    expect((at.getTime() / 1000 - iat) / 60).toBe(1440);
+  });
+
+  it('ignores kc_access, which expires in half an hour and is refreshed upstream', () => {
+    const short = jwt({ exp: 1000 });
+    const real = jwt({ exp: 1800000000 });
+    expect(ms.readCookieExpiry(`kc_access=${short}; kc_refresh=${real}`).toISOString())
+      .toBe('2027-01-15T08:00:00.000Z');
+  });
+
+  // Unknown, never "expired". Refusing to pull because a token did not parse
+  // would turn a cosmetic problem into an outage.
+  it('returns null rather than a date for anything it cannot read', () => {
+    expect(ms.readCookieExpiry(null)).toBeNull();
+    expect(ms.readCookieExpiry('')).toBeNull();
+    expect(ms.readCookieExpiry('companyId=480')).toBeNull();
+    expect(ms.readCookieExpiry('kc_refresh=not-a-jwt')).toBeNull();
+    expect(ms.readCookieExpiry('kc_refresh=hdr.%%%.sig')).toBeNull();
+    expect(ms.readCookieExpiry(withRefresh(jwt({ typ: 'Refresh' })))).toBeNull();
+    expect(ms.readCookieExpiry(withRefresh(jwt({ exp: 'soon' })))).toBeNull();
+  });
+
+  it('reads a cookie that arrived as a pasted cURL, the same as a bare one', () => {
+    const token = jwt({ exp: 1800000000 });
+    const curl = `curl 'https://codeninjas.mystudio.io/home' -H 'cookie: companyId=480; kc_refresh=${token}'`;
+    expect(ms.readCookieExpiry(curl)?.toISOString()).toBe('2027-01-15T08:00:00.000Z');
+  });
+});

@@ -11,6 +11,7 @@ import SidePanel from '../ui/SidePanel';
 import Button from '../ui/Button';
 import { api } from '../../api/client';
 import useIsDesktop from '../../lib/useIsDesktop';
+import { formatExpiry, hoursUntil } from '../../lib/useExpectedToday';
 
 // Connecting a center to the studio management system it already uses.
 //
@@ -739,6 +740,11 @@ export default function MyStudioConnect({ isOpen, onClose, status, onChanged, ce
 export function MyStudioRow({ status, onOpen, centerName, className = 'mt-3' }) {
   const connected = status?.connected;
   const expired = connected && status.status === 'expired';
+  // The sign-in is good for a day and no longer, so the most useful thing this
+  // row can say once it is connected is when that day ends. Silent when the
+  // token cannot be read, rather than guessing.
+  const hoursLeft = hoursUntil(status?.expiresAt);
+  const runningOut = hoursLeft !== null && hoursLeft > 0 && hoursLeft <= 6;
 
   return (
     <button
@@ -760,7 +766,11 @@ export function MyStudioRow({ status, onOpen, centerName, className = 'mt-3' }) 
             {expired
               ? 'Session ran out. Sign in again to keep pulling.'
               : connected
-                ? `${status.companyName || centerName || 'Connected'}. Today's classes appear on the board.`
+                ? `${status.companyName || centerName || 'Connected'}. ${
+                    status.expiresAt
+                      ? `Runs out ${formatExpiry(status.expiresAt)}.`
+                      : "Today's classes appear on the board."
+                  }`
                 : "Pull today's booked ninjas onto the board"}
           </p>
         </div>
@@ -768,7 +778,7 @@ export function MyStudioRow({ status, onOpen, centerName, className = 'mt-3' }) 
       <span
         aria-hidden
         className={`flex-shrink-0 ml-2 w-2 h-2 rounded-full ${
-          expired ? 'bg-amber-500' : connected ? 'bg-emerald-500' : 'bg-ninja-border'
+          expired || runningOut ? 'bg-amber-500' : connected ? 'bg-emerald-500' : 'bg-ninja-border'
         }`}
       />
     </button>

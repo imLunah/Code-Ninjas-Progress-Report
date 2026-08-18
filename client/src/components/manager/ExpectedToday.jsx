@@ -12,10 +12,13 @@ import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { CARD } from '../../lib/surfaces';
 import BouncingDots from '../ui/BouncingDots';
+import { useAuth } from '../../context/AuthContext';
 import useExpectedToday, {
   groupByClass,
   prettyTime,
   countNinjas,
+  formatExpiry,
+  hoursUntil,
 } from '../../lib/useExpectedToday';
 
 // Who MyStudio says is booked in today, offered as suggestions above the board.
@@ -44,6 +47,12 @@ export default function ExpectedToday({
 }) {
   const own = useExpectedToday(date, { enabled: !feed });
   const state = feed || own;
+  // Renewing is a director's job: it needs their MyStudio password and a code
+  // from their email. Senseis see this panel now that it follows the center
+  // rather than a per-device flag, so the difference has to be said out loud
+  // instead of offering all of them a link that goes nowhere for most.
+  const { user } = useAuth();
+  const canRenew = ['manager', 'admin'].includes(user?.role);
   const [adding, setAdding] = useState(() => new Set());
   const [accepted, setAccepted] = useState(() => new Set());
 
@@ -121,12 +130,18 @@ export default function ExpectedToday({
             </p>
             {/* Was a dead end that described where to go. Signing in again is
                 a code from an email now, so it is worth one tap from here. */}
-            <Link
-              to="/account?mystudio=1"
-              className="inline-block mt-1.5 font-ninja text-sm font-semibold text-ninja-blue hover:underline"
-            >
-              Sign in again
-            </Link>
+            {canRenew ? (
+              <Link
+                to="/account?mystudio=1"
+                className="inline-block mt-1.5 font-ninja text-sm font-semibold text-ninja-blue hover:underline"
+              >
+                Sign in again
+              </Link>
+            ) : (
+              <p className="mt-1.5 font-ninja text-sm text-ninja-muted">
+                A center director can sign in again to restore it.
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -160,6 +175,31 @@ export default function ExpectedToday({
 
   const groups = groupByClass(expected);
 
+  // The credential dies twenty four hours after it was made, and the moment is
+  // knowable in advance because the token says so. Six hours is the window that
+  // makes a warning useful rather than nagging: long enough to act on before the
+  // afternoon classes, short enough that it is not on screen most of the day.
+  //
+  // Directors only. A sensei cannot renew it, and a warning you cannot act on is
+  // just an amber box you learn to stop reading.
+  const hoursLeft = hoursUntil(data.expiresAt);
+  const runningOut = canRenew && hoursLeft !== null && hoursLeft > 0 && hoursLeft <= 6;
+
+  const expiryNotice = runningOut ? (
+    <div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-2.5">
+      <span aria-hidden className="mt-0.5 text-amber-600 dark:text-amber-400 flex-shrink-0">
+        <TriangleAlertIcon size={15} />
+      </span>
+      <p className="font-ninja text-xs text-ninja-navy min-w-0">
+        The MyStudio sign-in runs out {formatExpiry(data.expiresAt)}. It lasts a
+        day at a time, so this is normal.{' '}
+        <Link to="/account?mystudio=1" className="font-semibold text-ninja-blue hover:underline">
+          Renew it now
+        </Link>
+      </p>
+    </div>
+  ) : null;
+
   return (
     <div className={bare ? '' : `${CARD} p-4`}>
       {!bare && (
@@ -180,6 +220,8 @@ export default function ExpectedToday({
       )}
 
       {bare && <p className="font-ninja text-xs text-ninja-muted mb-3">{summary}</p>}
+
+      {expiryNotice}
 
       {/* One block per class, so the day reads as a timetable rather than as a
           column of names with headings floating in it. */}

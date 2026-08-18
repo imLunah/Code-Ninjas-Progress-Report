@@ -283,6 +283,46 @@ function serializeJar(jar) {
     .join('; ');
 }
 
+// When this credential stops working, read off the credential itself.
+//
+// kc_refresh is a Keycloak refresh token, and a JWT, so it states its own
+// expiry. Measured across both connected centers it is issued with a lifespan
+// of exactly 1440 minutes: a hard twenty four hour fuse lit at sign in, which
+// nothing on our side can extend. Their backend exchanges the refresh token for
+// a fresh access token on every request but never hands the new pair back, no
+// page load returns a Set-Cookie, and their own client carries no refresh call,
+// so the fuse is the vendor's behaviour rather than a defect in how we connect.
+// "Remember for 30 days" does not change it: the Fullerton connection was made
+// through the sign-in with rememberMe on and still got 1440 minutes.
+//
+// Knowing the moment in advance is the whole point. It turns a director finding
+// an empty board into the app asking for ten seconds before the fuse runs out.
+//
+// Derived rather than stored. The cookie is the only thing that actually
+// decides, and a column holding a second copy would be one more thing that can
+// disagree with it. Unreadable returns null, meaning unknown, never "expired":
+// a token shape we cannot parse is not a reason to refuse to try a pull.
+function readCookieExpiry(rawCookie) {
+  let refresh;
+  try {
+    refresh = parseJar(extractCookie(rawCookie)).kc_refresh;
+  } catch {
+    return null;
+  }
+  if (!refresh) return null;
+
+  const parts = String(refresh).split('.');
+  if (parts.length < 2) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+    if (!payload || typeof payload.exp !== 'number' || !Number.isFinite(payload.exp)) return null;
+    const at = new Date(payload.exp * 1000);
+    return Number.isNaN(at.getTime()) ? null : at;
+  } catch {
+    return null;
+  }
+}
+
 // Folds a response's Set-Cookie headers into a jar. Returns whether anything
 // actually moved, so a pull that changed nothing does not write to the database.
 //
@@ -1231,6 +1271,7 @@ module.exports = {
   parseCookie,
   parseJar,
   serializeJar,
+  readCookieExpiry,
   mergeSetCookie,
   createSession,
   readCookieIdentity,

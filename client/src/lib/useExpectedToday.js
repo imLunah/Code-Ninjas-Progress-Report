@@ -93,3 +93,34 @@ export function countNinjas(expected) {
 export function prettyTime(value) {
   return String(value || '').replace(/^0/, '');
 }
+
+// How long this center's MyStudio credential has left, and how to say it.
+//
+// The credential is a Keycloak refresh token with a hard twenty four hour
+// expiry that nothing on our side can extend, so the useful thing is to say
+// when it runs out before it does. The server derives the moment from the token
+// itself and sends it as `expiresAt`.
+
+export function hoursUntil(iso) {
+  if (!iso) return null;
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return null;
+  return (at - new Date()) / 3600000;
+}
+
+// "at 4:31 PM", "tomorrow at 4:31 PM", "on Thu at 4:31 PM". A bare clock time
+// is ambiguous the moment the answer is not today, and a full date is more than
+// anyone needs for something that never lives longer than a day.
+export function formatExpiry(iso) {
+  if (!iso) return '';
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return '';
+
+  const time = at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const days = Math.round((startOfDay(at) - startOfDay(new Date())) / 86400000);
+
+  if (days <= 0) return `at ${time}`;
+  if (days === 1) return `tomorrow at ${time}`;
+  return `on ${at.toLocaleDateString([], { weekday: 'short' })} at ${time}`;
+}
