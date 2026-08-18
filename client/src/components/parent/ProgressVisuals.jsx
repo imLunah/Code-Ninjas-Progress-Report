@@ -58,6 +58,11 @@ function toMonthKey(dateStr) {
 
 // ─── Animation variants ───────────────────────────────────────────────────────
 
+// The ladder's icon row is as tall as its largest icon: the current belt is
+// drawn bigger than the rest, and without a fixed row the taller one would
+// shift its own label down out of line with its neighbours.
+const ICON_ROW = 34;
+
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
@@ -268,40 +273,91 @@ function BeltJourney({ enrollment }) {
       initial="hidden"
       animate="show"
     >
-      <div className="p-5 relative">
-        <div className="absolute pointer-events-none" style={{ right: -8, top: -8, opacity: 0.42 }}>
+      {/* Laid out like ProgramCardBanner above: the text takes the room that is
+          left and the belt sits beside it at a fixed size, rather than being a
+          watermark pinned to the corner.
+
+          The watermark was 110px on a phone and grew to 208px past `md`, on a
+          card whose own width does not grow at the same rate, so between
+          breakpoints it swallowed the card and ran off the edge. A size that
+          answers to the viewport inside a box that answers to its container is
+          the whole bug. A flex-shrink-0 square beside a min-w-0 column
+          cannot overlap anything at any width, which is why every other program
+          card already works. */}
+      <div className="p-5">
+        <div className="flex items-center gap-4">
+          <div className="flex-1 min-w-0">
+            <p className="font-ninja text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.75)' }}>
+              Current Belt
+            </p>
+
+            <div className="flex items-baseline gap-2 mb-1">
+              <p className="text-white font-ninja font-black" style={{ fontSize: '28px', lineHeight: 1 }}>{belt_level}</p>
+              {sublevel && <p className="font-ninja font-bold text-xl" style={{ color: 'rgba(255,255,255,0.85)' }}>#{sublevel}</p>}
+            </div>
+
+            {(current_project || last_session_date) && (
+              <p className="font-ninja text-xs" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                {current_project ? `${current_project}${project_status ? ` · ${project_status}` : ''}` : ''}
+                {current_project && last_session_date ? ' · ' : ''}
+                {last_session_date ? `Last: ${formatDate(last_session_date)}` : ''}
+              </p>
+            )}
+          </div>
+
+          {/* Same entrance, size and shadow the program logos use, so the two
+              cards read as one family. Opaque now: it is the card's emblem
+              rather than something behind the words. */}
           {BELT_IMAGES[belt_level] ? (
-            <img src={BELT_IMAGES[belt_level]} alt="" draggable={false} className="w-[110px] h-[110px] sm:w-40 sm:h-40 md:w-52 md:h-52" />
+            <motion.img
+              src={BELT_IMAGES[belt_level]}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              initial={{ opacity: 0, scale: 0.7, x: 16 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
+              style={{
+                width: 76, height: 76, objectFit: 'contain', flexShrink: 0,
+                filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.5))',
+              }}
+            />
           ) : (
             <div
-              className="w-[110px] h-[110px] sm:w-40 sm:h-40 md:w-52 md:h-52 rounded-full flex items-center justify-center font-ninja font-black"
-              style={{ backgroundColor: getBelt(belt_level)?.color || '#9ca3af', color: getBelt(belt_level)?.textColor || '#fff' }}
+              aria-hidden="true"
+              className="rounded-full flex items-center justify-center font-ninja font-black"
+              style={{
+                width: 76, height: 76, flexShrink: 0, fontSize: '1.75rem',
+                backgroundColor: getBelt(belt_level)?.color || '#9ca3af',
+                color: getBelt(belt_level)?.textColor || '#fff',
+                filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.5))',
+              }}
             >
-              <span style={{ fontSize: '3rem' }}>{belt_level[0]}</span>
+              {belt_level[0]}
             </div>
           )}
         </div>
 
-        <p className="font-ninja text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.75)' }}>
-          Current Belt
-        </p>
+        {/* The negative side margin lets the ladder's glow bleed past the
+            padding; the top margin has to live in the same shorthand or the
+            inline rule silently zeroes a Tailwind mt-* class. */}
+        {/* One column per belt, icon above its own label, rather than two
+            parallel rows that have to agree on where each belt starts.
 
-        <div className="flex items-baseline gap-2 mb-1">
-          <p className="text-white font-ninja font-black" style={{ fontSize: '28px', lineHeight: 1 }}>{belt_level}</p>
-          {sublevel && <p className="font-ninja font-bold text-xl" style={{ color: 'rgba(255,255,255,0.85)' }}>#{sublevel}</p>}
-        </div>
+            They did not agree. The label sat in a box the width of the icon
+            with white-space nowrap, so every name longer than 26 pixels
+            overflowed its own cell and ran into the next one: OrangeGreen,
+            BronzeSilver, PlatinumGold. Sizing the cell to the icon while
+            filling it with a word is the bug, and widening the cell to fit the
+            longest word would pad Red and Blue out to match Platinum.
 
-        {(current_project || last_session_date) && (
-          <p className="font-ninja text-xs mb-5" style={{ color: 'rgba(255,255,255,0.65)' }}>
-            {current_project ? `${current_project}${project_status ? ` · ${project_status}` : ''}` : ''}
-            {current_project && last_session_date ? ' · ' : ''}
-            {last_session_date ? `Last: ${formatDate(last_session_date)}` : ''}
-          </p>
-        )}
-        {!current_project && !last_session_date && <div className="mb-5" />}
-
-        <div className="overflow-x-auto no-scrollbar" style={{ margin: '0 -4px', padding: '4px' }}>
-          <div className="flex items-center" style={{ minWidth: 'max-content' }}>
+            A column sizes itself to whichever of its two children is wider, so
+            short names stay tight and long ones simply take the room they need.
+            The connector keeps its own margin-top rather than being centred by
+            the flex row, because the row is now as tall as an icon plus a label
+            and centring would drop the line down among the words. */}
+        <div className="overflow-x-auto no-scrollbar" style={{ margin: '20px -4px 0', padding: '4px' }}>
+          <div className="flex items-start" style={{ minWidth: 'max-content' }}>
             {BELTS.map((belt, i) => {
               const reached = i <= currentIndex;
               const isCurrent = i === currentIndex;
@@ -311,43 +367,41 @@ function BeltJourney({ enrollment }) {
                   {i > 0 && (
                     <div style={{
                       width: '12px', height: '2px', flexShrink: 0,
+                      // Half of ICON_ROW, less half the line, so it meets the
+                      // icons at their centre whichever size they are.
+                      marginTop: ICON_ROW / 2 - 1,
                       backgroundColor: reached ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.22)',
                     }} />
                   )}
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: reached ? 1 : 0.45, scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 340, damping: 18, delay: i * 0.04 + 0.2 }}
-                    style={{ flexShrink: 0, display: 'block' }}
-                  >
-                    <BeltIcon
-                      belt={belt.name}
-                      size={imgSize}
-                      style={{
-                        filter: isCurrent
-                          ? 'drop-shadow(0 0 6px rgba(255,255,255,0.55))'
-                          : reached ? 'none' : 'grayscale(100%)',
-                      }}
-                    />
-                  </motion.div>
-                </React.Fragment>
-              );
-            })}
-          </div>
-          <div className="flex" style={{ minWidth: 'max-content', marginTop: '5px' }}>
-            {BELTS.map((belt, i) => {
-              const reached = i <= currentIndex;
-              const isCurrent = i === currentIndex;
-              const imgSize = isCurrent ? 34 : 26;
-              return (
-                <React.Fragment key={belt.name}>
-                  {i > 0 && <div style={{ width: '12px', flexShrink: 0 }} />}
-                  <div style={{ width: imgSize, textAlign: 'center' }}>
+                  <div style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    flexShrink: 0, padding: '0 3px',
+                  }}>
+                    {/* Fixed height so the current belt's larger icon does not
+                        push its own label out of line with the rest. */}
+                    <div style={{ height: ICON_ROW, display: 'flex', alignItems: 'center' }}>
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: reached ? 1 : 0.45, scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 340, damping: 18, delay: i * 0.04 + 0.2 }}
+                        style={{ flexShrink: 0, display: 'block' }}
+                      >
+                        <BeltIcon
+                          belt={belt.name}
+                          size={imgSize}
+                          style={{
+                            filter: isCurrent
+                              ? 'drop-shadow(0 0 6px rgba(255,255,255,0.55))'
+                              : reached ? 'none' : 'grayscale(100%)',
+                          }}
+                        />
+                      </motion.div>
+                    </div>
                     <span style={{
                       fontSize: '12px', fontFamily: 'Nunito, sans-serif',
                       fontWeight: isCurrent ? 700 : 400,
                       color: reached ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)',
-                      whiteSpace: 'nowrap', display: 'block',
+                      whiteSpace: 'nowrap', display: 'block', marginTop: '5px',
                     }}>
                       {belt.name}
                     </span>
