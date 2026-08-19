@@ -2,22 +2,17 @@
 <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
     <style>
-      /* The mark is the brand blue, and the tab strip it sits in is not
-         always light. These are the app's own two blues: #006add is
-         --ninja-blue in light mode, #38a1ff is what that token becomes in
-         dark, where the darker blue starts to close up against a near black
-         tab. So the tab icon is the same colour as the interface behind it in
-         whichever theme the browser is wearing.
-
-         Only this file can do that. The PNG icons next to it are fixed
-         bitmaps with no media query, which is why they ship on a plate
-         instead. */
+      /* The mark is black, and the tab strip it sits in is not always light.
+         A single flat fill would vanish against a dark tab, so the glyph
+         flips to white when the browser reports a dark UI. The PNG icons
+         next to this file cannot do that, which is why they ship with a
+         white plate behind them instead. */
       .cls-1 {
-        fill: #006add;
+        fill: #000;
       }
       @media (prefers-color-scheme: dark) {
         .cls-1 {
-          fill: #38a1ff;
+          fill: #fff;
         }
       }
     </style>
