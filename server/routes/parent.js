@@ -74,7 +74,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     const center = centers[0];
     const { rows } = await pool.query(
       `SELECT parent_name FROM students
-        WHERE LOWER(parent_email) = LOWER($1) AND location_id = $2 AND active = true
+        WHERE LOWER(parent_email) = LOWER($1) AND EXISTS (SELECT 1 FROM student_locations sl_m WHERE sl_m.student_id = students.id AND sl_m.location_id = $2) AND active = true
         LIMIT 1`,
       [email, center.id]
     );
@@ -140,7 +140,7 @@ router.get('/students', requireParent, async (req, res) => {
         ${STUDENT_PROGRAMS_SUBQUERY},
         (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id AND pl.notes IS DISTINCT FROM 'Marked complete from roadmap') AS last_activity
       FROM students s
-      WHERE LOWER(s.parent_email) = LOWER($1) AND s.location_id = $2 AND s.active = true
+      WHERE LOWER(s.parent_email) = LOWER($1) AND EXISTS (SELECT 1 FROM student_locations sl_m WHERE sl_m.student_id = s.id AND sl_m.location_id = $2) AND s.active = true
       ORDER BY s.full_name
     `, [req.session.parentEmail, req.session.parentLocationId]);
     res.json(rows);
@@ -159,7 +159,7 @@ router.get('/students/:id', requireParent, async (req, res) => {
       SELECT s.id, s.full_name, s.birthday, s.created_at, s.special_instructions, s.parent_note,
         ${STUDENT_PROGRAMS_SUBQUERY}
       FROM students s
-      WHERE s.id = $1 AND LOWER(s.parent_email) = LOWER($2) AND s.location_id = $3 AND s.active = true
+      WHERE s.id = $1 AND LOWER(s.parent_email) = LOWER($2) AND EXISTS (SELECT 1 FROM student_locations sl_m WHERE sl_m.student_id = s.id AND sl_m.location_id = $3) AND s.active = true
     `, [id, req.session.parentEmail, req.session.parentLocationId]);
 
     if (!rows[0]) return res.status(404).json({ error: 'Student not found' });
@@ -206,7 +206,7 @@ router.patch('/students/:id/instructions', requireParent, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `UPDATE students SET special_instructions = $1
-        WHERE id = $2 AND LOWER(parent_email) = LOWER($3) AND location_id = $4 AND active = true
+        WHERE id = $2 AND LOWER(parent_email) = LOWER($3) AND EXISTS (SELECT 1 FROM student_locations sl_m WHERE sl_m.student_id = students.id AND sl_m.location_id = $4) AND active = true
         RETURNING special_instructions`,
       [special_instructions?.trim() || null, id, req.session.parentEmail, req.session.parentLocationId]
     );

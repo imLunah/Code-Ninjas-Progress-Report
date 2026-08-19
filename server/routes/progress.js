@@ -124,7 +124,7 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     const assignmentId = assignmentRows[0]?.id || null;
 
     const { rows: studentRows } = await pool.query(
-      'SELECT id FROM students WHERE id = $1 AND active = true AND location_id = $2',
+      'SELECT id FROM students WHERE id = $1 AND active = true AND EXISTS (SELECT 1 FROM student_locations sl_m WHERE sl_m.student_id = students.id AND sl_m.location_id = $2)',
       [student_id, req.session.activeLocationId]
     );
     if (!studentRows[0]) return res.status(404).json({ error: 'Student not found' });
@@ -330,7 +330,7 @@ router.patch('/:id', requireSensei, requireOwnLocation, async (req, res) => {
     const { rows: before } = await client.query(
       `SELECT pl.* FROM progress_logs pl
        JOIN students s ON pl.student_id = s.id
-       WHERE pl.id = $1 AND s.location_id = $2
+       WHERE pl.id = $1 AND EXISTS (SELECT 1 FROM student_locations sl_m WHERE sl_m.student_id = s.id AND sl_m.location_id = $2)
        ${isManager ? '' : 'AND pl.sensei_id = $3'}
        FOR UPDATE OF pl`,
       lookup
@@ -449,7 +449,7 @@ router.delete('/:id', requireSensei, requireOwnLocation, async (req, res) => {
     const { rows } = await pool.query(
       `DELETE FROM progress_logs
        USING students s
-       WHERE progress_logs.id = $1 AND progress_logs.student_id = s.id AND s.location_id = $2
+       WHERE progress_logs.id = $1 AND progress_logs.student_id = s.id AND EXISTS (SELECT 1 FROM student_locations sl_m WHERE sl_m.student_id = s.id AND sl_m.location_id = $2)
        ${ownershipClause}
        RETURNING progress_logs.id`,
       params
@@ -482,7 +482,7 @@ router.post('/:id/comments', requireSensei, requireOwnLocation, async (req, res)
     const { rows: logRows } = await pool.query(
       `SELECT pl.id FROM progress_logs pl
        JOIN students s ON pl.student_id = s.id
-       WHERE pl.id = $1 AND s.location_id = $2`,
+       WHERE pl.id = $1 AND EXISTS (SELECT 1 FROM student_locations sl_m WHERE sl_m.student_id = s.id AND sl_m.location_id = $2)`,
       [req.params.id, req.session.activeLocationId]
     );
     if (!logRows[0]) return res.status(404).json({ error: 'Log not found' });
@@ -514,7 +514,7 @@ router.post('/:id/reactions', requireSensei, requireOwnLocation, async (req, res
         const { rows } = await client.query(
           `SELECT pl.id FROM progress_logs pl
            JOIN students s ON pl.student_id = s.id
-           WHERE pl.id = $1 AND s.location_id = $2`,
+           WHERE pl.id = $1 AND EXISTS (SELECT 1 FROM student_locations sl_m WHERE sl_m.student_id = s.id AND sl_m.location_id = $2)`,
           [req.params.id, req.session.activeLocationId]
         );
         return rows[0]?.id ?? null;

@@ -2073,6 +2073,21 @@ ALTER TABLE public.user_locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
 --
+--
+-- Migration 027 (student_locations), appended after the dump was taken so the
+-- test database matches production. Re-dump prod-schema.sql to fold it in.
+--
+CREATE TABLE IF NOT EXISTS public.student_locations (
+    student_id integer NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
+    location_id integer NOT NULL REFERENCES public.locations(id) ON DELETE CASCADE,
+    added_by integer REFERENCES public.users(id) ON DELETE SET NULL,
+    added_at timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (student_id, location_id)
+);
+CREATE INDEX IF NOT EXISTS idx_student_locations_location ON public.student_locations USING btree (location_id);
+ALTER TABLE public.student_locations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY deny_all ON public.student_locations AS RESTRICTIVE FOR ALL USING (false) WITH CHECK (false);
+
 -- PostgreSQL database dump complete
 --
 
