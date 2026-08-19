@@ -51,17 +51,11 @@ export function Hero({ program, size = 'card', className = '', style = {}, child
 }
 
 // The badge on the right of a hero: the belt for CREATE, the program's logo
-// for everything else. Belts get a soft ring in the belt's own colour so the
-// icon does not sink into the blue.
+// for everything else. The belt icon is its own emblem and sits on the
+// banner as it is, no ring around it.
 export function Emblem({ program, belt, size = 64 }) {
   if (program === 'CREATE' && belt) {
-    const b = BELTS.find((x) => x.name === belt);
-    return (
-      <span className="inline-flex items-center justify-center rounded-full flex-shrink-0"
-        style={{ width: size, height: size, boxShadow: `0 0 0 3px ${b?.color || '#fff'}, 0 0 0 5px rgb(255 255 255 / 0.18)`, background: 'rgb(0 0 0 / 0.25)' }}>
-        <BeltIcon belt={belt} size={Math.round(size * 0.86)} />
-      </span>
-    );
+    return <BeltIcon belt={belt} size={size} className="flex-shrink-0" />;
   }
   const logo = PROGRAM_LOGOS[program];
   if (!logo) return null;
