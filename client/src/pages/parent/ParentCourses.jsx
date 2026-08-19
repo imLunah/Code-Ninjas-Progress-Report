@@ -5,12 +5,13 @@ import { ChevronRightIcon } from 'lucide-react';
 import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { PageTitle, Hero, Emblem, ProgramMark, BeltRoad, LevelPills, Group, Row, Tile, StatusDot, StatusText, BackChip } from '../../components/parent/ParentUI';
-import ProgressVisuals from '../../components/parent/ProgressVisuals';
 import useIsDesktop from '../../lib/useIsDesktop';
 import { FLAT } from '../../lib/surfaces';
 import { SkeletonCards } from '../../components/ui/Skeleton';
 import { BELTS, getLevels } from '../../utils/beltConfig';
-import { levelProjects, levelStates, levelTitle, realSessions, fmtDay } from '../../lib/parentProgress';
+import { levelProjects, levelStates, levelTitle, realSessions, trackModel, fmtDay } from '../../lib/parentProgress';
+import { KIT_SHORT } from '../../lib/programTheme';
+import { useCurriculum } from '../../context/CurriculumContext';
 
 // Courses: one card per program the child is in, and the one that is open.
 //
@@ -23,27 +24,43 @@ import { levelProjects, levelStates, levelTitle, realSessions, fmtDay } from '..
 // it leads with a hero in the CREATE blue (the belt shows as its icon, not as
 // the banner's colour), the level pills, the chosen level's real projects from
 // the curriculum with what the log says about each, and the other levels.
-// Programs without belts keep the module and kit views the portal already
-// derived, under a hero in their own art.
+// Programs without belts are tracks of modules (kits for Robotics), read off
+// the curriculum and the log by trackModel: the same hero in their own art,
+// the tracks as pills, the open track's modules, and the other tracks.
 
 const EASE_OUT = [0.23, 1, 0.32, 1];
 const SNAP = { type: 'spring', stiffness: 480, damping: 36 }; // critically damped, ~0.3s
 const enc = (p) => encodeURIComponent(p);
 
 // A short line about where the child is in a program.
-function whereLine(enrollment, logs) {
+function whereLine(enrollment, logs, model) {
   if (enrollment.program === 'CREATE') {
     return enrollment.belt_level ? `${enrollment.belt_level} belt${enrollment.belt_sublevel ? ` · Level ${enrollment.belt_sublevel}` : ''}` : 'Just getting started';
   }
-  const bits = [enrollment.last_sub_program, enrollment.last_module_name].filter(Boolean);
-  if (bits.length) return bits.join(' · ');
-  const n = realSessions(logs).length;
-  return n ? `${n} session${n === 1 ? '' : 's'}` : 'Just getting started';
+  const t = model?.current;
+  if (t && t.sessions > 0) {
+    return [model.multi ? t.name : null, t.working ? t.working.name : null].filter(Boolean).join(' · ') || `${t.sessions} session${t.sessions === 1 ? '' : 's'}`;
+  }
+  return 'Just getting started';
+}
+
+// The line under a track's name: "Module 2 of 4 · Sensors".
+function trackLine(t) {
+  if (!t) return '';
+  if (t.working) return `Module ${t.working.index} of ${t.modules.length} · ${t.working.name}`;
+  if (t.modules.length) return `${t.done} of ${t.modules.length} modules`;
+  return t.sessions ? `${t.sessions} session${t.sessions === 1 ? '' : 's'}` : 'Not started yet';
+}
+
+function useTrackModel(enrollment, logs) {
+  const { curriculum, subPrograms } = useCurriculum();
+  return useMemo(() => (enrollment.program === 'CREATE' ? null : trackModel({ program: enrollment.program, enrollment, logs, curriculum, subPrograms, shortNames: KIT_SHORT })), [enrollment, logs, curriculum, subPrograms]);
 }
 
 function CourseCard({ enrollment, logs, selected, showRing }) {
   const p = enrollment.program;
   const isCreate = p === 'CREATE';
+  const model = useTrackModel(enrollment, logs);
   const belt = enrollment.belt_level;
   const levels = isCreate && belt ? getLevels(belt) : [];
   // A belt with no level recorded is at its first: the bonus tracks are
@@ -69,7 +86,7 @@ function CourseCard({ enrollment, logs, selected, showRing }) {
         <ProgramMark program={p} />
         <div className="min-w-0 flex-1">
           <p className="font-ninja font-extrabold text-[16px] text-ninja-navy leading-tight truncate">{p}</p>
-          <p className="font-ninja text-[12.5px] v2 text-ninja-muted truncate">{whereLine(enrollment, logs)}</p>
+          <p className="font-ninja text-[12.5px] v2 text-ninja-muted truncate">{whereLine(enrollment, logs, model)}</p>
         </div>
         <ChevronRightIcon size={18} className="text-ninja-muted/60 flex-shrink-0" aria-hidden />
       </div>
@@ -89,12 +106,14 @@ function CourseCard({ enrollment, logs, selected, showRing }) {
               </>
             ) : (
               <>
-                <p className="font-ninja text-[12px] font-extrabold opacity-85">{enrollment.last_sub_program ? 'Current kit' : 'Now'}</p>
+                <p className="font-ninja text-[12px] font-extrabold opacity-85">
+                  {model?.multi ? (model.current?.sessions ? `Current ${model.unit.toLowerCase()}` : `First ${model.unit.toLowerCase()}`) : 'Now'}
+                </p>
                 <p className="font-ninja font-extrabold text-[22px] leading-tight mt-0.5 truncate">
-                  {enrollment.last_sub_program || enrollment.last_module_name || p}
+                  {model?.multi ? model.current?.name : (model?.current?.working?.name || p)}
                 </p>
                 <p className="font-ninja text-[13px] opacity-85 mt-0.5 truncate">
-                  {enrollment.last_sub_program && enrollment.last_module_name ? enrollment.last_module_name : `${realSessions(logs).length} sessions`}
+                  {model?.multi ? trackLine(model.current) : (model?.current?.working ? `Module ${model.current.working.index} of ${model.current.modules.length}` : trackLine(model?.current))}
                 </p>
               </>
             )}
@@ -232,9 +251,35 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
   );
 }
 
-function ProgramDetail({ enrollment, logs, childName, backTo }) {
+function ModuleRow({ m, first }) {
+  // A module that is only called "Module 3" should not be told it is Module 3 twice.
+  const label = m.name === `Module ${m.index}` ? null : `Module ${m.index}`;
+  const sub = [label,
+    m.status === 'done' && m.date ? `done ${fmtDay(m.date)}` : null,
+    m.status === 'working' ? `working on it${m.date ? ` · ${fmtDay(m.date)}` : ''}` : null,
+  ].filter(Boolean).join(' · ') || null;
+  return (
+    <Row first={first} inset lead={<StatusDot status={m.status} />} dim={m.status === 'todo'}
+      title={m.name} subtitle={sub} trailing={m.status !== 'todo' ? <StatusText status={m.status} /> : null} />
+  );
+}
+
+function TrackDetail({ enrollment, logs, childName, backTo }) {
   const p = enrollment.program;
-  const sessions = realSessions(logs).length;
+  const model = useTrackModel(enrollment, logs);
+  const { tracks, current, multi, unit } = model;
+  const [openIdx, setOpenIdx] = useState(current ? current.index : 1);
+  const [dir, setDir] = useState(1);
+  useEffect(() => { setOpenIdx(current ? current.index : 1); }, [enrollment.id, current?.index]);
+  const open = tracks.find((t) => t.index === openIdx) || current;
+  const pick = (i) => { setDir(i > openIdx ? 1 : -1); setOpenIdx(i); };
+  const pills = tracks.map((t) => ({ level: t.index, label: t.short, state: t.state }));
+  const started = current?.sessions > 0;
+
+  const meta = multi
+    ? (current ? `${unit} ${current.index} of ${tracks.length} · ${current.name}` : 'Just getting started')
+    : (current?.working ? `Module ${current.working.index} of ${current.modules.length} · ${current.working.name}` : started ? `${current.sessions} session${current.sessions === 1 ? '' : 's'}` : 'Just getting started');
+
   return (
     <div className="space-y-4">
       <Hero program={p} size="page">
@@ -242,17 +287,56 @@ function ProgramDetail({ enrollment, logs, childName, backTo }) {
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">{p} · {childName}</p>
-            <p className="font-ninja font-extrabold text-[32px] leading-none mt-1 tracking-[-0.01em] truncate">
-              {enrollment.last_sub_program || enrollment.last_module_name || p}
-            </p>
-            <p className="font-ninja text-[13px] opacity-85 mt-2 truncate">
-              {[enrollment.last_sub_program && enrollment.last_module_name ? enrollment.last_module_name : null, sessions ? `${sessions} session${sessions === 1 ? '' : 's'}` : 'Just getting started'].filter(Boolean).join(' · ')}
-            </p>
+            <p className="font-ninja font-extrabold text-[32px] leading-[1.05] mt-1 tracking-[-0.01em]">{p}</p>
+            <p className="font-ninja text-[13px] opacity-85 mt-2 truncate">{meta}</p>
           </div>
-          <Emblem program={p} size={72} />
+          <Emblem program={p} size={84} />
         </div>
+        {multi && (
+          <>
+            <div className="hidden lg:block mt-5"><LevelPills states={pills} value={openIdx} onChange={pick} onHero layoutId="track-pill-desktop" /></div>
+            <div className="lg:hidden mt-4"><LevelPills states={pills} value={openIdx} onChange={pick} onHero layoutId="track-pill-mobile" /></div>
+          </>
+        )}
       </Hero>
-      <ProgressVisuals programs={[enrollment]} sessionLogs={logs} />
+
+      {open && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div key={open.index}
+              initial={{ opacity: 0, x: 10 * dir }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 * dir }}
+              transition={{ duration: 0.18, ease: EASE_OUT }}>
+              <Group tint={open.state === 'current' ? (started ? 'blue' : undefined) : open.state === 'done' ? 'green' : undefined}>
+                <div className="px-4 pt-3.5 pb-3">
+                  <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em]" style={open.state !== 'ahead' && (started || open.state === 'done') ? { color: 'var(--tint-ink)' } : { color: 'rgb(var(--ninja-muted))' }}>
+                    {multi ? `${unit} ${open.index}` : 'Modules'}{open.state === 'current' ? (started ? ' · now' : ' · next') : open.state === 'done' ? ' · done' : ''}
+                  </p>
+                  {multi && <p className="font-ninja font-extrabold text-[20px] text-ninja-navy leading-tight mt-0.5">{open.name}</p>}
+                  <p className="font-ninja text-[12.5px] v2 text-ninja-muted mt-0.5">
+                    {[trackLine(open), open.first ? `started ${fmtDay(open.first)}` : null].filter(Boolean).join(' · ')}
+                  </p>
+                </div>
+                <div className="mx-3 mb-3 rounded-[14px] overflow-hidden border border-ninja-navy/[0.06]">
+                  {open.modules.map((m, i) => <ModuleRow key={m.name} m={m} first={i === 0} />)}
+                  {open.modules.length === 0 && <p className="px-4 py-3 font-ninja text-sm text-ninja-muted tint-inset">No modules listed for this {unit.toLowerCase()} yet.</p>}
+                </div>
+              </Group>
+            </motion.div>
+          </AnimatePresence>
+
+          {multi && (
+            <Group title={`All ${unit.toLowerCase()}s`}>
+              {tracks.map((t, i) => (
+                <Row key={t.name} first={i === 0} onClick={() => pick(t.index)} active={t.index === openIdx} dim={t.state === 'ahead'}
+                  lead={<Tile tint={t.state === 'done' ? 'rgb(34 197 94 / 0.14)' : t.state === 'current' ? 'rgb(var(--ninja-blue) / 0.14)' : 'rgb(var(--ninja-navy) / 0.06)'} color={t.state === 'done' ? '#15803d' : t.state === 'current' ? undefined : 'rgb(var(--ninja-muted))'}>{t.index}</Tile>}
+                  title={t.name}
+                  subtitle={[`${t.modules.length} module${t.modules.length === 1 ? '' : 's'}`, t.state === 'current' ? (started ? 'now' : 'next') : t.state === 'done' && t.last ? `done ${fmtDay(t.last)}` : null].filter(Boolean).join(' · ')}
+                />
+              ))}
+            </Group>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -260,7 +344,7 @@ function ProgramDetail({ enrollment, logs, childName, backTo }) {
 function CourseDetail({ enrollment, logs, childName, backTo }) {
   return enrollment.program === 'CREATE'
     ? <CreateDetail enrollment={enrollment} logs={logs} childName={childName} backTo={backTo} />
-    : <ProgramDetail enrollment={enrollment} logs={logs} childName={childName} backTo={backTo} />;
+    : <TrackDetail enrollment={enrollment} logs={logs} childName={childName} backTo={backTo} />;
 }
 
 export default function ParentCourses() {

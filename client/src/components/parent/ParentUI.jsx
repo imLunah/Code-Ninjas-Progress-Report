@@ -51,20 +51,15 @@ export function Hero({ program, size = 'card', className = '', style = {}, child
 }
 
 // The badge on the right of a hero: the belt for CREATE, the program's logo
-// for everything else. The belt icon is its own emblem and sits on the
-// banner as it is, no ring around it.
+// for everything else. Both sit on the banner as they are, no disc and no
+// ring: the art is the emblem.
 export function Emblem({ program, belt, size = 64 }) {
   if (program === 'CREATE' && belt) {
     return <BeltIcon belt={belt} size={size} className="flex-shrink-0" />;
   }
   const logo = PROGRAM_LOGOS[program];
   if (!logo) return null;
-  return (
-    <span className="inline-flex items-center justify-center rounded-full flex-shrink-0"
-      style={{ width: size, height: size, background: 'rgb(255 255 255 / 0.12)', border: '1px solid rgb(255 255 255 / 0.22)' }}>
-      <img src={logo} alt="" className="object-contain" style={{ width: Math.round(size * 0.72), height: Math.round(size * 0.72) }} />
-    </span>
-  );
+  return <img src={logo} alt="" className="object-contain flex-shrink-0 drop-shadow-[0_4px_10px_rgba(0,0,0,0.35)]" style={{ width: size, height: size }} />;
 }
 
 // The 40px program logo that leads a card header.
@@ -125,7 +120,7 @@ export function BeltRoad({ current, onHero = false, compact = false, className =
   );
 }
 
-// Level pills. `states` is levelStates() from parentProgress: done levels
+// Level pills (and kit pills, via `label`). `states` is levelStates() from parentProgress: done levels
 // carry a check, the current one is solid, the ones ahead are quiet. On a
 // hero the solid pill is white; on a card it is the CREATE blue. The solid
 // fill slides between pills rather than blinking, so the eye follows the
@@ -146,11 +141,13 @@ export function LevelPills({ states, value, onChange, onHero = false, layoutId =
             className={`relative inline-flex items-center justify-center gap-1 h-8 min-w-[40px] px-3 rounded-[10px] font-ninja font-extrabold text-[13px] transition-colors duration-150 active:scale-95 ${selected ? '' : rest} ${ink}`}>
             {selected && (
               <motion.span layoutId={layoutId} transition={{ type: 'spring', stiffness: 480, damping: 36 }} aria-hidden
-                className={`absolute inset-0 rounded-[10px] ${onHero ? 'bg-white' : 'bg-ninja-blue'}`} />
+                className={`absolute inset-0 rounded-[10px] ${onHero ? '' : 'bg-ninja-blue'}`}
+                // Inline on the hero: `.dark .bg-white` would turn the pill dark on the blue.
+                style={onHero ? { background: '#ffffff' } : undefined} />
             )}
             <span className="relative z-10 inline-flex items-center gap-1">
               {s.state === 'done' && <CheckIcon size={12} strokeWidth={3.2} aria-hidden />}
-              {s.level}
+              {s.label ?? s.level}
             </span>
           </button>
         );
