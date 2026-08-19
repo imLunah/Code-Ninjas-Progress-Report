@@ -35,6 +35,51 @@ const STUDENT_PROGRAMS_SUBQUERY = `
   ) AS programs
 `;
 
+// What Home shows for each child without opening them: the last handful of
+// sessions (with the sensei's display name, which is what the child calls
+// them), the last few club days, and which days this week they were checked in.
+// The full history is on the child's own route; this is the glance.
+const RECENT_SESSIONS_SUBQUERY = `
+  COALESCE(
+    (SELECT json_agg(r ORDER BY r.session_date DESC, r.created_at DESC) FROM (
+      SELECT pl.session_date, pl.created_at, pl.program, pl.sub_program, pl.module_name, pl.lesson_name,
+             pl.belt_level_at, pl.belt_sublevel_at, pl.project_at, pl.status_at,
+             u.display_name AS sensei_name
+        FROM progress_logs pl
+        LEFT JOIN users u ON u.id = pl.sensei_id
+       WHERE pl.student_id = s.id AND pl.notes IS DISTINCT FROM 'Marked complete from roadmap'
+       ORDER BY pl.session_date DESC, pl.created_at DESC
+       LIMIT 6
+    ) r),
+    '[]'::json
+  ) AS recent_sessions
+`;
+
+const RECENT_CLUBS_SUBQUERY = `
+  COALESCE(
+    (SELECT json_agg(c ORDER BY c.session_date DESC) FROM (
+      SELECT cs.club_name, cs.session_date
+        FROM club_attendees ca
+        JOIN club_sessions cs ON cs.id = ca.club_session_id
+       WHERE ca.student_id = s.id
+       ORDER BY cs.session_date DESC
+       LIMIT 3
+    ) c),
+    '[]'::json
+  ) AS recent_clubs
+`;
+
+const WEEK_CHECKINS_SUBQUERY = `
+  COALESCE(
+    (SELECT json_agg(DISTINCT to_char(da.session_date, 'YYYY-MM-DD'))
+       FROM daily_assignments da
+      WHERE da.student_id = s.id
+        AND da.session_date >= date_trunc('week', CURRENT_DATE)::date
+        AND da.session_date <  (date_trunc('week', CURRENT_DATE) + interval '7 days')::date),
+    '[]'::json
+  ) AS week_checkins
+`;
+
 // POST /api/parent/login
 // Center code first, then the email.
 //
@@ -138,7 +183,10 @@ router.get('/students', requireParent, async (req, res) => {
     const { rows } = await pool.query(`
       SELECT s.id, s.full_name, s.birthday, s.created_at,
         ${STUDENT_PROGRAMS_SUBQUERY},
-        (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id AND pl.notes IS DISTINCT FROM 'Marked complete from roadmap') AS last_activity
+        (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id AND pl.notes IS DISTINCT FROM 'Marked complete from roadmap') AS last_activity,
+        ${RECENT_SESSIONS_SUBQUERY},
+        ${RECENT_CLUBS_SUBQUERY},
+        ${WEEK_CHECKINS_SUBQUERY}
       FROM students s
       WHERE LOWER(s.parent_email) = LOWER($1) AND EXISTS (SELECT 1 FROM student_locations sl_m WHERE sl_m.student_id = s.id AND sl_m.location_id = $2) AND s.active = true
       ORDER BY s.full_name
@@ -167,8 +215,10 @@ router.get('/students/:id', requireParent, async (req, res) => {
     const { rows: logs } = await pool.query(`
       SELECT pl.session_date, pl.program, pl.sub_program, pl.module_name, pl.lesson_name,
         pl.belt_level_at, pl.belt_sublevel_at, pl.project_at, pl.status_at,
-        (pl.notes = 'Marked complete from roadmap') AS from_roadmap
+        (pl.notes = 'Marked complete from roadmap') AS from_roadmap,
+        u.display_name AS sensei_name
       FROM progress_logs pl
+      LEFT JOIN users u ON u.id = pl.sensei_id
       WHERE pl.student_id = $1
       ORDER BY pl.session_date DESC, pl.created_at DESC
     `, [id]);

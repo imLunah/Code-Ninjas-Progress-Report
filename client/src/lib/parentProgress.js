@@ -6,7 +6,7 @@
 // is stored twice. Where a fact is not recorded, the helper says so with a
 // null rather than inventing one.
 
-import { BELTS, BELT_LEVEL_PROJECTS, getLevels } from '../utils/beltConfig';
+import { BELTS, BELT_LEVEL_PROJECTS, UPPER_BELTS, getLevels } from '../utils/beltConfig';
 
 export const beltIndex = (name) => BELTS.findIndex((b) => b.name === name);
 
@@ -57,11 +57,14 @@ export function levelProjects(beltName, level, logs) {
       byProject.set(l.project_at, { rank, status: l.status_at, date: String(l.session_date).split('T')[0] });
     }
   }
+  // Black and the bonus tracks are flat lists of projects, with no
+  // Build / Solve / Adventure rhythm to name.
+  const flat = UPPER_BELTS.includes(beltName);
   return names.map((name, i) => {
     const hit = byProject.get(name);
     return {
       name,
-      kind: i === names.length - 1 ? 'Adventure' : (/debug/i.test(name) ? 'Solve' : 'Build'),
+      kind: flat ? 'Project' : i === names.length - 1 ? 'Adventure' : (/debug/i.test(name) ? 'Solve' : 'Build'),
       status: hit ? (hit.status === 'Completed' ? 'done' : 'working') : 'todo',
       date: hit?.date || null,
     };

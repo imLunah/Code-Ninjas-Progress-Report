@@ -23,6 +23,9 @@ export function ParentPortalProvider({ children }) {
   const [students, setStudents] = useState(null);      // null = not loaded yet
   const [listError, setListError] = useState('');
   const [activeId, setActiveIdState] = useState(null);
+  // Home can show every child at once; everywhere else is one child. Starts
+  // on "all" for a family with more than one, on the child otherwise.
+  const [viewAll, setViewAll] = useState(true);
   const [details, setDetails] = useState({});          // id -> detail payload
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
@@ -41,6 +44,7 @@ export function ParentPortalProvider({ children }) {
         try { remembered = Number(localStorage.getItem(storageKey(parent.email))) || null; } catch { /* ignore */ }
         const first = rows[0]?.id ?? null;
         setActiveIdState(rows.some((r) => r.id === remembered) ? remembered : first);
+        setViewAll(rows.length > 1);
       })
       .catch(() => { if (!cancelled) { setStudents([]); setListError("Could not load your children's profiles."); } });
     return () => { cancelled = true; };
@@ -81,13 +85,17 @@ export function ParentPortalProvider({ children }) {
       active,
       activeId,
       setActiveId,
+      viewAll,
+      setViewAll,
       detail: activeId ? details[activeId] || null : null,
+      detailFor: (id) => details[id] || null,
+      loadDetail: load,
       detailLoading: detailLoading && !(activeId && details[activeId]),
       detailError,
       refresh: () => load(activeId, { force: true }),
       saveNote,
     };
-  }, [students, listError, activeId, setActiveId, details, detailLoading, detailError, load, saveNote]);
+  }, [students, listError, activeId, setActiveId, viewAll, details, detailLoading, detailError, load, saveNote]);
 
   return <ParentPortalContext.Provider value={value}>{children}</ParentPortalContext.Provider>;
 }

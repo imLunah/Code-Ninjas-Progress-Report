@@ -9,6 +9,10 @@
 import { getBelt } from '../utils/beltConfig';
 
 export const PROGRAM_GRADIENTS = {
+  // CREATE's banner is the CREATE blue at every belt. The belt shows as its
+  // icon on the banner, not as the banner's colour, which is what keeps a
+  // White or Yellow belt from turning the whole hero pale.
+  'CREATE':           'linear-gradient(145deg, #2f74e6 0%, #1355c9 50%, #0c3d99 100%)',
   'Robotics Academy': 'linear-gradient(135deg, #060d1a 0%, #0a1e3d 55%, #0d3070 100%)',
   'AI Academy':       'linear-gradient(135deg, #060c1f 0%, #091840 55%, #0e2a7a 100%)',
   'JR':               'linear-gradient(135deg, #1a0533 0%, #2d1267 55%, #4c1d95 100%)',
