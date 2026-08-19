@@ -181,7 +181,17 @@ router.get('/students/:id', requireParent, async (req, res) => {
       ORDER BY cs.session_date DESC
     `, [id]);
 
-    res.json({ ...rows[0], session_logs: logs, club_attendance: clubs });
+    // Today's check-ins, so the portal can say "checked in at 4:12" the
+    // moment it happens. Program and time only; nothing a parent could not
+    // already see standing at the front desk.
+    const { rows: today } = await pool.query(`
+      SELECT da.program, da.created_at, da.completed
+        FROM daily_assignments da
+       WHERE da.student_id = $1 AND da.session_date = CURRENT_DATE
+       ORDER BY da.created_at ASC
+    `, [id]);
+
+    res.json({ ...rows[0], session_logs: logs, club_attendance: clubs, today_checkins: today });
   } catch (err) {
     console.error('Parent student detail error:', err);
     res.status(500).json({ error: 'Failed to load student' });

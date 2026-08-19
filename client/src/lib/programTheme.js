@@ -1,0 +1,59 @@
+// One place for how a program and a belt LOOK, shared by the parent portal's
+// pages and the older progress cards so the two cannot drift.
+//
+// Program identity colours are pinned (JR purple, CREATE / Robotics / AI blue)
+// and do NOT follow the theme accent. Belts take their own colour from
+// beltConfig; the hero gradient is built from it here so a belt-up recolours
+// the whole hero without anyone touching a stylesheet.
+
+import { getBelt } from '../utils/beltConfig';
+
+export const PROGRAM_GRADIENTS = {
+  'Robotics Academy': 'linear-gradient(135deg, #060d1a 0%, #0a1e3d 55%, #0d3070 100%)',
+  'AI Academy':       'linear-gradient(135deg, #060c1f 0%, #091840 55%, #0e2a7a 100%)',
+  'JR':               'linear-gradient(135deg, #1a0533 0%, #2d1267 55%, #4c1d95 100%)',
+  'VR Coding':        'linear-gradient(135deg, #04181c 0%, #073a40 55%, #0b5e63 100%)',
+  'Silver':           'linear-gradient(135deg, #1f2937 0%, #374151 55%, #4b5563 100%)',
+  'Gold Unity':       'linear-gradient(135deg, #3b2f0a 0%, #6b5210 55%, #92400e 100%)',
+  'Gold Godot':       'linear-gradient(135deg, #1e3a5f 0%, #2a5a8f 55%, #3573b1 100%)',
+};
+
+export const PROGRAM_BAR_COLORS = {
+  'Robotics Academy': '#2563eb',
+  'AI Academy':       '#1d4ed8',
+  'JR':               '#7c3aed',
+  'VR Coding':        '#14b8a6',
+};
+
+export const JR_CODING_MODULES = ['Module 1','Module 2','Module 3','Module 4','Module 5','Module 6','Module 7','Module 8','Module 9','Module 10'];
+export const SNAP_CIRCUITS_TOTAL = 24;
+
+export const KIT_ORDER  = ['LEGO Spike Essentials', 'LEGO Spike Prime', 'VEX GO', 'Ozobot Evo'];
+export const KIT_SHORT  = { 'LEGO Spike Essentials': 'Essentials', 'LEGO Spike Prime': 'Prime', 'VEX GO': 'VEX GO', 'Ozobot Evo': 'Ozobot' };
+export const KIT_TOTALS = { 'LEGO Spike Essentials': 8, 'LEGO Spike Prime': 4, 'VEX GO': 4, 'Ozobot Evo': 2 };
+
+// The hero for a belt: the belt's own colour, deepened towards the bottom
+// right, with the ink the belt config already declares so a White or Yellow
+// belt stays readable. Falls back to the CREATE blue when no belt is set yet.
+export function beltHero(beltName) {
+  const belt = getBelt(beltName);
+  if (!belt) {
+    return { background: 'linear-gradient(150deg, #006add 0%, #004fa8 100%)', color: '#ffffff', shadow: 'rgb(0 79 168 / 0.35)' };
+  }
+  const c = belt.color;
+  return {
+    background: `linear-gradient(150deg, color-mix(in srgb, ${c} 88%, white) 0%, ${c} 40%, color-mix(in srgb, ${c} 68%, black) 100%)`,
+    color: belt.textColor || '#ffffff',
+    shadow: `color-mix(in srgb, ${c} 45%, transparent)`,
+    solid: c,
+  };
+}
+
+// The hero for a program that has no belt: its pinned identity gradient.
+export function programHero(program) {
+  return {
+    background: PROGRAM_GRADIENTS[program] || 'linear-gradient(150deg, #006add 0%, #004fa8 100%)',
+    color: '#ffffff',
+    shadow: 'rgb(26 46 74 / 0.35)',
+  };
+}

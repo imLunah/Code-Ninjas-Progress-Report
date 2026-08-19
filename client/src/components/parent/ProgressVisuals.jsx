@@ -1,31 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { BELTS, PROGRAM_LOGOS, PROGRAM_BANNERS, getLevels, getBelt } from '../../utils/beltConfig';
+import { PROGRAM_GRADIENTS, PROGRAM_BAR_COLORS, JR_CODING_MODULES, SNAP_CIRCUITS_TOTAL, KIT_ORDER, KIT_SHORT, KIT_TOTALS } from '../../lib/programTheme';
 import BeltIcon from '../ui/BeltIcon';
 import { useCurriculum } from '../../context/CurriculumContext';
 import { formatDate } from '../../utils/dateUtils';
 import { CARD } from '../../lib/surfaces';
 
-const PROGRAM_GRADIENTS = {
-  'Robotics Academy': 'linear-gradient(135deg, #060d1a 0%, #0a1e3d 55%, #0d3070 100%)',
-  'AI Academy':       'linear-gradient(135deg, #060c1f 0%, #091840 55%, #0e2a7a 100%)',
-  'JR':               'linear-gradient(135deg, #1a0533 0%, #2d1267 55%, #4c1d95 100%)',
-  'VR Coding':        'linear-gradient(135deg, #04181c 0%, #073a40 55%, #0b5e63 100%)',
-};
-
-const PROGRAM_BAR_COLORS = {
-  'Robotics Academy': '#2563eb',
-  'AI Academy':       '#1d4ed8',
-  'JR':               '#7c3aed',
-  'VR Coding':        '#14b8a6',
-};
-
-const JR_CODING_MODULES = ['Module 1','Module 2','Module 3','Module 4','Module 5','Module 6','Module 7','Module 8','Module 9','Module 10'];
-const SNAP_CIRCUITS_TOTAL = 24;
-
-const KIT_ORDER  = ['LEGO Spike Essentials', 'LEGO Spike Prime', 'VEX GO', 'Ozobot Evo'];
-const KIT_SHORT  = { 'LEGO Spike Essentials': 'Essentials', 'LEGO Spike Prime': 'Prime', 'VEX GO': 'VEX GO', 'Ozobot Evo': 'Ozobot' };
-const KIT_TOTALS = { 'LEGO Spike Essentials': 8, 'LEGO Spike Prime': 4, 'VEX GO': 4, 'Ozobot Evo': 2 };
+// Program colours, kit and module vocab live in lib/programTheme so the parent
+// portal's own pages read the same values.
 
 const BELT_IMAGES = {
   White:  '/belts/belt-white.png',

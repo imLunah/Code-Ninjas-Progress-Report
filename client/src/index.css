@@ -541,3 +541,21 @@ textarea:focus-visible {
   .modal-backdrop, .modal-panel { animation-duration: 1ms; }
 }
 
+/* ── Parent portal tinted cards ──
+   The page is flat; the softness lives in the cards. A slight gradient inside
+   the card, never on the page. Dedicated classes rather than bg-* utilities so
+   the .dark .bg-white override cannot fight them, and each has its own dark
+   reading. */
+.tint-blue  { background: linear-gradient(160deg, #dbe9ff 0%, #e8f0ff 100%); border: 1px solid #cfe0ff; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.8), 0 8px 24px rgb(0 106 221 / 0.08); }
+.tint-green { background: linear-gradient(160deg, #d9f7e4 0%, #e8fbef 100%); border: 1px solid #c3efd3; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.8), 0 8px 24px rgb(34 197 94 / 0.08); }
+.tint-lilac { background: linear-gradient(160deg, #ebe4ff 0%, #f2edff 100%); border: 1px solid #ddd2ff; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.8), 0 8px 24px rgb(124 58 237 / 0.08); }
+.tint-amber { background: linear-gradient(160deg, #fff3cd 0%, #fff8e6 100%); border: 1px solid #fde68a; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.8), 0 8px 24px rgb(180 83 9 / 0.08); }
+.dark .tint-blue  { background: linear-gradient(160deg, rgb(56 161 255 / 0.18) 0%, rgb(56 161 255 / 0.08) 100%); border-color: rgb(56 161 255 / 0.28); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06); }
+.dark .tint-green { background: linear-gradient(160deg, rgb(34 197 94 / 0.18) 0%, rgb(34 197 94 / 0.08) 100%); border-color: rgb(34 197 94 / 0.28); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06); }
+.dark .tint-lilac { background: linear-gradient(160deg, rgb(168 85 247 / 0.2) 0%, rgb(168 85 247 / 0.09) 100%); border-color: rgb(168 85 247 / 0.3); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06); }
+.dark .tint-amber { background: linear-gradient(160deg, rgb(245 158 11 / 0.18) 0%, rgb(245 158 11 / 0.08) 100%); border-color: rgb(245 158 11 / 0.3); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06); }
+/* A white inset row inside a tinted card. */
+.tint-inset { background: rgb(255 255 255 / 0.85); box-shadow: inset 0 1px 0 #ffffff; }
+.dark .tint-inset { background: rgb(255 255 255 / 0.07); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08); }
+/* Vibrancy for secondary text on tints and heroes: heavier, a touch tracked. */
+.v2 { font-weight: 700; letter-spacing: 0.005em; }

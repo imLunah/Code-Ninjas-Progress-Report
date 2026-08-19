@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/react';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { ParentAuthProvider } from './context/ParentAuthContext';
+import { ParentPortalProvider } from './context/ParentPortalContext';
 import { CurriculumProvider } from './context/CurriculumContext';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import ParentRoute from './components/layout/ParentRoute';
@@ -35,8 +36,12 @@ const LogClubPage = lazy(() => import('./pages/sensei/LogClubPage'));
 const ClubsPage = lazy(() => import('./pages/ClubsPage'));
 const ClubProfilePage = lazy(() => import('./pages/ClubProfilePage'));
 const ClubSessionPage = lazy(() => import('./pages/ClubSessionPage'));
-const ParentDashboard = lazy(() => import('./pages/parent/ParentDashboard'));
-const ParentStudentProfile = lazy(() => import('./pages/parent/ParentStudentProfile'));
+const ParentHome = lazy(() => import('./pages/parent/ParentHome'));
+const ParentCourses = lazy(() => import('./pages/parent/ParentCourses'));
+const ParentCourseDetail = lazy(() => import('./pages/parent/ParentCourseDetail'));
+const ParentNote = lazy(() => import('./pages/parent/ParentNote'));
+const ParentSessions = lazy(() => import('./pages/parent/ParentSessions'));
+const ParentStudentRedirect = lazy(() => import('./pages/parent/ParentStudentRedirect'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const AccessibilityPage = lazy(() => import('./pages/AccessibilityPage'));
@@ -59,6 +64,7 @@ export default function App() {
       <ThemeProvider>
       <CurriculumProvider>
       <ParentAuthProvider>
+      <ParentPortalProvider>
       <AuthProvider>
           <Suspense fallback={null}>
           <Routes>
@@ -87,8 +93,14 @@ export default function App() {
 
             {/* Parent portal */}
             <Route path="/parent/login"       element={<Navigate to="/login?tab=parent" replace />} />
-            <Route path="/parent/dashboard"   element={<ParentRoute><ParentDashboard /></ParentRoute>} />
-            <Route path="/parent/students/:id" element={<ParentRoute><ParentStudentProfile /></ParentRoute>} />
+            <Route path="/parent/dashboard"   element={<ParentRoute><ParentHome /></ParentRoute>} />
+            <Route path="/parent/courses"     element={<ParentRoute><ParentCourses /></ParentRoute>} />
+            <Route path="/parent/courses/:program" element={<ParentRoute><ParentCourseDetail /></ParentRoute>} />
+            <Route path="/parent/note"        element={<ParentRoute><ParentNote /></ParentRoute>} />
+            <Route path="/parent/sessions"    element={<ParentRoute><ParentSessions /></ParentRoute>} />
+            {/* Old links pointed at a per-child profile page. They pick that
+                child and land on Home. */}
+            <Route path="/parent/students/:id" element={<ParentRoute><ParentStudentRedirect /></ParentRoute>} />
 
             {/* Admin */}
             <Route path="/admin/locations" element={<ProtectedRoute role="manager"><LocationsPage /></ProtectedRoute>} />
@@ -118,6 +130,7 @@ export default function App() {
           <AdminBar />
           <WhatsNewModal />
       </AuthProvider>
+      </ParentPortalProvider>
       </ParentAuthProvider>
       </CurriculumProvider>
       </ThemeProvider>
