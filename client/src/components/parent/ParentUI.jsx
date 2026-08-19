@@ -43,10 +43,11 @@ export function Hero({ program, size = 'card', className = '', style = {}, child
     ? `linear-gradient(90deg, rgb(6 13 26 / 0.72) 0%, rgb(6 13 26 / 0.45) 55%, rgb(6 13 26 / 0.25) 100%), url(${banner}) center / cover no-repeat`
     : gradient;
   // A page hero on a phone is the top of the screen: it runs edge to edge
-  // from under the status bar, and only its bottom corners are rounded. On
-  // desktop it is a card in the right column like everything else.
+  // from just under the status bar with all four corners rounded like the
+  // screen itself. On desktop it is a card in the right column like
+  // everything else.
   const pad = size === 'page'
-    ? '-mx-4 sm:-mx-6 -mt-5 rounded-t-none rounded-b-[34px] px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6 lg:mx-0 lg:mt-0 lg:rounded-[26px] lg:px-7 lg:pt-7 lg:pb-6'
+    ? '-mx-4 sm:-mx-6 -mt-3 rounded-[34px] px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6 lg:mx-0 lg:mt-0 lg:rounded-[26px] lg:px-7 lg:pt-7 lg:pb-6'
     : 'p-4 rounded-[18px]';
   return (
     <div className={`relative overflow-hidden text-white ${pad} ${className}`} style={{ background, ...style }}>

@@ -164,7 +164,7 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
     return (
       <div className="space-y-4">
         <Hero program="CREATE" size="page">
-          {backTo && <div className="mb-8"><BackChip to={backTo} label="Back to courses" /></div>}
+          {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to courses" /></div>}
           <p className="font-ninja text-[12px] font-extrabold opacity-85">CREATE · {childName}</p>
           <p className="font-ninja font-extrabold text-[32px] leading-tight mt-1">White belt ahead</p>
           <p className="font-ninja text-[13px] opacity-85 mt-1">The belt road starts with the first logged session.</p>
@@ -176,10 +176,12 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
   return (
     <div className="space-y-4">
       <Hero program="CREATE" size="page">
-        {backTo && <div className="mb-8"><BackChip to={backTo} label="Back to courses" /></div>}
-        <div className="flex items-start justify-between gap-5">
+        {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to courses" /></div>}
+        {/* Phone: the belt on the right of the title, as drawn. Desktop: the
+            belt leads the title and the level pills take the right. */}
+        <div className="flex items-center lg:items-start justify-between gap-5">
           <div className="flex items-center gap-4 min-w-0">
-            <Emblem program="CREATE" belt={belt} size={72} />
+            <span className="hidden lg:inline-flex"><Emblem program="CREATE" belt={belt} size={72} /></span>
             <div className="min-w-0">
               <p className="hidden lg:block font-ninja text-[12px] font-extrabold opacity-85 truncate">CREATE · {childName}</p>
               <p className="font-ninja font-extrabold text-[36px] lg:text-[32px] leading-none mt-1 tracking-[-0.015em]">{belt} belt</p>
@@ -188,6 +190,7 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
               </p>
             </div>
           </div>
+          <span className="lg:hidden flex-shrink-0"><Emblem program="CREATE" belt={belt} size={96} /></span>
           <div className="hidden lg:block flex-shrink-0 pt-1">
             <LevelPills states={states} value={level} onChange={pick} onHero layoutId="level-pill-desktop" />
           </div>
@@ -283,7 +286,7 @@ function TrackDetail({ enrollment, logs, childName, backTo }) {
   return (
     <div className="space-y-4">
       <Hero program={p} size="page">
-        {backTo && <div className="mb-8"><BackChip to={backTo} label="Back to courses" /></div>}
+        {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to courses" /></div>}
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="hidden lg:block font-ninja text-[12px] font-extrabold opacity-85 truncate">{p} · {childName}</p>
