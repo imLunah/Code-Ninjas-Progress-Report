@@ -42,7 +42,12 @@ export function Hero({ program, size = 'card', className = '', style = {}, child
   const background = banner
     ? `linear-gradient(90deg, rgb(6 13 26 / 0.72) 0%, rgb(6 13 26 / 0.45) 55%, rgb(6 13 26 / 0.25) 100%), url(${banner}) center / cover no-repeat`
     : gradient;
-  const pad = size === 'page' ? 'px-5 pt-5 pb-5 sm:px-7 sm:pt-7 sm:pb-6 rounded-[26px]' : 'p-4 rounded-[18px]';
+  // A page hero on a phone is the top of the screen: it runs edge to edge
+  // from under the status bar, and only its bottom corners are rounded. On
+  // desktop it is a card in the right column like everything else.
+  const pad = size === 'page'
+    ? '-mx-4 sm:-mx-6 -mt-5 rounded-t-none rounded-b-[34px] px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6 lg:mx-0 lg:mt-0 lg:rounded-[26px] lg:px-7 lg:pt-7 lg:pb-6'
+    : 'p-4 rounded-[18px]';
   return (
     <div className={`relative overflow-hidden text-white ${pad} ${className}`} style={{ background, ...style }}>
       {children}
@@ -134,14 +139,14 @@ export function LevelPills({ states, value, onChange, onHero = false, layoutId =
           ? (selected ? 'text-[#0c3d99]' : s.state === 'done' ? 'text-white' : 'text-white/80')
           : (selected ? 'text-white' : s.state === 'done' ? 'text-ninja-navy' : 'text-ninja-muted');
         const rest = onHero
-          ? (s.state === 'done' ? 'bg-white/25' : 'bg-white/12')
+          ? (s.state === 'done' ? 'bg-white/30 border border-white/40' : 'bg-white/15 border border-white/25')
           : 'bg-ninja-bg border border-ninja-border';
         return (
           <button key={s.level} type="button" role="tab" aria-selected={selected} onClick={() => onChange?.(s.level)}
-            className={`relative inline-flex items-center justify-center gap-1 h-8 min-w-[40px] px-3 rounded-[10px] font-ninja font-extrabold text-[13px] transition-colors duration-150 active:scale-95 ${selected ? '' : rest} ${ink}`}>
+            className={`relative inline-flex items-center justify-center gap-1 h-9 min-w-[44px] px-3.5 rounded-[12px] font-ninja font-extrabold text-[13px] transition-colors duration-150 active:scale-95 ${selected ? '' : rest} ${ink}`}>
             {selected && (
               <motion.span layoutId={layoutId} transition={{ type: 'spring', stiffness: 480, damping: 36 }} aria-hidden
-                className={`absolute inset-0 rounded-[10px] ${onHero ? '' : 'bg-ninja-blue'}`}
+                className={`absolute inset-0 rounded-[12px] ${onHero ? '' : 'bg-ninja-blue'}`}
                 // Inline on the hero: `.dark .bg-white` would turn the pill dark on the blue.
                 style={onHero ? { background: '#ffffff' } : undefined} />
             )}

@@ -164,7 +164,7 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
     return (
       <div className="space-y-4">
         <Hero program="CREATE" size="page">
-          {backTo && <div className="mb-4"><BackChip to={backTo} label="Back to courses" /></div>}
+          {backTo && <div className="mb-8"><BackChip to={backTo} label="Back to courses" /></div>}
           <p className="font-ninja text-[12px] font-extrabold opacity-85">CREATE · {childName}</p>
           <p className="font-ninja font-extrabold text-[32px] leading-tight mt-1">White belt ahead</p>
           <p className="font-ninja text-[13px] opacity-85 mt-1">The belt road starts with the first logged session.</p>
@@ -176,13 +176,13 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
   return (
     <div className="space-y-4">
       <Hero program="CREATE" size="page">
-        {backTo && <div className="mb-4"><BackChip to={backTo} label="Back to courses" /></div>}
+        {backTo && <div className="mb-8"><BackChip to={backTo} label="Back to courses" /></div>}
         <div className="flex items-start justify-between gap-5">
           <div className="flex items-center gap-4 min-w-0">
             <Emblem program="CREATE" belt={belt} size={72} />
             <div className="min-w-0">
-              <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">CREATE · {childName}</p>
-              <p className="font-ninja font-extrabold text-[32px] leading-none mt-1 tracking-[-0.01em]">{belt} belt</p>
+              <p className="hidden lg:block font-ninja text-[12px] font-extrabold opacity-85 truncate">CREATE · {childName}</p>
+              <p className="font-ninja font-extrabold text-[36px] lg:text-[32px] leading-none mt-1 tracking-[-0.015em]">{belt} belt</p>
               <p className="font-ninja text-[13px] opacity-85 mt-2 truncate">
                 {[`Level ${currentLevel}`, levels.length ? `${pos} of ${levels.length}` : null, next ? `earns ${next}` : null, sessions.length ? `${sessions.length} session${sessions.length === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ')}
               </p>
@@ -283,14 +283,14 @@ function TrackDetail({ enrollment, logs, childName, backTo }) {
   return (
     <div className="space-y-4">
       <Hero program={p} size="page">
-        {backTo && <div className="mb-4"><BackChip to={backTo} label="Back to courses" /></div>}
+        {backTo && <div className="mb-8"><BackChip to={backTo} label="Back to courses" /></div>}
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">{p} · {childName}</p>
-            <p className="font-ninja font-extrabold text-[32px] leading-[1.05] mt-1 tracking-[-0.01em]">{p}</p>
+            <p className="hidden lg:block font-ninja text-[12px] font-extrabold opacity-85 truncate">{p} · {childName}</p>
+            <p className="font-ninja font-extrabold text-[36px] lg:text-[32px] leading-[1.02] mt-1 tracking-[-0.015em]">{p}</p>
             <p className="font-ninja text-[13px] opacity-85 mt-2 truncate">{meta}</p>
           </div>
-          <Emblem program={p} size={84} />
+          <Emblem program={p} size={104} />
         </div>
         {multi && (
           <>
@@ -306,9 +306,9 @@ function TrackDetail({ enrollment, logs, childName, backTo }) {
             <motion.div key={open.index}
               initial={{ opacity: 0, x: 10 * dir }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 * dir }}
               transition={{ duration: 0.18, ease: EASE_OUT }}>
-              <Group tint={open.state === 'current' ? (started ? 'blue' : undefined) : open.state === 'done' ? 'green' : undefined}>
+              <Group tint={open.state === 'current' ? 'blue' : open.state === 'done' ? 'green' : undefined}>
                 <div className="px-4 pt-3.5 pb-3">
-                  <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em]" style={open.state !== 'ahead' && (started || open.state === 'done') ? { color: 'var(--tint-ink)' } : { color: 'rgb(var(--ninja-muted))' }}>
+                  <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em]" style={open.state !== 'ahead' ? { color: 'var(--tint-ink)' } : { color: 'rgb(var(--ninja-muted))' }}>
                     {multi ? `${unit} ${open.index}` : 'Modules'}{open.state === 'current' ? (started ? ' · now' : ' · next') : open.state === 'done' ? ' · done' : ''}
                   </p>
                   {multi && <p className="font-ninja font-extrabold text-[20px] text-ninja-navy leading-tight mt-0.5">{open.name}</p>}
@@ -409,7 +409,7 @@ export default function ParentCourses() {
   // Phone, with a course open: the course is the page.
   if (!desktop && open) {
     return (
-      <ParentLayout switcher={switcher}>
+      <ParentLayout switcher={switcher} bleed>
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, ease: EASE_OUT }}>
           <CourseDetail enrollment={open} logs={logsFor(open.program)} childName={first} backTo="/parent/courses" />
         </motion.div>

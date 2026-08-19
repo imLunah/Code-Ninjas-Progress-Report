@@ -90,7 +90,9 @@ function ParentTabBar() {
   );
 }
 
-export default function ParentLayout({ children, switcher = null }) {
+// `bleed`: the page opens with a full-bleed hero on a phone, so the bar
+// stays out of its way below lg and the hero's own back chip is the way out.
+export default function ParentLayout({ children, switcher = null, bleed = false }) {
   const { parent, logout } = useParentAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -114,7 +116,7 @@ export default function ParentLayout({ children, switcher = null }) {
       </svg>
 
       {/* One flat bar. Full width, white, a hairline under it, nothing floating. */}
-      <header className="bg-white border-b border-ninja-border">
+      <header className={`bg-white border-b border-ninja-border ${bleed ? 'hidden lg:block' : ''}`}>
         <div className="max-w-6xl mx-auto h-16 px-4 sm:px-6 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <Logo variant="lockup" className="h-8 text-ninja-navy" />
