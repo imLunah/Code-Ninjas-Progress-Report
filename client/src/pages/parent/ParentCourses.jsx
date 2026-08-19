@@ -39,7 +39,7 @@ function CreateCard({ enrollment, logs }) {
           eyebrow={belt ? `${belt} belt` : 'CREATE'}
           title={belt ? <>Level {level} <span className="text-[15px] font-bold opacity-80">of {maxLevel}</span></> : 'Starting soon'}
           subtitle={enrollment.current_project ? `${enrollment.current_project}${enrollment.project_status ? ` · ${enrollment.project_status.toLowerCase()}` : ''}` : null}
-          aside={belt ? <Gauge value={level} max={maxLevel} size={60} ink={m.color} face="rgb(0 0 0 / 0.16)" /> : null}
+          aside={belt ? <Gauge value={level} max={maxLevel} size={60} ink={m.onHero} ring={m.onHeroDim} face={m.face} /> : null}
           className="!rounded-[20px] !p-4"
         />
       </div>
@@ -143,8 +143,8 @@ export default function ParentCourses() {
             <div key={name} className="tint-lilac rounded-[22px] px-4 py-3.5 flex items-center gap-3">
               <Tile size={36} rounded={12} tint="rgb(255 255 255 / 0.8)"><UsersRoundIcon size={18} className="text-purple-700" /></Tile>
               <div className="min-w-0 flex-1">
-                <p className="font-ninja font-extrabold text-[15px]" style={{ color: '#4c1d95' }}>{name}</p>
-                <p className="font-ninja text-[12px] v2" style={{ color: 'rgb(76 29 149 / 0.7)' }}>{mine.length} session{mine.length === 1 ? '' : 's'} · last {fmtDay(mine[0]?.session_date)}</p>
+                <p className="font-ninja font-extrabold text-[15px]" style={{ color: 'var(--tint-ink)' }}>{name}</p>
+                <p className="font-ninja text-[12px] v2" style={{ color: 'var(--tint-ink-soft)' }}>{mine.length} session{mine.length === 1 ? '' : 's'} · last {fmtDay(mine[0]?.session_date)}</p>
               </div>
             </div>
           );

@@ -43,10 +43,10 @@ function BeltHeroCard({ enrollment, logs, size = 'card' }) {
         aside={belt ? (
           <div className="flex items-center gap-3">
             <BeltIcon belt={belt} size={size === 'page' ? 64 : 48} style={{ filter: 'drop-shadow(0 6px 14px rgb(0 0 0 / 0.3))' }} />
-            <Gauge value={level} max={maxLevel} size={size === 'page' ? 84 : 66} ink={m.color} face="rgb(0 0 0 / 0.16)" />
+            <Gauge value={level} max={maxLevel} size={size === 'page' ? 84 : 66} ink={m.onHero} ring={m.onHeroDim} face={m.face} />
           </div>
         ) : null}
-        footer={belt ? <SegmentBar total={levels.length} done={done} current fill={m.color} empty={m.color === '#ffffff' ? 'rgb(255 255 255 / 0.22)' : 'rgb(0 0 0 / 0.14)'} /> : null}
+        footer={belt ? <SegmentBar total={levels.length} done={done} current fill={m.onHero} empty={m.onHeroDim} /> : null}
       />
     </Link>
   );
@@ -95,7 +95,7 @@ export default function ParentHome() {
     >
       {active && (
         <p className="text-ninja-muted font-ninja text-[13px] v2 mt-0.5">
-          {[calcAge(active.birthday) !== null ? `Age ${calcAge(active.birthday)}` : null, (active.programs || []).map((p) => p.program).join(' · ') || null].filter(Boolean).join(' · ')}
+          {[calcAge(active.birthday) ? `Age ${calcAge(active.birthday)}` : null, (active.programs || []).map((p) => p.program).join(' · ') || null].filter(Boolean).join(' · ')}
         </p>
       )}
     </PageHeader>
@@ -138,7 +138,7 @@ export default function ParentHome() {
       <div className="px-4 pt-4 pb-3 grid grid-cols-[92px_minmax(0,1fr)] gap-3">
         <div className="flex flex-col justify-between">
           <span className="font-ninja font-extrabold text-[24px] leading-none tracking-[-0.02em] text-ninja-navy">Today</span>
-          <span className="font-ninja text-[12px] v2 text-ninja-blue-ink opacity-90">{today.length ? `${today.length} check-in${today.length > 1 ? 's' : ''}` : 'No check-in yet'}</span>
+          <span className="font-ninja text-[12px] v2" style={{ color: 'var(--tint-ink)' }}>{today.length ? `${today.length} check-in${today.length > 1 ? 's' : ''}` : 'No check-in yet'}</span>
         </div>
         <div className="flex flex-col gap-1.5">
           {today.length === 0 && (
@@ -173,7 +173,7 @@ export default function ParentHome() {
             ))}
             {earned.length === 0 && <span className="text-ninja-navy font-ninja font-extrabold text-[22px]">0</span>}
           </div>
-          <p className="font-ninja text-[12px] font-extrabold" style={{ color: '#15803d' }}>
+          <p className="font-ninja text-[12px] font-extrabold" style={{ color: 'var(--tint-ink)' }}>
             {journey.find((b) => b.state === 'ahead') ? `${journey.find((b) => b.state === 'ahead').name} is next` : 'At the top'}
           </p>
         </div>
@@ -206,8 +206,8 @@ export default function ParentHome() {
   const note = detail && (
     <button type="button" onClick={() => navigate('/parent/note')} className="tint-amber rounded-[22px] px-4 py-3.5 text-left w-full">
       <div className="flex items-center justify-between">
-        <span className="font-ninja text-[12px] v2 uppercase tracking-[0.06em]" style={{ color: '#b45309' }}>Note for Senseis</span>
-        <span className="font-ninja text-[12px] font-extrabold" style={{ color: '#b45309' }}>{detail.special_instructions?.trim() ? 'Edit' : 'Add'}</span>
+        <span className="font-ninja text-[12px] v2 uppercase tracking-[0.06em]" style={{ color: 'var(--tint-ink)' }}>Note for Senseis</span>
+        <span className="font-ninja text-[12px] font-extrabold" style={{ color: 'var(--tint-ink)' }}>{detail.special_instructions?.trim() ? 'Edit' : 'Add'}</span>
       </div>
       <p className="font-ninja text-[14px] text-ninja-navy mt-1 line-clamp-2">
         {detail.special_instructions?.trim() || 'Allergies, pickup notes, anything the senseis should know.'}

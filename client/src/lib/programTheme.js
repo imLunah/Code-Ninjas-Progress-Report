@@ -38,14 +38,27 @@ export const KIT_TOTALS = { 'LEGO Spike Essentials': 8, 'LEGO Spike Prime': 4, '
 export function beltHero(beltName) {
   const belt = getBelt(beltName);
   if (!belt) {
-    return { background: 'linear-gradient(150deg, #006add 0%, #004fa8 100%)', color: '#ffffff', shadow: 'rgb(0 79 168 / 0.35)' };
+    return { background: 'linear-gradient(150deg, #006add 0%, #004fa8 100%)', color: '#ffffff', shadow: 'rgb(0 79 168 / 0.35)', light: false, onHero: '#ffffff', onHeroDim: 'rgb(255 255 255 / 0.22)', onHeroMid: 'rgb(255 255 255 / 0.5)', face: 'rgb(0 0 0 / 0.16)' };
   }
   const c = belt.color;
+  const ink = belt.textColor || '#ffffff';
+  // A pale belt (White, Yellow, Silver, Platinum) carries dark ink, and
+  // everything drawn on the hero (gauge, bar, pills) has to be drawn in that
+  // ink and its tints, or it vanishes into the pale material. `onHero` is the
+  // colour to use for chrome on the hero; `onHeroDim` for its unfilled state.
+  const light = ink !== '#ffffff';
   return {
-    background: `linear-gradient(150deg, color-mix(in srgb, ${c} 88%, white) 0%, ${c} 40%, color-mix(in srgb, ${c} 68%, black) 100%)`,
-    color: belt.textColor || '#ffffff',
-    shadow: `color-mix(in srgb, ${c} 45%, transparent)`,
+    background: light
+      ? `linear-gradient(150deg, color-mix(in srgb, ${c} 92%, white) 0%, ${c} 45%, color-mix(in srgb, ${c} 78%, black) 100%)`
+      : `linear-gradient(150deg, color-mix(in srgb, ${c} 88%, white) 0%, ${c} 40%, color-mix(in srgb, ${c} 68%, black) 100%)`,
+    color: ink,
+    shadow: light ? 'rgb(26 46 74 / 0.22)' : `color-mix(in srgb, ${c} 45%, transparent)`,
     solid: c,
+    light,
+    onHero: light ? 'rgb(26 46 74 / 0.9)' : '#ffffff',
+    onHeroDim: light ? 'rgb(26 46 74 / 0.16)' : 'rgb(255 255 255 / 0.22)',
+    onHeroMid: light ? 'rgb(26 46 74 / 0.32)' : 'rgb(255 255 255 / 0.5)',
+    face: light ? 'rgb(255 255 255 / 0.55)' : 'rgb(0 0 0 / 0.16)',
   };
 }
 
@@ -55,5 +68,10 @@ export function programHero(program) {
     background: PROGRAM_GRADIENTS[program] || 'linear-gradient(150deg, #006add 0%, #004fa8 100%)',
     color: '#ffffff',
     shadow: 'rgb(26 46 74 / 0.35)',
+    light: false,
+    onHero: '#ffffff',
+    onHeroDim: 'rgb(255 255 255 / 0.22)',
+    onHeroMid: 'rgb(255 255 255 / 0.5)',
+    face: 'rgb(0 0 0 / 0.16)',
   };
 }

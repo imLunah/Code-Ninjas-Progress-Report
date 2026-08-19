@@ -20,10 +20,10 @@ import { beltJourney, levelProjects, levelStates, levelTitle, realSessions, fmtD
 // programs keep the module and kit views the portal already had, under the
 // same hero, because that derivation is program-specific and correct.
 
-function BackChip({ to }) {
+function BackChip({ to, light = false }) {
   return (
     <Link to={to} aria-label="Back to courses"
-      className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white/20 border border-white/35 backdrop-blur-md">
+      className={`inline-flex items-center justify-center w-9 h-9 rounded-full backdrop-blur-md ${light ? 'bg-ninja-navy/10 border border-ninja-navy/15' : 'bg-white/20 border border-white/35'}`}>
       <ChevronLeftIcon size={18} strokeWidth={2.6} />
     </Link>
   );
@@ -67,23 +67,31 @@ function CreateDetail({ enrollment, logs }) {
   const viewing = states.find((s) => s.level === level);
   const pillFor = (s) => {
     const active = s.level === level;
-    if (active) return { background: '#ffffff', color: m.solid && m.color === '#ffffff' ? m.solid : '#1a2e4a', boxShadow: '0 4px 12px rgb(0 0 0 / 0.18)' };
-    if (s.state === 'done') return { background: 'rgb(255 255 255 / 0.28)', border: '1px solid rgb(255 255 255 / 0.3)', color: m.color };
-    return { background: 'rgb(255 255 255 / 0.12)', border: '1px solid rgb(255 255 255 / 0.2)', color: m.color, opacity: 0.85 };
+    if (active) {
+      return m.light
+        ? { background: '#1a2e4a', color: '#ffffff', boxShadow: '0 4px 12px rgb(0 0 0 / 0.18)' }
+        : { background: '#ffffff', color: m.solid || '#1a2e4a', boxShadow: '0 4px 12px rgb(0 0 0 / 0.18)' };
+    }
+    if (s.state === 'done') return { background: m.light ? 'rgb(26 46 74 / 0.14)' : 'rgb(255 255 255 / 0.28)', border: `1px solid ${m.light ? 'rgb(26 46 74 / 0.18)' : 'rgb(255 255 255 / 0.3)'}`, color: m.onHero };
+    return { background: m.light ? 'rgb(26 46 74 / 0.06)' : 'rgb(255 255 255 / 0.12)', border: `1px solid ${m.light ? 'rgb(26 46 74 / 0.12)' : 'rgb(255 255 255 / 0.2)'}`, color: m.onHero, opacity: 0.85 };
   };
+  // Past Black the road runs into the bonus tracks, so a ninja on Bronze or
+  // beyond sees all thirteen; before that, the nine main belts and a strip.
+  const pastBlack = idx >= 9;
+  const road = pastBlack ? journey : journey.slice(0, 9);
 
   return (
     <div className="space-y-4">
       <Hero
         material={m}
         size="page"
-        eyebrow={<span className="flex items-center gap-3"><BackChip to="/parent/courses" /><span>CREATE</span></span>}
+        eyebrow={<span className="flex items-center gap-3"><BackChip to="/parent/courses" light={m.light} /><span>CREATE</span></span>}
         title={belt ? `${belt} belt` : 'CREATE'}
         subtitle={belt ? `Level ${currentLevel} of ${maxLevel}${next ? ` · earns ${next}` : ''}${thisBelt?.first ? ` · started ${fmtDay(thisBelt.first)}` : ''}${totalDone ? ` · ${totalDone} projects done` : ''}` : 'Belt journey starting soon'}
         aside={belt ? (
           <div className="relative w-[92px] h-[92px]">
-            <span className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(${m.color} 0deg ${Math.round((currentLevel / Math.max(1, maxLevel)) * 360)}deg, rgb(255 255 255 / 0.22) ${Math.round((currentLevel / Math.max(1, maxLevel)) * 360)}deg 360deg)` }} />
-            <span className="absolute inset-[7px] rounded-full flex items-center justify-center" style={{ background: 'rgb(0 0 0 / 0.16)', boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.4), 0 8px 20px rgb(0 0 0 / 0.25)' }}>
+            <span className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(${m.onHero} 0deg ${Math.round((currentLevel / Math.max(1, maxLevel)) * 360)}deg, ${m.onHeroDim} ${Math.round((currentLevel / Math.max(1, maxLevel)) * 360)}deg 360deg)` }} />
+            <span className="absolute inset-[7px] rounded-full flex items-center justify-center" style={{ background: m.face, boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.4), 0 8px 20px rgb(0 0 0 / 0.25)' }}>
               <BeltIcon belt={belt} size={58} />
             </span>
           </div>
@@ -107,11 +115,11 @@ function CreateDetail({ enrollment, logs }) {
             <section className="tint-green rounded-[24px] p-4 pb-2 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-ninja text-[12px] font-extrabold uppercase tracking-[0.08em]" style={{ color: '#15803d' }}>
+                  <p className="font-ninja text-[12px] font-extrabold uppercase tracking-[0.08em]" style={{ color: 'var(--tint-ink)' }}>
                     Level {level}{viewing?.state === 'current' ? ' · now' : viewing?.state === 'done' ? ' · done' : ' · ahead'}
                   </p>
                   <p className="font-ninja font-extrabold text-[20px] leading-tight tracking-[-0.02em] text-ninja-navy">{levelTitle(belt, level)}</p>
-                  <p className="font-ninja text-[12px] v2 mt-0.5" style={{ color: 'rgb(20 83 45 / 0.75)' }}>{doneCount} of {projects.length} projects</p>
+                  <p className="font-ninja text-[12px] v2 mt-0.5" style={{ color: 'var(--tint-ink-soft)' }}>{doneCount} of {projects.length} projects</p>
                 </div>
                 <Gauge value={doneCount} max={projects.length} size={48} ink="#22c55e" ring="rgb(34 197 94 / 0.2)" face="rgb(255 255 255 / 0.85)" />
               </div>
@@ -136,17 +144,19 @@ function CreateDetail({ enrollment, logs }) {
 
           <div className="space-y-4">
             <Group title="Belt road">
-              {journey.slice(0, 9).map((b, i) => (
+              {road.map((b, i) => (
                 <Row key={b.name} first={i === 0} dim={b.state === 'ahead'}
                   lead={<BeltIcon belt={b.name} size={b.state === 'current' ? 30 : 26} dimmed={b.state === 'ahead'} style={b.state === 'current' ? { boxShadow: `0 0 0 2px #fff, 0 0 0 3px ${m.solid || '#22c55e'}`, borderRadius: 999 } : undefined} />}
-                  title={<>{b.name}{b.state === 'current' && <span className="ml-1.5 align-middle text-[10px] font-extrabold px-2 py-0.5 rounded-full" style={{ background: 'rgb(34 197 94 / 0.16)', color: '#15803d' }}>Now</span>}</>}
+                  title={<>{b.name}{b.state === 'current' && <span className="ml-1.5 align-middle text-[10px] font-extrabold px-2 py-0.5 rounded-full" style={{ background: 'rgb(34 197 94 / 0.16)' }}><span className="text-green-700 dark:text-green-400">Now</span></span>}</>}
                   subtitle={b.state === 'ahead' ? `${b.levels} level${b.levels === 1 ? '' : 's'}` : b.state === 'current' ? `Level ${currentLevel} of ${maxLevel}` : `${b.levels} levels${b.first ? ` · started ${fmtDay(b.first)}` : ''}${b.sessions ? ` · ${b.sessions} sessions` : ''}`}
                 />
               ))}
-              <div className="px-4 py-3 border-t border-ninja-navy/[0.08] flex items-center justify-between">
-                <span className="font-ninja text-[12px] text-ninja-muted v2">After Black: bonus tracks</span>
-                <span className="flex gap-1.5">{BELTS.slice(9).map((b) => <BeltIcon key={b.name} belt={b.name} size={16} dimmed />)}</span>
-              </div>
+              {!pastBlack && (
+                <div className="px-4 py-3 border-t border-ninja-navy/[0.08] flex items-center justify-between">
+                  <span className="font-ninja text-[12px] text-ninja-muted v2">After Black: bonus tracks</span>
+                  <span className="flex gap-1.5">{BELTS.slice(9).map((b) => <BeltIcon key={b.name} belt={b.name} size={16} dimmed />)}</span>
+                </div>
+              )}
             </Group>
           </div>
         </div>

@@ -52,13 +52,13 @@ export default function ParentNote() {
         <div className="tint-amber rounded-[24px]">
           <div className="px-5 py-4">
             <div className="flex items-center justify-between gap-3 mb-2.5">
-              <div className="flex items-center gap-2" style={{ color: '#b45309' }}>
+              <div className="flex items-center gap-2" style={{ color: 'var(--tint-ink)' }}>
                 <Pin className="w-4 h-4 -rotate-12" />
-                <h2 className="font-ninja font-extrabold text-[15px]" style={{ color: '#78350f' }}>Note for Senseis</h2>
+                <h2 className="font-ninja font-extrabold text-[15px]" style={{ color: 'var(--tint-ink)' }}>Note for Senseis</h2>
               </div>
               {!editing && (
                 <button type="button" onClick={() => { setDraft(text); setEditing(true); }}
-                  className="font-ninja text-xs font-extrabold hover:underline" style={{ color: '#b45309' }}>
+                  className="font-ninja text-xs font-extrabold hover:underline" style={{ color: 'var(--tint-ink)' }}>
                   {text.trim() ? 'Edit' : 'Add note'}
                 </button>
               )}
@@ -75,7 +75,7 @@ export default function ParentNote() {
                     {saving ? 'Saving…' : 'Save note'}
                   </button>
                   <button type="button" onClick={() => { setEditing(false); setDraft(text); }}
-                    className="font-ninja text-xs font-extrabold px-3 py-1.5" style={{ color: '#b45309' }}>
+                    className="font-ninja text-xs font-extrabold px-3 py-1.5" style={{ color: 'var(--tint-ink)' }}>
                     Cancel
                   </button>
                 </div>
@@ -87,7 +87,7 @@ export default function ParentNote() {
                 </ReactMarkdown>
               </div>
             ) : (
-              <p className="font-ninja text-sm leading-relaxed" style={{ color: 'rgb(180 83 9 / 0.7)' }}>
+              <p className="font-ninja text-sm leading-relaxed" style={{ color: 'var(--tint-ink-soft)' }}>
                 Nothing pinned yet. Anything you write here shows on {active?.full_name.split(' ')[0]}'s profile for every sensei at the center.
               </p>
             )}
