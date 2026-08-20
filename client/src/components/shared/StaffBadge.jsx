@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import Logo from '../ui/Logo';
 
 // The onboarding staff badge: a physical card in 3D that prints what the form
@@ -42,13 +43,25 @@ function initialsOf(name = '') {
 
 // `details` is optional back-of-card print: [{ label, value }] rows under the
 // Staff ID, for a badge that describes someone else (joined date, log count on
-// the staff profile). Onboarding and Edit profile pass nothing and the back
-// stays as it was.
-export default function StaffBadge({ name, username, role, center, avatar, side = 'front', scale = 1, className = '', details = [] }) {
+// the staff profile). Onboarding passes nothing and the back stays as it was.
+//
+// `editable` makes the card its own form: { onName, onUsername, onAvatar }.
+// Tapping the printed name (or the Staff ID on the back) turns that line into
+// an input in the same ink; Enter or leaving the field hands the value to the
+// callback, Escape puts the print back. Tapping the photo calls onAvatar, and
+// a tap anywhere else turns the card over, since the username lives on the
+// back and not everyone will think to drag. Taps are detected by hand off the
+// existing pointer handlers: the stage takes pointer capture for the drag, so
+// a real click would fire on the stage, never on anything inside it.
+export default function StaffBadge({ name, username, role, center, avatar, side = 'front', scale = 1, className = '', details = [], editable = null }) {
   const stageRef = useRef(null);
   const cardRef = useRef(null);
+  const inputRef = useRef(null);
+  const [editing, setEditing] = useState(null); // 'name' | 'user' | null
+  const [draft, setDraft] = useState('');
+  const cancelled = useRef(false);
   // All motion state lives in one ref so the component never re-renders for it.
-  const m = useRef({ rx: -6, ry: 24, tRx: -6, tRy: 24, vx: 0, dragging: false, px: 0, py: 0, lastTouch: 0, side: 'front' }).current;
+  const m = useRef({ rx: -6, ry: 24, tRx: -6, tRy: 24, vx: 0, dragging: false, px: 0, py: 0, lastTouch: 0, side: 'front', hold: false, downX: 0, downY: 0, downT: 0, downTarget: null, moved: 0 }).current;
 
   // Turning the card over is one more half-turn in whichever direction it is
   // already going, not a snap to a fixed angle — a spin the sensei gave it is
@@ -65,7 +78,7 @@ export default function StaffBadge({ name, username, role, center, avatar, side 
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let raf;
     const frame = (t) => {
-      const idle = !m.dragging && performance.now() - m.lastTouch > 2600;
+      const idle = !m.dragging && !m.hold && performance.now() - m.lastTouch > 2600;
       let sway = 0;
       let bob = 0;
       if (idle && !reduced) {
@@ -84,11 +97,41 @@ export default function StaffBadge({ name, username, role, center, avatar, side 
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  const startEdit = (slot) => {
+    if (editing === slot) return;
+    cancelled.current = false;
+    // Rendered synchronously inside the pointer gesture so the focus that
+    // follows still counts as user-initiated and a phone opens its keyboard.
+    flushSync(() => {
+      setDraft((slot === 'name' ? name : username) || '');
+      setEditing(slot);
+    });
+    m.hold = true;
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  };
+  const finishEdit = () => {
+    const slot = editing;
+    const value = draft;
+    setEditing(null);
+    m.hold = false;
+    m.lastTouch = performance.now();
+    if (!slot || cancelled.current) return;
+    (slot === 'name' ? editable?.onName : editable?.onUsername)?.(value);
+  };
+
   const onPointerDown = (e) => {
+    // Typing and text selection in an open editor must never become a drag.
+    if (e.target.tagName === 'INPUT') return;
     m.dragging = true;
     m.vx = 0;
     m.px = e.clientX;
     m.py = e.clientY;
+    m.downX = e.clientX;
+    m.downY = e.clientY;
+    m.downT = performance.now();
+    m.downTarget = e.target;
+    m.moved = 0;
     m.lastTouch = performance.now();
     stageRef.current?.setPointerCapture(e.pointerId);
   };
@@ -101,6 +144,7 @@ export default function StaffBadge({ name, username, role, center, avatar, side 
     m.tRy += dx * 0.45;
     m.vx = dx;
     m.tRx = Math.max(-42, Math.min(42, m.tRx - dy * 0.3));
+    m.moved = Math.max(m.moved, Math.hypot(e.clientX - m.downX, e.clientY - m.downY));
     m.lastTouch = performance.now();
   };
   const onPointerUp = () => {
@@ -108,6 +152,41 @@ export default function StaffBadge({ name, username, role, center, avatar, side 
     m.dragging = false;
     if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) m.tRy += m.vx * 9;
     m.lastTouch = performance.now();
+    if (!editable) return;
+    const isTap = m.moved < 8 && performance.now() - m.downT < 600;
+    if (!isTap) return;
+    const slot = m.downTarget?.closest?.('[data-badge-tap]')?.dataset?.badgeTap;
+    if (slot === 'avatar') editable.onAvatar?.();
+    else if (slot === 'name' || slot === 'user') startEdit(slot);
+    else if (!editing) {
+      m.side = m.side === 'back' ? 'front' : 'back';
+      m.tRy += m.side === 'back' ? 180 : -180;
+    }
+  };
+
+  const slotProps = (slot, label) => (editable ? {
+    'data-badge-tap': slot,
+    role: 'button',
+    tabIndex: 0,
+    'aria-label': label,
+    style: { cursor: 'pointer' },
+    onKeyDown: (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      if (slot === 'avatar') editable.onAvatar?.();
+      else startEdit(slot);
+    },
+  } : {});
+
+  const editorProps = {
+    ref: inputRef,
+    value: draft,
+    onChange: (e) => setDraft(e.target.value),
+    onBlur: finishEdit,
+    onKeyDown: (e) => {
+      if (e.key === 'Enter') e.currentTarget.blur();
+      if (e.key === 'Escape') { cancelled.current = true; e.currentTarget.blur(); }
+    },
   };
 
   const shownName = (name || '').trim();
@@ -164,19 +243,39 @@ export default function StaffBadge({ name, username, role, center, avatar, side 
               <div className="grid place-items-center" style={{ marginTop: 34 }}>
                 <div
                   className="grid place-items-center overflow-hidden"
-                  style={{ width: 112, height: 112, borderRadius: '50%', background: '#e6f0fc', border: '4px solid #006add' }}
+                  {...slotProps('avatar', 'Change photo')}
+                  style={{ width: 112, height: 112, borderRadius: '50%', background: '#e6f0fc', border: '4px solid #006add', ...(editable ? { cursor: 'pointer' } : {}) }}
                 >
                   {avatar
-                    ? <img src={avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <span className="font-ninja font-black" style={{ fontSize: 40, color: shownName ? '#1a2e4a' : '#50669055' }}>{initialsOf(shownName) || '?'}</span>}
+                    ? <img src={avatar} alt="" draggable={false} data-badge-tap={editable ? 'avatar' : undefined} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <span className="font-ninja font-black" data-badge-tap={editable ? 'avatar' : undefined} style={{ fontSize: 40, color: shownName ? '#1a2e4a' : '#50669055' }}>{initialsOf(shownName) || '?'}</span>}
                 </div>
               </div>
-              <div
-                className="font-ninja font-black text-center"
-                style={{ marginTop: 22, fontSize: 27, letterSpacing: '-0.01em', padding: '0 20px', minHeight: 38, overflowWrap: 'anywhere', color: shownName ? '#1a2e4a' : '#50669055' }}
-              >
-                {shownName || 'Your name'}
-              </div>
+              {editing === 'name' ? (
+                <input
+                  {...editorProps}
+                  data-badge-tap="name"
+                  aria-label="Display name"
+                  maxLength={80}
+                  autoComplete="name"
+                  placeholder="Your name"
+                  className="font-ninja font-black text-center"
+                  style={{
+                    marginTop: 22, fontSize: 27, letterSpacing: '-0.01em', minHeight: 38,
+                    width: 'calc(100% - 40px)', alignSelf: 'center', background: 'transparent',
+                    border: 'none', outline: 'none', borderBottom: '2px dashed #b9c6dd',
+                    color: '#1a2e4a', userSelect: 'text', touchAction: 'auto',
+                  }}
+                />
+              ) : (
+                <div
+                  className="font-ninja font-black text-center"
+                  {...slotProps('name', 'Edit display name')}
+                  style={{ marginTop: 22, fontSize: 27, letterSpacing: '-0.01em', padding: '0 20px', minHeight: 38, overflowWrap: 'anywhere', color: shownName ? '#1a2e4a' : '#50669055', ...(editable ? { cursor: 'text' } : {}) }}
+                >
+                  {shownName || 'Your name'}
+                </div>
+              )}
               <div className="font-ninja font-bold text-center" style={{ color: '#506690', fontSize: 14, marginTop: 2, padding: '0 16px' }}>
                 {[role, center].filter(Boolean).join(' · ')}
               </div>
@@ -202,9 +301,31 @@ export default function StaffBadge({ name, username, role, center, avatar, side 
                 <Logo variant="wordmark" accent="#38a1ff" className="h-6 self-start" />
                 <div className="font-ninja font-extrabold uppercase" style={{ fontSize: 12, letterSpacing: '0.22em', color: '#8a9bb8', marginTop: 18 }}>
                   Staff ID
-                  <b className="block font-ninja" style={{ fontSize: 24, letterSpacing: '0.04em', overflowWrap: 'anywhere', color: shownUser ? '#ffffff' : '#8a9bb855', textTransform: 'none' }}>
-                    {shownUser || 'your.username'}
-                  </b>
+                  {editing === 'user' ? (
+                    <input
+                      {...editorProps}
+                      data-badge-tap="user"
+                      aria-label="Username"
+                      autoComplete="username"
+                      spellCheck={false}
+                      autoCapitalize="none"
+                      placeholder="your.username"
+                      className="block font-ninja font-extrabold"
+                      style={{
+                        fontSize: 24, letterSpacing: '0.04em', width: '100%', background: 'transparent',
+                        border: 'none', outline: 'none', borderBottom: '2px dashed #3b5375',
+                        color: '#ffffff', textTransform: 'none', userSelect: 'text', touchAction: 'auto',
+                      }}
+                    />
+                  ) : (
+                    <b
+                      className="block font-ninja"
+                      {...slotProps('user', 'Edit username')}
+                      style={{ fontSize: 24, letterSpacing: '0.04em', overflowWrap: 'anywhere', color: shownUser ? '#ffffff' : '#8a9bb855', textTransform: 'none', ...(editable ? { cursor: 'text' } : {}) }}
+                    >
+                      {shownUser || 'your.username'}
+                    </b>
+                  )}
                 </div>
                 {details.length > 0 && (
                   <div className="flex gap-6" style={{ marginTop: 18 }}>
