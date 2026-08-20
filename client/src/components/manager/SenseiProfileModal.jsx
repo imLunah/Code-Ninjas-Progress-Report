@@ -44,8 +44,8 @@ const DESK_MAX_SCALE = 1.75;
 // phone spend its width on the objects rather than the stage's empty margin;
 // the stage itself may hang past the wrap, so the scroller clips x.
 const DESK_FIT_W = 360;
-// Air kept under the measured chrome: the overlay's padding plus a breath.
-const DESK_BREATH_H = 40;
+// The overlay's padding plus a breath, kept clear above and below the panel.
+const DESK_BREATH_H = 48;
 
 const spring = { type: 'spring', damping: 26, stiffness: 260 };
 
@@ -118,11 +118,14 @@ export default function SenseiProfileModal({
       // padding) is scale-independent, so it can be measured instead of
       // guessed: panel content height minus the desk's own box.
       const scroller = el.closest('[data-desk-scroller]');
-      const chrome = (scroller ? scroller.scrollHeight - el.offsetHeight : 150) + DESK_BREATH_H;
+      const chrome = scroller ? scroller.scrollHeight - el.offsetHeight : 150;
+      // The panel itself is capped at 90vh, so the desk must fit the smaller
+      // of that cap and the viewport minus the overlay's padding.
+      const room = Math.min(window.innerHeight - DESK_BREATH_H, window.innerHeight * 0.9) - chrome - 8;
       setDeskScale(Math.min(
         DESK_MAX_SCALE,
         el.clientWidth / DESK_FIT_W,
-        (window.innerHeight - chrome) / DESK_H,
+        room / DESK_H,
       ));
     };
     fit();
