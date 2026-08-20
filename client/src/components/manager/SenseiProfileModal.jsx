@@ -38,9 +38,14 @@ const PAPER_H = 416;
 const DESK_W = 400;
 const DESK_H = 480;
 const DESK_MAX_SCALE = 1.75;
-// Everything around the desk inside the 90vh panel: overlay padding, the
-// pt-8/pb-4 shell, the hint line and the action row.
-const DESK_CHROME_H = 210;
+// The widest the painted desk actually gets, measured across both views:
+// card in front the ink spans about -117..+175 of the stage's centre, paper
+// in front about -172..+140. Sizing against this instead of the stage lets a
+// phone spend its width on the objects rather than the stage's empty margin;
+// the stage itself may hang past the wrap, so the scroller clips x.
+const DESK_FIT_W = 360;
+// Air kept under the measured chrome: the overlay's padding plus a breath.
+const DESK_BREATH_H = 40;
 
 const spring = { type: 'spring', damping: 26, stiffness: 260 };
 
@@ -108,11 +113,18 @@ export default function SenseiProfileModal({
     if (!isOpen) return;
     const el = deskWrapRef.current;
     if (!el) return;
-    const fit = () => setDeskScale(Math.min(
-      DESK_MAX_SCALE,
-      el.clientWidth / DESK_W,
-      (window.innerHeight - DESK_CHROME_H) / DESK_H,
-    ));
+    const fit = () => {
+      // Everything in the panel that is not the desk (hint, buttons, shell
+      // padding) is scale-independent, so it can be measured instead of
+      // guessed: panel content height minus the desk's own box.
+      const scroller = el.closest('[data-desk-scroller]');
+      const chrome = (scroller ? scroller.scrollHeight - el.offsetHeight : 150) + DESK_BREATH_H;
+      setDeskScale(Math.min(
+        DESK_MAX_SCALE,
+        el.clientWidth / DESK_FIT_W,
+        (window.innerHeight - chrome) / DESK_H,
+      ));
+    };
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(el);
@@ -163,7 +175,7 @@ export default function SenseiProfileModal({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/50 backdrop-blur-sm"
         onClick={handleClose}
       >
         <motion.div
@@ -176,9 +188,9 @@ export default function SenseiProfileModal({
           style={{ maxHeight: '90vh' }}
           onClick={(e) => e.stopPropagation()}
         >
-         <div className="overflow-y-auto flex-1 min-h-0">
+         <div data-desk-scroller className="overflow-y-auto overflow-x-hidden flex-1 min-h-0">
           <div
-            className="relative px-4 pt-8 pb-4"
+            className="relative px-1 sm:px-4 pt-8 pb-4"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
