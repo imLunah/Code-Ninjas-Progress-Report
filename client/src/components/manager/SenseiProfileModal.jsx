@@ -50,7 +50,7 @@ function PaperSheet({ logs }) {
       {logs.length === 0 ? (
         <p className="text-center" style={{ fontSize: 13, color: '#506690', marginTop: 48 }}>No progress logs yet.</p>
       ) : (
-        <div className="flex-1 min-h-0 overflow-y-auto" style={{ marginTop: 4 }}>
+        <div className="flex-1 min-h-0 overflow-y-auto" style={{ marginTop: 4, scrollbarWidth: 'thin', scrollbarColor: 'rgba(26,46,74,0.25) transparent' }}>
           {logs.map((log, i) => (
             <div key={log.id} style={{ padding: '10px 0', borderBottom: i < logs.length - 1 ? '1px solid rgba(26,46,74,0.08)' : 'none' }}>
               <div className="flex items-baseline justify-between gap-2">
@@ -132,7 +132,7 @@ export default function SenseiProfileModal({
           animate={{ opacity: 1, y: 0 }}
           exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-          className="w-full sm:max-w-md bg-ninja-bg rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+          className="w-full sm:max-w-md flex flex-col"
           style={{ maxHeight: '90vh' }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -148,7 +148,7 @@ export default function SenseiProfileModal({
               className="absolute top-0 left-0 right-0 h-8 sm:hidden flex items-center justify-center z-10"
               aria-label="Close"
             >
-              <span className="block w-10 h-1 rounded-full bg-ninja-navy/30" />
+              <span className="block w-10 h-1 rounded-full bg-white/40" />
             </button>
 
             {/* The desk. Touch stops here so handling either object can never
@@ -220,7 +220,7 @@ export default function SenseiProfileModal({
               </motion.div>
             </div>
 
-            <p className="text-ninja-muted font-ninja text-xs text-center mt-1">
+            <p className="font-ninja text-xs text-center mt-1" style={{ color: 'rgba(255,255,255,0.65)' }}>
               {cardInFront
                 ? 'Drag the card to turn it over. The paper behind it holds their logs.'
                 : 'Tap the card to bring it back.'}
@@ -228,11 +228,11 @@ export default function SenseiProfileModal({
 
             {showActions && (
               <div className="flex flex-wrap justify-center gap-2 mt-4">
-                <button className={`${heroBtn} bg-ninja-navy/10 hover:bg-ninja-navy/20 text-ninja-navy`} onClick={() => { handleClose(); onResetLogin(); }}>
+                <button className={`${heroBtn} bg-white/10 hover:bg-white/20 text-white`} onClick={() => { handleClose(); onResetLogin(); }}>
                   Reset Login
                 </button>
                 {onManageCenters && centers.length > 1 && (
-                  <button className={`${heroBtn} bg-ninja-navy/10 hover:bg-ninja-navy/20 text-ninja-navy`} onClick={() => { handleClose(); onManageCenters(); }}>
+                  <button className={`${heroBtn} bg-white/10 hover:bg-white/20 text-white`} onClick={() => { handleClose(); onManageCenters(); }}>
                     Manage Centers
                   </button>
                 )}
@@ -240,10 +240,10 @@ export default function SenseiProfileModal({
                   confirmingRemove ? (
                     <>
                       <button className={`${heroBtn} bg-ninja-red hover:opacity-90 text-white`} onClick={() => { onRemove(); handleClose(); }}>Confirm Remove</button>
-                      <button className={`${heroBtn} bg-ninja-navy/10 hover:bg-ninja-navy/20 text-ninja-navy`} onClick={() => setConfirmingRemove(false)}>Cancel</button>
+                      <button className={`${heroBtn} bg-white/10 hover:bg-white/20 text-white`} onClick={() => setConfirmingRemove(false)}>Cancel</button>
                     </>
                   ) : (
-                    <button className={`${heroBtn} bg-ninja-red/15 hover:bg-ninja-red/25 text-ninja-red dark:text-red-300`} onClick={() => setConfirmingRemove(true)}>Remove</button>
+                    <button className={`${heroBtn} bg-ninja-red/20 hover:bg-ninja-red/30 text-red-300`} onClick={() => setConfirmingRemove(true)}>Remove</button>
                   )
                 )}
               </div>
