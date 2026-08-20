@@ -1,5 +1,6 @@
 import { useState, useRef, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ModalPortal from '../ui/ModalPortal';
 import StaffBadge from '../shared/StaffBadge';
 import { formatDate } from '../../utils/dateUtils';
 
@@ -135,7 +136,11 @@ export default function SenseiProfileModal({
 
   const cardInFront = view === 'card';
 
+  // Portalled to <body> like every other dialog: rendered in place it sits
+  // inside the app shell's stacking context, and floating chrome portalled
+  // above the shell (the admin pill) paints over the scrim regardless of z.
   return (
+    <ModalPortal>
     <AnimatePresence>
       {isOpen && sensei && (
       <motion.div
@@ -282,5 +287,6 @@ export default function SenseiProfileModal({
       </motion.div>
       )}
     </AnimatePresence>
+    </ModalPortal>
   );
 }
