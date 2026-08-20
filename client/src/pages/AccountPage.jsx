@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ONBOARDING_ENABLED } from '../lib/features';
 import { PRESET_AVATARS } from '../lib/avatars';
+import StaffBadge from '../components/shared/StaffBadge';
 import { CARD } from '../lib/surfaces';
 import useIsDesktop from '../lib/useIsDesktop';
 import { MoonIcon, SunIcon } from '../components/ui/icons';
@@ -46,6 +47,10 @@ export default function AccountPage() {
   const [avatarError, setAvatarError] = useState('');
 
   const [section, setSection] = useState('profile');
+
+  // The badge on Edit profile turns over to its back while the username field
+  // has focus, because that is the face the username is printed on.
+  const [unameFocus, setUnameFocus] = useState(false);
 
   // The MyStudio connection for this center. Fetched for any director, not
   // only one who has the Experimental toggle on: the connection belongs to the
@@ -163,6 +168,21 @@ export default function AccountPage() {
   /* ------------------------------------------------------------- pieces -- */
   // Each block is built once and placed by whichever layout is active.
 
+  // The staff badge, printing the DRAFT: the name and username as they are
+  // typed, ahead of Save, and the avatar as it is picked (avatar picks save
+  // immediately). Editing the profile is editing the card.
+  const profileBadge = (scale) => (
+    <StaffBadge
+      name={displayName}
+      username={username}
+      avatar={user?.profilePicUrl}
+      role={roleLabel}
+      center={user?.activeLocation?.name}
+      side={unameFocus ? 'back' : 'front'}
+      scale={scale}
+    />
+  );
+
   const identity = (
     <div className="relative bg-[#dbe4f2] dark:bg-ninja-hero rounded-2xl overflow-hidden px-6 pt-7 pb-6 shadow-lg">
       <img src="/CodeNinjasIcon.svg" alt="" className="absolute right-4 top-4 w-20 opacity-[0.08] pointer-events-none" />
@@ -187,7 +207,6 @@ export default function AccountPage() {
           <p className="text-ninja-muted/70 font-ninja text-xs">@{user?.username}</p>
         </div>
       </div>
-      {avatarError && <p className="text-ninja-red dark:text-red-300 font-ninja text-xs mt-2 relative z-10">{avatarError}</p>}
     </div>
   );
 
@@ -228,6 +247,7 @@ export default function AccountPage() {
           );
         })}
       </div>
+      {avatarError && <p className="text-ninja-red font-ninja text-xs mt-3">{avatarError}</p>}
     </div>
   );
 
@@ -552,6 +572,8 @@ export default function AccountPage() {
           type="text"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
+          onFocus={() => setUnameFocus(true)}
+          onBlur={() => setUnameFocus(false)}
           autoComplete="username"
           spellCheck={false}
           autoCapitalize="none"
@@ -728,15 +750,17 @@ export default function AccountPage() {
               </h2>
 
               {section === 'profile' && (
-                <>
-                  {identity}
-                  {avatarPicker}
-                  <form onSubmit={handleSave} className={`${CARD} p-6 space-y-5`}>
-                    {nameFields}
-                    {messages}
-                    {saveButton}
-                  </form>
-                </>
+                <div className="flex flex-col xl:flex-row gap-8 xl:items-start">
+                  <div className="flex justify-center flex-shrink-0">{profileBadge(0.72)}</div>
+                  <div className="flex-1 min-w-0 space-y-6">
+                    {avatarPicker}
+                    <form onSubmit={handleSave} className={`${CARD} p-6 space-y-5`}>
+                      {nameFields}
+                      {messages}
+                      {saveButton}
+                    </form>
+                  </div>
+                </div>
               )}
 
               {section === 'password' && (
@@ -762,7 +786,7 @@ export default function AccountPage() {
   return (
     <Layout>
       <div className="mx-auto w-full max-w-md space-y-6">
-        {identity}
+        <div className="flex justify-center">{profileBadge(0.5)}</div>
         {avatarPicker}
         {appearanceCard}
         {experimentalCard}
