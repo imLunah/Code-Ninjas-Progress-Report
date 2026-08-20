@@ -39,7 +39,11 @@ function initialsOf(name = '') {
   return parts.slice(0, 2).map((p) => p[0].toUpperCase()).join('');
 }
 
-export default function StaffBadge({ name, username, role, center, avatar, side = 'front', scale = 1, className = '' }) {
+// `details` is optional back-of-card print: [{ label, value }] rows under the
+// Staff ID, for a badge that describes someone else (joined date, log count on
+// the staff profile). Onboarding and Edit profile pass nothing and the back
+// stays as it was.
+export default function StaffBadge({ name, username, role, center, avatar, side = 'front', scale = 1, className = '', details = [] }) {
   const stageRef = useRef(null);
   const cardRef = useRef(null);
   // All motion state lives in one ref so the component never re-renders for it.
@@ -205,6 +209,16 @@ export default function StaffBadge({ name, username, role, center, avatar, side 
                     {shownUser || 'your.username'}
                   </b>
                 </div>
+                {details.length > 0 && (
+                  <div className="flex gap-6" style={{ marginTop: 18 }}>
+                    {details.map(({ label, value }) => (
+                      <div key={label} className="font-ninja font-extrabold uppercase" style={{ fontSize: 10, letterSpacing: '0.18em', color: '#8a9bb8' }}>
+                        {label}
+                        <b className="block font-ninja" style={{ fontSize: 17, letterSpacing: '0.02em', color: '#ffffff', textTransform: 'none' }}>{value}</b>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="font-ninja" style={{ marginTop: 'auto', fontSize: 12, color: '#8a9bb8', lineHeight: 1.7 }}>
                   Property of {center ? `Code Ninjas ${center}` : 'Code Ninjas'}.<br />
                   If found, return it to the dojo.<br />

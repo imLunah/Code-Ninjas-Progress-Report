@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BeltBadge from '../ui/BeltBadge';
+import StaffBadge from '../shared/StaffBadge';
 import { formatDate } from '../../utils/dateUtils';
 
 // Strip markdown syntax for compact one/two-line previews where rendered
@@ -12,26 +13,6 @@ function stripMarkdown(text = '') {
     .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
     .replace(/\n+/g, ' ')
     .trim();
-}
-
-function Avatar({ url, name }) {
-  const [imgError, setImgError] = useState(false);
-  const initials = name?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || '?';
-  if (url && !imgError) {
-    return (
-      <img
-        src={url}
-        alt={name}
-        onError={() => setImgError(true)}
-        className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg"
-      />
-    );
-  }
-  return (
-    <div className="w-20 h-20 rounded-full bg-ninja-blue border-4 border-white shadow-lg flex items-center justify-center">
-      <span className="text-white font-ninja font-bold text-2xl">{initials}</span>
-    </div>
-  );
 }
 
 function StatCard({ value, label, delay = 0 }) {
@@ -104,9 +85,10 @@ export default function SenseiProfileModal({
           style={{ maxHeight: '90vh' }}
           onClick={(e) => e.stopPropagation()}
         >
+         <div className="overflow-y-auto flex-1 min-h-0">
           {/* Hero header — touch here to swipe-dismiss */}
           <div
-            className="relative bg-[#dbe4f2] dark:bg-ninja-hero px-6 pt-8 pb-6 flex-shrink-0"
+            className="relative bg-[#dbe4f2] dark:bg-ninja-hero px-6 pt-8 pb-6"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
@@ -125,29 +107,33 @@ export default function SenseiProfileModal({
               <span className="block w-10 h-1 rounded-full bg-ninja-navy/30" />
             </button>
 
-            <div className="flex items-end gap-4 mb-5">
-              <motion.div
-                initial={{ scale: 0.7, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', damping: 20, stiffness: 260, delay: 0.05 }}
-              >
-                <Avatar url={sensei.profile_pic_url} name={sensei.display_name} />
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1, duration: 0.3 }}
-                className="pb-1"
-              >
-                <p className="text-ninja-navy font-ninja font-bold text-xl leading-tight">{sensei.display_name}</p>
-                <p className="text-ninja-muted font-ninja text-sm mt-0.5">@{sensei.username}</p>
-                {/* Plain line, not an uppercase pill. The role is a fact about
-                    this person, not a status that needs a coloured badge. */}
-                <p className="text-ninja-muted font-ninja text-sm mt-1">
-                  {sensei.role === 'manager' ? 'Center Director' : 'Sensei'}
-                </p>
-              </motion.div>
-            </div>
+            {/* The staff badge, standing in for the flat avatar-and-name
+                block. The front is who they are; drag it over and the back
+                prints the Staff ID with when they joined and how much they
+                have logged. Touch events stop here so spinning the card can
+                never read as the hero's swipe-down-to-dismiss. */}
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 260, delay: 0.05 }}
+              className="flex flex-col items-center mb-4"
+              onTouchStart={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
+            >
+              <StaffBadge
+                name={sensei.display_name}
+                username={sensei.username}
+                avatar={sensei.profile_pic_url}
+                role={sensei.role === 'manager' ? 'Center Director' : 'Sensei'}
+                center={centerNames[0]}
+                scale={0.52}
+                details={[
+                  { label: 'Joined', value: joinYear },
+                  { label: 'Logs', value: logs.length },
+                ]}
+              />
+              <p className="text-ninja-muted font-ninja text-xs">Drag the card to turn it over.</p>
+            </motion.div>
 
             {showActions && (
               <div className="flex flex-wrap gap-2 mb-5">
@@ -178,8 +164,7 @@ export default function SenseiProfileModal({
             </div>
           </div>
 
-          {/* Scrollable body */}
-          <div className="overflow-y-auto flex-1 min-h-0">
+          <div>
             {centerNames.length > 0 && (
               <div className="px-5 pt-4">
                 <p className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest mb-2">
@@ -239,6 +224,7 @@ export default function SenseiProfileModal({
             </div>
 
           </div>
+         </div>
         </motion.div>
       </motion.div>
       )}
