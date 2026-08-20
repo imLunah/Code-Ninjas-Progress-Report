@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import StaffBadge from '../shared/StaffBadge';
 import { formatDate } from '../../utils/dateUtils';
@@ -26,6 +26,13 @@ function stripMarkdown(text = '') {
 
 const PAPER_W = 280;
 const PAPER_H = 416;
+
+// The desk's offsets — where the paper tucks, where the badge peeks — are
+// tuned against this stage. Narrower screens scale the WHOLE desk instead of
+// re-deriving every offset, so the composition is identical at every width
+// and nothing can fall off a phone's edge.
+const DESK_W = 400;
+const DESK_H = 480;
 
 const spring = { type: 'spring', damping: 26, stiffness: 260 };
 
@@ -83,6 +90,20 @@ export default function SenseiProfileModal({
   // 'card' or 'logs': which of the two objects is in front.
   const [view, setView] = useState('card');
   const touchStartY = useRef(null);
+
+  // Fit the fixed-size desk to whatever width the modal actually has.
+  const deskWrapRef = useRef(null);
+  const [deskScale, setDeskScale] = useState(1);
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    const el = deskWrapRef.current;
+    if (!el) return;
+    const fit = () => setDeskScale(Math.min(1, el.clientWidth / DESK_W));
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isOpen]);
 
   const isCD = sensei?.role === 'manager';
   const showActions = isManager && !isReadOnly;
@@ -152,13 +173,19 @@ export default function SenseiProfileModal({
             </button>
 
             {/* The desk. Touch stops here so handling either object can never
-                read as the swipe-down-to-dismiss. */}
+                read as the swipe-down-to-dismiss. The outer div is the fitted
+                footprint; the inner one is always 400x480 and scales to it. */}
             <div
+              ref={deskWrapRef}
               className="relative mx-auto"
-              style={{ height: 480, maxWidth: 400 }}
+              style={{ height: DESK_H * deskScale, maxWidth: DESK_W }}
               onTouchStart={(e) => e.stopPropagation()}
               onTouchEnd={(e) => e.stopPropagation()}
             >
+             <div
+              className="absolute left-1/2"
+              style={{ width: DESK_W, height: DESK_H, marginLeft: -DESK_W / 2, transform: `scale(${deskScale})`, transformOrigin: 'top center' }}
+             >
               {/* The paper, tucked behind the card until selected. */}
               <motion.div
                 className="absolute left-1/2 top-1/2"
@@ -218,6 +245,7 @@ export default function SenseiProfileModal({
                   />
                 )}
               </motion.div>
+             </div>
             </div>
 
             <p className="font-ninja text-xs text-center mt-1" style={{ color: 'rgba(255,255,255,0.65)' }}>
