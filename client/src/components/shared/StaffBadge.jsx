@@ -42,11 +42,11 @@ function initialsOf(name = '') {
 }
 
 // `details` is optional back-of-card print: [{ label, value }] rows under the
-// Staff ID, for a badge that describes someone else (joined date, log count on
+// username, for a badge that describes someone else (joined date, log count on
 // the staff profile). Onboarding passes nothing and the back stays as it was.
 //
 // `editable` makes the card its own form: { onName, onUsername, onAvatar }.
-// Tapping the printed name (or the Staff ID on the back) turns that line into
+// Tapping the printed name (or the username on the back) turns that line into
 // an input in the same ink; Enter or leaving the field hands the value to the
 // callback, Escape puts the print back. Tapping the photo calls onAvatar, and
 // a tap anywhere else turns the card over, since the username lives on the
@@ -60,6 +60,19 @@ export default function StaffBadge({ name, username, role, center, avatar, side 
   const [editing, setEditing] = useState(null); // 'name' | 'user' | null
   const [draft, setDraft] = useState('');
   const cancelled = useRef(false);
+  // When the photo changes, the old one slides off the ring to the left and
+  // the new one slides in from the right, like the next card in a stack.
+  const [slide, setSlide] = useState(null); // { key, prev }
+  const prevAvatarRef = useRef(avatar);
+  useEffect(() => {
+    if (prevAvatarRef.current === avatar) return;
+    const prev = prevAvatarRef.current;
+    prevAvatarRef.current = avatar;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    setSlide({ key: Date.now(), prev });
+    const t = setTimeout(() => setSlide(null), 380);
+    return () => clearTimeout(t);
+  }, [avatar]);
   // All motion state lives in one ref so the component never re-renders for it.
   const m = useRef({ rx: -6, ry: 24, tRx: -6, tRy: 24, vx: 0, dragging: false, px: 0, py: 0, lastTouch: 0, side: 'front', hold: false, downX: 0, downY: 0, downT: 0, downTarget: null, moved: 0 }).current;
 
@@ -227,7 +240,7 @@ export default function StaffBadge({ name, username, role, center, avatar, side 
               <div
                 aria-hidden="true"
                 style={{
-                  position: 'absolute', top: 0, right: 0, width: '65%', height: '42%',
+                  position: 'absolute', top: 0, right: 0, width: '65%', height: '42%', pointerEvents: 'none',
                   backgroundImage: 'radial-gradient(circle, #006add 2.1px, transparent 2.6px)',
                   backgroundSize: '15px 15px', opacity: 0.14,
                   WebkitMaskImage: 'radial-gradient(110% 110% at 100% 0%, black 30%, transparent 72%)',
@@ -242,13 +255,31 @@ export default function StaffBadge({ name, username, role, center, avatar, side 
               </div>
               <div className="grid place-items-center" style={{ marginTop: 34 }}>
                 <div
-                  className="grid place-items-center overflow-hidden"
-                  {...slotProps('avatar', 'Change photo')}
-                  style={{ width: 112, height: 112, borderRadius: '50%', background: '#e6f0fc', border: '4px solid #006add', ...(editable ? { cursor: 'pointer' } : {}) }}
+                  className="overflow-hidden"
+                  {...slotProps('avatar', 'Next avatar')}
+                  style={{ position: 'relative', width: 112, height: 112, borderRadius: '50%', background: '#e6f0fc', border: '4px solid #006add', ...(editable ? { cursor: 'pointer' } : {}) }}
                 >
-                  {avatar
-                    ? <img src={avatar} alt="" draggable={false} data-badge-tap={editable ? 'avatar' : undefined} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <span className="font-ninja font-black" data-badge-tap={editable ? 'avatar' : undefined} style={{ fontSize: 40, color: shownName ? '#1a2e4a' : '#50669055' }}>{initialsOf(shownName) || '?'}</span>}
+                  <div
+                    key={slide ? `in-${slide.key}` : 'still'}
+                    className="grid place-items-center"
+                    style={{ position: 'absolute', inset: 0, ...(slide ? { animation: 'badgeAvatarIn 340ms cubic-bezier(0.22, 1, 0.36, 1)' } : {}) }}
+                  >
+                    {avatar
+                      ? <img src={avatar} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <span className="font-ninja font-black" style={{ fontSize: 40, color: shownName ? '#1a2e4a' : '#50669055' }}>{initialsOf(shownName) || '?'}</span>}
+                  </div>
+                  {slide && (
+                    <div
+                      key={`out-${slide.key}`}
+                      aria-hidden="true"
+                      className="grid place-items-center"
+                      style={{ position: 'absolute', inset: 0, animation: 'badgeAvatarOut 340ms cubic-bezier(0.22, 1, 0.36, 1) forwards' }}
+                    >
+                      {slide.prev
+                        ? <img src={slide.prev} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <span className="font-ninja font-black" style={{ fontSize: 40, color: '#50669055' }}>{initialsOf(shownName) || '?'}</span>}
+                    </div>
+                  )}
                 </div>
               </div>
               {editing === 'name' ? (
@@ -288,7 +319,7 @@ export default function StaffBadge({ name, username, role, center, avatar, side 
               <div
                 aria-hidden="true"
                 style={{
-                  position: 'absolute', bottom: 0, left: 0, width: '65%', height: '42%',
+                  position: 'absolute', bottom: 0, left: 0, width: '65%', height: '42%', pointerEvents: 'none',
                   backgroundImage: 'radial-gradient(circle, #ffffff 2.1px, transparent 2.6px)',
                   backgroundSize: '15px 15px', opacity: 0.14, transform: 'scale(-1)',
                   WebkitMaskImage: 'radial-gradient(110% 110% at 100% 0%, black 30%, transparent 72%)',
@@ -300,7 +331,7 @@ export default function StaffBadge({ name, username, role, center, avatar, side 
               <div className="flex flex-col flex-1" style={{ padding: '26px 24px' }}>
                 <Logo variant="wordmark" accent="#38a1ff" className="h-6 self-start" />
                 <div className="font-ninja font-extrabold uppercase" style={{ fontSize: 12, letterSpacing: '0.22em', color: '#8a9bb8', marginTop: 18 }}>
-                  Staff ID
+                  Username
                   {editing === 'user' ? (
                     <input
                       {...editorProps}

@@ -12,7 +12,6 @@ import { CARD } from '../lib/surfaces';
 import useIsDesktop from '../lib/useIsDesktop';
 import { MoonIcon, SunIcon } from '../components/ui/icons';
 import MyStudioConnect, { MyStudioRow } from '../components/manager/MyStudioConnect';
-import Modal from '../components/ui/Modal';
 import {
   UserIcon,
   LockIcon,
@@ -43,16 +42,12 @@ export default function AccountPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const [savingAvatar, setSavingAvatar] = useState(false);
-  const [avatarError, setAvatarError] = useState('');
-
   const [section, setSection] = useState('profile');
 
   // Edit profile is the ID card itself: taps on the printed name, the photo
-  // and the Staff ID commit straight to the API, and this is where those
+  // and the username commit straight to the API, and this is where those
   // commits report back, under the card.
   const [cardMsg, setCardMsg] = useState(null); // { type: 'error' | 'success', text }
-  const [avatarOpen, setAvatarOpen] = useState(false);
 
   // The MyStudio connection for this center. Fetched for any director, not
   // only one who has the Experimental toggle on: the connection belongs to the
@@ -87,19 +82,38 @@ export default function AccountPage() {
     setSearchParams(searchParams, { replace: true });
   }, [isManager, searchParams, setSearchParams]);
 
-  const handlePresetSelect = async (src) => {
-    setSavingAvatar(true);
-    setAvatarError('');
+  // Tapping the photo steps to the next preset. The card updates on the tap
+  // and the save waits for the tapping to stop, so stepping through the whole
+  // ring is ten slides and one PATCH, not ten.
+  const avatarTimer = useRef(null);
+  const pendingAvatar = useRef(null);
+  const lastSavedAvatar = useRef(user?.profilePicUrl || null);
+  useEffect(() => () => {
+    if (avatarTimer.current) {
+      clearTimeout(avatarTimer.current);
+      if (pendingAvatar.current) api.patch('/users/me/avatar', { profile_pic_url: pendingAvatar.current }).catch(() => {});
+    }
+  }, []);
+  const saveAvatar = async (src) => {
+    avatarTimer.current = null;
+    pendingAvatar.current = null;
     try {
       await api.patch('/users/me/avatar', { profile_pic_url: src });
-      setUser((prev) => ({ ...prev, profilePicUrl: src }));
-      return true;
+      lastSavedAvatar.current = src;
+      setCardMsg({ type: 'success', text: 'Photo updated.' });
     } catch {
-      setAvatarError('Failed to set avatar. Try again.');
-      return false;
-    } finally {
-      setSavingAvatar(false);
+      setUser((prev) => ({ ...prev, profilePicUrl: lastSavedAvatar.current }));
+      setCardMsg({ type: 'error', text: 'Failed to save the photo. Try again.' });
     }
+  };
+  const cycleAvatar = () => {
+    const list = PRESET_AVATARS.map((a) => a.src);
+    const next = list[(list.indexOf(user?.profilePicUrl) + 1) % list.length];
+    setCardMsg(null);
+    setUser((prev) => ({ ...prev, profilePicUrl: next }));
+    pendingAvatar.current = next;
+    if (avatarTimer.current) clearTimeout(avatarTimer.current);
+    avatarTimer.current = setTimeout(() => saveAvatar(next), 900);
   };
 
   // Commits from the card. Each one is a single field, saved the moment the
@@ -201,16 +215,15 @@ export default function AccountPage() {
       role={roleLabel}
       center={user?.activeLocation?.name}
       scale={scale}
-      editable={{ onName: commitName, onUsername: commitUsername, onAvatar: () => setAvatarOpen(true) }}
+      editable={{ onName: commitName, onUsername: commitUsername, onAvatar: cycleAvatar }}
     />
   );
 
   const cardNote = (
     <div className="text-center space-y-1.5 max-w-sm mx-auto">
       <p className="text-ninja-muted font-ninja text-xs">
-        Tap the name or photo to change it. The username is printed on the back; tap the card to turn it over.
+        Tap the photo for the next avatar, and tap the name to retype it. The username is printed on the back; tap the card to turn it over.
       </p>
-      {savingAvatar && <p className="text-ninja-muted font-ninja text-sm">Saving photo…</p>}
       {cardMsg && (
         <p className={`font-ninja text-sm font-semibold ${cardMsg.type === 'error' ? 'text-ninja-red' : 'text-green-600'}`}>
           {cardMsg.text}
@@ -231,11 +244,6 @@ export default function AccountPage() {
               {initials}
             </div>
           )}
-          {savingAvatar && (
-            <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-ninja-navy font-ninja font-bold text-lg leading-tight truncate">{user?.displayName}</p>
@@ -254,36 +262,6 @@ export default function AccountPage() {
         <p className="text-amber-700 font-ninja text-xs mt-0.5">Your password was reset by an admin. Set a new password to continue.</p>
       </div>
     </div>
-  );
-
-  const avatarModal = (
-    <Modal isOpen={avatarOpen} onClose={() => setAvatarOpen(false)} title="Choose avatar" width="max-w-md">
-      <div className="grid grid-cols-5 gap-3 justify-items-center">
-        {PRESET_AVATARS.map(({ src, label }) => {
-          const isActive = user?.profilePicUrl === src;
-          return (
-            <button
-              key={src}
-              type="button"
-              onClick={async () => { if (await handlePresetSelect(src)) setAvatarOpen(false); }}
-              disabled={savingAvatar}
-              className={`relative w-14 h-14 rounded-full overflow-hidden border-2 transition-all hover:scale-105 disabled:opacity-50 ${
-                isActive ? 'border-ninja-blue ring-2 ring-ninja-blue/30' : 'border-ninja-border hover:border-ninja-blue'
-              }`}
-              title={label}
-            >
-              <img src={src} alt={label} className="w-full h-full object-cover bg-ninja-bg" />
-              {isActive && (
-                <div className="absolute inset-0 bg-ninja-blue/20 flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">✓</span>
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
-      {avatarError && <p className="text-ninja-red font-ninja text-xs mt-3">{avatarError}</p>}
-    </Modal>
   );
 
   // Mobile only: the desktop sidebar already carries the same toggle.
@@ -778,7 +756,6 @@ export default function AccountPage() {
             </motion.section>
           </div>
         </div>
-        {avatarModal}
         {myStudioPanel}
       </Layout>
     );
@@ -805,7 +782,6 @@ export default function AccountPage() {
 
         {signOut}
       </div>
-      {avatarModal}
       {myStudioPanel}
     </Layout>
   );
