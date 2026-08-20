@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import BeltBadge from '../ui/BeltBadge';
 import StaffBadge from '../shared/StaffBadge';
 import { formatDate } from '../../utils/dateUtils';
 
@@ -15,11 +14,74 @@ function stripMarkdown(text = '') {
     .trim();
 }
 
+// The staff profile is a desk: the ID card in front, and a sheet of paper
+// tucked behind it carrying their progress logs. Selecting the paper brings
+// it forward to read; selecting the card brings the card back. Nothing else
+// is in the modal, because everything the old sections said is printed on
+// one of the two objects.
+//
+// The paper is a physical object like the card: inline hex throughout, one
+// look in both themes, because .dark .bg-white would turn a Tailwind-painted
+// sheet slate.
+
+const PAPER_W = 280;
+const PAPER_H = 416;
+
+const spring = { type: 'spring', damping: 26, stiffness: 260 };
+
+function PaperSheet({ logs }) {
+  return (
+    <div
+      className="flex flex-col font-ninja"
+      style={{
+        width: PAPER_W,
+        height: PAPER_H,
+        background: '#fdfdf8',
+        color: '#1a2e4a',
+        borderRadius: 10,
+        boxShadow: '0 24px 48px -18px rgba(10, 20, 40, 0.4)',
+        padding: '18px 18px 14px',
+      }}
+    >
+      <div className="flex items-baseline justify-between" style={{ borderBottom: '1.5px solid rgba(26,46,74,0.15)', paddingBottom: 8 }}>
+        <span className="font-black" style={{ fontSize: 15 }}>Progress Logs</span>
+        <span className="font-bold" style={{ fontSize: 12, color: '#506690' }}>{logs.length}</span>
+      </div>
+      {logs.length === 0 ? (
+        <p className="text-center" style={{ fontSize: 13, color: '#506690', marginTop: 48 }}>No progress logs yet.</p>
+      ) : (
+        <div className="flex-1 min-h-0 overflow-y-auto" style={{ marginTop: 4 }}>
+          {logs.map((log, i) => (
+            <div key={log.id} style={{ padding: '10px 0', borderBottom: i < logs.length - 1 ? '1px solid rgba(26,46,74,0.08)' : 'none' }}>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="font-bold" style={{ fontSize: 13 }}>{log.student_name}</span>
+                <span className="flex-shrink-0" style={{ fontSize: 11, color: '#506690' }}>{formatDate(log.session_date)}</span>
+              </div>
+              {log.belt_level_at && (
+                <p className="font-bold" style={{ fontSize: 11, color: '#006add', marginTop: 1 }}>
+                  {log.belt_level_at}{log.belt_sublevel_at ? ` · Level ${log.belt_sublevel_at}` : ''}
+                </p>
+              )}
+              {log.notes && (
+                <p className="line-clamp-2" style={{ fontSize: 12, color: '#506690', lineHeight: 1.5, marginTop: 2 }}>
+                  {stripMarkdown(log.notes)}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SenseiProfileModal({
   isOpen, onClose, sensei, logs = [],
   isManager, isReadOnly, onEditLogin, onResetLogin, onRemove, onManageCenters, centers = [],
 }) {
   const [confirmingRemove, setConfirmingRemove] = useState(false);
+  // 'card' or 'logs': which of the two objects is in front.
+  const [view, setView] = useState('card');
   const touchStartY = useRef(null);
 
   const isCD = sensei?.role === 'manager';
@@ -32,6 +94,7 @@ export default function SenseiProfileModal({
 
   const handleClose = () => {
     setConfirmingRemove(false);
+    setView('card');
     onClose();
   };
 
@@ -48,6 +111,8 @@ export default function SenseiProfileModal({
   const joinYear = sensei?.created_at
     ? new Date(sensei.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
     : '—';
+
+  const cardInFront = view === 'card';
 
   return (
     <AnimatePresence>
@@ -72,53 +137,97 @@ export default function SenseiProfileModal({
           onClick={(e) => e.stopPropagation()}
         >
          <div className="overflow-y-auto flex-1 min-h-0">
-          {/* Header — touch here to swipe-dismiss. No band behind the card:
-              the badge is the hero, standing on the modal's own ground. */}
           <div
-            className="relative px-6 pt-8 pb-2"
+            className="relative px-4 pt-8 pb-4"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
-
             {/* Large-tap drag handle — also closes on tap */}
             <button
               onClick={handleClose}
-              className="absolute top-0 left-0 right-0 h-8 sm:hidden flex items-center justify-center"
+              className="absolute top-0 left-0 right-0 h-8 sm:hidden flex items-center justify-center z-10"
               aria-label="Close"
             >
               <span className="block w-10 h-1 rounded-full bg-ninja-navy/30" />
             </button>
 
-            {/* The staff badge, standing in for the flat avatar-and-name
-                block. The front is who they are; drag it over and the back
-                prints the Staff ID with when they joined and how much they
-                have logged. Touch events stop here so spinning the card can
-                never read as the hero's swipe-down-to-dismiss. */}
-            <motion.div
-              initial={{ scale: 0.85, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', damping: 20, stiffness: 260, delay: 0.05 }}
-              className="flex flex-col items-center mb-4"
+            {/* The desk. Touch stops here so handling either object can never
+                read as the swipe-down-to-dismiss. */}
+            <div
+              className="relative mx-auto"
+              style={{ height: 480, maxWidth: 400 }}
               onTouchStart={(e) => e.stopPropagation()}
               onTouchEnd={(e) => e.stopPropagation()}
             >
-              <StaffBadge
-                name={sensei.display_name}
-                username={sensei.username}
-                avatar={sensei.profile_pic_url}
-                role={sensei.role === 'manager' ? 'Center Director' : 'Sensei'}
-                center={centerNames[0]}
-                scale={0.52}
-                details={[
-                  { label: 'Joined', value: joinYear },
-                  { label: 'Logs', value: logs.length },
-                ]}
-              />
-              <p className="text-ninja-muted font-ninja text-xs">Drag the card to turn it over.</p>
-            </motion.div>
+              {/* The paper, tucked behind the card until selected. */}
+              <motion.div
+                className="absolute left-1/2 top-1/2"
+                initial={false}
+                animate={cardInFront
+                  ? { x: -PAPER_W / 2 + 62, y: -PAPER_H / 2 - 4, rotate: 8, scale: 0.9 }
+                  : { x: -PAPER_W / 2, y: -PAPER_H / 2 + 8, rotate: 0, scale: 1 }}
+                transition={spring}
+                style={{ zIndex: cardInFront ? 1 : 2 }}
+              >
+                <div style={{ pointerEvents: cardInFront ? 'none' : 'auto' }}>
+                  <PaperSheet logs={logs} />
+                </div>
+                {cardInFront && (
+                  <button
+                    type="button"
+                    onClick={() => setView('logs')}
+                    className="absolute inset-0 rounded-lg"
+                    aria-label={`Read the progress logs (${logs.length})`}
+                  />
+                )}
+              </motion.div>
+
+              {/* The badge. */}
+              {/* Centring is baked into margins (badge stage at scale 0.56 is
+                  216x319) so both animation states are plain numbers — framer
+                  cannot tween a percentage into a calc(), it snaps. */}
+              <motion.div
+                className="absolute left-1/2 top-1/2"
+                initial={false}
+                animate={cardInFront
+                  ? { x: 0, y: 0, rotate: 0, scale: 1 }
+                  : { x: -105, y: 10, rotate: -9, scale: 0.62 }}
+                transition={spring}
+                style={{ zIndex: cardInFront ? 2 : 1, marginLeft: -108, marginTop: -160 }}
+              >
+                <div style={{ pointerEvents: cardInFront ? 'auto' : 'none' }}>
+                  <StaffBadge
+                    name={sensei.display_name}
+                    username={sensei.username}
+                    avatar={sensei.profile_pic_url}
+                    role={sensei.role === 'manager' ? 'Center Director' : 'Sensei'}
+                    center={centerNames[0]}
+                    scale={0.56}
+                    details={[
+                      { label: 'Joined', value: joinYear },
+                      { label: 'Logs', value: logs.length },
+                    ]}
+                  />
+                </div>
+                {!cardInFront && (
+                  <button
+                    type="button"
+                    onClick={() => setView('card')}
+                    className="absolute inset-0"
+                    aria-label="Bring the card back"
+                  />
+                )}
+              </motion.div>
+            </div>
+
+            <p className="text-ninja-muted font-ninja text-xs text-center mt-1">
+              {cardInFront
+                ? 'Drag the card to turn it over. The paper behind it holds their logs.'
+                : 'Tap the card to bring it back.'}
+            </p>
 
             {showActions && (
-              <div className="flex flex-wrap justify-center gap-2 mb-3">
+              <div className="flex flex-wrap justify-center gap-2 mt-4">
                 <button className={`${heroBtn} bg-ninja-navy/10 hover:bg-ninja-navy/20 text-ninja-navy`} onClick={() => { handleClose(); onResetLogin(); }}>
                   Reset Login
                 </button>
@@ -139,68 +248,6 @@ export default function SenseiProfileModal({
                 )}
               </div>
             )}
-
-          </div>
-
-          <div>
-            {centerNames.length > 0 && (
-              <div className="px-5 pt-4">
-                <p className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest mb-2">
-                  Centers
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {centerNames.map((name) => (
-                    <span key={name} className="inline-block px-2.5 py-0.5 bg-ninja-bg border border-ninja-border rounded-full text-ninja-navy text-xs font-ninja font-semibold">
-                      {name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="px-5 py-4">
-              <p className="text-ninja-muted font-ninja font-semibold text-xs uppercase tracking-widest mb-3">
-                Recent Logs
-              </p>
-
-              {logs.length === 0 ? (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.25 }}
-                  className="text-center py-10"
-                >
-                  <img src="/CodeNinjasIcon.svg" alt="" className="w-10 h-10 opacity-10 mx-auto mb-3" />
-                  <p className="text-ninja-muted font-ninja text-sm">No progress logs yet.</p>
-                </motion.div>
-              ) : (
-                <div className="space-y-2.5">
-                  {logs.map((log, i) => (
-                    <motion.div
-                      key={log.id}
-                      initial={{ opacity: 0, x: -12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.15 + i * 0.05, duration: 0.25, ease: 'easeOut' }}
-                      className="bg-white border border-ninja-border rounded-xl p-3 shadow-sm"
-                    >
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="font-ninja font-bold text-ninja-navy text-sm">{log.student_name}</span>
-                        <span className="text-ninja-muted font-ninja text-xs flex-shrink-0">{formatDate(log.session_date)}</span>
-                      </div>
-                      {log.belt_level_at && (
-                        <div className="mb-1.5">
-                          <BeltBadge belt={log.belt_level_at} sublevel={log.belt_sublevel_at} size="xs" />
-                        </div>
-                      )}
-                      {log.notes && (
-                        <p className="text-ninja-muted font-ninja text-sm leading-relaxed line-clamp-2">{stripMarkdown(log.notes)}</p>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </div>
-
           </div>
          </div>
         </motion.div>
