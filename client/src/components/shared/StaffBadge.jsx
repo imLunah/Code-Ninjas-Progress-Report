@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import Logo from '../ui/Logo';
 
 // The onboarding staff badge: a physical card in 3D that prints what the form
 // collects as it is typed. Drag it to spin, throw it and it keeps momentum,
@@ -156,10 +157,8 @@ export default function StaffBadge({ name, username, role, center, avatar, side 
               />
               {/* lanyard slot */}
               <div style={{ width: 52, height: 9, borderRadius: 6, background: '#10192c', margin: '16px auto 0', flexShrink: 0, boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.5)' }} />
-              <div className="flex justify-between items-baseline" style={{ padding: '14px 24px 0' }}>
-                <span className="font-ninja font-black" style={{ fontSize: 17, letterSpacing: '0.04em' }}>
-                  <span style={{ color: '#006add' }}>DOJO</span><span style={{ color: '#1a2e4a' }}>LINK</span>
-                </span>
+              <div className="flex justify-between items-center" style={{ padding: '14px 24px 0' }}>
+                <Logo variant="wordmark" accent="#006add" className="h-4" />
                 <span className="font-ninja font-extrabold uppercase" style={{ fontSize: 11, letterSpacing: '0.14em', color: '#506690' }}>Staff</span>
               </div>
               <div className="grid place-items-center" style={{ marginTop: 34 }}>
@@ -200,9 +199,7 @@ export default function StaffBadge({ name, username, role, center, avatar, side 
               <div style={{ width: 52, height: 9, borderRadius: 6, background: '#10192c', margin: '16px auto 0', flexShrink: 0, boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.5)' }} />
               <div style={{ height: 44, background: '#10192c', marginTop: 22, flexShrink: 0 }} />
               <div className="flex flex-col flex-1" style={{ padding: '26px 24px' }}>
-                <span className="font-ninja font-black" style={{ fontSize: 26, letterSpacing: '0.04em' }}>
-                  <span style={{ color: '#38a1ff' }}>DOJO</span><span style={{ color: '#ffffff' }}>LINK</span>
-                </span>
+                <Logo variant="wordmark" accent="#38a1ff" className="h-6 self-start" />
                 <div className="font-ninja font-extrabold uppercase" style={{ fontSize: 12, letterSpacing: '0.22em', color: '#8a9bb8', marginTop: 18 }}>
                   Staff ID
                   <b className="block font-ninja" style={{ fontSize: 24, letterSpacing: '0.04em', overflowWrap: 'anywhere', color: shownUser ? '#ffffff' : '#8a9bb855', textTransform: 'none' }}>
