@@ -53,8 +53,14 @@ export default function LogProgressPage() {
     ? Object.fromEntries(countsParam.split(',').map(s => { const i = s.lastIndexOf(':'); return [s.slice(0, i), parseInt(s.slice(i + 1))]; }))
     : {};
 
-  // Sessions still waiting on a program, after the ones logged in this visit
-  const pendingCount = (p) => Math.max((programCounts[p] || 0) - (loggedHere[p] || 0), 0);
+  // Sessions still waiting on a program, after the ones logged in this visit.
+  // `counts` only ever carries the check-ins that were still open when the
+  // board built the link, so a class logged before we arrived is not in it.
+  const remainingFor = (p, logged) => Math.max((programCounts[p] || 0) - (logged[p] || 0), 0);
+  const pendingCount = (p) => remainingFor(p, loggedHere);
+  // Every check-in this ninja still owes today, across all their classes.
+  const outstanding = (logged) =>
+    Object.keys(programCounts).reduce((n, p) => n + remainingFor(p, logged), 0);
   // The board's date is the OLDEST pending check-in for that program, so it is
   // spent once we log it — after that the refetched student carries the next one.
   const sessionDateFor = (p) =>
@@ -80,15 +86,34 @@ export default function LogProgressPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // Stay on the ninja after logging — going back to the board means clicking
-  // through to the same kid again to log a second program or fix a mistake.
+  // A written session sends the sensei back to Today's Board, but only once the
+  // ninja has nothing left owing. A kid booked into two classes, or carrying a
+  // make-up session, gets logged in one sitting: bouncing out between them
+  // means finding the same card again to finish the job. The board is the
+  // receipt when we do leave, since the card drops out of the default unlogged
+  // view and the counter moves. Editing an existing session never navigates,
+  // because a correction is not a step forward.
   const handleLogged = () => {
     const program = selectedProgram;
-    setLoggedHere((prev) => ({ ...prev, [program]: (prev[program] || 0) + 1 }));
+    const logged = { ...loggedHere, [program]: (loggedHere[program] || 0) + 1 };
+    setLoggedHere(logged);
     // The extra session is written; the page goes back to editing the latest.
     setLogAnotherFor(null);
+
+    if (outstanding(logged) === 0) {
+      navigate(dashboardPath);
+      return;
+    }
+
     // Refresh belt / project / last lesson so the header reflects what was just logged
     api.get(`/students/${id}`).then(setStudent).catch(() => {});
+    // That class is finished, so the form moves itself to the one that is not.
+    // Leaving it parked on a class with nothing left to write is how the second
+    // check-in gets missed.
+    if (remainingFor(program, logged) === 0) {
+      const next = (todayPrograms || []).find((p) => p !== program && remainingFor(p, logged) > 0);
+      if (next) setSelectedProgram(next);
+    }
   };
 
   const handleLogUpdated = (logId, patch) =>
