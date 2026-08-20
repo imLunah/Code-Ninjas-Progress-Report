@@ -31,6 +31,13 @@ export default function MarkdownEditor({ value, onChange, placeholder, variant =
         codeBlock: false,
         blockquote: false,
         horizontalRule: false,
+        // StarterKit v3 bundles the Link extension, and its default is to OPEN
+        // a link on click — so typing "code.org" mid-note and then clicking
+        // near it to move the caret navigated away from the form. The editor
+        // is for writing: a link here is text that happens to be a link, so it
+        // still autolinks (the saved markdown carries it and the rendered log
+        // makes it clickable) but never navigates from inside the editor.
+        link: { openOnClick: false },
       }),
       Placeholder.configure({ placeholder: placeholder || 'Write a note…' }),
       Markdown.configure({ html: false, transformPastedText: true, transformCopiedText: true }),

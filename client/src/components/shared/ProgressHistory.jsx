@@ -17,13 +17,14 @@ import { ReactionPicker, ReactionChips, RowActions, StripButton, IN_STRIP_MENU, 
 import LazyMarkdownEditor from './LazyMarkdownEditor';
 import MarkdownView from './MarkdownView';
 import { authorName } from '../../lib/authors';
+import Linkify from './Linkify';
 
 function LogComment({ comment }) {
   return (
     <div className="flex gap-2 mt-2">
       <div className="flex-shrink-0 w-1 rounded-full bg-ninja-blue" />
       <div>
-        <p className="text-ninja-navy font-ninja text-sm">{comment.body}</p>
+        <p className="text-ninja-navy font-ninja text-sm"><Linkify>{comment.body}</Linkify></p>
         <p className="text-ninja-muted font-ninja text-xs mt-0.5">
           {authorName(comment.user_name)} · {new Date(comment.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </p>
