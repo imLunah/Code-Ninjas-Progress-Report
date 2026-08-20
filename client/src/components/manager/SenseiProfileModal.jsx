@@ -29,11 +29,18 @@ const PAPER_W = 280;
 const PAPER_H = 416;
 
 // The desk's offsets — where the paper tucks, where the badge peeks — are
-// tuned against this stage. Narrower screens scale the WHOLE desk instead of
-// re-deriving every offset, so the composition is identical at every width
-// and nothing can fall off a phone's edge.
+// tuned against this stage. Every other size scales the WHOLE desk instead of
+// re-deriving any offset, so the composition is identical at every width and
+// nothing can fall off a phone's edge. Desktops scale UP as far as the
+// viewport's height allows (the badge is CSS-scaled inside anyway, so this
+// costs nothing in sharpness); DESK_MAX_SCALE stops a big monitor turning
+// the card into a poster.
 const DESK_W = 400;
 const DESK_H = 480;
+const DESK_MAX_SCALE = 1.75;
+// Everything around the desk inside the 90vh panel: overlay padding, the
+// pt-8/pb-4 shell, the hint line and the action row.
+const DESK_CHROME_H = 210;
 
 const spring = { type: 'spring', damping: 26, stiffness: 260 };
 
@@ -92,18 +99,25 @@ export default function SenseiProfileModal({
   const [view, setView] = useState('card');
   const touchStartY = useRef(null);
 
-  // Fit the fixed-size desk to whatever width the modal actually has.
+  // Fit the fixed-size desk to the room the modal actually has: never wider
+  // than the panel, never taller than what the viewport leaves after the
+  // hint and the buttons.
   const deskWrapRef = useRef(null);
   const [deskScale, setDeskScale] = useState(1);
   useLayoutEffect(() => {
     if (!isOpen) return;
     const el = deskWrapRef.current;
     if (!el) return;
-    const fit = () => setDeskScale(Math.min(1, el.clientWidth / DESK_W));
+    const fit = () => setDeskScale(Math.min(
+      DESK_MAX_SCALE,
+      el.clientWidth / DESK_W,
+      (window.innerHeight - DESK_CHROME_H) / DESK_H,
+    ));
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(el);
-    return () => ro.disconnect();
+    window.addEventListener('resize', fit);
+    return () => { ro.disconnect(); window.removeEventListener('resize', fit); };
   }, [isOpen]);
 
   const isCD = sensei?.role === 'manager';
@@ -158,7 +172,7 @@ export default function SenseiProfileModal({
           animate={{ opacity: 1, y: 0 }}
           exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-          className="w-full sm:max-w-md flex flex-col"
+          className="w-full sm:max-w-md lg:max-w-3xl flex flex-col"
           style={{ maxHeight: '90vh' }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -183,7 +197,7 @@ export default function SenseiProfileModal({
             <div
               ref={deskWrapRef}
               className="relative mx-auto"
-              style={{ height: DESK_H * deskScale, maxWidth: DESK_W }}
+              style={{ height: DESK_H * deskScale, maxWidth: DESK_W * DESK_MAX_SCALE }}
               onTouchStart={(e) => e.stopPropagation()}
               onTouchEnd={(e) => e.stopPropagation()}
             >
