@@ -181,6 +181,12 @@ export default function SenseiProfileModal({
         className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/50 backdrop-blur-sm"
         onClick={handleClose}
       >
+        {/* The panel is transparent and nearly viewport-wide, so it must NOT
+            swallow clicks — visually its empty area IS the scrim. The two desk
+            objects and the action row stop propagation themselves; everything
+            else falls through to the overlay and closes. The card's drag can't
+            leak here: the badge stage takes pointer capture, so its click
+            fires inside the object and is stopped with it. */}
         <motion.div
           key="panel"
           initial={{ opacity: 0, y: 60 }}
@@ -189,7 +195,6 @@ export default function SenseiProfileModal({
           transition={{ type: 'spring', damping: 28, stiffness: 300 }}
           className="w-full sm:max-w-md lg:max-w-3xl flex flex-col"
           style={{ maxHeight: '90vh' }}
-          onClick={(e) => e.stopPropagation()}
         >
          <div data-desk-scroller className="overflow-y-auto overflow-x-hidden flex-1 min-h-0">
           <div
@@ -229,6 +234,7 @@ export default function SenseiProfileModal({
                   : { x: -PAPER_W / 2, y: -PAPER_H / 2 + 8, rotate: 0, scale: 1 }}
                 transition={spring}
                 style={{ zIndex: cardInFront ? 1 : 2 }}
+                onClick={(e) => e.stopPropagation()}
               >
                 <div style={{ pointerEvents: cardInFront ? 'none' : 'auto' }}>
                   <PaperSheet logs={logs} />
@@ -255,6 +261,7 @@ export default function SenseiProfileModal({
                   : { x: -108, y: 10, rotate: -9, scale: 0.55 }}
                 transition={spring}
                 style={{ zIndex: cardInFront ? 2 : 1, marginLeft: -117, marginTop: -173 }}
+                onClick={(e) => e.stopPropagation()}
               >
                 <div style={{ pointerEvents: cardInFront ? 'auto' : 'none' }}>
                   <StaffBadge
@@ -289,7 +296,7 @@ export default function SenseiProfileModal({
             </p>
 
             {showActions && (
-              <div className="flex flex-wrap justify-center gap-2 mt-4">
+              <div className="flex flex-wrap justify-center gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
                 <button className={`${heroBtn} bg-white/10 hover:bg-white/20 text-white`} onClick={() => { handleClose(); onResetLogin(); }}>
                   Reset Login
                 </button>
