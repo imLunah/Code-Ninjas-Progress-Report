@@ -64,6 +64,8 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     module_name,
     lesson_name,
     lesson_entries, // array of { sub_program, module_name, lesson_name } for multi-lesson sessions
+                    // A CREATE session may also carry belt_level_at / belt_sublevel_at per entry,
+                    // for a class where the ninja finished a level or a belt and carried on.
   } = req.body;
 
   if (!student_id || !program || !notes) {
@@ -107,6 +109,22 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
     // Bound belt_sublevel_at against the real max for the belt (blocks values like 1000).
     const subError = await validateSublevel(pool, belt_level_at ?? null, belt_sublevel_at ?? null);
     if (subError) return res.status(400).json({ error: subError });
+
+    // A per-entry belt and level is a second way into the same two columns, so
+    // it gets the same two checks. Validating only the top level values would
+    // hand back the out-of-range write session 27 closed, one nesting deeper.
+    // Each entry's level is bounded against that entry's OWN belt.
+    for (const entry of entries) {
+      if (entry.belt_level_at !== undefined && !isValidBelt(entry.belt_level_at)) {
+        return res.status(400).json({ error: 'Invalid belt level' });
+      }
+      const entrySubError = await validateSublevel(
+        pool,
+        entry.belt_level_at ?? belt_level_at ?? null,
+        entry.belt_sublevel_at ?? null
+      );
+      if (entrySubError) return res.status(400).json({ error: entrySubError });
+    }
 
     // Prefer today's pending assignment so logging clears the kid from the board.
     // A generic check-in (program IS NULL) is also eligible — the sensei picking a
@@ -155,8 +173,8 @@ router.post('/', requireSensei, requireOwnLocation, async (req, res) => {
         program,
         senseiId,
         date,
-        belt_level_at || null,
-        belt_sublevel_at || null,
+        entry.belt_level_at ?? belt_level_at ?? null,
+        entry.belt_sublevel_at ?? belt_sublevel_at ?? null,
         entry.project_at ?? project_at ?? null,
         entry.status ?? status_at ?? null,
         notes,
