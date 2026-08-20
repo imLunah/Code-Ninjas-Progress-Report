@@ -156,6 +156,18 @@ export default function LogProgressPage() {
     ? (student.programs || []).filter((p) => todayPrograms.includes(p.program))
     : (student.programs || []);
 
+  // The question above these is which class you are logging, so a class that is
+  // already written is not one of the answers. When nothing is left to log the
+  // visit is a correction instead, and then the logged classes are exactly the
+  // ones that have to be reachable, so they come back.
+  //
+  // Written once is not the same as finished: a ninja catching up on two CREATE
+  // sessions has one logged and one still owed, and that class has to stay.
+  const isFullyLogged = (p) => donePrograms.has(p) && pendingCount(p) === 0;
+  const pendingPrograms = availablePrograms.filter((p) => !isFullyLogged(p.program));
+  const selectablePrograms = pendingPrograms.length > 0 ? pendingPrograms : availablePrograms;
+  const loggedCount = availablePrograms.filter((p) => isFullyLogged(p.program)).length;
+
   const enrollment = availablePrograms.find((p) => p.program === selectedProgram);
 
   // The sessions already written for this ninja, newest first, narrowed to the
@@ -238,8 +250,8 @@ export default function LogProgressPage() {
                     Which program are you logging?
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {availablePrograms.map((p) => {
-                      const isDone = donePrograms.has(p.program);
+                    {selectablePrograms.map((p) => {
+                      const isDone = isFullyLogged(p.program);
                       const isSelected = selectedProgram === p.program;
                       return (
                         <button
@@ -263,9 +275,11 @@ export default function LogProgressPage() {
                       );
                     })}
                   </div>
-                  {donePrograms.size > 0 && donePrograms.size < availablePrograms.length && (
+                  {/* With the logged classes off the list, this line is the
+                      only thing that says they happened. */}
+                  {loggedCount > 0 && loggedCount < availablePrograms.length && (
                     <p className="text-ninja-muted font-ninja text-xs mt-2">
-                      {donePrograms.size}/{availablePrograms.length} programs already logged today.
+                      {loggedCount}/{availablePrograms.length} programs already logged today.
                     </p>
                   )}
                 </div>
