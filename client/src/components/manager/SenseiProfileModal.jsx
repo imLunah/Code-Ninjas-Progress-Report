@@ -15,20 +15,6 @@ function stripMarkdown(text = '') {
     .trim();
 }
 
-function StatCard({ value, label, delay = 0 }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.3, ease: 'easeOut' }}
-      className="flex-1 bg-ninja-navy/10 backdrop-blur-sm rounded-xl p-3 text-center"
-    >
-      <p className="text-ninja-navy font-ninja font-bold text-2xl leading-none">{value}</p>
-      <p className="text-ninja-muted font-ninja text-xs mt-1">{label}</p>
-    </motion.div>
-  );
-}
-
 export default function SenseiProfileModal({
   isOpen, onClose, sensei, logs = [],
   isManager, isReadOnly, onEditLogin, onResetLogin, onRemove, onManageCenters, centers = [],
@@ -86,17 +72,13 @@ export default function SenseiProfileModal({
           onClick={(e) => e.stopPropagation()}
         >
          <div className="overflow-y-auto flex-1 min-h-0">
-          {/* Hero header — touch here to swipe-dismiss */}
+          {/* Header — touch here to swipe-dismiss. No band behind the card:
+              the badge is the hero, standing on the modal's own ground. */}
           <div
-            className="relative bg-[#dbe4f2] dark:bg-ninja-hero px-6 pt-8 pb-6"
+            className="relative px-6 pt-8 pb-2"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
-            <img
-              src="/CodeNinjasIcon.svg"
-              alt=""
-              className="absolute right-4 top-4 w-16 h-16 opacity-10 pointer-events-none select-none"
-            />
 
             {/* Large-tap drag handle — also closes on tap */}
             <button
@@ -136,7 +118,7 @@ export default function SenseiProfileModal({
             </motion.div>
 
             {showActions && (
-              <div className="flex flex-wrap gap-2 mb-5">
+              <div className="flex flex-wrap justify-center gap-2 mb-3">
                 <button className={`${heroBtn} bg-ninja-navy/10 hover:bg-ninja-navy/20 text-ninja-navy`} onClick={() => { handleClose(); onResetLogin(); }}>
                   Reset Login
                 </button>
@@ -158,10 +140,6 @@ export default function SenseiProfileModal({
               </div>
             )}
 
-            <div className="flex gap-2">
-              <StatCard value={logs.length} label="Progress Logs" delay={0.15} />
-              <StatCard value={joinYear} label="Joined" delay={0.2} />
-            </div>
           </div>
 
           <div>
