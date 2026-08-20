@@ -164,7 +164,7 @@ export default function SenseiProfileModal({
                 className="absolute left-1/2 top-1/2"
                 initial={false}
                 animate={cardInFront
-                  ? { x: -PAPER_W / 2 + 62, y: -PAPER_H / 2 - 4, rotate: 8, scale: 0.9 }
+                  ? { x: -PAPER_W / 2 + 44, y: -PAPER_H / 2 - 6, rotate: 7, scale: 0.8 }
                   : { x: -PAPER_W / 2, y: -PAPER_H / 2 + 8, rotate: 0, scale: 1 }}
                 transition={spring}
                 style={{ zIndex: cardInFront ? 1 : 2 }}
@@ -183,17 +183,17 @@ export default function SenseiProfileModal({
               </motion.div>
 
               {/* The badge. */}
-              {/* Centring is baked into margins (badge stage at scale 0.56 is
-                  216x319) so both animation states are plain numbers — framer
+              {/* Centring is baked into margins (badge stage at scale 0.62 is
+                  234x347) so both animation states are plain numbers — framer
                   cannot tween a percentage into a calc(), it snaps. */}
               <motion.div
                 className="absolute left-1/2 top-1/2"
                 initial={false}
                 animate={cardInFront
                   ? { x: 0, y: 0, rotate: 0, scale: 1 }
-                  : { x: -105, y: 10, rotate: -9, scale: 0.62 }}
+                  : { x: -108, y: 10, rotate: -9, scale: 0.55 }}
                 transition={spring}
-                style={{ zIndex: cardInFront ? 2 : 1, marginLeft: -108, marginTop: -160 }}
+                style={{ zIndex: cardInFront ? 2 : 1, marginLeft: -117, marginTop: -173 }}
               >
                 <div style={{ pointerEvents: cardInFront ? 'auto' : 'none' }}>
                   <StaffBadge
@@ -202,7 +202,7 @@ export default function SenseiProfileModal({
                     avatar={sensei.profile_pic_url}
                     role={sensei.role === 'manager' ? 'Center Director' : 'Sensei'}
                     center={centerNames[0]}
-                    scale={0.56}
+                    scale={0.62}
                     details={[
                       { label: 'Joined', value: joinYear },
                       { label: 'Logs', value: logs.length },
