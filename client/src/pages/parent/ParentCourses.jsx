@@ -426,7 +426,21 @@ export default function ParentCourses() {
         {header}
         {desktop ? (
           <div className="grid grid-cols-[400px_minmax(0,1fr)] gap-6 items-start">
-            {list}
+            {/* The list is pinned and scrolls on its own: each program is a
+                hero card, so five of them would stretch the page to their sum
+                and reading the open course means scrolling past all of them.
+                Capped at a screen, the page never grows with enrollment — the
+                extra cards scroll inside the column while the open course
+                stays put beside it. The stretched wrapper is what gives the
+                sticky child room to travel (items-start alone leaves it
+                nowhere to go); the 1px padding keeps the selection ring,
+                drawn just outside the card, from being clipped by the
+                scroller. */}
+            <div className="self-stretch min-w-0">
+              <div className="sticky top-5 max-h-[calc(100vh-2.5rem)] overflow-y-auto no-scrollbar overscroll-contain -m-1 p-1">
+                {list}
+              </div>
+            </div>
             <div className="min-w-0">
               <AnimatePresence mode="wait" initial={false}>
                 {open && (
