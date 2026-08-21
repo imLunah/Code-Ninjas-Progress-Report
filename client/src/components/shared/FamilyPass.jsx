@@ -9,10 +9,9 @@ import { BELTS } from '../../utils/beltConfig';
 // keeps momentum, leave it and it floats, `side` turns it over, a tap turns
 // it over too) with a different object on the stage.
 //
-// The front is navy: the family name, the center, member since, and one belt
-// stripe along the foot per ninja in their current belt colour. The back is
-// white: the ninjas by name and belt, then the parent as printed during
-// onboarding. Faces are inline hex on purpose (a printed object, identical in
+// The front is navy: the family name, the center, and one belt stripe along
+// the foot per ninja in their current belt colour. The back is white: the
+// ninjas by name, age and belt, then the parent as printed during onboarding. Faces are inline hex on purpose (a printed object, identical in
 // both themes; `.dark .bg-white` would turn a painted face slate mid-spin),
 // and rotation is written straight to the node from one rAF loop.
 
@@ -43,9 +42,9 @@ const SHEEN = {
 
 const BELT_COLOR = Object.fromEntries(BELTS.map((b) => [b.name, b.color]));
 
-// ninjas: [{ name, belt, program }]. `familyName` is the surname as typed;
+// ninjas: [{ name, age, belt }]. `familyName` is the surname as typed;
 // empty prints "Your family" while the parent is still on the name step.
-export default function FamilyPass({ familyName, parentName, relationship, phone, center, ninjas = [], memberSince, side = 'front', scale = 1, className = '' }) {
+export default function FamilyPass({ familyName, parentName, relationship, phone, center, ninjas = [], side = 'front', scale = 1, className = '' }) {
   const stageRef = useRef(null);
   const cardRef = useRef(null);
   const m = useRef({ rx: -6, ry: -18, tRx: -6, tRy: -18, vx: 0, dragging: false, px: 0, py: 0, lastTouch: 0, side: 'front', downX: 0, downY: 0, downT: 0, moved: 0 }).current;
@@ -172,9 +171,8 @@ export default function FamilyPass({ familyName, parentName, relationship, phone
                 }}
               />
 
-              <div className="flex justify-between items-start" style={{ padding: '22px 26px 0' }}>
+              <div style={{ padding: '22px 26px 0' }}>
                 <span style={{ color: '#ffffff', display: 'inline-flex' }}><Logo variant="wordmark" accent={ACCENT} className="h-6" /></span>
-                <span className="font-ninja font-extrabold uppercase" style={{ fontSize: 11, letterSpacing: '0.24em', color: '#8a9bb8', marginTop: 4 }}>Family pass</span>
               </div>
 
               <div style={{ padding: '0 26px', marginTop: 'auto', marginBottom: 22 }}>
@@ -182,9 +180,11 @@ export default function FamilyPass({ familyName, parentName, relationship, phone
                 <div className="font-ninja font-black" style={{ fontSize: 34, lineHeight: 1.05, letterSpacing: '-0.01em', color: surname ? '#ffffff' : 'rgba(255,255,255,0.35)', overflowWrap: 'anywhere' }}>
                   {surname ? `${surname} Family` : 'Your family'}
                 </div>
-                <div className="font-ninja font-bold" style={{ fontSize: 13, color: '#8a9bb8', marginTop: 8 }}>
-                  {[center ? `Code Ninjas ${center}` : null, memberSince ? `Member since ${memberSince}` : null].filter(Boolean).join(' · ')}
-                </div>
+                {center && (
+                  <div className="font-ninja font-bold" style={{ fontSize: 13, color: '#8a9bb8', marginTop: 8 }}>
+                    Code Ninjas {center}
+                  </div>
+                )}
               </div>
 
               {/* One stripe per ninja, in their belt colour. */}
@@ -217,10 +217,14 @@ export default function FamilyPass({ familyName, parentName, relationship, phone
                   {ninjas.slice(0, 4).map((n, i) => (
                     <div key={`${n.name}-${i}`} className="flex items-center" style={{ gap: 10 }}>
                       <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: 4, background: BELT_COLOR[n.belt] || '#d6dfeb', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.12)', flexShrink: 0 }} />
-                      <b className="font-ninja font-extrabold" style={{ fontSize: 16, color: NAVY, overflowWrap: 'anywhere' }}>{n.name}</b>
-                      <span className="font-ninja font-bold" style={{ fontSize: 12.5, color: '#506690', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
-                        {[n.belt ? `${n.belt} belt` : null, n.program].filter(Boolean).join(' · ')}
-                      </span>
+                      <b className="font-ninja font-extrabold" style={{ fontSize: 16, color: NAVY, overflowWrap: 'anywhere' }}>
+                        {n.name}{n.age != null && <span className="font-bold" style={{ color: '#506690', marginLeft: 6 }}>{n.age}</span>}
+                      </b>
+                      {n.belt && (
+                        <span className="font-ninja font-bold" style={{ fontSize: 12.5, color: '#506690', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+                          {n.belt} belt
+                        </span>
+                      )}
                     </div>
                   ))}
                   {ninjas.length > 4 && <span className="font-ninja font-bold" style={{ fontSize: 12, color: '#8a9bb8' }}>and {ninjas.length - 4} more</span>}

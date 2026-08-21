@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { useLightOnly } from '../../context/ThemeContext';
+import { calcAge } from '../../lib/parentProgress';
 import FamilyPass from '../../components/shared/FamilyPass';
 import Logo from '../../components/ui/Logo';
 
@@ -62,21 +63,14 @@ export default function ParentWelcomePage() {
   const kids = (portal?.students || []).map((s) => s.full_name.split(' ')[0]);
 
   // The pass prints the form live: the family name as the surname is typed,
-  // the ninjas with their belts on the back, and under them the parent as
-  // they fill themselves in. A ninja's belt is their CREATE belt when they
-  // have one, else whatever program lists one first.
+  // the ninjas with their ages and belts on the back, and under them the
+  // parent as they fill themselves in. A ninja's belt is their CREATE belt
+  // when they have one, else whatever program lists one first.
   const ninjas = (portal?.students || []).map((s) => {
     const programs = s.programs || [];
-    const create = programs.find((p) => p.program === 'CREATE' && p.belt_level);
-    const withBelt = create || programs.find((p) => p.belt_level) || programs[0];
-    return { name: s.full_name.split(' ')[0], belt: withBelt?.belt_level || null, program: withBelt?.program || null };
+    const withBelt = programs.find((p) => p.program === 'CREATE' && p.belt_level) || programs.find((p) => p.belt_level);
+    return { name: s.full_name.split(' ')[0], age: calcAge(s.birthday), belt: withBelt?.belt_level || null };
   });
-  const memberSince = (() => {
-    const stamps = (portal?.students || []).map((s) => s.created_at).filter(Boolean).map((d) => new Date(d)).filter((d) => !Number.isNaN(d));
-    if (!stamps.length) return null;
-    const first = new Date(Math.min(...stamps));
-    return first.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
-  })();
   const passProps = {
     familyName: last,
     parentName: fullName,
@@ -84,7 +78,6 @@ export default function ParentWelcomePage() {
     phone: phone.trim(),
     center: parent?.centerName,
     ninjas,
-    memberSince,
     side: step === 3 ? 'back' : 'front',
   };
 
