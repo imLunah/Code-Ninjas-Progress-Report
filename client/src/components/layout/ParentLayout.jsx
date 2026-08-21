@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { HomeIcon, BookOpenIcon, UserRoundIcon, LogOutIcon, ChevronLeftIcon } from 'lucide-react';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
-import ThemeToggle from '../ui/ThemeToggle';
+import { useLightOnly } from '../../context/ThemeContext';
 import Logo from '../ui/Logo';
 import Segmented from '../ui/Segmented';
 import BugReportButton from '../ui/BugReportButton';
@@ -24,6 +24,9 @@ import { RocketIcon } from '../ui/icons';
 // banner can span the content region exactly with 100cqw — w-screen would
 // run under the side nav. Nothing inside main is position: fixed, which the
 // containment would re-anchor to main.
+//
+// Light only: the boot script in index.html skips the dark class under
+// /parent and useLightOnly holds it off while the shell is mounted.
 
 // Same widths as the staff Sidebar, so the two shells collapse to the same rail.
 const EXPANDED_W = 240; // matches w-60
@@ -158,10 +161,6 @@ function ParentSideNav({ switcher, parentName, centerName, onLogout, onReport })
       {!collapsed && <div className="px-4 py-3 border-t border-ninja-border empty:hidden">{switcher}</div>}
 
       <div className="mt-auto">
-        <div className={`py-2 flex items-center border-t border-ninja-border ${collapsed ? 'px-0 justify-center' : 'px-4 justify-between'}`}>
-          {!collapsed && <span className="font-ninja text-xs font-semibold text-ninja-muted">Appearance</span>}
-          <ThemeToggle />
-        </div>
         {/* The account row, same shape as the staff sidebar's: the parent's
             initials, their name over their center, and the report + sign
             out glyphs. On the rail the glyphs stack under the initials. */}
@@ -262,6 +261,9 @@ export default function ParentLayout({ children, switcher = null, bleed = false 
   const { parent, logout } = useParentAuth();
   const navigate = useNavigate();
   const [bugOpen, setBugOpen] = useState(false);
+  // The parent portal is light only; there is no theme toggle here and the
+  // shell holds the page light while it is up.
+  useLightOnly();
 
   const handleLogout = async () => {
     await logout();
@@ -296,7 +298,6 @@ export default function ParentLayout({ children, switcher = null, bleed = false 
             <span className="text-ninja-muted font-ninja text-[13px] v2 hidden sm:inline">Parent Portal</span>
           </div>
           <div className="flex items-center gap-3">
-            <ThemeToggle />
             <button onClick={handleLogout} className="text-ninja-muted hover:text-ninja-red font-ninja text-[13px] font-bold transition-colors">
               Sign out
             </button>

@@ -43,7 +43,7 @@
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="https://www.dojolink.app/og-preview.jpg" />
-    <script>try{if(localStorage.getItem('dj-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
+    <script>try{if(localStorage.getItem('dj-theme')==='dark'&&location.pathname.indexOf('/parent')!==0)document.documentElement.classList.add('dark')}catch(e){}</script>
   </head>
   <body>
     <div id="root"></div>
