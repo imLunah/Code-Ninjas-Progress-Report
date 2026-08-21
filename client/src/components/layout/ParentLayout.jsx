@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { HomeIcon, BookOpenIcon, UserRoundIcon } from 'lucide-react';
 import { useParentAuth } from '../../context/ParentAuthContext';
@@ -12,11 +12,17 @@ import { RocketIcon } from '../ui/icons';
 
 // The parent portal's shell.
 //
-// A flat page. On desktop one white bar runs edge to edge with a hairline
-// under it: the logo, the section switcher in the middle, the child switcher
-// and the account on the right. On a phone the bar is just the logo and the
-// account, the pages carry their own large titles, and the sections live in a
-// floating capsule at the bottom, the same material as the staff nav.
+// A flat page. On desktop a white side nav runs down the left edge with a
+// hairline beside it: the logo on top, the sections under it, the child
+// switcher, and the account at the bottom. On a phone the bar across the top
+// is just the logo and the account, the pages carry their own large titles,
+// and the sections live in a floating capsule at the bottom, the same
+// material as the staff nav.
+//
+// `main` is a size container (container-type: inline-size) so the home
+// banner can span the content region exactly with 100cqw — w-screen would
+// run under the side nav. Nothing inside main is position: fixed, which the
+// containment would re-anchor to main.
 
 const TABS = [
   { to: '/parent/dashboard', label: 'Home',    Glyph: HomeIcon },
@@ -50,11 +56,68 @@ export function ChildSwitcher({ withAll = false, size = 'sm', layoutId = 'parent
   return <Segmented options={options} value={value} onChange={onChange} label="Which ninja" layoutId={layoutId} size={size} />;
 }
 
+// Home, Courses, and the active child's profile — the same three sections as
+// the phone capsule, built the same way.
+function useParentTabs() {
+  const { activeId } = useParentPortal();
+  return [...TABS, { to: activeId ? `/parent/students/${activeId}` : '/parent/dashboard', match: '/parent/students', label: 'Profile', Glyph: UserRoundIcon }];
+}
+
+function ParentSideNav({ switcher, centerName, onLogout }) {
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const tabs = useParentTabs();
+  return (
+    <aside className="hidden lg:flex flex-col w-60 shrink-0 sticky top-0 h-screen bg-white border-r border-ninja-border z-40">
+      <div className="px-5 py-5 border-b border-ninja-border">
+        <Logo variant="lockup" className="h-8 text-ninja-navy" />
+        <p className="mt-1.5 font-ninja text-[12px] v2 text-ninja-muted">Parent Portal</p>
+      </div>
+
+      <nav aria-label="Parent portal" className="p-3 mt-1 space-y-0.5">
+        {tabs.map((t) => {
+          const active = isActive(pathname, t.match || t.to);
+          return (
+            <button
+              key={t.label}
+              type="button"
+              onClick={() => navigate(t.to)}
+              aria-current={active ? 'page' : undefined}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-ninja font-bold text-sm transition-colors ${
+                active ? 'bg-ninja-blue/10 text-ninja-blue-ink' : 'text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg'
+              }`}
+            >
+              <t.Glyph strokeWidth={2.1} aria-hidden className="w-5 h-5 flex-shrink-0" />
+              {t.label}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* empty:hidden — ChildSwitcher renders nothing for a one-child family,
+          and this block should take its border and padding with it. */}
+      <div className="px-4 py-3 border-t border-ninja-border empty:hidden">{switcher}</div>
+
+      <div className="mt-auto border-t border-ninja-border">
+        {centerName && <p className="px-5 pt-3 font-ninja text-[12px] v2 text-ninja-muted truncate">{centerName}</p>}
+        <div className="px-5 py-2 flex items-center justify-between">
+          <span className="font-ninja text-xs font-semibold text-ninja-muted">Appearance</span>
+          <ThemeToggle />
+        </div>
+        <div className="px-5 pb-4">
+          <button onClick={onLogout} className="font-ninja text-[13px] font-bold text-ninja-muted hover:text-ninja-red transition-colors">
+            Sign out
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
 function ParentTabBar() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { activeId } = useParentPortal();
-  const tabs = [...TABS, { to: activeId ? `/parent/students/${activeId}` : '/parent/dashboard', match: '/parent/students', label: 'Profile', Glyph: UserRoundIcon }];
+  const tabs = useParentTabs();
   return (
     <nav
       aria-label="Parent portal"
@@ -90,12 +153,11 @@ function ParentTabBar() {
   );
 }
 
-// `bleed`: the page opens with a full-bleed hero on a phone, so the bar
+// `bleed`: the page opens with a full-bleed hero on a phone, so the top bar
 // stays out of its way below lg and the hero's own back chip is the way out.
 export default function ParentLayout({ children, switcher = null, bleed = false }) {
   const { parent, logout } = useParentAuth();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
   const [bugOpen, setBugOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -104,10 +166,7 @@ export default function ParentLayout({ children, switcher = null, bleed = false 
   };
 
   return (
-    // overflow-x-clip: the home banner is w-screen inside the centered main
-    // column, which overhangs by half a scrollbar each side. Clip, not hidden:
-    // hidden would make this the scrollport and break sticky descendants.
-    <div className="min-h-[100dvh] bg-ninja-bg overflow-x-clip">
+    <div className="min-h-[100dvh] bg-ninja-bg lg:flex">
       {/* Liquid glass filter for the phone capsule. Chromium refracts; iOS
           Safari falls back to blur. Same filter the staff shell defines. */}
       <svg aria-hidden="true" className="absolute w-0 h-0 pointer-events-none" focusable="false">
@@ -118,29 +177,16 @@ export default function ParentLayout({ children, switcher = null, bleed = false 
         </filter>
       </svg>
 
-      {/* One flat bar. Full width, white, a hairline under it, nothing floating. */}
-      <header className={`bg-white border-b border-ninja-border ${bleed ? 'hidden lg:block' : ''}`}>
-        <div className="max-w-6xl mx-auto h-16 px-4 sm:px-6 flex items-center justify-between gap-4">
+      <ParentSideNav switcher={switcher} centerName={parent?.centerName} onLogout={handleLogout} />
+
+      {/* The phone's flat top bar: the logo and the account, nothing else. */}
+      <header className={`bg-white border-b border-ninja-border ${bleed ? 'hidden' : 'lg:hidden'}`}>
+        <div className="h-16 px-4 sm:px-6 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <Logo variant="lockup" className="h-8 text-ninja-navy" />
             <span className="text-ninja-muted font-ninja text-[13px] v2 hidden sm:inline">Parent Portal</span>
           </div>
-
-          <div className="hidden lg:flex items-center gap-1 p-1 rounded-xl bg-ninja-bg border border-ninja-border">
-            {TABS.map((t) => {
-              const active = isActive(pathname, t.to);
-              return (
-                <NavLink key={t.to} to={t.to}
-                  className={`px-4 py-1.5 rounded-lg font-ninja text-[13px] font-extrabold transition-colors ${active ? 'bg-white dark:bg-white/[0.12] text-ninja-navy shadow-sm' : 'text-ninja-muted hover:text-ninja-navy'}`}>
-                  {t.label}
-                </NavLink>
-              );
-            })}
-          </div>
-
           <div className="flex items-center gap-3">
-            <div className="hidden lg:block">{switcher}</div>
-            {parent?.centerName && <span className="text-ninja-muted font-ninja text-[13px] v2 hidden xl:inline">{parent.centerName}</span>}
             <ThemeToggle />
             <button onClick={handleLogout} className="text-ninja-muted hover:text-ninja-red font-ninja text-[13px] font-bold transition-colors">
               Sign out
@@ -149,8 +195,10 @@ export default function ParentLayout({ children, switcher = null, bleed = false 
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-5 lg:pt-7 pb-32 lg:pb-12">
-        {children}
+      <main className="flex-1 min-w-0 pt-5 lg:pt-7 pb-32 lg:pb-12 [container-type:inline-size]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          {children}
+        </div>
       </main>
 
       <ParentTabBar />

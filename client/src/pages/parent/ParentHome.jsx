@@ -123,9 +123,10 @@ function stripMd(text = '') {
 // a dark wash for the white ink, the imageless fallback is a deep navy, and
 // neither can be fought by the .dark overrides.
 //
-// The banner runs edge to edge: it escapes main's max-w-6xl column with the
-// w-screen + left-1/2 trick (ParentLayout's root clips the ~half-scrollbar of
-// horizontal overflow this creates), while its ink stays in its own inner
+// The banner runs edge to edge across the content region: it escapes main's
+// max-w-6xl column with the left-1/2 trick sized in container units — main is
+// a size container in ParentLayout, so 100cqw is the region beside the side
+// nav, where w-screen would run underneath it. Its ink stays in its own inner
 // max-w-6xl column so the text still lines up with the page content below.
 function EventSlideshow({ events }) {
   const [idx, setIdx] = useState(0);
@@ -151,7 +152,7 @@ function EventSlideshow({ events }) {
 
   return (
     <section
-      className="relative left-1/2 -translate-x-1/2 w-screen -mt-5 lg:-mt-7 overflow-hidden text-white"
+      className="relative left-1/2 -translate-x-1/2 w-[100cqw] -mt-5 lg:-mt-7 overflow-hidden text-white"
       style={{ background: '#0e1c3a' }}
       aria-label="Events at the center"
       onPointerEnter={(e) => { if (e.pointerType === 'mouse') setPaused(true); }}
@@ -397,7 +398,7 @@ export default function ParentHome() {
       <div className="space-y-4 lg:space-y-5">
         {/* The banner is the page's opening, where the Home title used to be:
             first in flow, and its negative margin eats main's top padding so
-            the full-bleed navy sits flush under the header bar. */}
+            the full-bleed navy sits flush with the top of the page. */}
         <EventSlideshow events={events} />
 
         <div className="lg:hidden"><ChildSwitcher withAll layoutId="parent-child-mobile" /></div>
