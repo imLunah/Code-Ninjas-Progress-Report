@@ -171,9 +171,9 @@ function EventSlideshow({ events }) {
             />
             {/* The wash that keeps white ink readable on any artwork. */}
             <span aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgb(6 11 24 / 0.82) 0%, rgb(6 11 24 / 0.55) 55%, rgb(6 11 24 / 0.2) 100%)' }} />
+            {/* Opacity on the element, not the color: the mark's paths
+                overlap, and a translucent color doubles up where they do. */}
             {!ev.image_url && (
-              {/* Opacity on the element, not the color: the mark's paths
-                  overlap, and a translucent color doubles up where they do. */}
               <span aria-hidden className="absolute right-6 top-1/2 -translate-y-1/2 hidden sm:block" style={{ color: '#ffffff', opacity: 0.22 }}>
                 <Logo variant="mark" className="h-16" />
               </span>
