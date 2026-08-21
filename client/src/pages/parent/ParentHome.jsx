@@ -105,7 +105,11 @@ function firstName(name) {
   return String(name || '').trim().split(' ')[0];
 }
 
-function ChildCard({ child }) {
+// `wide` is the one-ninja layout: the card is the whole row, so instead of a
+// stack it becomes two columns at lg — hero on the left grown to the height
+// of the list beside it, recent sessions on the right — under a full-width
+// header. With siblings the stacked card in a half column stays.
+function ChildCard({ child, wide = false }) {
   const programs = child.programs || [];
   const sessions = child.recent_sessions || [];
   const clubs = child.recent_clubs || [];
@@ -124,8 +128,8 @@ function ChildCard({ child }) {
   const profile = `/parent/students/${child.id}`;
 
   return (
-    <article className={`${FLAT} p-4 sm:p-5 flex flex-col gap-4`}>
-      <header className="flex items-center gap-3">
+    <article className={`${FLAT} p-4 sm:p-5 flex flex-col gap-4 ${wide ? 'lg:grid lg:grid-cols-2 lg:gap-x-6' : ''}`}>
+      <header className={`flex items-center gap-3 ${wide ? 'lg:col-span-2' : ''}`}>
         <ProgramMark program={programs[0]?.program} />
         <div className="min-w-0 flex-1">
           <h2 className="font-ninja font-extrabold text-[17px] text-ninja-navy leading-tight truncate">{child.full_name}</h2>
@@ -136,8 +140,10 @@ function ChildCard({ child }) {
         <MoreLink to={profile}>Full profile</MoreLink>
       </header>
 
-      <Hero program={heroProgram}>
-        <div className="flex items-center justify-between gap-4">
+      {/* In the wide card the grid stretches the hero to the list's height,
+          so it becomes a flex that centres its content in the taller banner. */}
+      <Hero program={heroProgram} className={wide ? 'lg:flex lg:items-center lg:p-6' : ''}>
+        <div className={`flex items-center justify-between gap-4 ${wide ? 'lg:flex-1' : ''}`}>
           <div className="min-w-0">
             <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">
               {last ? `Last class · ${fmtLongDay(last.session_date)}` : 'No classes logged yet'}
@@ -162,7 +168,7 @@ function ChildCard({ child }) {
           ))}
         </Group>
       ) : (
-        <p className="font-ninja text-[13px] v2 text-ninja-muted px-1">
+        <p className={`font-ninja text-[13px] v2 text-ninja-muted px-1 ${wide ? 'lg:self-center' : ''}`}>
           {last ? 'The rest of the history is on the profile.' : 'Sessions show up here as soon as a sensei logs one.'}
         </p>
       )}
@@ -200,8 +206,8 @@ export default function ParentHome() {
         ) : (
           <>
             <WeekStrip center={parent?.centerName} kids={visible} />
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {visible.map((c) => <ChildCard key={c.id} child={c} />)}
+            <div className={`grid grid-cols-1 gap-4 ${visible.length > 1 ? 'lg:grid-cols-2' : ''}`}>
+              {visible.map((c) => <ChildCard key={c.id} child={c} wide={visible.length === 1} />)}
             </div>
           </>
         )}
