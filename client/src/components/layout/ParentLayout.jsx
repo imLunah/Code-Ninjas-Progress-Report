@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { HomeIcon, BookOpenIcon, UserRoundIcon } from 'lucide-react';
+import { HomeIcon, BookOpenIcon, UserRoundIcon, LogOutIcon } from 'lucide-react';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import ThemeToggle from '../ui/ThemeToggle';
@@ -63,7 +63,7 @@ function useParentTabs() {
   return [...TABS, { to: activeId ? `/parent/students/${activeId}` : '/parent/dashboard', match: '/parent/students', label: 'Profile', Glyph: UserRoundIcon }];
 }
 
-function ParentSideNav({ switcher, centerName, onLogout }) {
+function ParentSideNav({ switcher, parentName, centerName, onLogout, onReport }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const tabs = useParentTabs();
@@ -98,16 +98,38 @@ function ParentSideNav({ switcher, centerName, onLogout }) {
           and this block should take its border and padding with it. */}
       <div className="px-4 py-3 border-t border-ninja-border empty:hidden">{switcher}</div>
 
-      <div className="mt-auto border-t border-ninja-border">
-        {centerName && <p className="px-5 pt-3 font-ninja text-[12px] v2 text-ninja-muted truncate">{centerName}</p>}
-        <div className="px-5 py-2 flex items-center justify-between">
+      <div className="mt-auto">
+        <div className="py-2 px-4 border-t border-ninja-border flex items-center justify-between">
           <span className="font-ninja text-xs font-semibold text-ninja-muted">Appearance</span>
           <ThemeToggle />
         </div>
-        <div className="px-5 pb-4">
-          <button onClick={onLogout} className="font-ninja text-[13px] font-bold text-ninja-muted hover:text-ninja-red transition-colors">
-            Sign out
-          </button>
+        {/* The account row, same shape as the staff sidebar's: a generic
+            ninja avatar (parents have no profile picture), the parent's
+            name over their center, and the report + sign out glyphs. */}
+        <div className="p-3 border-t border-ninja-border">
+          <div className="flex items-center gap-2.5 px-2 py-2">
+            <img src="/profile/ninja-wave.png" alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-ninja-border" />
+            <div className="flex-1 min-w-0">
+              <p className="font-ninja font-bold text-ninja-navy text-sm truncate">{parentName || 'Parent'}</p>
+              {centerName && <p className="font-ninja text-ninja-muted text-xs truncate">{centerName}</p>}
+            </div>
+            <button
+              onClick={onReport}
+              title="Report a bug or suggest a feature"
+              aria-label="Report a bug or suggest a feature"
+              className="text-ninja-muted hover:text-ninja-red transition-colors flex-shrink-0 p-1"
+            >
+              <RocketIcon className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onLogout}
+              title="Sign out"
+              aria-label="Sign out"
+              className="text-ninja-muted hover:text-ninja-red transition-colors flex-shrink-0 p-1"
+            >
+              <LogOutIcon className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </aside>
@@ -177,7 +199,13 @@ export default function ParentLayout({ children, switcher = null, bleed = false 
         </filter>
       </svg>
 
-      <ParentSideNav switcher={switcher} centerName={parent?.centerName} onLogout={handleLogout} />
+      <ParentSideNav
+        switcher={switcher}
+        parentName={parent?.parentName}
+        centerName={parent?.centerName}
+        onLogout={handleLogout}
+        onReport={() => setBugOpen(true)}
+      />
 
       {/* The phone's flat top bar: the logo and the account, nothing else. */}
       <header className={`bg-white border-b border-ninja-border ${bleed ? 'hidden' : 'lg:hidden'}`}>
@@ -203,14 +231,6 @@ export default function ParentLayout({ children, switcher = null, bleed = false 
 
       <ParentTabBar />
 
-      <button
-        onClick={() => setBugOpen(true)}
-        title="Report a bug or suggest a feature"
-        aria-label="Report a bug or suggest a feature"
-        className="hidden lg:flex fixed bottom-6 right-6 z-40 bg-white border border-ninja-border text-ninja-muted hover:text-ninja-red shadow-lg rounded-full w-9 h-9 items-center justify-center transition-all hover:shadow-xl"
-      >
-        <RocketIcon className="w-4 h-4" />
-      </button>
       <BugReportButton open={bugOpen} onClose={() => setBugOpen(false)} reporter={{ name: parent?.parentName, role: 'parent' }} />
     </div>
   );
