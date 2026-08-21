@@ -5,6 +5,7 @@ import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { useLightOnly } from '../../context/ThemeContext';
 import StaffBadge from '../../components/shared/StaffBadge';
+import Logo from '../../components/ui/Logo';
 
 // A parent's first sign-in. The same shape as the staff welcome: a short
 // walk, with their ID card beside it printing what they type. Name, then
@@ -136,13 +137,14 @@ export default function ParentWelcomePage() {
                   initial="enter" animate="center" exit="exit" transition={transition}
                   className="absolute inset-0 flex flex-col items-center justify-center text-center"
                 >
-                  <motion.img
-                    src="/CodeNinjasCelebrate.webp" alt=""
+                  <motion.div
                     initial={{ scale: 0.6, opacity: 0, y: 20 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.05 }}
-                    className="h-36 mb-8 drop-shadow-xl"
-                  />
+                    className="mb-8"
+                  >
+                    <Logo variant="mark" className="h-28 text-ninja-navy" />
+                  </motion.div>
                   <motion.p
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
                     className="text-ninja-blue font-ninja font-bold text-sm tracking-wide uppercase mb-2"
@@ -151,9 +153,9 @@ export default function ParentWelcomePage() {
                   </motion.p>
                   <motion.h1
                     initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}
-                    className="text-4xl font-black font-ninja text-ninja-navy mb-3"
+                    className="mb-3"
                   >
-                    Dojo<span className="text-ninja-blue">Link</span>
+                    <Logo variant="wordmark" className="h-10 text-ninja-navy" />
                   </motion.h1>
                   <motion.p
                     initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
