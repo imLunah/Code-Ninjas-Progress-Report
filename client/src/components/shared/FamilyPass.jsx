@@ -11,7 +11,8 @@ import { BELTS } from '../../utils/beltConfig';
 //
 // The front is navy: the family name, the center, and one belt stripe along
 // the foot per ninja in their current belt colour. The back is white: the
-// ninjas by name, age and belt, then the parent as printed during onboarding. Faces are inline hex on purpose (a printed object, identical in
+// ninjas by name and age with a swatch in their belt colour, then the parent
+// as printed during onboarding. Faces are inline hex on purpose (a printed object, identical in
 // both themes; `.dark .bg-white` would turn a painted face slate mid-spin),
 // and rotation is written straight to the node from one rAF loop.
 
@@ -217,12 +218,10 @@ export default function FamilyPass({ familyName, parentName, relationship, phone
                   {ninjas.slice(0, 4).map((n, i) => (
                     <div key={`${n.name}-${i}`} className="flex items-center" style={{ gap: 10 }}>
                       <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: 4, background: BELT_COLOR[n.belt] || '#d6dfeb', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.12)', flexShrink: 0 }} />
-                      <b className="font-ninja font-extrabold" style={{ fontSize: 16, color: NAVY, overflowWrap: 'anywhere' }}>
-                        {n.name}{n.age != null && <span className="font-bold" style={{ color: '#506690', marginLeft: 6 }}>{n.age}</span>}
-                      </b>
-                      {n.belt && (
+                      <b className="font-ninja font-extrabold" style={{ fontSize: 16, color: NAVY, overflowWrap: 'anywhere' }}>{n.name}</b>
+                      {n.age != null && (
                         <span className="font-ninja font-bold" style={{ fontSize: 12.5, color: '#506690', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
-                          {n.belt} belt
+                          Age {n.age}
                         </span>
                       )}
                     </div>

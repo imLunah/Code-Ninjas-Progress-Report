@@ -63,13 +63,14 @@ export default function ParentWelcomePage() {
   const kids = (portal?.students || []).map((s) => s.full_name.split(' ')[0]);
 
   // The pass prints the form live: the family name as the surname is typed,
-  // the ninjas with their ages and belts on the back, and under them the
-  // parent as they fill themselves in. A ninja's belt is their CREATE belt
-  // when they have one, else whatever program lists one first.
+  // the ninjas with their ages on the back (the swatch and the front's
+  // stripe are their belt colour), and under them the parent as they fill
+  // themselves in. A ninja's belt is their CREATE belt when they have one,
+  // else whatever program lists one first.
   const ninjas = (portal?.students || []).map((s) => {
     const programs = s.programs || [];
     const withBelt = programs.find((p) => p.program === 'CREATE' && p.belt_level) || programs.find((p) => p.belt_level);
-    return { name: s.full_name.split(' ')[0], age: calcAge(s.birthday), belt: withBelt?.belt_level || null };
+    return { name: s.full_name, age: calcAge(s.birthday), belt: withBelt?.belt_level || null };
   });
   const passProps = {
     familyName: last,
