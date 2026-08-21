@@ -53,7 +53,9 @@ function initialsOf(name = '') {
 // back and not everyone will think to drag. Taps are detected by hand off the
 // existing pointer handlers: the stage takes pointer capture for the drag, so
 // a real click would fire on the stage, never on anything inside it.
-export default function StaffBadge({ name, username, role, center, avatar, side = 'front', scale = 1, className = '', details = [], editable = null }) {
+// `idLabel` / `idPlaceholder` rename the back's headline field: staff print
+// a username there, a parent prints their ninjas.
+export default function StaffBadge({ name, username, role, center, avatar, side = 'front', scale = 1, className = '', details = [], editable = null, idLabel = 'Username', idPlaceholder = 'your.username' }) {
   const stageRef = useRef(null);
   const cardRef = useRef(null);
   const inputRef = useRef(null);
@@ -331,16 +333,16 @@ export default function StaffBadge({ name, username, role, center, avatar, side 
               <div className="flex flex-col flex-1" style={{ padding: '26px 24px' }}>
                 <Logo variant="wordmark" accent="#38a1ff" className="h-6 self-start" />
                 <div className="font-ninja font-extrabold uppercase" style={{ fontSize: 12, letterSpacing: '0.22em', color: '#8a9bb8', marginTop: 18 }}>
-                  Username
+                  {idLabel}
                   {editing === 'user' ? (
                     <input
                       {...editorProps}
                       data-badge-tap="user"
-                      aria-label="Username"
+                      aria-label={idLabel}
                       autoComplete="username"
                       spellCheck={false}
                       autoCapitalize="none"
-                      placeholder="your.username"
+                      placeholder={idPlaceholder}
                       className="block font-ninja font-extrabold"
                       style={{
                         fontSize: 24, letterSpacing: '0.04em', width: '100%', background: 'transparent',
@@ -354,7 +356,7 @@ export default function StaffBadge({ name, username, role, center, avatar, side 
                       {...slotProps('user', 'Edit username')}
                       style={{ fontSize: 24, letterSpacing: '0.04em', overflowWrap: 'anywhere', color: shownUser ? '#ffffff' : '#8a9bb855', textTransform: 'none', ...(editable ? { cursor: 'text' } : {}) }}
                     >
-                      {shownUser || 'your.username'}
+                      {shownUser || idPlaceholder}
                     </b>
                   )}
                 </div>

@@ -24,6 +24,14 @@ export function ParentAuthProvider({ children }) {
     return data;
   }
 
+  // Onboarding's save. The server answers with the whole parent payload, so
+  // the name in the nav and the onboarded flag update in one step.
+  async function saveProfile(fields) {
+    const data = await api.post('/parent/profile', fields);
+    setParent(data);
+    return data;
+  }
+
   async function logout() {
     try {
       await api.post('/parent/logout', {});
@@ -33,7 +41,7 @@ export function ParentAuthProvider({ children }) {
   }
 
   return (
-    <ParentAuthContext.Provider value={{ parent, loading, login, logout }}>
+    <ParentAuthContext.Provider value={{ parent, loading, login, logout, saveProfile }}>
       {children}
     </ParentAuthContext.Provider>
   );

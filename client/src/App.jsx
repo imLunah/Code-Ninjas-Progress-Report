@@ -40,6 +40,7 @@ const ClubSessionPage = lazy(() => import('./pages/ClubSessionPage'));
 const ParentHome = lazy(() => import('./pages/parent/ParentHome'));
 const ParentCourses = lazy(() => import('./pages/parent/ParentCourses'));
 const ParentProfile = lazy(() => import('./pages/parent/ParentProfile'));
+const ParentWelcomePage = lazy(() => import('./pages/parent/ParentWelcomePage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const AccessibilityPage = lazy(() => import('./pages/AccessibilityPage'));
@@ -92,6 +93,7 @@ export default function App() {
 
             {/* Parent portal */}
             <Route path="/parent/login"       element={<Navigate to="/login?tab=parent" replace />} />
+            <Route path="/parent/welcome"     element={<ParentRoute onboarding><ParentWelcomePage /></ParentRoute>} />
             <Route path="/parent/dashboard"   element={<ParentRoute><ParentHome /></ParentRoute>} />
             <Route path="/parent/courses"     element={<ParentRoute><ParentCourses /></ParentRoute>} />
             <Route path="/parent/courses/:program" element={<ParentRoute><ParentCourses /></ParentRoute>} />

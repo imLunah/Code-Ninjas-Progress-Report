@@ -15,6 +15,52 @@ const loginLimiter = rateLimit({
 // Matches the staff-side pinned-note ceiling in students.js.
 const MAX_INSTRUCTIONS = 2000;
 
+const RELATIONSHIPS = ['Mom', 'Dad', 'Guardian', 'Grandparent', 'Other'];
+
+// What the client knows about the signed-in parent. A parent_profiles row is
+// what onboarding writes, and having one is what "onboarded" means; without
+// one the payload carries what the desk has on file as a starting point for
+// the form (the name and phone typed onto a ninja's record), and the portal
+// sends them to /parent/welcome. Called by login, /me and the profile save so
+// the three never disagree about the shape.
+async function parentPayload(pool, session) {
+  const email = session.parentEmail;
+  const base = { email, role: 'parent', centerName: session.parentLocationName || null };
+  const { rows: [profile] } = await pool.query(
+    'SELECT first_name, last_name, phone, relationship FROM parent_profiles WHERE email = $1',
+    [email]
+  );
+  if (profile) {
+    return {
+      ...base,
+      onboarded: true,
+      parentName: `${profile.first_name} ${profile.last_name}`.trim(),
+      firstName: profile.first_name,
+      lastName: profile.last_name,
+      phone: profile.phone,
+      relationship: profile.relationship,
+    };
+  }
+  const { rows: [onFile] } = await pool.query(
+    `SELECT parent_name, parent_phone FROM students
+      WHERE LOWER(parent_email) = $1 AND active = true
+        AND EXISTS (SELECT 1 FROM student_locations sl_m WHERE sl_m.student_id = students.id AND sl_m.location_id = $2)
+      ORDER BY (parent_phone IS NULL), (parent_name IS NULL), id
+      LIMIT 1`,
+    [email, session.parentLocationId]
+  );
+  return {
+    ...base,
+    onboarded: false,
+    parentName: onFile?.parent_name || null,
+    prefill: { name: onFile?.parent_name || '', phone: onFile?.parent_phone || '' },
+  };
+}
+
+function cleanText(v, max) {
+  return String(v ?? '').trim().replace(/\s+/g, ' ').slice(0, max);
+}
+
 const STUDENT_PROGRAMS_SUBQUERY = `
   COALESCE(
     (SELECT json_agg(
@@ -121,9 +167,10 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     req.session.parentEmail = email.toLowerCase();
     req.session.role = 'parent';
-    req.session.parentName = rows[0].parent_name || null;
     req.session.parentLocationId = center.id;
     req.session.parentLocationName = center.name;
+    const payload = await parentPayload(pool, req.session);
+    req.session.parentName = payload.parentName;
     // Same rule as staff: thirty days when asked for, otherwise the cookie
     // dies with the browser. A family checking progress on a shared tablet
     // is exactly who should be able to say no to this.
@@ -135,12 +182,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       req.session.save((err) => (err ? reject(err) : resolve()));
     });
 
-    res.json({
-      email: req.session.parentEmail,
-      role: 'parent',
-      parentName: req.session.parentName,
-      centerName: center.name,
-    });
+    res.json(payload);
   } catch (err) {
     console.error('Parent login error:', err);
     res.status(500).json({ error: 'Login failed' });
@@ -148,17 +190,61 @@ router.post('/login', loginLimiter, async (req, res) => {
 });
 
 // GET /api/parent/me
-router.get('/me', (req, res) => {
+router.get('/me', async (req, res) => {
   // A session made before centers existed has no location and cannot be scoped,
   // so it is treated as signed out rather than silently given the old
   // cross-center reach.
   if (!req.session.parentEmail || !req.session.parentLocationId) return res.json(null);
-  res.json({
-    email: req.session.parentEmail,
-    role: 'parent',
-    parentName: req.session.parentName,
-    centerName: req.session.parentLocationName || null,
-  });
+  try {
+    const payload = await parentPayload(req.app.get('db'), req.session);
+    req.session.parentName = payload.parentName;
+    res.json(payload);
+  } catch (err) {
+    console.error('Parent me error:', err);
+    res.status(500).json({ error: 'Failed to load account' });
+  }
+});
+
+// POST /api/parent/profile — onboarding's save, and the only write to a
+// parent's own record. First and last name are required, phone and
+// relationship optional. A phone, once given, is written back onto the
+// parent's ninjas at this center: the desk's copy is usually the stale one,
+// and a current pickup number is the point of asking.
+router.post('/profile', requireParent, async (req, res) => {
+  const pool = req.app.get('db');
+  const body = req.body || {};
+  const firstName = cleanText(body.first_name, 60);
+  const lastName = cleanText(body.last_name, 60);
+  const phone = cleanText(body.phone, 30) || null;
+  const relationship = RELATIONSHIPS.includes(body.relationship) ? body.relationship : null;
+  if (!firstName || !lastName) return res.status(400).json({ error: 'Please enter your first and last name.' });
+  if (phone && phone.replace(/\D/g, '').length < 7) return res.status(400).json({ error: 'That phone number looks too short.' });
+
+  try {
+    await pool.query(
+      `INSERT INTO parent_profiles (email, first_name, last_name, phone, relationship)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (email) DO UPDATE
+         SET first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name,
+             phone = EXCLUDED.phone, relationship = EXCLUDED.relationship, updated_at = now()`,
+      [req.session.parentEmail, firstName, lastName, phone, relationship]
+    );
+    if (phone) {
+      await pool.query(
+        `UPDATE students SET parent_phone = $1
+          WHERE LOWER(parent_email) = $2 AND active = true
+            AND EXISTS (SELECT 1 FROM student_locations sl_m WHERE sl_m.student_id = students.id AND sl_m.location_id = $3)`,
+        [phone, req.session.parentEmail, req.session.parentLocationId]
+      );
+    }
+    const payload = await parentPayload(pool, req.session);
+    req.session.parentName = payload.parentName;
+    await new Promise((resolve, reject) => req.session.save((err) => (err ? reject(err) : resolve())));
+    res.json(payload);
+  } catch (err) {
+    console.error('Parent profile error:', err);
+    res.status(500).json({ error: 'Failed to save your profile' });
+  }
 });
 
 // POST /api/parent/logout
