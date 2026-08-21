@@ -122,7 +122,9 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
       );
 
       if (existing[0]) {
-        await pool.query('UPDATE daily_assignments SET session_date = $1 WHERE id = $2', [date, existing[0].id]);
+        // checked_in_at follows the ninja to today: the parent portal's live
+        // schedule reads the arrival, and this row's created_at is the old one.
+        await pool.query('UPDATE daily_assignments SET session_date = $1, checked_in_at = NOW() WHERE id = $2', [date, existing[0].id]);
         assignmentId = existing[0].id;
       } else {
         const { rows: inserted } = await pool.query(

@@ -9,15 +9,15 @@ import Logo from '../../components/ui/Logo';
 import { FLAT } from '../../lib/surfaces';
 import { SkeletonCards } from '../../components/ui/Skeleton';
 import { fmtDay, fmtLongDay, calcAge } from '../../lib/parentProgress';
+import { hoursFor, slotsFor, slotForHour, fmtHour } from '../../lib/centerHours';
 
 // Home: the family at a glance.
 //
 // One card per child, each led by their last class in the colour of the
-// program it was in, then the few sessions before it. Above them, the week:
-// which days each child was checked in. Nothing here needs a child opened;
-// it all comes off the family list.
+// program it was in, then the few sessions before it. Above them, the live
+// schedule: how busy the center is, hour by hour, with today's current hour
+// lit. Nothing here needs a child opened; the cards come off the family list.
 
-const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 function ymd(d) {
   const y = d.getFullYear();
@@ -39,44 +39,159 @@ function thisWeek() {
   });
 }
 
-function WeekStrip({ center, kids }) {
-  const days = useMemo(thisWeek, []);
-  const today = ymd(new Date());
-  const checked = new Map(); // ymd -> number of kids checked in that day
-  for (const k of kids) {
-    for (const d of k.week_checkins || []) checked.set(d, (checked.get(d) || 0) + 1);
+const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+// How busy the center is, by the hour, for this week.
+//
+// Every check-in at the center is an hour of a ninja in the building, filed
+// under the open hour it was closest to. One bar per open hour of the chosen
+// day; today is chosen by default (or the last open day, on a Sunday), the
+// current hour is the lit bar, and hours still to come are empty tracks.
+// Bars scale against the week's busiest hour so Tuesday and Saturday read
+// against the same ruler. Refreshes every minute while the tab is showing,
+// so a parent deciding whether to come now is looking at now.
+function LiveSchedule({ center }) {
+  const days = useMemo(() => thisWeek().slice(0, 6), []); // Mon..Sat; Sunday is closed
+  const [now, setNow] = useState(() => new Date());
+  const today = ymd(now);
+  const [slots, setSlots] = useState(null);
+  const [day, setDay] = useState(() => {
+    const open = days.filter((d) => ymd(d) <= today && hoursFor(d));
+    return ymd(open[open.length - 1] || days[0]);
+  });
+
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      if (document.hidden) return;
+      api.get(`/parent/schedule?today=${ymd(new Date())}`)
+        .then((r) => { if (alive) { setSlots(r?.slots || []); setNow(new Date()); } })
+        .catch(() => { if (alive) setSlots((s) => s || []); });
+    };
+    load();
+    const t = setInterval(load, 60_000);
+    document.addEventListener('visibilitychange', load);
+    return () => { alive = false; clearInterval(t); document.removeEventListener('visibilitychange', load); };
+  }, []);
+
+  // "day|slot" -> ninjas in that hour, and the week's busiest hour.
+  const { counts, weekMax } = useMemo(() => {
+    const counts = new Map();
+    const byDay = new Map(days.map((d) => [ymd(d), d]));
+    for (const { day: d, hour, count } of slots || []) {
+      const date = byDay.get(d);
+      if (!date) continue;
+      const slot = slotForHour(date, hour);
+      if (slot == null) continue;
+      const k = `${d}|${slot}`;
+      counts.set(k, (counts.get(k) || 0) + count);
+    }
+    return { counts, weekMax: Math.max(1, ...counts.values()) };
+  }, [slots, days]);
+
+  const selected = days.find((d) => ymd(d) === day) || days[0];
+  const selectedKey = ymd(selected);
+  const hourSlots = slotsFor(selected);
+  const isToday = selectedKey === today;
+  const nowHour = now.getHours() + now.getMinutes() / 60;
+  const todayHours = hoursFor(now);
+  const openNow = todayHours && nowHour >= todayHours.open && nowHour < todayHours.close;
+  const nowSlot = openNow ? Math.floor(nowHour) : null;
+  const inNow = nowSlot != null ? counts.get(`${today}|${nowSlot}`) || 0 : 0;
+
+  // Next opening, for the closed state: later today, or the next open day.
+  let status;
+  if (openNow) {
+    status = `Open until ${fmtHour(todayHours.close)} · ${inNow === 0 ? 'quiet right now' : `${inNow} ninja${inNow === 1 ? '' : 's'} in now`}`;
+  } else if (todayHours && nowHour < todayHours.open) {
+    status = `Opens today at ${fmtHour(todayHours.open)}`;
+  } else {
+    const next = new Date(now);
+    for (let i = 1; i <= 7; i++) {
+      next.setDate(next.getDate() + 1);
+      const h = hoursFor(next);
+      if (h) { status = `Closed · Opens ${DAY_SHORT[(next.getDay() + 6) % 7]} ${fmtHour(h.open)}`; break; }
+    }
   }
-  const total = [...checked.values()].reduce((a, b) => a + b, 0);
+
+  const dayTotal = hourSlots.reduce((a, h) => a + (counts.get(`${selectedKey}|${h}`) || 0), 0);
+
   return (
     <section className={`${FLAT} px-4 py-3.5 sm:px-5`}>
-      <div className="flex items-baseline justify-between gap-3 mb-2.5">
-        <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted truncate">
-          This week{center ? ` at ${center}` : ''}
+      <div className="flex items-baseline justify-between gap-3 mb-3">
+        <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted truncate flex items-center gap-1.5">
+          {openNow && <span className="relative flex w-2 h-2 flex-shrink-0" aria-hidden><span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-60" /><span className="relative rounded-full w-2 h-2 bg-green-500" /></span>}
+          {openNow ? 'Live' : 'This week'}{center ? ` at ${center}` : ''}
         </p>
-        <p className="font-ninja text-[12px] v2 text-ninja-muted flex-shrink-0">
-          {total === 0 ? 'No check-ins yet' : `${total} check-in${total === 1 ? '' : 's'}`}
-        </p>
+        <p className="font-ninja text-[12px] v2 text-ninja-muted flex-shrink-0 truncate">{status}</p>
       </div>
-      <div className="grid grid-cols-7 gap-1">
-        {days.map((d, i) => {
-          const key = ymd(d);
-          const isToday = key === today;
-          const n = checked.get(key) || 0;
-          const past = key < today;
-          return (
-            <div key={key} className="flex flex-col items-center gap-1">
-              <span className={`font-ninja text-[11px] font-bold ${isToday ? 'text-ninja-blue-ink' : 'text-ninja-muted'}`}>{DAY_LETTERS[i]}</span>
-              <span className={`w-9 h-9 rounded-full inline-flex items-center justify-center font-ninja font-extrabold text-[15px] ${isToday ? 'bg-ninja-blue text-white' : past ? 'text-ninja-navy' : 'text-ninja-navy/45'}`}>
-                {d.getDate()}
-              </span>
-              <span className="h-1.5 flex items-center gap-0.5" aria-label={n ? `${n} checked in` : undefined}>
-                {Array.from({ length: Math.min(n, 3) }, (_, j) => (
-                  <span key={j} className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                ))}
-              </span>
+
+      <div className="flex items-end gap-3 sm:gap-5">
+        {/* Day picker: which day's hours the bars show. */}
+        <div className="flex flex-col gap-1 flex-shrink-0" role="tablist" aria-label="Day">
+          {days.map((d) => {
+            const key = ymd(d);
+            const on = key === selectedKey;
+            const isTodayChip = key === today;
+            return (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => setDay(key)}
+                className={`h-7 min-w-[44px] px-2 rounded-full font-ninja font-extrabold text-[11px] transition-colors ${
+                  on ? 'bg-ninja-blue text-white' : isTodayChip ? 'text-ninja-blue-ink hover:bg-ninja-blue/10' : 'text-ninja-muted hover:bg-ninja-bg hover:text-ninja-navy'
+                }`}
+              >
+                {DAY_SHORT[(d.getDay() + 6) % 7]}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* The bars: one per open hour of the chosen day. */}
+        <div className="flex-1 min-w-0">
+          {hourSlots.length === 0 ? (
+            <p className="font-ninja text-sm text-ninja-muted py-8 text-center">Closed</p>
+          ) : (
+            <div className="grid gap-1.5 sm:gap-3" style={{ gridTemplateColumns: `repeat(${hourSlots.length}, minmax(0, 1fr))` }}>
+              {hourSlots.map((h) => {
+                const n = counts.get(`${selectedKey}|${h}`) || 0;
+                const live = isToday && nowSlot === h;
+                const future = selectedKey > today || (isToday && (nowSlot == null ? nowHour < h : h > nowSlot));
+                const pct = Math.round((n / weekMax) * 100);
+                return (
+                  <div key={h} className="flex flex-col items-center gap-1.5">
+                    <span className={`font-ninja text-[11px] font-bold tabular-nums leading-none ${live ? 'text-ninja-blue-ink' : 'text-ninja-muted'}`}>
+                      {n > 0 ? n : future ? '' : '0'}
+                    </span>
+                    <div
+                      className={`w-full h-20 sm:h-24 rounded-lg flex flex-col justify-end overflow-hidden ${future ? 'border border-dashed border-ninja-border' : 'bg-ninja-bg'}`}
+                      role="img"
+                      aria-label={future ? `${fmtHour(h)}, not yet` : `${fmtHour(h)}: ${n} ninja${n === 1 ? '' : 's'}${live ? ', now' : ''}`}
+                    >
+                      <motion.div
+                        initial={false}
+                        animate={{ height: `${n > 0 ? Math.max(pct, 8) : 0}%` }}
+                        transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+                        className={`w-full rounded-lg ${live ? 'bg-ninja-blue' : 'bg-ninja-blue/35'}`}
+                      />
+                    </div>
+                    <span className={`font-ninja text-[11px] leading-none whitespace-nowrap ${live ? 'font-extrabold text-ninja-blue-ink' : 'font-bold text-ninja-muted'}`}>
+                      {live ? 'Now' : fmtHour(h)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          )}
+          {hourSlots.length > 0 && slots && (
+            <p className="mt-2 font-ninja text-[11px] text-ninja-muted text-right" aria-live="polite">
+              {dayTotal === 0 ? (selectedKey > today ? 'Not yet' : 'No check-ins') : `${dayTotal} check-in${dayTotal === 1 ? '' : 's'} ${isToday ? 'so far' : DAY_SHORT[(selected.getDay() + 6) % 7]}`}
+            </p>
+          )}
+        </div>
       </div>
     </section>
   );
@@ -414,7 +529,7 @@ export default function ParentHome() {
           </div>
         ) : (
           <>
-            <WeekStrip center={parent?.centerName} kids={visible} />
+            <LiveSchedule center={parent?.centerName} />
             <div className={`grid grid-cols-1 gap-4 ${visible.length > 1 ? 'lg:grid-cols-2' : ''}`}>
               {visible.map((c) => <ChildCard key={c.id} child={c} wide={visible.length === 1} />)}
             </div>

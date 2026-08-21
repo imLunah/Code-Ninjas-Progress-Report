@@ -434,6 +434,7 @@ CREATE TABLE public.daily_assignments (
     completed boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now(),
     program text,
+    checked_in_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT daily_assignments_program_check CHECK (((program IS NULL) OR (program = ANY (ARRAY['CREATE'::text, 'Robotics Academy'::text, 'AI Academy'::text, 'JR'::text, 'Silver'::text, 'Gold Unity'::text, 'Gold Godot'::text]))))
 );
 

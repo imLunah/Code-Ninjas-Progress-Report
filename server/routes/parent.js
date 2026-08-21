@@ -69,16 +69,6 @@ const RECENT_CLUBS_SUBQUERY = `
   ) AS recent_clubs
 `;
 
-const WEEK_CHECKINS_SUBQUERY = `
-  COALESCE(
-    (SELECT json_agg(DISTINCT to_char(da.session_date, 'YYYY-MM-DD'))
-       FROM daily_assignments da
-      WHERE da.student_id = s.id
-        AND da.session_date >= date_trunc('week', CURRENT_DATE)::date
-        AND da.session_date <  (date_trunc('week', CURRENT_DATE) + interval '7 days')::date),
-    '[]'::json
-  ) AS week_checkins
-`;
 
 // POST /api/parent/login
 // Center code first, then the email.
@@ -205,6 +195,45 @@ router.get('/events', requireParent, async (req, res) => {
   }
 });
 
+// GET /api/parent/schedule?today=YYYY-MM-DD
+//
+// How busy the center is, hour by hour, for the week around `today`: every
+// check-in at the center (not just this family's) bucketed by the hour it
+// happened, rounded to the nearest. Counts only, no names. The client owns
+// the opening hours and clamps an arrival to the nearest open slot, so the
+// server hands back raw hours and lets it draw.
+//
+// Hours are read in the centers' own zone. All three are in California and
+// the server clock is UTC, so without the conversion a 4 PM arrival would
+// report as 11 PM. `today` is the parent's local date for the same reason
+// as /events: the server's CURRENT_DATE is already tomorrow every evening.
+//
+// daily_assignments has no location: a ninja's check-in is attributed to the
+// centers they belong to, which double-counts the rare ninja at two centers.
+const CENTER_TZ = 'America/Los_Angeles';
+router.get('/schedule', requireParent, async (req, res) => {
+  const pool = req.app.get('db');
+  const today = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.today || '')) ? req.query.today : null;
+  try {
+    const { rows } = await pool.query(`
+      WITH wk AS (SELECT date_trunc('week', COALESCE($2::date, CURRENT_DATE))::date AS start)
+      SELECT to_char(wk.start, 'YYYY-MM-DD') AS week_start,
+             to_char(da.session_date, 'YYYY-MM-DD') AS day,
+             EXTRACT(HOUR FROM (da.checked_in_at AT TIME ZONE $3) + interval '30 minutes')::int AS hour,
+             COUNT(*)::int AS count
+      FROM daily_assignments da, wk
+      WHERE da.session_date >= wk.start AND da.session_date < wk.start + 7
+        AND EXISTS (SELECT 1 FROM student_locations sl WHERE sl.student_id = da.student_id AND sl.location_id = $1)
+      GROUP BY 1, 2, 3
+      ORDER BY 2, 3
+    `, [req.session.parentLocationId, today, CENTER_TZ]);
+    res.json({ slots: rows.map(({ day, hour, count }) => ({ day, hour, count })) });
+  } catch (err) {
+    console.error('Parent schedule error:', err);
+    res.status(500).json({ error: 'Failed to load schedule' });
+  }
+});
+
 // GET /api/parent/students
 router.get('/students', requireParent, async (req, res) => {
   const pool = req.app.get('db');
@@ -214,8 +243,7 @@ router.get('/students', requireParent, async (req, res) => {
         ${STUDENT_PROGRAMS_SUBQUERY},
         (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id AND pl.notes IS DISTINCT FROM 'Marked complete from roadmap') AS last_activity,
         ${RECENT_SESSIONS_SUBQUERY},
-        ${RECENT_CLUBS_SUBQUERY},
-        ${WEEK_CHECKINS_SUBQUERY}
+        ${RECENT_CLUBS_SUBQUERY}
       FROM students s
       WHERE LOWER(s.parent_email) = LOWER($1) AND EXISTS (SELECT 1 FROM student_locations sl_m WHERE sl_m.student_id = s.id AND sl_m.location_id = $2) AND s.active = true
       ORDER BY s.full_name
