@@ -17,7 +17,7 @@ const isValidDate = (s) => DATE_RE.test(s) && !Number.isNaN(new Date(`${s}T00:00
 // to_char keeps event_date a plain YYYY-MM-DD — a raw pg DATE serializes as a
 // UTC-midnight ISO string, which reads back a day early in western timezones.
 const SELECT = `
-  SELECT e.id, e.title, e.description, e.event_time, e.type, e.created_by,
+  SELECT e.id, e.title, e.description, e.event_time, e.type, e.created_by, e.featured,
          to_char(e.event_date, 'YYYY-MM-DD') AS event_date,
          e.created_at, e.updated_at,
          u.display_name AS created_by_name
@@ -27,7 +27,7 @@ const SELECT = `
 
 // Validates + normalizes the writable fields. Returns { error } or { data }.
 function parseBody(body) {
-  const { title, description, event_date, event_time, type } = body || {};
+  const { title, description, event_date, event_time, type, featured } = body || {};
   if (typeof title !== 'string' || !title.trim()) return { error: 'Title is required' };
   if (title.length > MAX_TITLE) return { error: `Title max ${MAX_TITLE} characters` };
   if (typeof event_date !== 'string' || !isValidDate(event_date)) return { error: 'A valid date is required' };
@@ -40,6 +40,9 @@ function parseBody(body) {
   if (type != null && (typeof type !== 'string' || type.length > MAX_TYPE)) {
     return { error: `Type max ${MAX_TYPE} characters` };
   }
+  if (featured != null && typeof featured !== 'boolean') {
+    return { error: 'Featured must be true or false' };
+  }
   return {
     data: {
       title: title.trim(),
@@ -47,6 +50,7 @@ function parseBody(body) {
       event_date,
       event_time: event_time && event_time.trim() ? event_time.trim() : null,
       type: type && type.trim() ? type.trim() : 'Other',
+      featured: featured === true,
     },
   };
 }
@@ -71,16 +75,16 @@ router.post('/', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const parsed = parseBody(req.body);
   if (parsed.error) return res.status(400).json({ error: parsed.error });
-  const { title, description, event_date, event_time, type } = parsed.data;
+  const { title, description, event_date, event_time, type, featured } = parsed.data;
   try {
     const { rows } = await pool.query(
       `WITH ins AS (
-         INSERT INTO events (location_id, created_by, title, description, event_date, event_time, type)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         INSERT INTO events (location_id, created_by, title, description, event_date, event_time, type, featured)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *
        )
        ${SELECT.replace('FROM events e', 'FROM ins e')} WHERE true`,
-      [req.session.activeLocationId, req.session.userId, title, description, event_date, event_time, type]
+      [req.session.activeLocationId, req.session.userId, title, description, event_date, event_time, type, featured]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -94,7 +98,7 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
   const pool = req.app.get('db');
   const parsed = parseBody(req.body);
   if (parsed.error) return res.status(400).json({ error: parsed.error });
-  const { title, description, event_date, event_time, type } = parsed.data;
+  const { title, description, event_date, event_time, type, featured } = parsed.data;
   try {
     const { rows: found } = await pool.query(
       'SELECT id FROM events WHERE id = $1 AND location_id = $2',
@@ -103,11 +107,11 @@ router.patch('/:id', requireManager, requireOwnLocation, async (req, res) => {
     if (!found[0]) return res.status(404).json({ error: 'Event not found' });
     const { rows } = await pool.query(
       `WITH upd AS (
-         UPDATE events SET title=$1, description=$2, event_date=$3, event_time=$4, type=$5, updated_at=now()
-         WHERE id=$6 RETURNING *
+         UPDATE events SET title=$1, description=$2, event_date=$3, event_time=$4, type=$5, featured=$6, updated_at=now()
+         WHERE id=$7 RETURNING *
        )
        ${SELECT.replace('FROM events e', 'FROM upd e')} WHERE true`,
-      [title, description, event_date, event_time, type, req.params.id]
+      [title, description, event_date, event_time, type, featured, req.params.id]
     );
     res.json(rows[0]);
   } catch (err) {

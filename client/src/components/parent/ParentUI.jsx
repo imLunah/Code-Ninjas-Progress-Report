@@ -78,16 +78,21 @@ export function ProgramMark({ program, size = 40 }) {
   );
 }
 
-// The belt road: all thirteen belts in a row, the current one lit, the ones
-// behind full, the ones ahead dimmed. `onHero` draws its labels and
-// connectors in white for use on a blue banner; otherwise navy on white.
-// Scrolls sideways where thirteen do not fit.
+// The belt road: all thirteen belts in a row, the current one grown well past
+// the others with the connectors behind it lit — the trail walked so far —
+// and the ones ahead dimmed. No ring around the current belt: the size and
+// the trail are the marker. `onHero` draws its labels and connectors in white
+// for use on a blue banner; otherwise navy on white. Scrolls sideways where
+// thirteen do not fit; mouse users drag it (the scrollbar is hidden and a
+// wheel is vertical, so without the drag only a trackpad could move it).
 export function BeltRoad({ current, onHero = false, compact = false, className = '' }) {
   const idx = BELTS.findIndex((b) => b.name === current);
   const icon = compact ? 22 : 26;
-  const cur = compact ? 30 : 34;
+  const cur = compact ? 36 : 42;
   const line = onHero ? 'rgb(255 255 255 / 0.35)' : 'rgb(var(--ninja-navy) / 0.15)';
+  const trail = onHero ? 'rgb(255 255 255 / 0.85)' : 'rgb(var(--ninja-navy) / 0.45)';
   const scroller = useRef(null);
+  const drag = useRef(null);
   // Where the road is wider than its box, start it with the current belt in
   // view rather than always at White. Sets scrollLeft directly so the page
   // itself does not move.
@@ -98,8 +103,23 @@ export function BeltRoad({ current, onHero = false, compact = false, className =
     const centre = idx * col + col / 2;
     el.scrollLeft = Math.max(0, centre - el.clientWidth / 2);
   }, [idx, compact]);
+  const endDrag = () => { drag.current = null; };
   return (
-    <div ref={scroller} className={`overflow-x-auto no-scrollbar -mx-1 px-1 ${className}`} aria-label="Belt road" role="img">
+    <div
+      ref={scroller}
+      onPointerDown={(e) => {
+        if (e.pointerType !== 'mouse' || !scroller.current) return;
+        drag.current = { x: e.clientX, left: scroller.current.scrollLeft };
+        scroller.current.setPointerCapture(e.pointerId);
+      }}
+      onPointerMove={(e) => {
+        if (!drag.current || !scroller.current) return;
+        scroller.current.scrollLeft = drag.current.left - (e.clientX - drag.current.x);
+      }}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      className={`overflow-x-auto no-scrollbar cursor-grab active:cursor-grabbing select-none -mx-1 px-1 ${className}`}
+      aria-label="Belt road" role="img">
       <div className="flex items-start" style={{ minWidth: 'max-content' }}>
         {BELTS.map((b, i) => {
           const state = idx < 0 ? 'ahead' : i < idx ? 'earned' : i === idx ? 'current' : 'ahead';
@@ -108,15 +128,14 @@ export function BeltRoad({ current, onHero = false, compact = false, className =
             <div key={b.name} className="flex items-start">
               <div className="flex flex-col items-center" style={{ width: compact ? 40 : 46 }}>
                 <span className="flex items-center justify-center" style={{ height: cur }}>
-                  <BeltIcon belt={b.name} size={size} dimmed={state === 'ahead'}
-                    style={state === 'current' ? { borderRadius: 999, boxShadow: `0 0 0 2px ${onHero ? 'rgb(255 255 255 / 0.9)' : '#fff'}, 0 0 0 4px ${b.color}` } : undefined} />
+                  <BeltIcon belt={b.name} size={size} dimmed={state === 'ahead'} />
                 </span>
                 <span className={`font-ninja mt-1 leading-none ${compact ? 'text-[9px]' : 'text-[10px]'} ${state === 'current' ? 'font-extrabold' : 'font-bold'} ${onHero ? (state === 'ahead' ? 'text-white/45' : 'text-white') : (state === 'ahead' ? 'text-ninja-muted/60' : 'text-ninja-navy')}`}>
                   {b.name}
                 </span>
               </div>
               {i < BELTS.length - 1 && (
-                <span aria-hidden className="block flex-shrink-0" style={{ width: compact ? 6 : 8, height: 2, background: line, marginTop: cur / 2 - 1, marginLeft: -3, marginRight: -3 }} />
+                <span aria-hidden className="block flex-shrink-0" style={{ width: compact ? 6 : 8, height: 2, background: i < idx ? trail : line, marginTop: cur / 2 - 1, marginLeft: -3, marginRight: -3 }} />
               )}
             </div>
           );

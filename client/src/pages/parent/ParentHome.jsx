@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
+import { api } from '../../api/client';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { PageTitle, Hero, Emblem, ProgramMark, Group, Row, StatusText, MoreLink } from '../../components/parent/ParentUI';
 import { FLAT } from '../../lib/surfaces';
+import { colorFor } from '../../lib/eventTypes';
 import { SkeletonCards } from '../../components/ui/Skeleton';
 import { fmtDay, fmtLongDay, calcAge } from '../../lib/parentProgress';
 
@@ -74,6 +76,43 @@ function WeekStrip({ center, kids }) {
             </div>
           );
         })}
+      </div>
+    </section>
+  );
+}
+
+const MONTH_ABBR = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+// The featured event, as a banner at the top of the home: a CD ticked
+// "Feature on the Parent Portal" on a calendar event and this is where it
+// lands. Colored by the event's type (the same colors the staff calendar
+// uses), soonest event first; it stays until its day has passed. The
+// gradient is inline — a dark wash over the type color — so it reads the
+// same in both themes and never fights the .dark overrides.
+function EventBanner({ event }) {
+  if (!event) return null;
+  const isToday = event.event_date === ymd(new Date());
+  const color = colorFor(event.type);
+  const [, m, d] = event.event_date.split('-').map(Number);
+  return (
+    <section
+      className="relative overflow-hidden rounded-[22px] text-white px-4 py-4 sm:px-6"
+      style={{ background: `linear-gradient(120deg, rgb(9 14 26 / 0.5) 0%, rgb(9 14 26 / 0.15) 100%), ${color}` }}
+    >
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] opacity-90 truncate">
+            {isToday ? 'Happening today' : 'Coming up'}{event.type && event.type !== 'Other' ? ` · ${event.type}` : ''}
+          </p>
+          <p className="font-ninja font-extrabold text-[21px] sm:text-[24px] leading-tight mt-1 truncate">{event.title}</p>
+          <p className="font-ninja text-[13px] font-bold opacity-90 mt-1 truncate">
+            {isToday ? 'Today' : fmtLongDay(event.event_date)}{event.event_time ? ` · ${event.event_time}` : ''}
+          </p>
+        </div>
+        <div className="flex-shrink-0 w-[54px] rounded-[14px] bg-white/15 border border-white/25 text-center py-1.5" aria-hidden>
+          <p className="font-ninja text-[10px] font-extrabold tracking-wide opacity-90">{MONTH_ABBR[m - 1]}</p>
+          <p className="font-ninja font-extrabold text-[22px] leading-none mt-0.5">{d}</p>
+        </div>
       </div>
     </section>
   );
@@ -179,6 +218,17 @@ function ChildCard({ child, wide = false }) {
 export default function ParentHome() {
   const { parent } = useParentAuth();
   const { students, listError, activeId, viewAll } = useParentPortal();
+  // The soonest featured event, if the center has one. `today` is the
+  // browser's local date so an event stays "today" through its own evening —
+  // the server clock is UTC and would drop it at 5pm California time.
+  const [featured, setFeatured] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    api.get(`/parent/events?today=${ymd(new Date())}`)
+      .then((rows) => { if (alive) setFeatured(rows?.[0] || null); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   const visible = useMemo(() => {
     if (!students) return [];
@@ -193,6 +243,8 @@ export default function ParentHome() {
       <div className="space-y-4 lg:space-y-5">
         <PageTitle eyebrow={todayLabel} title="Home" />
         <div className="lg:hidden"><ChildSwitcher withAll layoutId="parent-child-mobile" /></div>
+
+        <EventBanner event={featured} />
 
         {students === null ? (
           <SkeletonCards count={2} cols="lg:grid-cols-2" height={320} label="Loading your family" />

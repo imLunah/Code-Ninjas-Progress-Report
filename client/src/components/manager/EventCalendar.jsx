@@ -11,18 +11,9 @@ import { CakeIcon as Cake, ChevronLeftIcon as ChevL, ChevronRightIcon as ChevR }
 
 
 
-// Type is free text. These are just suggestions + known colors; anything else
-// falls back to a neutral chip. Avoids the pinned program hues (JR purple, VR
-// teal) so calendar chips never read as a program.
-export const TYPE_SUGGESTIONS = ['Game Building', 'Tournament', 'Parents Night', 'Field Trip', 'Holiday'];
-const TYPE_COLOR = {
-  'game building': '#2563eb',
-  'tournament':    '#f59e0b',
-  'parents night': '#ec4899',
-  'field trip':    '#10b981',
-  'holiday':       '#ef4444',
-};
-export const colorFor = (type) => TYPE_COLOR[(type || '').trim().toLowerCase()] || '#64748b';
+// Type suggestions + colors live in lib/eventTypes.js: the parent portal's
+// featured-event banner shares them without pulling this whole calendar in.
+import { TYPE_SUGGESTIONS, colorFor } from '../../lib/eventTypes';
 
 // Birthdays sit on the same grid as events but must not read as one, so they get
 // a tinted chip + cake glyph instead of a solid bar. The ink comes from a custom
@@ -60,6 +51,7 @@ function EventForm({ initial, canDelete, onSave, onDelete, onCancel, busy }) {
   const [time, setTime] = useState(initial.event_time || '');
   const [type, setType] = useState(initial.type || '');
   const [description, setDescription] = useState(initial.description || '');
+  const [featured, setFeatured] = useState(initial.featured === true);
   const [confirmDel, setConfirmDel] = useState(false);
 
   const canSave = title.trim() && date;
@@ -100,6 +92,17 @@ function EventForm({ initial, canDelete, onSave, onDelete, onCancel, busy }) {
           placeholder="Anything instructors should know" className={`${field} resize-none`} />
       </div>
 
+      <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-lg border border-ninja-border bg-ninja-bg px-3 py-2.5">
+        <input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)}
+          className="mt-0.5 w-4 h-4 flex-shrink-0 accent-ninja-blue" />
+        <span>
+          <span className="block font-ninja text-sm font-bold text-ninja-navy">Feature on the Parent Portal</span>
+          <span className="block font-ninja text-xs text-ninja-muted mt-0.5">
+            Families see a banner on their home page until the day passes. The title, date and time go out; notes stay staff-only.
+          </span>
+        </span>
+      </label>
+
       <div className="flex items-center justify-between pt-1">
         {canDelete ? (
           confirmDel ? (
@@ -116,7 +119,7 @@ function EventForm({ initial, canDelete, onSave, onDelete, onCancel, busy }) {
         <div className="flex items-center gap-2">
           <button onClick={onCancel} className="font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-navy px-2 py-2 rounded">Cancel</button>
           <button
-            onClick={() => onSave({ title, event_date: date, event_time: time, type, description })}
+            onClick={() => onSave({ title, event_date: date, event_time: time, type, description, featured })}
             disabled={busy || !canSave}
             className="font-ninja text-sm font-bold px-4 py-2 rounded-lg bg-ninja-blue text-white transition-transform duration-150 ease-[var(--ease-out)] active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100">
             {initial.id ? 'Save' : 'Add event'}

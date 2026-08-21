@@ -176,6 +176,34 @@ router.post('/logout', (req, res) => {
   req.session.destroy(() => res.json({ ok: true }));
 });
 
+// GET /api/parent/events?today=YYYY-MM-DD — the center events a CD has chosen
+// to feature for families, soonest first. `today` is the parent's local date:
+// the server clock is UTC, which is already tomorrow every California
+// evening, and an event must stay visible for the whole of its own evening.
+// A bad or missing value falls back to the server's date — the parent can
+// only widen or narrow which FEATURED events they see, nothing else.
+// Deliberately no description: that field is the staff notes box ("anything
+// instructors should know") and was never written for families.
+router.get('/events', requireParent, async (req, res) => {
+  const pool = req.app.get('db');
+  const today = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.today || '')) ? req.query.today : null;
+  try {
+    const { rows } = await pool.query(`
+      SELECT e.id, e.title, e.event_time, e.type,
+             to_char(e.event_date, 'YYYY-MM-DD') AS event_date
+      FROM events e
+      WHERE e.location_id = $1 AND e.featured = true
+        AND e.event_date >= COALESCE($2::date, CURRENT_DATE)
+      ORDER BY e.event_date ASC, e.event_time ASC NULLS FIRST
+      LIMIT 3
+    `, [req.session.parentLocationId, today]);
+    res.json(rows);
+  } catch (err) {
+    console.error('Parent events error:', err);
+    res.status(500).json({ error: 'Failed to load events' });
+  }
+});
+
 // GET /api/parent/students
 router.get('/students', requireParent, async (req, res) => {
   const pool = req.app.get('db');
