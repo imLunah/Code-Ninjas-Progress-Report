@@ -82,55 +82,57 @@ function WeekStrip({ center, kids }) {
   );
 }
 
-const MONTH_ABBR = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-
 // The center's event listings, at the top of the home. One listing is a
 // banner; more than one rotates like a slideshow, sliding to the next every
-// few seconds, with dots to jump. Hovering pauses it, reduced-motion stops
-// the auto-advance entirely, and a listing with a link makes its whole slide
-// the link. Everything is inline color: the image gets a dark wash for the
-// white ink, the imageless fallback is a deep navy, and neither can be
-// fought by the .dark overrides.
+// few seconds, with dots to jump. A mouse resting on it holds it still, and
+// Learn more grows the banner downward in place — description, event info
+// and the sign-up link — instead of leaving the page; the slideshow waits
+// while it is open. No date tile: the eyebrow already says the date, and the
+// tile sat on top of the artwork. Everything is inline color: the image gets
+// a dark wash for the white ink, the imageless fallback is a deep navy, and
+// neither can be fought by the .dark overrides.
 function EventSlideshow({ events }) {
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   useEffect(() => { if (idx >= events.length && events.length) setIdx(0); }, [events.length, idx]);
+  // Only a mouse pauses: a touch has no "leave", so a pointer pause on a
+  // phone would stick and the slideshow would never move again.
   useEffect(() => {
-    if (events.length < 2 || paused) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (events.length < 2 || paused || expanded) return;
     const t = setInterval(() => setIdx((n) => (n + 1) % events.length), 6000);
     return () => clearInterval(t);
-  }, [events.length, paused]);
+  }, [events.length, paused, expanded]);
   if (!events.length) return null;
 
   const ev = events[Math.min(idx, events.length - 1)];
   const isToday = ev.event_date === ymd(new Date());
-  const [, m, d] = (ev.event_date || '').split('-').map(Number);
   const when = ev.event_date
     ? `${isToday ? 'Today' : fmtLongDay(ev.event_date)}${ev.event_time ? ` · ${ev.event_time}` : ''}`
     : null;
   const hook = ev.subtitle || (ev.description ? ev.description.split('\n')[0] : null);
-  const Wrap = ev.event_url ? 'a' : 'div';
-  const wrapProps = ev.event_url ? { href: ev.event_url, target: '_blank', rel: 'noopener noreferrer' } : {};
+  const hasMore = Boolean(ev.description || ev.event_url || when);
+  let host = null;
+  try { host = ev.event_url ? new URL(ev.event_url).hostname.replace(/^www\./, '') : null; } catch { /* leave null */ }
 
   return (
     <section
-      className="relative overflow-hidden rounded-[22px] h-44 sm:h-52 text-white"
+      className="overflow-hidden rounded-[22px] text-white"
       style={{ background: '#0e1c3a' }}
       aria-label="Events at the center"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      onPointerEnter={(e) => { if (e.pointerType === 'mouse') setPaused(true); }}
+      onPointerLeave={(e) => { if (e.pointerType === 'mouse') setPaused(false); }}
     >
-      <AnimatePresence initial={false}>
-        <motion.div
-          key={ev.id}
-          className="absolute inset-0"
-          initial={{ opacity: 0, x: 40 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -40 }}
-          transition={{ duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
-        >
-          <Wrap {...wrapProps} className="block absolute inset-0 focus-visible:outline-none">
+      <div className="relative h-44 sm:h-52">
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={ev.id}
+            className="absolute inset-0"
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -40 }}
+            transition={{ duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
+          >
             <span
               aria-hidden
               className="absolute inset-0"
@@ -145,46 +147,86 @@ function EventSlideshow({ events }) {
                 <Logo variant="mark" className="h-16" />
               </span>
             )}
-            <span className="relative h-full flex items-center justify-between gap-4 px-4 sm:px-6">
-              <span className="min-w-0 block">
-                <span className="block font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] opacity-90 truncate">
+            <div className="relative h-full flex items-center px-4 sm:px-6">
+              <div className="min-w-0">
+                <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] opacity-90 truncate">
                   {ev.event_date ? (isToday ? 'Happening today' : 'Coming up') : 'Announcement'}{when ? ` · ${when}` : ''}
-                </span>
-                <span className="block font-ninja font-extrabold text-[22px] sm:text-[25px] leading-tight mt-1 truncate">{ev.title}</span>
-                {hook && <span className="block font-ninja text-[13px] font-bold opacity-90 mt-1 line-clamp-2 sm:line-clamp-1">{hook}</span>}
-                {ev.event_url && (
-                  <span className="mt-2.5 inline-flex items-center gap-1 font-ninja text-[12px] font-extrabold rounded-full px-3 py-1"
-                    style={{ background: 'rgb(255 255 255 / 0.18)', border: '1px solid rgb(255 255 255 / 0.3)' }}>
-                    Learn more ›
-                  </span>
+                </p>
+                <p className="font-ninja font-extrabold text-[22px] sm:text-[25px] leading-tight mt-1 truncate">{ev.title}</p>
+                {hook && <p className="font-ninja text-[13px] font-bold opacity-90 mt-1 line-clamp-2 sm:line-clamp-1">{hook}</p>}
+                {hasMore && (
+                  <button
+                    type="button"
+                    onClick={() => setExpanded((x) => !x)}
+                    aria-expanded={expanded}
+                    className="mt-2.5 inline-flex items-center gap-1 font-ninja text-[12px] font-extrabold rounded-full px-3 py-1 transition-colors"
+                    style={{ background: 'rgb(255 255 255 / 0.18)', border: '1px solid rgb(255 255 255 / 0.3)' }}
+                  >
+                    {expanded ? 'Show less' : 'Learn more ›'}
+                  </button>
                 )}
-              </span>
-              {ev.event_date && (
-                <span aria-hidden className="hidden sm:block flex-shrink-0 w-[54px] rounded-[14px] text-center py-1.5"
-                  style={{ background: 'rgb(255 255 255 / 0.15)', border: '1px solid rgb(255 255 255 / 0.25)' }}>
-                  <span className="block font-ninja text-[10px] font-extrabold tracking-wide opacity-90">{MONTH_ABBR[m - 1]}</span>
-                  <span className="block font-ninja font-extrabold text-[22px] leading-none mt-0.5">{d}</span>
-                </span>
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+        {events.length > 1 && (
+          <span className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+            {events.map((e, i) => (
+              <button
+                key={e.id}
+                type="button"
+                onClick={() => setIdx(i)}
+                aria-label={`Show event ${i + 1} of ${events.length}`}
+                aria-current={i === Math.min(idx, events.length - 1) ? 'true' : undefined}
+                className="w-2 h-2 rounded-full transition-colors"
+                style={{ background: i === Math.min(idx, events.length - 1) ? 'rgb(255 255 255 / 0.95)' : 'rgb(255 255 255 / 0.4)' }}
+              />
+            ))}
+          </span>
+        )}
+      </div>
+
+      {/* The detail sheet the banner grows into. Same surface, so the growth
+          reads as the banner getting taller, not a second card appearing. */}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            key="detail"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 sm:px-6 py-4 space-y-3" style={{ borderTop: '1px solid rgb(255 255 255 / 0.12)' }}>
+              {when && (
+                <p className="font-ninja text-[13px] font-extrabold">
+                  {isToday ? 'Today' : fmtLongDay(ev.event_date)}{ev.event_time ? ` · ${ev.event_time}` : ''}
+                </p>
               )}
-            </span>
-          </Wrap>
-        </motion.div>
+              {ev.description && (
+                <p className="font-ninja text-[13.5px] leading-relaxed whitespace-pre-line" style={{ color: 'rgb(255 255 255 / 0.88)' }}>
+                  {ev.description}
+                </p>
+              )}
+              {ev.event_url && (
+                <p className="flex items-center gap-2.5">
+                  <a
+                    href={ev.event_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 font-ninja text-[13px] font-extrabold rounded-full px-4 py-1.5"
+                    style={{ background: '#ffffff', color: '#0c2f6b' }}
+                  >
+                    Sign up ›
+                  </a>
+                  {host && <span className="font-ninja text-[12px] opacity-70 truncate">{host}</span>}
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
-      {events.length > 1 && (
-        <span className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
-          {events.map((e, i) => (
-            <button
-              key={e.id}
-              type="button"
-              onClick={() => setIdx(i)}
-              aria-label={`Show event ${i + 1} of ${events.length}`}
-              aria-current={i === Math.min(idx, events.length - 1) ? 'true' : undefined}
-              className="w-2 h-2 rounded-full transition-colors"
-              style={{ background: i === Math.min(idx, events.length - 1) ? 'rgb(255 255 255 / 0.95)' : 'rgb(255 255 255 / 0.4)' }}
-            />
-          ))}
-        </span>
-      )}
     </section>
   );
 }
