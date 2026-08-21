@@ -244,10 +244,6 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
               );
             })}
           </Group>
-          <div className={`${FLAT} p-4 lg:hidden`}>
-            <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted mb-2">Belt road</p>
-            <BeltRoad current={belt} />
-          </div>
         </div>
       </div>
     </div>
