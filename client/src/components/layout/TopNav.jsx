@@ -57,9 +57,9 @@ export default function TopNav({ onOpenBug }) {
       <nav className="flex items-center gap-1 min-w-0 overflow-x-auto no-scrollbar">
         {navLinks.map((link) => {
           const isActive = isLinkActive(link, location.pathname, location.search);
-          return (
+          const tab = (
             <Link
-              key={link.to}
+              key={link.quick ? undefined : link.to}
               to={link.to}
               className={`px-3.5 py-2 rounded-xl font-ninja font-bold text-sm transition-colors whitespace-nowrap ${
                 isActive
@@ -69,6 +69,28 @@ export default function TopNav({ onOpenBug }) {
             >
               {link.label}
             </Link>
+          );
+          if (!link.quick) return tab;
+          // The quick link unfolds out of its tab's right side on hover, and
+          // stays unfolded while it is the open page. Width animates so the
+          // reveal reads as the tab growing a tool, not the row jumping.
+          const quickActive = isLinkActive(link.quick, location.pathname, location.search);
+          return (
+            <span key={link.to} className="group flex items-center">
+              {tab}
+              <Link
+                to={link.quick.to}
+                title={link.quick.label}
+                aria-label={link.quick.label}
+                className={`flex items-center justify-center h-8 rounded-lg overflow-hidden transition-all duration-200 focus-visible:opacity-100 focus-visible:w-8 ${
+                  quickActive
+                    ? 'w-8 opacity-100 bg-ninja-blue/10 text-ninja-blue-ink'
+                    : 'w-0 opacity-0 group-hover:w-8 group-hover:opacity-100 text-ninja-muted hover:text-ninja-blue-ink hover:bg-ninja-blue/10'
+                }`}
+              >
+                <link.quick.Glyph size={17} strokeWidth={1.9} className="flex-shrink-0" />
+              </Link>
+            </span>
           );
         })}
       </nav>

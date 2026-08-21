@@ -3,8 +3,6 @@ import { motion } from 'framer-motion';
 import { CalendarIcon, ImageIcon, MegaphoneIcon, PlusIcon } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import Modal from '../../components/ui/Modal';
-import SidePanel from '../../components/ui/SidePanel';
-import useIsDesktop from '../../lib/useIsDesktop';
 import { CARD } from '../../lib/surfaces';
 import { SkeletonCards } from '../../components/ui/Skeleton';
 import { api } from '../../api/client';
@@ -215,7 +213,6 @@ function ListingCard({ listing, canManage, onEdit, onDelete, onTogglePublished }
 export default function EventsPage() {
   const { isReadOnly } = useAuth();
   const canManage = !isReadOnly;
-  const isDesktop = useIsDesktop();
   const [listings, setListings] = useState(null);
   const [editor, setEditor] = useState(null); // { listing } — add uses {}
   const [busy, setBusy] = useState(false);
@@ -277,9 +274,6 @@ export default function EventsPage() {
     }
   };
 
-  const Shell = isDesktop ? SidePanel : Modal;
-  const shellProps = isDesktop ? { width: 'w-[27rem]' } : { width: 'max-w-md' };
-
   return (
     <Layout>
       <div className="space-y-6">
@@ -318,11 +312,14 @@ export default function EventsPage() {
         )}
       </div>
 
-      <Shell isOpen={!!editor} onClose={() => setEditor(null)} title={editor?.listing?.id ? 'Edit listing' : 'New listing'} {...shellProps}>
+      {/* Centered on every width, not a side panel: authoring a listing is a
+          sit-down task with an image and a preview, not a quick edit beside
+          the page. */}
+      <Modal isOpen={!!editor} onClose={() => setEditor(null)} title={editor?.listing?.id ? 'Edit listing' : 'New listing'} width="max-w-lg">
         {editor && (
           <ListingForm initial={editor.listing} onSave={save} onCancel={() => setEditor(null)} busy={busy} error={formError} />
         )}
-      </Shell>
+      </Modal>
     </Layout>
   );
 }

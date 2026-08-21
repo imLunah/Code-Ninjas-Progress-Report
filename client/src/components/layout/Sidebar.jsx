@@ -45,12 +45,15 @@ function BugIcon() {
 }
 
 export const managerLinks = [
-  { to: '/manager/overview', label: 'Dashboard', Glyph: LayoutGridIcon },
+  // Events rides the Dashboard row as a hover reveal rather than a row of its
+  // own — same reasoning as Tasks below: it is a director tool beside the
+  // dashboard, and a full row makes the nav read one feature longer than the
+  // app is. Both navs render `quick` their own way.
+  { to: '/manager/overview', label: 'Dashboard', Glyph: LayoutGridIcon, quick: { to: '/manager/events', label: 'Events', Glyph: MegaphoneIcon } },
   { to: '/manager/dashboard', label: "Today's Board", icon: 'today' },
   { to: '/manager/students', label: 'Ninjas', icon: 'roster' },
   { to: '/clubs', label: 'Clubs', icon: 'clubs' },
   { to: '/manager/staff', label: 'Staff', icon: 'senseis' },
-  { to: '/manager/events', label: 'Events', Glyph: MegaphoneIcon },
   // Tasks is deliberately NOT here. The dashboard preview is the way in, and a
   // nav entry beside it makes the board look like two features. Both navs read
   // this list, so adding it back puts it in the sidebar and the top bar at once.
@@ -152,14 +155,16 @@ export default function Sidebar({ onOpenBug }) {
       <nav className="flex-1 p-3 space-y-0.5 mt-2 overflow-y-auto">
         {navLinks.map((link) => {
           const isActive = isLinkActive(link, location.pathname, location.search);
-          return (
+          const quick = !collapsed ? link.quick : null;
+          const quickActive = quick && isLinkActive(quick, location.pathname, location.search);
+          const row = (
             <Link
-              key={link.to}
+              key={quick ? undefined : link.to}
               to={link.to}
               title={collapsed ? link.label : undefined}
               className={`flex items-center gap-3 py-2.5 rounded-xl font-ninja font-bold text-sm transition-colors relative overflow-hidden whitespace-nowrap ${
                 collapsed ? 'px-0 justify-center' : 'px-3'
-              } ${
+              } ${quick ? 'pr-10' : ''} ${
                 isActive
                   ? 'bg-ninja-blue/10 text-ninja-blue-ink'
                   : 'text-ninja-navy hover:bg-ninja-bg'
@@ -172,6 +177,28 @@ export default function Sidebar({ onOpenBug }) {
                 </motion.span>
               )}
             </Link>
+          );
+          if (!quick) return row;
+          // A quick link rides its row's right edge and shows itself on hover
+          // (or whenever it is the open page, so "where am I" survives the
+          // pointer leaving). Sibling of the row, never nested — a link
+          // inside a link is invalid and screen readers trip over it.
+          return (
+            <div key={link.to} className="relative group">
+              {row}
+              <Link
+                to={quick.to}
+                title={quick.label}
+                aria-label={quick.label}
+                className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg transition-[opacity,background-color,color] focus-visible:opacity-100 ${
+                  quickActive
+                    ? 'opacity-100 bg-ninja-blue/10 text-ninja-blue-ink'
+                    : 'opacity-0 group-hover:opacity-100 text-ninja-muted hover:text-ninja-blue-ink hover:bg-ninja-blue/10'
+                }`}
+              >
+                <quick.Glyph size={18} strokeWidth={1.9} />
+              </Link>
+            </div>
           );
         })}
       </nav>
