@@ -4,7 +4,7 @@ import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayou
 import { api } from '../../api/client';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
-import { PageTitle, Hero, Emblem, ProgramMark, Group, Row, StatusText, MoreLink } from '../../components/parent/ParentUI';
+import { Hero, Emblem, ProgramMark, Group, Row, StatusText, MoreLink } from '../../components/parent/ParentUI';
 import Logo from '../../components/ui/Logo';
 import { FLAT } from '../../lib/surfaces';
 import { SkeletonCards } from '../../components/ui/Skeleton';
@@ -151,7 +151,7 @@ function EventSlideshow({ events }) {
 
   return (
     <section
-      className="relative left-1/2 -translate-x-1/2 w-screen overflow-hidden text-white"
+      className="relative left-1/2 -translate-x-1/2 w-screen -mt-5 lg:-mt-7 overflow-hidden text-white"
       style={{ background: '#0e1c3a' }}
       aria-label="Events at the center"
       onPointerEnter={(e) => { if (e.pointerType === 'mouse') setPaused(true); }}
@@ -181,21 +181,21 @@ function EventSlideshow({ events }) {
                   overlap, and a translucent color doubles up where they do. */}
               {!ev.image_url && (
                 <span aria-hidden className="absolute right-6 top-1/2 -translate-y-1/2 hidden sm:block" style={{ color: '#ffffff', opacity: 0.22 }}>
-                  <Logo variant="mark" className="h-20" />
+                  <Logo variant="mark" className="h-24" />
                 </span>
               )}
               <div className="min-w-0">
-                <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] opacity-90 truncate">
+                <p className="font-ninja text-[12px] sm:text-[13px] font-extrabold uppercase tracking-[0.08em] opacity-90 truncate">
                   {ev.event_date ? (isToday ? 'Happening today' : 'Coming up') : 'Announcement'}{when ? ` · ${when}` : ''}
                 </p>
-                <p className="font-ninja font-extrabold text-[22px] sm:text-[25px] leading-tight mt-1 truncate">{ev.title}</p>
-                {hook && <p className="font-ninja text-[13px] font-bold opacity-90 mt-1 line-clamp-2 sm:line-clamp-1">{hook}</p>}
+                <p className="font-ninja font-extrabold text-[28px] sm:text-[34px] lg:text-[40px] leading-tight mt-1.5 truncate">{ev.title}</p>
+                {hook && <p className="font-ninja text-[14px] sm:text-[16px] font-bold opacity-90 mt-1.5 line-clamp-2 sm:line-clamp-1">{hook}</p>}
                 {hasMore && (
                   <button
                     type="button"
                     onClick={() => setExpanded((x) => !x)}
                     aria-expanded={expanded}
-                    className="mt-2.5 inline-flex items-center gap-1 font-ninja text-[12px] font-extrabold rounded-full px-3 py-1 transition-colors"
+                    className="mt-3.5 inline-flex items-center gap-1 font-ninja text-[13px] sm:text-[14px] font-extrabold rounded-full px-4 py-1.5 transition-colors"
                     style={{ background: 'rgb(255 255 255 / 0.18)', border: '1px solid rgb(255 255 255 / 0.3)' }}
                   >
                     {expanded ? 'Show less' : 'Learn more ›'}
@@ -392,15 +392,15 @@ export default function ParentHome() {
     return students.filter((s) => s.id === activeId);
   }, [students, activeId, viewAll]);
 
-  const todayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-
   return (
     <ParentLayout switcher={<ChildSwitcher withAll layoutId="parent-child-desktop" />}>
       <div className="space-y-4 lg:space-y-5">
-        <PageTitle eyebrow={todayLabel} title="Home" />
-        <div className="lg:hidden"><ChildSwitcher withAll layoutId="parent-child-mobile" /></div>
-
+        {/* The banner is the page's opening, where the Home title used to be:
+            first in flow, and its negative margin eats main's top padding so
+            the full-bleed navy sits flush under the header bar. */}
         <EventSlideshow events={events} />
+
+        <div className="lg:hidden"><ChildSwitcher withAll layoutId="parent-child-mobile" /></div>
 
         {students === null ? (
           <SkeletonCards count={2} cols="lg:grid-cols-2" height={320} label="Loading your family" />
