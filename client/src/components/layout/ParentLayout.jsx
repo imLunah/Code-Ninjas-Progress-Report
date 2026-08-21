@@ -104,7 +104,10 @@ export default function ParentLayout({ children, switcher = null, bleed = false 
   };
 
   return (
-    <div className="min-h-[100dvh] bg-ninja-bg">
+    // overflow-x-clip: the home banner is w-screen inside the centered main
+    // column, which overhangs by half a scrollbar each side. Clip, not hidden:
+    // hidden would make this the scrollport and break sticky descendants.
+    <div className="min-h-[100dvh] bg-ninja-bg overflow-x-clip">
       {/* Liquid glass filter for the phone capsule. Chromium refracts; iOS
           Safari falls back to blur. Same filter the staff shell defines. */}
       <svg aria-hidden="true" className="absolute w-0 h-0 pointer-events-none" focusable="false">

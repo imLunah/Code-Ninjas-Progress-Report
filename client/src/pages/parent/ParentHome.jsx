@@ -122,6 +122,11 @@ function stripMd(text = '') {
 // tile sat on top of the artwork. Everything is inline color: the image gets
 // a dark wash for the white ink, the imageless fallback is a deep navy, and
 // neither can be fought by the .dark overrides.
+//
+// The banner runs edge to edge: it escapes main's max-w-6xl column with the
+// w-screen + left-1/2 trick (ParentLayout's root clips the ~half-scrollbar of
+// horizontal overflow this creates), while its ink stays in its own inner
+// max-w-6xl column so the text still lines up with the page content below.
 function EventSlideshow({ events }) {
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -146,13 +151,13 @@ function EventSlideshow({ events }) {
 
   return (
     <section
-      className="overflow-hidden rounded-[22px] text-white"
+      className="relative left-1/2 -translate-x-1/2 w-screen overflow-hidden text-white"
       style={{ background: '#0e1c3a' }}
       aria-label="Events at the center"
       onPointerEnter={(e) => { if (e.pointerType === 'mouse') setPaused(true); }}
       onPointerLeave={(e) => { if (e.pointerType === 'mouse') setPaused(false); }}
     >
-      <div className="relative h-44 sm:h-52">
+      <div className="relative h-56 sm:h-64 lg:h-72">
         <AnimatePresence initial={false}>
           <motion.div
             key={ev.id}
@@ -171,14 +176,14 @@ function EventSlideshow({ events }) {
             />
             {/* The wash that keeps white ink readable on any artwork. */}
             <span aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgb(6 11 24 / 0.82) 0%, rgb(6 11 24 / 0.55) 55%, rgb(6 11 24 / 0.2) 100%)' }} />
-            {/* Opacity on the element, not the color: the mark's paths
-                overlap, and a translucent color doubles up where they do. */}
-            {!ev.image_url && (
-              <span aria-hidden className="absolute right-6 top-1/2 -translate-y-1/2 hidden sm:block" style={{ color: '#ffffff', opacity: 0.22 }}>
-                <Logo variant="mark" className="h-16" />
-              </span>
-            )}
-            <div className="relative h-full flex items-center px-4 sm:px-6">
+            <div className="relative h-full max-w-6xl mx-auto flex items-center px-4 sm:px-6">
+              {/* Opacity on the element, not the color: the mark's paths
+                  overlap, and a translucent color doubles up where they do. */}
+              {!ev.image_url && (
+                <span aria-hidden className="absolute right-6 top-1/2 -translate-y-1/2 hidden sm:block" style={{ color: '#ffffff', opacity: 0.22 }}>
+                  <Logo variant="mark" className="h-20" />
+                </span>
+              )}
               <div className="min-w-0">
                 <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] opacity-90 truncate">
                   {ev.event_date ? (isToday ? 'Happening today' : 'Coming up') : 'Announcement'}{when ? ` · ${when}` : ''}
@@ -228,8 +233,9 @@ function EventSlideshow({ events }) {
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
             className="overflow-hidden"
+            style={{ borderTop: '1px solid rgb(255 255 255 / 0.12)' }}
           >
-            <div className="px-4 sm:px-6 py-4 space-y-3" style={{ borderTop: '1px solid rgb(255 255 255 / 0.12)' }}>
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 space-y-3">
               {when && (
                 <p className="font-ninja text-[13px] font-extrabold">
                   {isToday ? 'Today' : fmtLongDay(ev.event_date)}{ev.event_time ? ` · ${ev.event_time}` : ''}
