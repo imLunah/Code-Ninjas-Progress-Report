@@ -5,6 +5,7 @@ import { api } from '../../api/client';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { PageTitle, Hero, Emblem, ProgramMark, Group, Row, StatusText, MoreLink } from '../../components/parent/ParentUI';
+import Logo from '../../components/ui/Logo';
 import { FLAT } from '../../lib/surfaces';
 import { SkeletonCards } from '../../components/ui/Skeleton';
 import { fmtDay, fmtLongDay, calcAge } from '../../lib/parentProgress';
@@ -139,6 +140,11 @@ function EventSlideshow({ events }) {
             />
             {/* The wash that keeps white ink readable on any artwork. */}
             <span aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgb(6 11 24 / 0.82) 0%, rgb(6 11 24 / 0.55) 55%, rgb(6 11 24 / 0.2) 100%)' }} />
+            {!ev.image_url && (
+              <span aria-hidden className="absolute right-6 top-1/2 -translate-y-1/2 hidden sm:block" style={{ color: 'rgb(255 255 255 / 0.22)' }}>
+                <Logo variant="mark" className="h-16" />
+              </span>
+            )}
             <span className="relative h-full flex items-center justify-between gap-4 px-4 sm:px-6">
               <span className="min-w-0 block">
                 <span className="block font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] opacity-90 truncate">

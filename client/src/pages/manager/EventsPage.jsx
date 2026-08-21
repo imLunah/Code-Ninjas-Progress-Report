@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { CalendarIcon, ImageIcon, MegaphoneIcon, PlusIcon } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import Modal from '../../components/ui/Modal';
+import Logo from '../../components/ui/Logo';
 import { CARD } from '../../lib/surfaces';
 import { SkeletonCards } from '../../components/ui/Skeleton';
 import { api } from '../../api/client';
@@ -38,9 +39,11 @@ function ListingForm({ initial, onSave, onCancel, busy, error }) {
   const [subtitle, setSubtitle] = useState(initial.subtitle || '');
   const [eventUrl, setEventUrl] = useState(initial.event_url || '');
   const [date, setDate] = useState(initial.event_date || '');
-  const [time, setTime] = useState(initial.event_time || '');
+  // One stored string, two fields: "6:00 PM - 8:00 PM" round-trips through
+  // the same separator it was joined with.
+  const [timeStart, setTimeStart] = useState((initial.event_time || '').split(' - ')[0] || '');
+  const [timeEnd, setTimeEnd] = useState((initial.event_time || '').split(' - ')[1] || '');
   const [description, setDescription] = useState(initial.description || '');
-  const [published, setPublished] = useState(initial.published !== false);
   // The image travels separately from the fields: a chosen file is held here
   // and uploaded after the listing row exists, because the attach route needs
   // an id to hang it on.
@@ -68,9 +71,22 @@ function ListingForm({ initial, onSave, onCancel, busy, error }) {
   };
 
   const canSave = title.trim();
+  const wasPublished = Boolean(initial.id) && initial.published !== false;
+  const submit = (pub) => onSave(
+    {
+      title, subtitle, event_url: eventUrl, event_date: date || null,
+      event_time: [timeStart.trim(), timeEnd.trim()].filter(Boolean).join(' - '),
+      description, published: pub,
+    },
+    { file, removeImage },
+  );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Two columns so the form reads as a desk, not a tunnel: the words on
+          the left, the picture and the long text on the right. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+       <div className="space-y-4">
       <div>
         <label className={label}>Title</label>
         <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200}
@@ -87,9 +103,30 @@ function ListingForm({ initial, onSave, onCancel, busy, error }) {
         <label className={label}>Sign-up link {optional}</label>
         <input value={eventUrl} onChange={(e) => setEventUrl(e.target.value)} maxLength={500} type="url"
           placeholder="https://…" className={field} />
-        <p className="font-ninja text-xs text-ninja-muted mt-1">Where the banner sends a family who taps it — a MyStudio event page, a form, anything.</p>
+        <p className="font-ninja text-xs text-ninja-muted mt-1">Where the banner sends a family who taps it: a MyStudio event page, a form, anything.</p>
       </div>
 
+      <div>
+        <label className={label}>Date {optional}</label>
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={field} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={label}>Starts {optional}</label>
+          <input value={timeStart} onChange={(e) => setTimeStart(e.target.value)} maxLength={18}
+            placeholder="e.g. 6:00 PM" className={field} />
+        </div>
+        <div>
+          <label className={label}>Ends {optional}</label>
+          <input value={timeEnd} onChange={(e) => setTimeEnd(e.target.value)} maxLength={18}
+            placeholder="e.g. 8:00 PM" className={field} />
+        </div>
+      </div>
+      <p className="font-ninja text-xs text-ninja-muted -mt-2">With a date, the banner comes down by itself once the day passes. Without one, it stays up until you unpublish it.</p>
+       </div>
+
+       <div className="space-y-4">
       <div>
         <label className={label}>Banner image {optional}</label>
         {preview ? (
@@ -113,46 +150,29 @@ function ListingForm({ initial, onSave, onCancel, busy, error }) {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={label}>Date {optional}</label>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={field} />
-        </div>
-        <div>
-          <label className={label}>Time {optional}</label>
-          <input value={time} onChange={(e) => setTime(e.target.value)} maxLength={40}
-            placeholder="e.g. 6:00 PM" className={field} />
-        </div>
-      </div>
-      <p className="font-ninja text-xs text-ninja-muted -mt-2">With a date, the banner comes down by itself once the day passes. Without one, it stays up until you unpublish it.</p>
-
       <div>
         <label className={label}>Description {optional}</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000} rows={4}
-          placeholder="What families should know — this is parent-facing." className={`${field} resize-none`} />
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000} rows={6}
+          placeholder="What families should know. Parents read this word for word." className={`${field} resize-none`} />
       </div>
-
-      <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-lg border border-ninja-border bg-ninja-bg px-3 py-2.5">
-        <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)}
-          className="mt-0.5 w-4 h-4 flex-shrink-0 accent-ninja-blue" />
-        <span>
-          <span className="block font-ninja text-sm font-bold text-ninja-navy">Published</span>
-          <span className="block font-ninja text-xs text-ninja-muted mt-0.5">Live on the Parent Portal home. Untick to keep a draft.</span>
-        </span>
-      </label>
+       </div>
+      </div>
 
       {error && <p className="font-ninja text-sm text-ninja-red">{error}</p>}
 
       <div className="flex items-center justify-end gap-2 pt-1">
         <button onClick={onCancel} className="font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-navy px-2 py-2 rounded">Cancel</button>
         <button
-          onClick={() => onSave(
-            { title, subtitle, event_url: eventUrl, event_date: date || null, event_time: time, description, published },
-            { file, removeImage },
-          )}
+          onClick={() => submit(false)}
+          disabled={busy || !canSave}
+          className="font-ninja text-sm font-bold px-4 py-2 rounded-lg border border-ninja-border bg-white text-ninja-navy hover:bg-ninja-bg transition-colors disabled:opacity-50">
+          {wasPublished ? 'Move to draft' : 'Save draft'}
+        </button>
+        <button
+          onClick={() => submit(true)}
           disabled={busy || !canSave}
           className="font-ninja text-sm font-bold px-4 py-2 rounded-lg bg-ninja-blue text-white transition-transform duration-150 ease-[var(--ease-out)] active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100">
-          {busy ? 'Saving…' : initial.id ? 'Save' : 'Add listing'}
+          {busy ? 'Saving…' : wasPublished ? 'Save' : 'Publish'}
         </button>
       </div>
     </div>
@@ -162,30 +182,37 @@ function ListingForm({ initial, onSave, onCancel, busy, error }) {
 function ListingCard({ listing, canManage, onEdit, onDelete, onTogglePublished }) {
   const [confirmDel, setConfirmDel] = useState(false);
   const past = listing.event_date && listing.event_date < todayIso();
-  const live = listing.published && !past;
   const when = [fmtDate(listing.event_date), listing.event_time].filter(Boolean).join(' · ');
+  const status = past ? 'Ended' : listing.published ? 'Live for families' : 'Draft';
   return (
     <article className={`${CARD} overflow-hidden flex flex-col`}>
-      {listing.image_url ? (
-        <img src={listing.image_url} alt="" className="w-full aspect-[2/1] object-cover" />
-      ) : (
-        <div className="w-full aspect-[2/1] flex items-center justify-center text-white/85"
-          style={{ background: 'linear-gradient(135deg, #12264d 0%, #0b3d8f 100%)' }}>
-          <MegaphoneIcon size={30} strokeWidth={1.6} aria-hidden />
-        </div>
-      )}
+      <div className="relative">
+        {listing.image_url ? (
+          <img src={listing.image_url} alt="" className="w-full aspect-[2/1] object-cover" />
+        ) : (
+          <div className="w-full aspect-[2/1] flex items-center justify-center text-white/80"
+            style={{ background: 'linear-gradient(135deg, #12264d 0%, #0b3d8f 100%)' }}>
+            <Logo variant="mark" className="h-10" />
+          </div>
+        )}
+        {/* The whole status in one dot on the banner's corner: green live,
+            amber draft, gray ended. The word lives in the tooltip. */}
+        <span
+          role="img"
+          title={status}
+          aria-label={status}
+          className="absolute top-2.5 right-2.5 w-2.5 h-2.5 rounded-full"
+          style={{ background: past ? '#94a3b8' : listing.published ? '#22c55e' : '#f59e0b', boxShadow: '0 0 0 3px rgb(10 16 32 / 0.45)' }}
+        />
+      </div>
       <div className="p-4 flex flex-col gap-2 flex-1">
         <div className="min-w-0">
           <h3 className="font-ninja font-extrabold text-[16px] text-ninja-navy leading-tight truncate">{listing.title}</h3>
           {listing.subtitle && <p className="font-ninja text-[12.5px] text-ninja-muted truncate mt-0.5">{listing.subtitle}</p>}
         </div>
-        <div className="flex items-center gap-2 font-ninja text-xs text-ninja-muted">
-          {when && <span className="inline-flex items-center gap-1"><CalendarIcon size={12} aria-hidden />{when}</span>}
-          <span className={`inline-flex items-center gap-1.5 font-bold ${live ? 'text-green-600 dark:text-green-400' : ''}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${live ? 'bg-green-500' : 'bg-ninja-muted/50'}`} aria-hidden />
-            {past ? 'Ended' : listing.published ? 'Live for families' : 'Draft'}
-          </span>
-        </div>
+        {when && (
+          <p className="flex items-center gap-1 font-ninja text-xs text-ninja-muted"><CalendarIcon size={12} aria-hidden />{when}</p>
+        )}
         {canManage && (
           <div className="flex items-center gap-3 pt-1 mt-auto">
             <button onClick={onEdit} className="font-ninja text-sm font-bold text-ninja-blue hover:underline rounded">Edit</button>
@@ -312,10 +339,10 @@ export default function EventsPage() {
         )}
       </div>
 
-      {/* Centered on every width, not a side panel: authoring a listing is a
-          sit-down task with an image and a preview, not a quick edit beside
-          the page. */}
-      <Modal isOpen={!!editor} onClose={() => setEditor(null)} title={editor?.listing?.id ? 'Edit listing' : 'New listing'} width="max-w-lg">
+      {/* Centered and wide, not a side panel: authoring a listing is a
+          sit-down task, and two columns keep it from becoming a tall
+          tunnel of fields. */}
+      <Modal isOpen={!!editor} onClose={() => setEditor(null)} title={editor?.listing?.id ? 'Edit listing' : 'New listing'} width="max-w-3xl">
         {editor && (
           <ListingForm initial={editor.listing} onSave={save} onCancel={() => setEditor(null)} busy={busy} error={formError} />
         )}

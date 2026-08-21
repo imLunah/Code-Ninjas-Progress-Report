@@ -6,7 +6,7 @@ import ThemeToggle from '../ui/ThemeToggle';
 import Logo from '../ui/Logo';
 import { RocketIcon } from '../ui/icons';
 import { LogOutIcon, UserIcon, ChevronDownIcon } from 'lucide-react';
-import { managerLinks, senseiLinks, isLinkActive } from './Sidebar';
+import { managerLinks, senseiLinks, isLinkActive, QuickFlyoutPanel } from './Sidebar';
 
 // Experimental desktop layout: the sidebar's contents rearranged into a
 // horizontal bar. Mobile keeps the floating capsule nav either way, so this
@@ -19,6 +19,16 @@ export default function TopNav({ onOpenBug }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  // Which tab's quick flyout is open, and where it drops. Fixed-position
+  // because the tab strip is a scroll container and clips absolute children.
+  const [flyout, setFlyout] = useState(null);
+  const [flyoutPos, setFlyoutPos] = useState({ top: 0, left: 0 });
+  const openFlyout = (id, el) => {
+    const r = el.getBoundingClientRect();
+    setFlyoutPos({ top: r.bottom, left: r.left });
+    setFlyout(id);
+  };
+  useEffect(() => { setFlyout(null); }, [location.pathname]);
 
   const isSenseiView = user?.role === 'admin' && viewAs === 'sensei';
   const navLinks = isSenseiView ? senseiLinks : ['manager', 'admin'].includes(user?.role) ? managerLinks : user?.role === 'sensei' ? senseiLinks : [];
@@ -71,25 +81,24 @@ export default function TopNav({ onOpenBug }) {
             </Link>
           );
           if (!link.quick) return tab;
-          // The quick link unfolds out of its tab's right side on hover, and
-          // stays unfolded while it is the open page. Width animates so the
-          // reveal reads as the tab growing a tool, not the row jumping.
-          const quickActive = isLinkActive(link.quick, location.pathname, location.search);
+          // Hovering (or focusing into) the tab drops the same flyout panel
+          // the sidebar shows, under the tab. The flyout's hover box starts
+          // at the tab's bottom edge so the pointer never crosses dead
+          // ground on the way down.
           return (
-            <span key={link.to} className="group flex items-center">
+            <span
+              key={link.to}
+              onMouseEnter={(e) => openFlyout(link.to, e.currentTarget)}
+              onMouseLeave={() => setFlyout(null)}
+              onFocus={(e) => openFlyout(link.to, e.currentTarget)}
+              onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setFlyout(null); }}
+            >
               {tab}
-              <Link
-                to={link.quick.to}
-                title={link.quick.label}
-                aria-label={link.quick.label}
-                className={`flex items-center justify-center h-8 rounded-lg overflow-hidden transition-all duration-200 focus-visible:opacity-100 focus-visible:w-8 ${
-                  quickActive
-                    ? 'w-8 opacity-100 bg-ninja-blue/10 text-ninja-blue-ink'
-                    : 'w-0 opacity-0 group-hover:w-8 group-hover:opacity-100 text-ninja-muted hover:text-ninja-blue-ink hover:bg-ninja-blue/10'
-                }`}
-              >
-                <link.quick.Glyph size={17} strokeWidth={1.9} className="flex-shrink-0" />
-              </Link>
+              {flyout === link.to && (
+                <div className="fixed z-50 pt-2" style={{ top: flyoutPos.top, left: flyoutPos.left }}>
+                  <QuickFlyoutPanel link={link} pathname={location.pathname} search={location.search} />
+                </div>
+              )}
             </span>
           );
         })}
