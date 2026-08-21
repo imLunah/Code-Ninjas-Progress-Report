@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
 import { api } from '../../api/client';
@@ -82,6 +82,37 @@ function WeekStrip({ center, kids }) {
   );
 }
 
+// Markdown only loads when someone actually opens a banner's details —
+// react-markdown is too heavy to ride along on every home visit.
+const ReactMarkdown = lazy(() => import('react-markdown'));
+
+// Listing descriptions are CD-authored markdown shown on the navy banner, so
+// every ink is inline white. `img: () => null` stays: markdown never gets to
+// draw an image on this surface (same rule as the note maps, session 32).
+const BANNER_MD = {
+  p: (props) => <p className="font-ninja text-[13.5px] leading-relaxed mb-2 last:mb-0" {...props} />,
+  strong: (props) => <strong className="font-extrabold" style={{ color: '#ffffff' }} {...props} />,
+  a: (props) => <a target="_blank" rel="noopener noreferrer" className="underline font-bold" style={{ color: '#ffffff' }} {...props} />,
+  ul: (props) => <ul className="list-disc pl-5 mb-2 space-y-0.5" {...props} />,
+  ol: (props) => <ol className="list-decimal pl-5 mb-2 space-y-0.5" {...props} />,
+  li: (props) => <li className="font-ninja text-[13.5px] leading-relaxed" {...props} />,
+  h1: (props) => <p className="font-ninja font-extrabold text-[15px] mb-1.5" style={{ color: '#ffffff' }} {...props} />,
+  h2: (props) => <p className="font-ninja font-extrabold text-[14px] mb-1.5" style={{ color: '#ffffff' }} {...props} />,
+  h3: (props) => <p className="font-ninja font-extrabold text-[13.5px] mb-1.5" style={{ color: '#ffffff' }} {...props} />,
+  code: (props) => <code className="font-mono text-[12.5px] px-1 rounded" style={{ background: 'rgb(255 255 255 / 0.15)' }} {...props} />,
+  blockquote: (props) => <blockquote className="pl-3 mb-2" style={{ borderLeft: '2px solid rgb(255 255 255 / 0.3)' }} {...props} />,
+  img: () => null,
+};
+
+// Markdown syntax has no place in the banner's one-line hook.
+function stripMd(text = '') {
+  return text
+    .replace(/[*_`#>]/g, '')
+    .replace(/^\s*[-+]\s+/gm, '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .trim();
+}
+
 // The center's event listings, at the top of the home. One listing is a
 // banner; more than one rotates like a slideshow, sliding to the next every
 // few seconds, with dots to jump. A mouse resting on it holds it still, and
@@ -110,10 +141,8 @@ function EventSlideshow({ events }) {
   const when = ev.event_date
     ? `${isToday ? 'Today' : fmtLongDay(ev.event_date)}${ev.event_time ? ` · ${ev.event_time}` : ''}`
     : null;
-  const hook = ev.subtitle || (ev.description ? ev.description.split('\n')[0] : null);
+  const hook = ev.subtitle || (ev.description ? stripMd(ev.description.split('\n')[0]) : null);
   const hasMore = Boolean(ev.description || ev.event_url || when);
-  let host = null;
-  try { host = ev.event_url ? new URL(ev.event_url).hostname.replace(/^www\./, '') : null; } catch { /* leave null */ }
 
   return (
     <section
@@ -143,7 +172,9 @@ function EventSlideshow({ events }) {
             {/* The wash that keeps white ink readable on any artwork. */}
             <span aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgb(6 11 24 / 0.82) 0%, rgb(6 11 24 / 0.55) 55%, rgb(6 11 24 / 0.2) 100%)' }} />
             {!ev.image_url && (
-              <span aria-hidden className="absolute right-6 top-1/2 -translate-y-1/2 hidden sm:block" style={{ color: 'rgb(255 255 255 / 0.22)' }}>
+              {/* Opacity on the element, not the color: the mark's paths
+                  overlap, and a translucent color doubles up where they do. */}
+              <span aria-hidden className="absolute right-6 top-1/2 -translate-y-1/2 hidden sm:block" style={{ color: '#ffffff', opacity: 0.22 }}>
                 <Logo variant="mark" className="h-16" />
               </span>
             )}
@@ -205,12 +236,19 @@ function EventSlideshow({ events }) {
                 </p>
               )}
               {ev.description && (
-                <p className="font-ninja text-[13.5px] leading-relaxed whitespace-pre-line" style={{ color: 'rgb(255 255 255 / 0.88)' }}>
-                  {ev.description}
-                </p>
+                <div style={{ color: 'rgb(255 255 255 / 0.88)' }}>
+                  <Suspense fallback={<p className="font-ninja text-[13.5px] leading-relaxed whitespace-pre-line">{stripMd(ev.description)}</p>}>
+                    <ReactMarkdown
+                      components={BANNER_MD}
+                      urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
+                    >
+                      {ev.description}
+                    </ReactMarkdown>
+                  </Suspense>
+                </div>
               )}
               {ev.event_url && (
-                <p className="flex items-center gap-2.5">
+                <p>
                   <a
                     href={ev.event_url}
                     target="_blank"
@@ -220,7 +258,6 @@ function EventSlideshow({ events }) {
                   >
                     Sign up ›
                   </a>
-                  {host && <span className="font-ninja text-[12px] opacity-70 truncate">{host}</span>}
                 </p>
               )}
             </div>

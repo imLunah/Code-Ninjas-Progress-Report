@@ -4,6 +4,7 @@ import { CalendarIcon, ImageIcon, MegaphoneIcon, PlusIcon } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import Modal from '../../components/ui/Modal';
 import Logo from '../../components/ui/Logo';
+import LazyMarkdownEditor from '../../components/shared/LazyMarkdownEditor';
 import { CARD } from '../../lib/surfaces';
 import { SkeletonCards } from '../../components/ui/Skeleton';
 import { api } from '../../api/client';
@@ -152,8 +153,13 @@ function ListingForm({ initial, onSave, onCancel, busy, error }) {
 
       <div>
         <label className={label}>Description {optional}</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000} rows={6}
-          placeholder="What families should know. Parents read this word for word." className={`${field} resize-none`} />
+        {/* The same editor senseis log with, storing markdown; the parent
+            banner renders it formatted. */}
+        <LazyMarkdownEditor
+          value={description}
+          onChange={setDescription}
+          placeholder="What families should know. Try **bold** or start a line with '- ' for a list."
+        />
       </div>
        </div>
       </div>
