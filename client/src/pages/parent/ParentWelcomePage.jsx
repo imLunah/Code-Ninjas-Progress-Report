@@ -4,12 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { useLightOnly } from '../../context/ThemeContext';
-import StaffBadge from '../../components/shared/StaffBadge';
+import FamilyPass from '../../components/shared/FamilyPass';
 import Logo from '../../components/ui/Logo';
 
 // A parent's first sign-in. The same shape as the staff welcome: a short
-// walk, with their ID card beside it printing what they type. Name, then
-// phone and relationship, then the card turns over to show the ninjas it
+// walk, with the family's pass beside it printing what they type. Name, then
+// phone and relationship, then the pass turns over to show the ninjas it
 // belongs to. Saving writes the parent_profiles row; having one is what
 // lets ParentRoute through to the rest of the portal.
 //
@@ -61,19 +61,30 @@ export default function ParentWelcomePage() {
   const firstName = first.trim() || 'there';
   const kids = (portal?.students || []).map((s) => s.full_name.split(' ')[0]);
 
-  // The card prints the form live: the name as typed, and on the back the
-  // ninjas this card is for, with the relationship and phone under them.
-  const badgeProps = {
-    name: fullName,
-    role: 'Parent',
+  // The pass prints the form live: the family name as the surname is typed,
+  // the ninjas with their belts on the back, and under them the parent as
+  // they fill themselves in. A ninja's belt is their CREATE belt when they
+  // have one, else whatever program lists one first.
+  const ninjas = (portal?.students || []).map((s) => {
+    const programs = s.programs || [];
+    const create = programs.find((p) => p.program === 'CREATE' && p.belt_level);
+    const withBelt = create || programs.find((p) => p.belt_level) || programs[0];
+    return { name: s.full_name.split(' ')[0], belt: withBelt?.belt_level || null, program: withBelt?.program || null };
+  });
+  const memberSince = (() => {
+    const stamps = (portal?.students || []).map((s) => s.created_at).filter(Boolean).map((d) => new Date(d)).filter((d) => !Number.isNaN(d));
+    if (!stamps.length) return null;
+    const first = new Date(Math.min(...stamps));
+    return first.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+  })();
+  const passProps = {
+    familyName: last,
+    parentName: fullName,
+    relationship,
+    phone: phone.trim(),
     center: parent?.centerName,
-    username: listNames(kids),
-    idLabel: kids.length > 1 ? 'Ninjas' : 'Ninja',
-    idPlaceholder: 'your ninja',
-    details: [
-      relationship && { label: 'Relationship', value: relationship },
-      phone.trim() && { label: 'Phone', value: phone.trim() },
-    ].filter(Boolean),
+    ninjas,
+    memberSince,
     side: step === 3 ? 'back' : 'front',
   };
 
@@ -101,10 +112,10 @@ export default function ParentWelcomePage() {
       <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url(/onboarding-bg.webp)' }} />
       <div className="absolute inset-0 bg-gradient-to-b from-ninja-bg/70 via-ninja-bg/85 to-ninja-bg lg:from-ninja-bg/60 lg:via-ninja-bg/70 lg:to-ninja-bg/85" />
 
-      <div className="relative flex-1 lg:flex-none flex flex-col max-w-md lg:max-w-4xl w-full mx-auto px-6 pt-[max(env(safe-area-inset-top),28px)] pb-[max(env(safe-area-inset-bottom),28px)] lg:my-10 lg:px-10 lg:py-10 lg:rounded-3xl lg:border lg:border-ninja-border lg:bg-ninja-bg/75 lg:backdrop-blur-xl lg:shadow-2xl lg:grid lg:grid-cols-[380px,minmax(0,1fr)] lg:gap-10 lg:items-center">
-        {/* Desktop keeps the card beside every step, including the flip. */}
+      <div className="relative flex-1 lg:flex-none flex flex-col max-w-md lg:max-w-4xl w-full mx-auto px-6 pt-[max(env(safe-area-inset-top),28px)] pb-[max(env(safe-area-inset-bottom),28px)] lg:my-10 lg:px-10 lg:py-10 lg:rounded-3xl lg:border lg:border-ninja-border lg:bg-ninja-bg/75 lg:backdrop-blur-xl lg:shadow-2xl lg:grid lg:grid-cols-[440px,minmax(0,1fr)] lg:gap-10 lg:items-center">
+        {/* Desktop keeps the pass beside every step, including the flip. */}
         <div className="hidden lg:flex items-center justify-center">
-          <StaffBadge {...badgeProps} />
+          <FamilyPass {...passProps} scale={0.9} />
         </div>
 
         <div className="flex flex-col flex-1 min-h-0 lg:flex-none">
@@ -120,12 +131,12 @@ export default function ParentWelcomePage() {
             ))}
           </div>
 
-          {/* Phone: the card shows once the form is done with the keyboard.
+          {/* Phone: the pass shows once the form is done with the keyboard.
               The name and details steps bring it up, and a card plus a
               keyboard plus inputs does not fit a fixed-height shell. */}
           {step === 3 && (
             <div className="lg:hidden flex justify-center">
-              <StaffBadge {...badgeProps} scale={0.42} />
+              <FamilyPass {...passProps} scale={0.7} />
             </div>
           )}
 
@@ -236,7 +247,7 @@ export default function ParentWelcomePage() {
                 >
                   <h2 className="text-2xl font-black font-ninja text-ninja-navy mb-1.5">You're all set, {firstName}.</h2>
                   <p className="text-ninja-muted font-ninja text-sm mb-6">
-                    Here's your card. Inside you'll find {kids.length === 1 && kids[0] ? `${kids[0]}'s` : 'your ninjas\''} belts, classes and progress, and how busy the dojo is right now.
+                    Here's your family pass. Inside you'll find {kids.length === 1 && kids[0] ? `${kids[0]}'s` : 'your ninjas\''} belts, classes and progress, and how busy the dojo is right now.
                   </p>
                   <dl className="rounded-2xl border border-ninja-border bg-white/[0.03] px-5 py-4 grid grid-cols-[auto,1fr] gap-x-5 gap-y-2 font-ninja text-sm">
                     <dt className="text-ninja-muted">Name</dt><dd className="text-ninja-navy font-bold">{fullName}</dd>
