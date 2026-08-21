@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { HomeIcon, BookOpenIcon, UserRoundIcon, LogOutIcon } from 'lucide-react';
+import { HomeIcon, BookOpenIcon, UserRoundIcon, LogOutIcon, ChevronLeftIcon } from 'lucide-react';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import ThemeToggle from '../ui/ThemeToggle';
@@ -14,7 +14,8 @@ import { RocketIcon } from '../ui/icons';
 //
 // A flat page. On desktop a white side nav runs down the left edge with a
 // hairline beside it: the logo on top, the sections under it, the child
-// switcher, and the account at the bottom. On a phone the bar across the top
+// switcher, and the account at the bottom. It collapses to an icon rail the
+// same way the staff sidebar does, remembered per browser. On a phone the bar across the top
 // is just the logo and the account, the pages carry their own large titles,
 // and the sections live in a floating capsule at the bottom, the same
 // material as the staff nav.
@@ -23,6 +24,10 @@ import { RocketIcon } from '../ui/icons';
 // banner can span the content region exactly with 100cqw — w-screen would
 // run under the side nav. Nothing inside main is position: fixed, which the
 // containment would re-anchor to main.
+
+// Same widths as the staff Sidebar, so the two shells collapse to the same rail.
+const EXPANDED_W = 240; // matches w-60
+const COLLAPSED_W = 76;
 
 const TABS = [
   { to: '/parent/dashboard', label: 'Home',    Glyph: HomeIcon },
@@ -67,11 +72,56 @@ function ParentSideNav({ switcher, parentName, centerName, onLogout, onReport })
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const tabs = useParentTabs();
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('parent-nav-collapsed') === '1');
+  const toggleCollapsed = () => {
+    setCollapsed((c) => {
+      localStorage.setItem('parent-nav-collapsed', c ? '0' : '1');
+      return !c;
+    });
+  };
+
+  // Parents have no profile picture, so the account row carries their
+  // initials instead: first letter of the first and last name.
+  const initials = (parentName || '').trim().split(/\s+/).filter(Boolean).map((w) => w[0]).filter((_, i, a) => i === 0 || i === a.length - 1).join('').toUpperCase() || 'P';
+  const avatar = (
+    <div className="w-8 h-8 rounded-full bg-ninja-blue flex items-center justify-center text-white font-ninja font-bold text-xs flex-shrink-0" aria-hidden>
+      {initials}
+    </div>
+  );
+
   return (
-    <aside className="hidden lg:flex flex-col w-60 shrink-0 sticky top-0 h-screen bg-white border-r border-ninja-border z-40">
-      <div className="px-5 py-5 border-b border-ninja-border">
-        <Logo variant="lockup" className="h-8 text-ninja-navy" />
-        <p className="mt-1.5 font-ninja text-[12px] v2 text-ninja-muted">Parent Portal</p>
+    <motion.aside
+      initial={false}
+      animate={{ width: collapsed ? COLLAPSED_W : EXPANDED_W }}
+      transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+      className="hidden lg:flex flex-col shrink-0 sticky top-0 h-screen bg-white border-r border-ninja-border z-40"
+    >
+      {/* Collapse toggle, floating on the nav's edge like the staff sidebar's. */}
+      <button
+        type="button"
+        onClick={toggleCollapsed}
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        className="absolute -right-3 top-[72px] z-50 w-6 h-6 rounded-full bg-white border border-ninja-border shadow-sm flex items-center justify-center text-ninja-muted hover:text-ninja-blue hover:border-ninja-blue/50 transition-colors"
+      >
+        <motion.span
+          animate={{ rotate: collapsed ? 180 : 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+          className="flex"
+        >
+          <ChevronLeftIcon strokeWidth={2.5} aria-hidden className="w-3.5 h-3.5" />
+        </motion.span>
+      </button>
+
+      <div className={`py-5 border-b border-ninja-border overflow-hidden ${collapsed ? 'px-2 flex justify-center' : 'px-5'}`}>
+        {collapsed ? (
+          <Logo variant="mark" className="h-9 text-ninja-navy" />
+        ) : (
+          <>
+            <Logo variant="lockup" className="h-8 text-ninja-navy" />
+            <p className="mt-1.5 font-ninja text-[12px] v2 text-ninja-muted whitespace-nowrap">Parent Portal</p>
+          </>
+        )}
       </div>
 
       <nav aria-label="Parent portal" className="p-3 mt-1 space-y-0.5">
@@ -83,56 +133,87 @@ function ParentSideNav({ switcher, parentName, centerName, onLogout, onReport })
               type="button"
               onClick={() => navigate(t.to)}
               aria-current={active ? 'page' : undefined}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-ninja font-bold text-sm transition-colors ${
+              title={collapsed ? t.label : undefined}
+              aria-label={collapsed ? t.label : undefined}
+              className={`w-full flex items-center gap-3 py-2.5 rounded-xl font-ninja font-bold text-sm transition-colors whitespace-nowrap overflow-hidden ${
+                collapsed ? 'px-0 justify-center' : 'px-3'
+              } ${
                 active ? 'bg-ninja-blue/10 text-ninja-blue-ink' : 'text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg'
               }`}
             >
               <t.Glyph strokeWidth={2.1} aria-hidden className="w-5 h-5 flex-shrink-0" />
-              {t.label}
+              {!collapsed && (
+                <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15, delay: 0.08 }}>
+                  {t.label}
+                </motion.span>
+              )}
             </button>
           );
         })}
       </nav>
 
       {/* empty:hidden — ChildSwitcher renders nothing for a one-child family,
-          and this block should take its border and padding with it. */}
-      <div className="px-4 py-3 border-t border-ninja-border empty:hidden">{switcher}</div>
+          and this block should take its border and padding with it. The rail
+          is too narrow for a segmented control, so it goes with the labels. */}
+      {!collapsed && <div className="px-4 py-3 border-t border-ninja-border empty:hidden">{switcher}</div>}
 
       <div className="mt-auto">
-        <div className="py-2 px-4 border-t border-ninja-border flex items-center justify-between">
-          <span className="font-ninja text-xs font-semibold text-ninja-muted">Appearance</span>
+        <div className={`py-2 flex items-center border-t border-ninja-border ${collapsed ? 'px-0 justify-center' : 'px-4 justify-between'}`}>
+          {!collapsed && <span className="font-ninja text-xs font-semibold text-ninja-muted">Appearance</span>}
           <ThemeToggle />
         </div>
-        {/* The account row, same shape as the staff sidebar's: a generic
-            ninja avatar (parents have no profile picture), the parent's
-            name over their center, and the report + sign out glyphs. */}
+        {/* The account row, same shape as the staff sidebar's: the parent's
+            initials, their name over their center, and the report + sign
+            out glyphs. On the rail the glyphs stack under the initials. */}
         <div className="p-3 border-t border-ninja-border">
-          <div className="flex items-center gap-2.5 px-2 py-2">
-            <img src="/profile/ninja-wave.png" alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-ninja-border" />
-            <div className="flex-1 min-w-0">
-              <p className="font-ninja font-bold text-ninja-navy text-sm truncate">{parentName || 'Parent'}</p>
-              {centerName && <p className="font-ninja text-ninja-muted text-xs truncate">{centerName}</p>}
+          {collapsed ? (
+            <div className="flex flex-col items-center gap-2 py-1" title={parentName || 'Parent'}>
+              {avatar}
+              <button
+                onClick={onReport}
+                title="Report a bug or suggest a feature"
+                aria-label="Report a bug or suggest a feature"
+                className="text-ninja-muted hover:text-ninja-red transition-colors p-1"
+              >
+                <RocketIcon className="w-4 h-4" />
+              </button>
+              <button
+                onClick={onLogout}
+                title="Sign out"
+                aria-label="Sign out"
+                className="text-ninja-muted hover:text-ninja-red transition-colors p-1"
+              >
+                <LogOutIcon className="w-4 h-4" />
+              </button>
             </div>
-            <button
-              onClick={onReport}
-              title="Report a bug or suggest a feature"
-              aria-label="Report a bug or suggest a feature"
-              className="text-ninja-muted hover:text-ninja-red transition-colors flex-shrink-0 p-1"
-            >
-              <RocketIcon className="w-4 h-4" />
-            </button>
-            <button
-              onClick={onLogout}
-              title="Sign out"
-              aria-label="Sign out"
-              className="text-ninja-muted hover:text-ninja-red transition-colors flex-shrink-0 p-1"
-            >
-              <LogOutIcon className="w-4 h-4" />
-            </button>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2.5 px-2 py-2">
+              {avatar}
+              <div className="flex-1 min-w-0">
+                <p className="font-ninja font-bold text-ninja-navy text-sm truncate">{parentName || 'Parent'}</p>
+                {centerName && <p className="font-ninja text-ninja-muted text-xs truncate">{centerName}</p>}
+              </div>
+              <button
+                onClick={onReport}
+                title="Report a bug or suggest a feature"
+                aria-label="Report a bug or suggest a feature"
+                className="text-ninja-muted hover:text-ninja-red transition-colors flex-shrink-0 p-1"
+              >
+                <RocketIcon className="w-4 h-4" />
+              </button>
+              <button
+                onClick={onLogout}
+                title="Sign out"
+                aria-label="Sign out"
+                className="text-ninja-muted hover:text-ninja-red transition-colors flex-shrink-0 p-1"
+              >
+                <LogOutIcon className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
-    </aside>
+    </motion.aside>
   );
 }
 
