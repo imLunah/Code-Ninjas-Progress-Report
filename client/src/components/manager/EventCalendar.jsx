@@ -51,7 +51,6 @@ function EventForm({ initial, canDelete, onSave, onDelete, onCancel, busy }) {
   const [time, setTime] = useState(initial.event_time || '');
   const [type, setType] = useState(initial.type || '');
   const [description, setDescription] = useState(initial.description || '');
-  const [featured, setFeatured] = useState(initial.featured === true);
   const [confirmDel, setConfirmDel] = useState(false);
 
   const canSave = title.trim() && date;
@@ -92,17 +91,6 @@ function EventForm({ initial, canDelete, onSave, onDelete, onCancel, busy }) {
           placeholder="Anything instructors should know" className={`${field} resize-none`} />
       </div>
 
-      <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-lg border border-ninja-border bg-ninja-bg px-3 py-2.5">
-        <input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)}
-          className="mt-0.5 w-4 h-4 flex-shrink-0 accent-ninja-blue" />
-        <span>
-          <span className="block font-ninja text-sm font-bold text-ninja-navy">Feature on the Parent Portal</span>
-          <span className="block font-ninja text-xs text-ninja-muted mt-0.5">
-            Families see a banner on their home page until the day passes. The title, date and time go out; notes stay staff-only.
-          </span>
-        </span>
-      </label>
-
       <div className="flex items-center justify-between pt-1">
         {canDelete ? (
           confirmDel ? (
@@ -119,7 +107,7 @@ function EventForm({ initial, canDelete, onSave, onDelete, onCancel, busy }) {
         <div className="flex items-center gap-2">
           <button onClick={onCancel} className="font-ninja text-sm font-bold text-ninja-muted hover:text-ninja-navy px-2 py-2 rounded">Cancel</button>
           <button
-            onClick={() => onSave({ title, event_date: date, event_time: time, type, description, featured })}
+            onClick={() => onSave({ title, event_date: date, event_time: time, type, description })}
             disabled={busy || !canSave}
             className="font-ninja text-sm font-bold px-4 py-2 rounded-lg bg-ninja-blue text-white transition-transform duration-150 ease-[var(--ease-out)] active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100">
             {initial.id ? 'Save' : 'Add event'}

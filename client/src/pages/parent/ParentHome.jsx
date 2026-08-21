@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
 import { api } from '../../api/client';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { PageTitle, Hero, Emblem, ProgramMark, Group, Row, StatusText, MoreLink } from '../../components/parent/ParentUI';
 import { FLAT } from '../../lib/surfaces';
-import { colorFor } from '../../lib/eventTypes';
 import { SkeletonCards } from '../../components/ui/Skeleton';
 import { fmtDay, fmtLongDay, calcAge } from '../../lib/parentProgress';
 
@@ -83,37 +83,102 @@ function WeekStrip({ center, kids }) {
 
 const MONTH_ABBR = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
-// The featured event, as a banner at the top of the home: a CD ticked
-// "Feature on the Parent Portal" on a calendar event and this is where it
-// lands. Colored by the event's type (the same colors the staff calendar
-// uses), soonest event first; it stays until its day has passed. The
-// gradient is inline — a dark wash over the type color — so it reads the
-// same in both themes and never fights the .dark overrides.
-function EventBanner({ event }) {
-  if (!event) return null;
-  const isToday = event.event_date === ymd(new Date());
-  const color = colorFor(event.type);
-  const [, m, d] = event.event_date.split('-').map(Number);
+// The center's event listings, at the top of the home. One listing is a
+// banner; more than one rotates like a slideshow, sliding to the next every
+// few seconds, with dots to jump. Hovering pauses it, reduced-motion stops
+// the auto-advance entirely, and a listing with a link makes its whole slide
+// the link. Everything is inline color: the image gets a dark wash for the
+// white ink, the imageless fallback is a deep navy, and neither can be
+// fought by the .dark overrides.
+function EventSlideshow({ events }) {
+  const [idx, setIdx] = useState(0);
+  const [paused, setPaused] = useState(false);
+  useEffect(() => { if (idx >= events.length && events.length) setIdx(0); }, [events.length, idx]);
+  useEffect(() => {
+    if (events.length < 2 || paused) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const t = setInterval(() => setIdx((n) => (n + 1) % events.length), 6000);
+    return () => clearInterval(t);
+  }, [events.length, paused]);
+  if (!events.length) return null;
+
+  const ev = events[Math.min(idx, events.length - 1)];
+  const isToday = ev.event_date === ymd(new Date());
+  const [, m, d] = (ev.event_date || '').split('-').map(Number);
+  const when = ev.event_date
+    ? `${isToday ? 'Today' : fmtLongDay(ev.event_date)}${ev.event_time ? ` · ${ev.event_time}` : ''}`
+    : null;
+  const hook = ev.subtitle || (ev.description ? ev.description.split('\n')[0] : null);
+  const Wrap = ev.event_url ? 'a' : 'div';
+  const wrapProps = ev.event_url ? { href: ev.event_url, target: '_blank', rel: 'noopener noreferrer' } : {};
+
   return (
     <section
-      className="relative overflow-hidden rounded-[22px] text-white px-4 py-4 sm:px-6"
-      style={{ background: `linear-gradient(120deg, rgb(9 14 26 / 0.5) 0%, rgb(9 14 26 / 0.15) 100%), ${color}` }}
+      className="relative overflow-hidden rounded-[22px] h-44 sm:h-52 text-white"
+      style={{ background: '#0e1c3a' }}
+      aria-label="Events at the center"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
     >
-      <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] opacity-90 truncate">
-            {isToday ? 'Happening today' : 'Coming up'}{event.type && event.type !== 'Other' ? ` · ${event.type}` : ''}
-          </p>
-          <p className="font-ninja font-extrabold text-[21px] sm:text-[24px] leading-tight mt-1 truncate">{event.title}</p>
-          <p className="font-ninja text-[13px] font-bold opacity-90 mt-1 truncate">
-            {isToday ? 'Today' : fmtLongDay(event.event_date)}{event.event_time ? ` · ${event.event_time}` : ''}
-          </p>
-        </div>
-        <div className="flex-shrink-0 w-[54px] rounded-[14px] bg-white/15 border border-white/25 text-center py-1.5" aria-hidden>
-          <p className="font-ninja text-[10px] font-extrabold tracking-wide opacity-90">{MONTH_ABBR[m - 1]}</p>
-          <p className="font-ninja font-extrabold text-[22px] leading-none mt-0.5">{d}</p>
-        </div>
-      </div>
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={ev.id}
+          className="absolute inset-0"
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -40 }}
+          transition={{ duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
+        >
+          <Wrap {...wrapProps} className="block absolute inset-0 focus-visible:outline-none">
+            <span
+              aria-hidden
+              className="absolute inset-0"
+              style={ev.image_url
+                ? { background: `url("${ev.image_url}") center / cover no-repeat` }
+                : { background: 'linear-gradient(135deg, #12264d 0%, #0b3d8f 100%)' }}
+            />
+            {/* The wash that keeps white ink readable on any artwork. */}
+            <span aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgb(6 11 24 / 0.82) 0%, rgb(6 11 24 / 0.55) 55%, rgb(6 11 24 / 0.2) 100%)' }} />
+            <span className="relative h-full flex items-center justify-between gap-4 px-4 sm:px-6">
+              <span className="min-w-0 block">
+                <span className="block font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] opacity-90 truncate">
+                  {ev.event_date ? (isToday ? 'Happening today' : 'Coming up') : 'Announcement'}{when ? ` · ${when}` : ''}
+                </span>
+                <span className="block font-ninja font-extrabold text-[22px] sm:text-[25px] leading-tight mt-1 truncate">{ev.title}</span>
+                {hook && <span className="block font-ninja text-[13px] font-bold opacity-90 mt-1 line-clamp-2 sm:line-clamp-1">{hook}</span>}
+                {ev.event_url && (
+                  <span className="mt-2.5 inline-flex items-center gap-1 font-ninja text-[12px] font-extrabold rounded-full px-3 py-1"
+                    style={{ background: 'rgb(255 255 255 / 0.18)', border: '1px solid rgb(255 255 255 / 0.3)' }}>
+                    Learn more ›
+                  </span>
+                )}
+              </span>
+              {ev.event_date && (
+                <span aria-hidden className="hidden sm:block flex-shrink-0 w-[54px] rounded-[14px] text-center py-1.5"
+                  style={{ background: 'rgb(255 255 255 / 0.15)', border: '1px solid rgb(255 255 255 / 0.25)' }}>
+                  <span className="block font-ninja text-[10px] font-extrabold tracking-wide opacity-90">{MONTH_ABBR[m - 1]}</span>
+                  <span className="block font-ninja font-extrabold text-[22px] leading-none mt-0.5">{d}</span>
+                </span>
+              )}
+            </span>
+          </Wrap>
+        </motion.div>
+      </AnimatePresence>
+      {events.length > 1 && (
+        <span className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+          {events.map((e, i) => (
+            <button
+              key={e.id}
+              type="button"
+              onClick={() => setIdx(i)}
+              aria-label={`Show event ${i + 1} of ${events.length}`}
+              aria-current={i === Math.min(idx, events.length - 1) ? 'true' : undefined}
+              className="w-2 h-2 rounded-full transition-colors"
+              style={{ background: i === Math.min(idx, events.length - 1) ? 'rgb(255 255 255 / 0.95)' : 'rgb(255 255 255 / 0.4)' }}
+            />
+          ))}
+        </span>
+      )}
     </section>
   );
 }
@@ -218,14 +283,14 @@ function ChildCard({ child, wide = false }) {
 export default function ParentHome() {
   const { parent } = useParentAuth();
   const { students, listError, activeId, viewAll } = useParentPortal();
-  // The soonest featured event, if the center has one. `today` is the
+  // The center's published event listings for the slideshow. `today` is the
   // browser's local date so an event stays "today" through its own evening —
   // the server clock is UTC and would drop it at 5pm California time.
-  const [featured, setFeatured] = useState(null);
+  const [events, setEvents] = useState([]);
   useEffect(() => {
     let alive = true;
     api.get(`/parent/events?today=${ymd(new Date())}`)
-      .then((rows) => { if (alive) setFeatured(rows?.[0] || null); })
+      .then((rows) => { if (alive) setEvents(rows || []); })
       .catch(() => {});
     return () => { alive = false; };
   }, []);
@@ -244,7 +309,7 @@ export default function ParentHome() {
         <PageTitle eyebrow={todayLabel} title="Home" />
         <div className="lg:hidden"><ChildSwitcher withAll layoutId="parent-child-mobile" /></div>
 
-        <EventBanner event={featured} />
+        <EventSlideshow events={events} />
 
         {students === null ? (
           <SkeletonCards count={2} cols="lg:grid-cols-2" height={320} label="Loading your family" />

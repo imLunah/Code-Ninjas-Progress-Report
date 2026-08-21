@@ -176,26 +176,27 @@ router.post('/logout', (req, res) => {
   req.session.destroy(() => res.json({ ok: true }));
 });
 
-// GET /api/parent/events?today=YYYY-MM-DD — the center events a CD has chosen
-// to feature for families, soonest first. `today` is the parent's local date:
-// the server clock is UTC, which is already tomorrow every California
+// GET /api/parent/events?today=YYYY-MM-DD — the center's published event
+// listings for the home slideshow: authored for families on the manager
+// Events page, unlike calendar events, which are staff-facing. Dated
+// listings come soonest first and drop off once their day passes; undated
+// ones are evergreen and follow by recency. `today` is the parent's local
+// date: the server clock is UTC, which is already tomorrow every California
 // evening, and an event must stay visible for the whole of its own evening.
 // A bad or missing value falls back to the server's date — the parent can
-// only widen or narrow which FEATURED events they see, nothing else.
-// Deliberately no description: that field is the staff notes box ("anything
-// instructors should know") and was never written for families.
+// only widen or narrow which PUBLISHED listings they see, nothing else.
 router.get('/events', requireParent, async (req, res) => {
   const pool = req.app.get('db');
   const today = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.today || '')) ? req.query.today : null;
   try {
     const { rows } = await pool.query(`
-      SELECT e.id, e.title, e.event_time, e.type,
-             to_char(e.event_date, 'YYYY-MM-DD') AS event_date
-      FROM events e
-      WHERE e.location_id = $1 AND e.featured = true
-        AND e.event_date >= COALESCE($2::date, CURRENT_DATE)
-      ORDER BY e.event_date ASC, e.event_time ASC NULLS FIRST
-      LIMIT 3
+      SELECT l.id, l.title, l.subtitle, l.description, l.event_url, l.image_url, l.event_time,
+             to_char(l.event_date, 'YYYY-MM-DD') AS event_date
+      FROM event_listings l
+      WHERE l.location_id = $1 AND l.published = true
+        AND (l.event_date IS NULL OR l.event_date >= COALESCE($2::date, CURRENT_DATE))
+      ORDER BY l.event_date ASC NULLS LAST, l.created_at DESC
+      LIMIT 6
     `, [req.session.parentLocationId, today]);
     res.json(rows);
   } catch (err) {
