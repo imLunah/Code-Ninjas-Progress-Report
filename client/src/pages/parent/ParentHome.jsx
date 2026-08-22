@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
+import ParentLayout, { ChildSwitcher, GLASS, REFRACT } from '../../components/layout/ParentLayout';
 import { api } from '../../api/client';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
@@ -219,21 +219,23 @@ function LiveSchedule({ center }) {
 // react-markdown is too heavy to ride along on every home visit.
 const ReactMarkdown = lazy(() => import('react-markdown'));
 
-// Listing descriptions are CD-authored markdown shown on the navy banner, so
-// every ink is inline white. `img: () => null` stays: markdown never gets to
-// draw an image on this surface (same rule as the note maps, session 32).
+// Listing descriptions are CD-authored markdown shown on the banner's glass
+// sheet, so every ink is inline navy (the sheet is a light pane in both
+// themes). `img: () => null` stays: markdown never gets to draw an image on
+// this surface (same rule as the note maps, session 32).
+const NAVY = '#1a2e4a';
 const BANNER_MD = {
   p: (props) => <p className="font-ninja text-[13.5px] leading-relaxed mb-2 last:mb-0" {...props} />,
-  strong: (props) => <strong className="font-extrabold" style={{ color: '#ffffff' }} {...props} />,
-  a: (props) => <a target="_blank" rel="noopener noreferrer" className="underline font-bold" style={{ color: '#ffffff' }} {...props} />,
+  strong: (props) => <strong className="font-extrabold" style={{ color: NAVY }} {...props} />,
+  a: (props) => <a target="_blank" rel="noopener noreferrer" className="underline font-bold" style={{ color: '#0c2f6b' }} {...props} />,
   ul: (props) => <ul className="list-disc pl-5 mb-2 space-y-0.5" {...props} />,
   ol: (props) => <ol className="list-decimal pl-5 mb-2 space-y-0.5" {...props} />,
   li: (props) => <li className="font-ninja text-[13.5px] leading-relaxed" {...props} />,
-  h1: (props) => <p className="font-ninja font-extrabold text-[15px] mb-1.5" style={{ color: '#ffffff' }} {...props} />,
-  h2: (props) => <p className="font-ninja font-extrabold text-[14px] mb-1.5" style={{ color: '#ffffff' }} {...props} />,
-  h3: (props) => <p className="font-ninja font-extrabold text-[13.5px] mb-1.5" style={{ color: '#ffffff' }} {...props} />,
-  code: (props) => <code className="font-mono text-[12.5px] px-1 rounded" style={{ background: 'rgb(255 255 255 / 0.15)' }} {...props} />,
-  blockquote: (props) => <blockquote className="pl-3 mb-2" style={{ borderLeft: '2px solid rgb(255 255 255 / 0.3)' }} {...props} />,
+  h1: (props) => <p className="font-ninja font-extrabold text-[15px] mb-1.5" style={{ color: NAVY }} {...props} />,
+  h2: (props) => <p className="font-ninja font-extrabold text-[14px] mb-1.5" style={{ color: NAVY }} {...props} />,
+  h3: (props) => <p className="font-ninja font-extrabold text-[13.5px] mb-1.5" style={{ color: NAVY }} {...props} />,
+  code: (props) => <code className="font-mono text-[12.5px] px-1 rounded" style={{ background: 'rgb(26 46 74 / 0.08)' }} {...props} />,
+  blockquote: (props) => <blockquote className="pl-3 mb-2" style={{ borderLeft: '2px solid rgb(26 46 74 / 0.3)' }} {...props} />,
   img: () => null,
 };
 
@@ -291,6 +293,26 @@ function EventSlideshow({ events }) {
       onPointerEnter={(e) => { if (e.pointerType === 'mouse') setPaused(true); }}
       onPointerLeave={(e) => { if (e.pointerType === 'mouse') setPaused(false); }}
     >
+      {/* The artwork backs the whole section, detail sheet included, so the
+          glass the sheet is made of has something to bend. It crossfades
+          between listings; the words slide. */}
+      <AnimatePresence initial={false}>
+        <motion.span
+          key={ev.id}
+          aria-hidden
+          className="absolute inset-0"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.45 }}
+          style={ev.image_url
+            ? { background: `url("${ev.image_url}") center / cover no-repeat` }
+            : { background: 'linear-gradient(135deg, #12264d 0%, #0b3d8f 100%)' }}
+        />
+      </AnimatePresence>
+      {/* The wash that keeps white ink readable on any artwork. */}
+      <span aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgb(6 11 24 / 0.82) 0%, rgb(6 11 24 / 0.55) 55%, rgb(6 11 24 / 0.2) 100%)' }} />
+
       <div className="relative h-56 sm:h-64 lg:h-72">
         <AnimatePresence initial={false}>
           <motion.div
@@ -301,15 +323,6 @@ function EventSlideshow({ events }) {
             exit={{ opacity: 0, x: -40 }}
             transition={{ duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
           >
-            <span
-              aria-hidden
-              className="absolute inset-0"
-              style={ev.image_url
-                ? { background: `url("${ev.image_url}") center / cover no-repeat` }
-                : { background: 'linear-gradient(135deg, #12264d 0%, #0b3d8f 100%)' }}
-            />
-            {/* The wash that keeps white ink readable on any artwork. */}
-            <span aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgb(6 11 24 / 0.82) 0%, rgb(6 11 24 / 0.55) 55%, rgb(6 11 24 / 0.2) 100%)' }} />
             <div className="relative h-full max-w-6xl mx-auto flex items-center px-4 sm:px-6">
               {/* Opacity on the element, not the color: the mark's paths
                   overlap, and a translucent color doubles up where they do. */}
@@ -356,8 +369,9 @@ function EventSlideshow({ events }) {
         )}
       </div>
 
-      {/* The detail sheet the banner grows into. Same surface, so the growth
-          reads as the banner getting taller, not a second card appearing. */}
+      {/* The detail sheet the banner grows into: a pane of the same liquid
+          glass as the phone nav, floating on the artwork, with navy ink. The
+          banner still gets taller; the sheet is what it grows to show. */}
       <AnimatePresence initial={false}>
         {expanded && (
           <motion.div
@@ -366,17 +380,17 @@ function EventSlideshow({ events }) {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
-            className="overflow-hidden"
-            style={{ borderTop: '1px solid rgb(255 255 255 / 0.12)' }}
+            className="relative overflow-hidden"
           >
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 space-y-3">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-5">
+            <div className={`rounded-[22px] p-5 space-y-3 ${GLASS}`} style={{ ...REFRACT, color: NAVY }}>
               {when && (
                 <p className="font-ninja text-[13px] font-extrabold">
                   {isToday ? 'Today' : fmtLongDay(ev.event_date)}{ev.event_time ? ` · ${ev.event_time}` : ''}
                 </p>
               )}
               {ev.description && (
-                <div style={{ color: 'rgb(255 255 255 / 0.88)' }}>
+                <div style={{ color: 'rgb(26 46 74 / 0.9)' }}>
                   <Suspense fallback={<p className="font-ninja text-[13.5px] leading-relaxed whitespace-pre-line">{stripMd(ev.description)}</p>}>
                     <ReactMarkdown
                       components={BANNER_MD}
@@ -394,12 +408,13 @@ function EventSlideshow({ events }) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 font-ninja text-[13px] font-extrabold rounded-full px-4 py-1.5"
-                    style={{ background: '#ffffff', color: '#0c2f6b' }}
+                    style={{ background: NAVY, color: '#ffffff' }}
                   >
                     Sign up ›
                   </a>
                 </p>
               )}
+            </div>
             </div>
           </motion.div>
         )}
