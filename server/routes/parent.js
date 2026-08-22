@@ -33,17 +33,8 @@ async function parentPayload(pool, session) {
     'SELECT first_name, last_name, phone, relationship FROM parent_profiles WHERE email = $1',
     [email]
   );
-  if (profile) {
-    return {
-      ...base,
-      onboarded: true,
-      parentName: `${profile.first_name} ${profile.last_name}`.trim(),
-      firstName: profile.first_name,
-      lastName: profile.last_name,
-      phone: profile.phone,
-      relationship: profile.relationship,
-    };
-  }
+  // The phone is the desk's, off the ninja's record: onboarding does not ask
+  // for it, since the center already has it.
   const { rows: [onFile] } = await pool.query(
     `SELECT parent_name, parent_phone FROM students
       WHERE LOWER(parent_email) = $1 AND active = true
@@ -52,11 +43,24 @@ async function parentPayload(pool, session) {
       LIMIT 1`,
     [email, session.parentLocationId]
   );
+  const phone = onFile?.parent_phone || null;
+  if (profile) {
+    return {
+      ...base,
+      onboarded: true,
+      parentName: `${profile.first_name} ${profile.last_name}`.trim(),
+      firstName: profile.first_name,
+      lastName: profile.last_name,
+      phone,
+      relationship: profile.relationship,
+    };
+  }
   return {
     ...base,
     onboarded: false,
     parentName: onFile?.parent_name || null,
-    prefill: { name: onFile?.parent_name || '', phone: onFile?.parent_phone || '' },
+    phone,
+    prefill: { name: onFile?.parent_name || '' },
   };
 }
 
@@ -209,37 +213,26 @@ router.get('/me', async (req, res) => {
 });
 
 // POST /api/parent/profile — onboarding's save, and the only write to a
-// parent's own record. First and last name are required, phone and
-// relationship optional. A phone, once given, is written back onto the
-// parent's ninjas at this center: the desk's copy is usually the stale one,
-// and a current pickup number is the point of asking.
+// parent's own record. First and last name are required, relationship
+// optional. Phone is not asked for: the center already has it on the ninja's
+// record, and that copy is what the pass prints.
 router.post('/profile', requireParent, async (req, res) => {
   const pool = req.app.get('db');
   const body = req.body || {};
   const firstName = cleanText(body.first_name, 60);
   const lastName = cleanText(body.last_name, 60);
-  const phone = cleanText(body.phone, 30) || null;
   const relationship = RELATIONSHIPS.includes(body.relationship) ? body.relationship : null;
   if (!firstName || !lastName) return res.status(400).json({ error: 'Please enter your first and last name.' });
-  if (phone && phone.replace(/\D/g, '').length < 7) return res.status(400).json({ error: 'That phone number looks too short.' });
 
   try {
     await pool.query(
-      `INSERT INTO parent_profiles (email, first_name, last_name, phone, relationship)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO parent_profiles (email, first_name, last_name, relationship)
+       VALUES ($1, $2, $3, $4)
        ON CONFLICT (email) DO UPDATE
          SET first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name,
-             phone = EXCLUDED.phone, relationship = EXCLUDED.relationship, updated_at = now()`,
-      [req.session.parentEmail, firstName, lastName, phone, relationship]
+             relationship = EXCLUDED.relationship, updated_at = now()`,
+      [req.session.parentEmail, firstName, lastName, relationship]
     );
-    if (phone) {
-      await pool.query(
-        `UPDATE students SET parent_phone = $1
-          WHERE LOWER(parent_email) = $2 AND active = true
-            AND EXISTS (SELECT 1 FROM student_locations sl_m WHERE sl_m.student_id = students.id AND sl_m.location_id = $3)`,
-        [phone, req.session.parentEmail, req.session.parentLocationId]
-      );
-    }
     const payload = await parentPayload(pool, req.session);
     req.session.parentName = payload.parentName;
     await new Promise((resolve, reject) => req.session.save((err) => (err ? reject(err) : resolve())));

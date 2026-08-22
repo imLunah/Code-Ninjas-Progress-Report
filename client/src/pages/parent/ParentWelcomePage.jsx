@@ -10,8 +10,7 @@ import Logo from '../../components/ui/Logo';
 
 // A parent's first sign-in. The same shape as the staff welcome: a short
 // walk, with the family's pass beside it printing what they type. Name, then
-// phone and relationship, then the pass turns over to show the ninjas it
-// belongs to. Saving writes the parent_profiles row; having one is what
+// relationship, then the pass turns over to show the ninjas it belongs to. Saving writes the parent_profiles row; having one is what
 // lets ParentRoute through to the rest of the portal.
 //
 // Light only, like the rest of the parent portal.
@@ -52,7 +51,6 @@ export default function ParentWelcomePage() {
   const onFile = splitName(parent?.prefill?.name || '');
   const [first, setFirst] = useState(onFile.first);
   const [last, setLast] = useState(onFile.last);
-  const [phone, setPhone] = useState(parent?.prefill?.phone || '');
   const [relationship, setRelationship] = useState('');
 
   const [error, setError] = useState('');
@@ -75,7 +73,7 @@ export default function ParentWelcomePage() {
   const passProps = {
     parentName: fullName,
     relationship,
-    phone: phone.trim(),
+    phone: parent?.phone || '',
     center: parent?.centerName,
     centerCode: parent?.centerCode,
     ninjas,
@@ -93,7 +91,7 @@ export default function ParentWelcomePage() {
     setError('');
     setSaving(true);
     try {
-      await saveProfile({ first_name: first.trim(), last_name: last.trim(), phone: phone.trim() || null, relationship: relationship || null });
+      await saveProfile({ first_name: first.trim(), last_name: last.trim(), relationship: relationship || null });
       navigate('/parent/dashboard', { replace: true });
     } catch (err) {
       setError(err?.message || 'Something went wrong. Please try again.');
@@ -201,13 +199,8 @@ export default function ParentWelcomePage() {
                   className="absolute inset-0 flex flex-col justify-center"
                 >
                   <h2 className="text-2xl font-black font-ninja text-ninja-navy mb-1.5">Nice to meet you, {firstName}.</h2>
-                  <p className="text-ninja-muted font-ninja text-sm mb-7">A couple of things for the front desk. Both are optional.</p>
+                  <p className="text-ninja-muted font-ninja text-sm mb-7">One more thing for the front desk, if you'd like.</p>
                   <div className="space-y-5">
-                    <div>
-                      <label htmlFor="pw-phone" className="block text-ninja-muted font-ninja text-xs font-semibold mb-1.5">Phone number</label>
-                      <input id="pw-phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" placeholder="(714) 555-0123" className={INPUT} />
-                      <p className="mt-1.5 font-ninja text-[12px] text-ninja-muted">The number the center should call about {kids.length === 1 ? kids[0] : 'your ninjas'}.</p>
-                    </div>
                     <div>
                       <p className="block text-ninja-muted font-ninja text-xs font-semibold mb-1.5">I'm {kids.length === 1 && kids[0] ? `${kids[0]}'s` : 'their'}</p>
                       <div className="flex flex-wrap gap-2" role="group" aria-label="Relationship">
@@ -245,7 +238,6 @@ export default function ParentWelcomePage() {
                   </p>
                   <dl className="rounded-2xl border border-ninja-border bg-white/[0.03] px-5 py-4 grid grid-cols-[auto,1fr] gap-x-5 gap-y-2 font-ninja text-sm">
                     <dt className="text-ninja-muted">Name</dt><dd className="text-ninja-navy font-bold">{fullName}</dd>
-                    <dt className="text-ninja-muted">Phone</dt><dd className="text-ninja-navy font-bold">{phone.trim() || <span className="text-ninja-muted font-normal">Not given</span>}</dd>
                     <dt className="text-ninja-muted">Relationship</dt><dd className="text-ninja-navy font-bold">{relationship || <span className="text-ninja-muted font-normal">Not given</span>}</dd>
                   </dl>
                 </motion.div>
@@ -276,7 +268,7 @@ export default function ParentWelcomePage() {
 
             {step === 0 && <motion.button whileTap={{ scale: 0.97 }} onClick={() => go(1)} className={PRIMARY}>Let's go</motion.button>}
             {step === 1 && <motion.button whileTap={{ scale: 0.97 }} onClick={confirmName} className={PRIMARY}>Continue</motion.button>}
-            {step === 2 && <motion.button whileTap={{ scale: 0.97 }} onClick={() => go(1)} className={PRIMARY}>{phone.trim() || relationship ? 'Continue' : 'Skip for now'}</motion.button>}
+            {step === 2 && <motion.button whileTap={{ scale: 0.97 }} onClick={() => go(1)} className={PRIMARY}>{relationship ? 'Continue' : 'Skip for now'}</motion.button>}
             {step === 3 && (
               <motion.button whileTap={{ scale: 0.97 }} onClick={finish} disabled={saving} className={PRIMARY}>
                 {saving ? 'Saving…' : 'Go to my portal'}
