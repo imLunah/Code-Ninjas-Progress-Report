@@ -41,14 +41,14 @@ function thisWeek() {
 
 const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-// How busy the center is today, by the hour.
-//
-// Every check-in at the center is an hour of a ninja in the building, filed
-// under the open hour it was closest to. One bar per open hour of today: the
-// current hour is the lit bar, hours still to come are empty tracks, and the
-// bars scale against the week's busiest hour so a quiet afternoon reads as
-// quiet. Refreshes every minute while the tab is showing, so a parent
-// deciding whether to come now is looking at now.
+// How busy the center is today, by the hour, drawn the way a map app draws
+// "popular times": bars on a baseline, a dashed line at the week's peak,
+// hour ticks underneath, and the hour happening now in the strong colour
+// with a Live marker. Every check-in is an hour of a ninja in the building,
+// filed under the open hour it was closest to. Hours still to come show
+// what this week's earlier days did at that hour, faintly, so the shape of
+// the afternoon is there before it happens. Refreshes every minute while the
+// tab is showing, so a parent deciding whether to come now is looking at now.
 function LiveSchedule({ center }) {
   const days = useMemo(thisWeek, []);
   const [now, setNow] = useState(() => new Date());
@@ -69,8 +69,9 @@ function LiveSchedule({ center }) {
     return () => { alive = false; clearInterval(t); document.removeEventListener('visibilitychange', load); };
   }, []);
 
-  // "day|slot" -> ninjas in that hour, and the week's busiest hour.
-  const { counts, weekMax } = useMemo(() => {
+  // "day|slot" -> ninjas in that hour, the week's busiest hour, and the
+  // week's busiest hour-of-day (summed across days) for the footnote.
+  const { counts, weekMax, usual, busiestHour } = useMemo(() => {
     const counts = new Map();
     const byDay = new Map(days.map((d) => [ymd(d), d]));
     for (const { day: d, hour, count } of slots || []) {
@@ -81,19 +82,32 @@ function LiveSchedule({ center }) {
       const k = `${d}|${slot}`;
       counts.set(k, (counts.get(k) || 0) + count);
     }
-    return { counts, weekMax: Math.max(1, ...counts.values()) };
-  }, [slots, days]);
+    // What earlier days this week did at each hour, averaged, for the hours
+    // of today still to come.
+    const sums = new Map();
+    const seen = new Map();
+    const totals = new Map();
+    for (const [k, n] of counts) {
+      const [d, h] = k.split('|');
+      totals.set(h, (totals.get(h) || 0) + n);
+      if (d >= today) continue;
+      sums.set(h, (sums.get(h) || 0) + n);
+      seen.set(h, (seen.get(h) || 0) + 1);
+    }
+    const usual = new Map([...sums].map(([h, sum]) => [Number(h), sum / seen.get(h)]));
+    let busiestHour = null;
+    let best = 0;
+    for (const [h, n] of totals) if (n > best) { best = n; busiestHour = Number(h); }
+    return { counts, weekMax: Math.max(1, ...counts.values()), usual, busiestHour };
+  }, [slots, days, today]);
 
-  const selectedKey = today;
   const hourSlots = slotsFor(now);
-  const isToday = true;
   const nowHour = now.getHours() + now.getMinutes() / 60;
   const todayHours = hoursFor(now);
   const openNow = todayHours && nowHour >= todayHours.open && nowHour < todayHours.close;
   const nowSlot = openNow ? Math.floor(nowHour) : null;
   const inNow = nowSlot != null ? counts.get(`${today}|${nowSlot}`) || 0 : 0;
 
-  // Next opening, for the closed state: later today, or the next open day.
   let status;
   if (openNow) {
     status = `Open until ${fmtHour(todayHours.close)} · ${inNow === 0 ? 'quiet right now' : `${inNow} ninja${inNow === 1 ? '' : 's'} in now`}`;
@@ -108,62 +122,71 @@ function LiveSchedule({ center }) {
     }
   }
 
-  const dayTotal = hourSlots.reduce((a, h) => a + (counts.get(`${selectedKey}|${h}`) || 0), 0);
+  const dayTotal = hourSlots.reduce((a, h) => a + (counts.get(`${today}|${h}`) || 0), 0);
+  const tick = (h) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'a' : 'p'}`;
 
   return (
     <section className={`${FLAT} px-4 py-3.5 sm:px-5`}>
-      <div className="flex items-baseline justify-between gap-3 mb-3">
+      <div className="flex items-baseline justify-between gap-3">
         <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted truncate flex items-center gap-1.5">
           {openNow && <span className="relative flex w-2 h-2 flex-shrink-0" aria-hidden><span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-60" /><span className="relative rounded-full w-2 h-2 bg-green-500" /></span>}
-          {openNow ? 'Live' : 'This week'}{center ? ` at ${center}` : ''}
+          {openNow ? 'Live' : 'Today'}{center ? ` at ${center}` : ''}
         </p>
         <p className="font-ninja text-[12px] v2 text-ninja-muted flex-shrink-0 truncate">{status}</p>
       </div>
 
-      <div>
-        {/* The bars: one per open hour of today. */}
-        <div className="min-w-0">
-          {hourSlots.length === 0 ? (
-            <p className="font-ninja text-sm text-ninja-muted py-6 text-center">Closed today</p>
-          ) : (
-            <div className="grid gap-1.5 sm:gap-3" style={{ gridTemplateColumns: `repeat(${hourSlots.length}, minmax(0, 1fr))` }}>
-              {hourSlots.map((h) => {
-                const n = counts.get(`${selectedKey}|${h}`) || 0;
-                const live = isToday && nowSlot === h;
-                const future = selectedKey > today || (isToday && (nowSlot == null ? nowHour < h : h > nowSlot));
-                const pct = Math.round((n / weekMax) * 100);
-                return (
-                  <div key={h} className="flex flex-col items-center gap-1.5">
-                    <span className={`font-ninja text-[11px] font-bold tabular-nums leading-none ${live ? 'text-ninja-blue-ink' : 'text-ninja-muted'}`}>
-                      {n > 0 ? n : future ? '' : '0'}
+      {hourSlots.length === 0 ? (
+        <p className="font-ninja text-sm text-ninja-muted py-6 text-center">Closed today</p>
+      ) : (
+        <div className="mt-4">
+          {/* Peak line: the week's busiest hour is the ceiling every bar is
+              measured against, so today reads against a normal week. */}
+          <div className="flex items-center gap-2 mb-1">
+            <span className="flex-1 border-t border-dashed border-ninja-border" aria-hidden />
+            <span className="font-ninja text-[10px] text-ninja-muted">peak</span>
+          </div>
+          <div className="flex items-end gap-1.5 sm:gap-2 h-24 border-b border-ninja-border" role="img" aria-label={`Check-ins by hour today: ${hourSlots.map((h) => `${fmtHour(h)} ${counts.get(`${today}|${h}`) || 0}`).join(', ')}`}>
+            {hourSlots.map((h, i) => {
+              const n = counts.get(`${today}|${h}`) || 0;
+              const live = nowSlot === h;
+              const future = nowSlot == null ? nowHour < h : h > nowSlot;
+              const shown = future ? (usual.get(h) || 0) : n;
+              const pct = Math.min(100, Math.round((shown / weekMax) * 100));
+              return (
+                <div key={h} className="relative flex-1 min-w-0 h-full flex flex-col justify-end">
+                  {live && (
+                    <span className="absolute left-1/2 -translate-x-1/2 -top-1 font-ninja text-[10px] font-extrabold uppercase tracking-wide text-ninja-blue-ink whitespace-nowrap" style={{ bottom: `calc(${Math.max(pct, 6)}% + 4px)`, top: 'auto' }}>
+                      Live
                     </span>
-                    <div
-                      className={`w-full h-20 sm:h-24 rounded-lg flex flex-col justify-end overflow-hidden ${future ? 'border border-dashed border-ninja-border' : 'bg-ninja-bg'}`}
-                      role="img"
-                      aria-label={future ? `${fmtHour(h)}, not yet` : `${fmtHour(h)}: ${n} ninja${n === 1 ? '' : 's'}${live ? ', now' : ''}`}
-                    >
-                      <motion.div
-                        initial={false}
-                        animate={{ height: `${n > 0 ? Math.max(pct, 8) : 0}%` }}
-                        transition={{ type: 'spring', stiffness: 260, damping: 30 }}
-                        className={`w-full rounded-lg ${live ? 'bg-ninja-blue' : 'bg-ninja-blue/35'}`}
-                      />
-                    </div>
-                    <span className={`font-ninja text-[11px] leading-none whitespace-nowrap ${live ? 'font-extrabold text-ninja-blue-ink' : 'font-bold text-ninja-muted'}`}>
-                      {live ? 'Now' : fmtHour(h)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {hourSlots.length > 0 && slots && (
-            <p className="mt-2 font-ninja text-[11px] text-ninja-muted text-right" aria-live="polite">
-              {dayTotal === 0 ? 'No check-ins yet' : `${dayTotal} check-in${dayTotal === 1 ? '' : 's'} so far`}
+                  )}
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: `${shown > 0 ? Math.max(pct, 6) : 2}%` }}
+                    transition={{ type: 'spring', stiffness: 240, damping: 28, delay: i * 0.04 }}
+                    className={`w-full rounded-t-md ${live ? 'bg-ninja-blue' : future ? 'bg-ninja-blue/20' : 'bg-ninja-blue/55'}`}
+                    title={future ? `${fmtHour(h)}: usually ${Math.round(shown)} this week` : `${fmtHour(h)}: ${n} check-in${n === 1 ? '' : 's'}`}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex gap-1.5 sm:gap-2 mt-1.5">
+            {hourSlots.map((h) => {
+              const live = nowSlot === h;
+              return (
+                <span key={h} className={`flex-1 min-w-0 text-center font-ninja text-[11px] leading-none ${live ? 'font-extrabold text-ninja-blue-ink' : 'text-ninja-muted'}`}>{tick(h)}</span>
+              );
+            })}
+          </div>
+          {slots && (
+            <p className="mt-3 font-ninja text-[12px] text-ninja-muted" aria-live="polite">
+              {busiestHour != null ? `Busiest around ${fmtHour(busiestHour)} this week` : 'A quiet week so far'}
+              {' · '}
+              {dayTotal === 0 ? 'no check-ins yet today' : `${dayTotal} check-in${dayTotal === 1 ? '' : 's'} so far today`}
             </p>
           )}
         </div>
-      </div>
+      )}
     </section>
   );
 }
