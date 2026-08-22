@@ -115,18 +115,6 @@ export default function ParentWelcomePage() {
         </div>
 
         <div className="flex flex-col lg:flex-none">
-          {/* Progress */}
-          <div className="flex items-center gap-1.5 py-2">
-            {STEPS.map((name, i) => (
-              <motion.span
-                key={name}
-                className="h-1.5 rounded-full bg-ninja-blue"
-                animate={{ width: i === step ? 26 : 8, opacity: i <= step ? 1 : 0.25 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              />
-            ))}
-          </div>
-
           {/* Phone: the pass shows once the form is done with the keyboard.
               The name and details steps bring it up, and a card plus a
               keyboard plus inputs does not fit a fixed-height shell. */}
