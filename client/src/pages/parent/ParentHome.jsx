@@ -41,24 +41,19 @@ function thisWeek() {
 
 const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-// How busy the center is, by the hour, for this week.
+// How busy the center is today, by the hour.
 //
 // Every check-in at the center is an hour of a ninja in the building, filed
-// under the open hour it was closest to. One bar per open hour of the chosen
-// day; today is chosen by default (or the last open day, on a Sunday), the
-// current hour is the lit bar, and hours still to come are empty tracks.
-// Bars scale against the week's busiest hour so Tuesday and Saturday read
-// against the same ruler. Refreshes every minute while the tab is showing,
-// so a parent deciding whether to come now is looking at now.
+// under the open hour it was closest to. One bar per open hour of today: the
+// current hour is the lit bar, hours still to come are empty tracks, and the
+// bars scale against the week's busiest hour so a quiet afternoon reads as
+// quiet. Refreshes every minute while the tab is showing, so a parent
+// deciding whether to come now is looking at now.
 function LiveSchedule({ center }) {
-  const days = useMemo(() => thisWeek().slice(0, 6), []); // Mon..Sat; Sunday is closed
+  const days = useMemo(thisWeek, []);
   const [now, setNow] = useState(() => new Date());
   const today = ymd(now);
   const [slots, setSlots] = useState(null);
-  const [day, setDay] = useState(() => {
-    const open = days.filter((d) => ymd(d) <= today && hoursFor(d));
-    return ymd(open[open.length - 1] || days[0]);
-  });
 
   useEffect(() => {
     let alive = true;
@@ -89,10 +84,9 @@ function LiveSchedule({ center }) {
     return { counts, weekMax: Math.max(1, ...counts.values()) };
   }, [slots, days]);
 
-  const selected = days.find((d) => ymd(d) === day) || days[0];
-  const selectedKey = ymd(selected);
-  const hourSlots = slotsFor(selected);
-  const isToday = selectedKey === today;
+  const selectedKey = today;
+  const hourSlots = slotsFor(now);
+  const isToday = true;
   const nowHour = now.getHours() + now.getMinutes() / 60;
   const todayHours = hoursFor(now);
   const openNow = todayHours && nowHour >= todayHours.open && nowHour < todayHours.close;
@@ -126,34 +120,11 @@ function LiveSchedule({ center }) {
         <p className="font-ninja text-[12px] v2 text-ninja-muted flex-shrink-0 truncate">{status}</p>
       </div>
 
-      <div className="flex items-end gap-3 sm:gap-5">
-        {/* Day picker: which day's hours the bars show. */}
-        <div className="flex flex-col gap-1 flex-shrink-0" role="tablist" aria-label="Day">
-          {days.map((d) => {
-            const key = ymd(d);
-            const on = key === selectedKey;
-            const isTodayChip = key === today;
-            return (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={on}
-                onClick={() => setDay(key)}
-                className={`h-7 min-w-[44px] px-2 rounded-full font-ninja font-extrabold text-[11px] transition-colors ${
-                  on ? 'bg-ninja-blue text-white' : isTodayChip ? 'text-ninja-blue-ink hover:bg-ninja-blue/10' : 'text-ninja-muted hover:bg-ninja-bg hover:text-ninja-navy'
-                }`}
-              >
-                {DAY_SHORT[(d.getDay() + 6) % 7]}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* The bars: one per open hour of the chosen day. */}
-        <div className="flex-1 min-w-0">
+      <div>
+        {/* The bars: one per open hour of today. */}
+        <div className="min-w-0">
           {hourSlots.length === 0 ? (
-            <p className="font-ninja text-sm text-ninja-muted py-8 text-center">Closed</p>
+            <p className="font-ninja text-sm text-ninja-muted py-6 text-center">Closed today</p>
           ) : (
             <div className="grid gap-1.5 sm:gap-3" style={{ gridTemplateColumns: `repeat(${hourSlots.length}, minmax(0, 1fr))` }}>
               {hourSlots.map((h) => {
@@ -188,7 +159,7 @@ function LiveSchedule({ center }) {
           )}
           {hourSlots.length > 0 && slots && (
             <p className="mt-2 font-ninja text-[11px] text-ninja-muted text-right" aria-live="polite">
-              {dayTotal === 0 ? (selectedKey > today ? 'Not yet' : 'No check-ins') : `${dayTotal} check-in${dayTotal === 1 ? '' : 's'} ${isToday ? 'so far' : DAY_SHORT[(selected.getDay() + 6) % 7]}`}
+              {dayTotal === 0 ? 'No check-ins yet' : `${dayTotal} check-in${dayTotal === 1 ? '' : 's'} so far`}
             </p>
           )}
         </div>
