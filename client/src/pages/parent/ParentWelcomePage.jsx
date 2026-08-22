@@ -104,13 +104,17 @@ export default function ParentWelcomePage() {
       <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url(/onboarding-bg.webp)' }} />
       <div className="absolute inset-0 bg-gradient-to-b from-ninja-bg/70 via-ninja-bg/85 to-ninja-bg lg:from-ninja-bg/60 lg:via-ninja-bg/70 lg:to-ninja-bg/85" />
 
-      <div className="relative flex-1 lg:flex-none flex flex-col max-w-md lg:max-w-4xl w-full mx-auto px-6 pt-[max(env(safe-area-inset-top),28px)] pb-[max(env(safe-area-inset-bottom),28px)] lg:my-10 lg:px-10 lg:py-10 lg:rounded-3xl lg:border lg:border-ninja-border lg:bg-ninja-bg/75 lg:backdrop-blur-xl lg:shadow-2xl lg:grid lg:grid-cols-[440px,minmax(0,1fr)] lg:gap-10 lg:items-center">
+      {/* Phone: the steps hug their content and sit as one group in the
+          middle of the screen, the button right under them — a step area
+          that fills the screen leaves a field of nothing between the words
+          and the button. Desktop keeps the two-column shell. */}
+      <div className="relative flex-1 lg:flex-none flex flex-col justify-center max-w-md lg:max-w-4xl w-full mx-auto px-6 pt-[max(env(safe-area-inset-top),28px)] pb-[max(env(safe-area-inset-bottom),28px)] lg:my-10 lg:px-10 lg:py-10 lg:rounded-3xl lg:border lg:border-ninja-border lg:bg-ninja-bg/75 lg:backdrop-blur-xl lg:shadow-2xl lg:grid lg:grid-cols-[440px,minmax(0,1fr)] lg:gap-10 lg:items-center">
         {/* Desktop keeps the pass beside every step, including the flip. */}
         <div className="hidden lg:flex items-center justify-center">
           <FamilyPass {...passProps} scale={0.9} />
         </div>
 
-        <div className="flex flex-col flex-1 min-h-0 lg:flex-none">
+        <div className="flex flex-col lg:flex-none">
           {/* Progress */}
           <div className="flex items-center gap-1.5 py-2">
             {STEPS.map((name, i) => (
@@ -132,7 +136,7 @@ export default function ParentWelcomePage() {
             </div>
           )}
 
-          <div className="flex-1 min-h-0 lg:flex-none lg:h-[460px] relative overflow-hidden">
+          <div className={`relative overflow-hidden lg:h-[460px] ${step === 3 ? 'h-[min(300px,40dvh)]' : 'h-[min(440px,60dvh)]'}`}>
             <AnimatePresence mode="popLayout" custom={dir} initial={false}>
               {step === 0 && (
                 <motion.div
