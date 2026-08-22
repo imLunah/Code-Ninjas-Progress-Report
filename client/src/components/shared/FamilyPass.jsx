@@ -11,8 +11,8 @@ import { BELTS } from '../../utils/beltConfig';
 //
 // The front is navy: the family name, the center, and one belt stripe along
 // the foot per ninja in their current belt colour. The back is white: the
-// ninjas by name and age with a swatch in their belt colour, then the parent
-// as printed during onboarding. Faces are inline hex on purpose (a printed object, identical in
+// ninjas by name and age with a swatch in their belt colour, the center code
+// set like a card number, then the parent as printed during onboarding. Faces are inline hex on purpose (a printed object, identical in
 // both themes; `.dark .bg-white` would turn a painted face slate mid-spin),
 // and rotation is written straight to the node from one rAF loop.
 
@@ -45,7 +45,7 @@ const BELT_COLOR = Object.fromEntries(BELTS.map((b) => [b.name, b.color]));
 
 // ninjas: [{ name, age, belt }]. `familyName` is the surname as typed;
 // empty prints "Your family" while the parent is still on the name step.
-export default function FamilyPass({ familyName, parentName, relationship, phone, center, ninjas = [], side = 'front', scale = 1, className = '' }) {
+export default function FamilyPass({ familyName, parentName, relationship, phone, center, centerCode, ninjas = [], side = 'front', scale = 1, className = '' }) {
   const stageRef = useRef(null);
   const cardRef = useRef(null);
   const m = useRef({ rx: -6, ry: -18, tRx: -6, tRy: -18, vx: 0, dragging: false, px: 0, py: 0, lastTouch: 0, side: 'front', downX: 0, downY: 0, downT: 0, moved: 0 }).current;
@@ -229,7 +229,25 @@ export default function FamilyPass({ familyName, parentName, relationship, phone
                   {ninjas.length > 4 && <span className="font-ninja font-bold" style={{ fontSize: 12, color: '#8a9bb8' }}>and {ninjas.length - 4} more</span>}
                 </div>
 
-                <div style={{ marginTop: 'auto', paddingTop: 12, borderTop: '1px solid #e6ebf2', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
+                {/* The center code, set like the number on a bank card: wide,
+                    embossed, the thing a parent reads off the card to sign in. */}
+                {centerCode && (
+                  <div style={{ marginTop: 'auto', marginBottom: 14 }}>
+                    <div className="font-ninja font-extrabold uppercase" style={{ fontSize: 10, letterSpacing: '0.22em', color: '#8a9bb8' }}>Center code</div>
+                    <div
+                      className="font-ninja font-black uppercase"
+                      style={{
+                        fontSize: 26, letterSpacing: '0.28em', lineHeight: 1.2, marginTop: 2,
+                        color: '#3a537a',
+                        textShadow: '0 1px 0 rgba(255,255,255,0.95), 0 -1px 0 rgba(20,35,60,0.22), 0 2px 2px rgba(20,35,60,0.08)',
+                      }}
+                    >
+                      {centerCode}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ marginTop: centerCode ? 0 : 'auto', paddingTop: 12, borderTop: '1px solid #e6ebf2', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
                   <div style={{ minWidth: 0 }}>
                     <div className="font-ninja font-extrabold uppercase" style={{ fontSize: 10, letterSpacing: '0.22em', color: '#8a9bb8' }}>Parent</div>
                     <b className="block font-ninja font-extrabold" style={{ fontSize: 16, color: (parentName || '').trim() ? NAVY : '#8a9bb8', overflowWrap: 'anywhere' }}>

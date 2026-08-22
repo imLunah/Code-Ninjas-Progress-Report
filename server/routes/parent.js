@@ -25,7 +25,10 @@ const RELATIONSHIPS = ['Mom', 'Dad', 'Guardian', 'Grandparent', 'Other'];
 // the three never disagree about the shape.
 async function parentPayload(pool, session) {
   const email = session.parentEmail;
-  const base = { email, role: 'parent', centerName: session.parentLocationName || null };
+  // The center code is the other half of how a parent signs in; it prints on
+  // the back of their family pass so it is somewhere they can find it again.
+  const { rows: [loc] } = await pool.query('SELECT center_code FROM locations WHERE id = $1', [session.parentLocationId]);
+  const base = { email, role: 'parent', centerName: session.parentLocationName || null, centerCode: loc?.center_code || null };
   const { rows: [profile] } = await pool.query(
     'SELECT first_name, last_name, phone, relationship FROM parent_profiles WHERE email = $1',
     [email]

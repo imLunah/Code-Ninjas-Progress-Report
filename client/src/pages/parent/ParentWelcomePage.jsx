@@ -78,6 +78,7 @@ export default function ParentWelcomePage() {
     relationship,
     phone: phone.trim(),
     center: parent?.centerName,
+    centerCode: parent?.centerCode,
     ninjas,
     side: step === 3 ? 'back' : 'front',
   };
