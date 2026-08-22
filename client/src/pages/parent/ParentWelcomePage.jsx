@@ -62,7 +62,7 @@ export default function ParentWelcomePage() {
   const firstName = first.trim() || 'there';
   const kids = (portal?.students || []).map((s) => s.full_name.split(' ')[0]);
 
-  // The pass prints the form live: the family name as the surname is typed,
+  // The pass prints the form live: the parent's name as it is typed,
   // the ninjas with their ages on the back (the swatch and the front's
   // stripe are their belt colour), and under them the parent as they fill
   // themselves in. A ninja's belt is their CREATE belt when they have one,
@@ -73,7 +73,6 @@ export default function ParentWelcomePage() {
     return { name: s.full_name, age: calcAge(s.birthday), belt: withBelt?.belt_level || null };
   });
   const passProps = {
-    familyName: last,
     parentName: fullName,
     relationship,
     phone: phone.trim(),
