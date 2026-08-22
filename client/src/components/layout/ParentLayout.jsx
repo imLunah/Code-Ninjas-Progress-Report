@@ -45,6 +45,12 @@ function isActive(pathname, to) {
   return pathname === to || pathname.startsWith(to + '/');
 }
 
+// First letter of the first and last name. "P" until there is a name.
+function initialsOf(name) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  return parts.filter((_, i) => i === 0 || i === parts.length - 1).map((w) => w[0]).join('').toUpperCase() || 'P';
+}
+
 // Which child the pages are about. Home also offers "All"; everywhere else it
 // is one child. Hidden when there is only one child, because a choice with
 // one option is not a choice.
@@ -84,8 +90,8 @@ function ParentSideNav({ switcher, parentName, centerName, onLogout, onReport })
   };
 
   // Parents have no profile picture, so the account row carries their
-  // initials instead: first letter of the first and last name.
-  const initials = (parentName || '').trim().split(/\s+/).filter(Boolean).map((w) => w[0]).filter((_, i, a) => i === 0 || i === a.length - 1).join('').toUpperCase() || 'P';
+  // initials instead.
+  const initials = initialsOf(parentName);
   const avatar = (
     <div className="w-8 h-8 rounded-full bg-ninja-blue flex items-center justify-center text-white font-ninja font-bold text-xs flex-shrink-0" aria-hidden>
       {initials}
@@ -163,11 +169,21 @@ function ParentSideNav({ switcher, parentName, centerName, onLogout, onReport })
       <div className="mt-auto">
         {/* The account row, same shape as the staff sidebar's: the parent's
             initials, their name over their center, and the report + sign
-            out glyphs. On the rail the glyphs stack under the initials. */}
+            out glyphs. The initials and name open Settings. On the rail the
+            glyphs stack under the initials. */}
         <div className="p-3 border-t border-ninja-border">
           {collapsed ? (
-            <div className="flex flex-col items-center gap-2 py-1" title={parentName || 'Parent'}>
-              {avatar}
+            <div className="flex flex-col items-center gap-2 py-1">
+              <button
+                type="button"
+                onClick={() => navigate('/parent/account')}
+                title="Settings"
+                aria-label="Settings"
+                aria-current={isActive(pathname, '/parent/account') ? 'page' : undefined}
+                className="rounded-full hover:opacity-80 transition-opacity"
+              >
+                {avatar}
+              </button>
               <button
                 onClick={onReport}
                 title="Report a bug or suggest a feature"
@@ -187,11 +203,19 @@ function ParentSideNav({ switcher, parentName, centerName, onLogout, onReport })
             </div>
           ) : (
             <div className="flex items-center gap-2.5 px-2 py-2">
-              {avatar}
-              <div className="flex-1 min-w-0">
-                <p className="font-ninja font-bold text-ninja-navy text-sm truncate">{parentName || 'Parent'}</p>
-                {centerName && <p className="font-ninja text-ninja-muted text-xs truncate">{centerName}</p>}
-              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/parent/account')}
+                title="Settings"
+                aria-current={isActive(pathname, '/parent/account') ? 'page' : undefined}
+                className="flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-xl hover:opacity-80 transition-opacity"
+              >
+                {avatar}
+                <span className="flex-1 min-w-0">
+                  <span className="block font-ninja font-bold text-ninja-navy text-sm truncate">{parentName || 'Parent'}</span>
+                  {centerName && <span className="block font-ninja text-ninja-muted text-xs truncate">{centerName}</span>}
+                </span>
+              </button>
               <button
                 onClick={onReport}
                 title="Report a bug or suggest a feature"
@@ -297,11 +321,15 @@ export default function ParentLayout({ children, switcher = null, bleed = false 
             <Logo variant="lockup" className="h-8 text-ninja-navy" />
             <span className="text-ninja-muted font-ninja text-[13px] v2 hidden sm:inline">Parent Portal</span>
           </div>
-          <div className="flex items-center gap-3">
-            <button onClick={handleLogout} className="text-ninja-muted hover:text-ninja-red font-ninja text-[13px] font-bold transition-colors">
-              Sign out
-            </button>
-          </div>
+          {/* The initials open Settings, where Sign out lives. */}
+          <button
+            type="button"
+            onClick={() => navigate('/parent/account')}
+            aria-label="Settings"
+            className="w-9 h-9 rounded-full bg-ninja-blue flex items-center justify-center text-white font-ninja font-bold text-xs flex-shrink-0"
+          >
+            {initialsOf(parent?.parentName)}
+          </button>
         </div>
       </header>
 

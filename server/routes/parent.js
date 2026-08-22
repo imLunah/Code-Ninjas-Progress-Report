@@ -212,10 +212,18 @@ router.get('/me', async (req, res) => {
   }
 });
 
-// POST /api/parent/profile — onboarding's save, and the only write to a
-// parent's own record. First and last name are required, relationship
-// optional. Phone is not asked for: the center already has it on the ninja's
-// record, and that copy is what the pass prints.
+// POST /api/parent/profile — onboarding's save and the settings page's, the
+// only write to a parent's own record. First and last name are required,
+// relationship optional. Phone is not asked for: the center already has it
+// on the ninja's record, and that copy is what the pass prints.
+//
+// Email is the parent's sign-in identity and lives on every ninja's record,
+// so changing it moves those records too, in one transaction: the ninja rows
+// carrying the old address, the profile row, and the session. An address
+// already on another family's records is refused outright — accepting it
+// would hand this parent that family's ninjas at the next sign-in, and hand
+// that family these.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 router.post('/profile', requireParent, async (req, res) => {
   const pool = req.app.get('db');
   const body = req.body || {};
@@ -224,15 +232,48 @@ router.post('/profile', requireParent, async (req, res) => {
   const relationship = RELATIONSHIPS.includes(body.relationship) ? body.relationship : null;
   if (!firstName || !lastName) return res.status(400).json({ error: 'Please enter your first and last name.' });
 
+  const oldEmail = req.session.parentEmail;
+  const newEmail = body.email === undefined ? oldEmail : cleanText(body.email, 254).toLowerCase();
+  const emailChanging = newEmail !== oldEmail;
+  if (emailChanging && !EMAIL_RE.test(newEmail)) return res.status(400).json({ error: 'That email address does not look right.' });
+
+  const client = await pool.connect();
   try {
-    await pool.query(
+    await client.query('BEGIN');
+    if (emailChanging) {
+      const { rows: taken } = await client.query(
+        `SELECT 1 FROM students WHERE LOWER(parent_email) = $1
+         UNION ALL
+         SELECT 1 FROM parent_profiles WHERE email = $1
+         LIMIT 1`,
+        [newEmail]
+      );
+      if (taken.length) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: "That email is already on another family's account. Ask the front desk if it should be yours." });
+      }
+      await client.query('UPDATE students SET parent_email = $1 WHERE LOWER(parent_email) = $2', [newEmail, oldEmail]);
+      await client.query('UPDATE parent_profiles SET email = $1, updated_at = now() WHERE email = $2', [newEmail, oldEmail]);
+    }
+    await client.query(
       `INSERT INTO parent_profiles (email, first_name, last_name, relationship)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (email) DO UPDATE
          SET first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name,
              relationship = EXCLUDED.relationship, updated_at = now()`,
-      [req.session.parentEmail, firstName, lastName, relationship]
+      [newEmail, firstName, lastName, relationship]
     );
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('Parent profile error:', err);
+    return res.status(500).json({ error: 'Failed to save your profile' });
+  } finally {
+    client.release();
+  }
+
+  try {
+    req.session.parentEmail = newEmail;
     const payload = await parentPayload(pool, req.session);
     req.session.parentName = payload.parentName;
     await new Promise((resolve, reject) => req.session.save((err) => (err ? reject(err) : resolve())));
@@ -240,79 +281,6 @@ router.post('/profile', requireParent, async (req, res) => {
   } catch (err) {
     console.error('Parent profile error:', err);
     res.status(500).json({ error: 'Failed to save your profile' });
-  }
-});
-
-// POST /api/parent/logout
-router.post('/logout', (req, res) => {
-  req.session.destroy(() => res.json({ ok: true }));
-});
-
-// GET /api/parent/events?today=YYYY-MM-DD — the center's published event
-// listings for the home slideshow: authored for families on the manager
-// Events page, unlike calendar events, which are staff-facing. Dated
-// listings come soonest first and drop off once their day passes; undated
-// ones are evergreen and follow by recency. `today` is the parent's local
-// date: the server clock is UTC, which is already tomorrow every California
-// evening, and an event must stay visible for the whole of its own evening.
-// A bad or missing value falls back to the server's date — the parent can
-// only widen or narrow which PUBLISHED listings they see, nothing else.
-router.get('/events', requireParent, async (req, res) => {
-  const pool = req.app.get('db');
-  const today = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.today || '')) ? req.query.today : null;
-  try {
-    const { rows } = await pool.query(`
-      SELECT l.id, l.title, l.subtitle, l.description, l.event_url, l.image_url, l.event_time,
-             to_char(l.event_date, 'YYYY-MM-DD') AS event_date
-      FROM event_listings l
-      WHERE l.location_id = $1 AND l.published = true
-        AND (l.event_date IS NULL OR l.event_date >= COALESCE($2::date, CURRENT_DATE))
-      ORDER BY l.event_date ASC NULLS LAST, l.created_at DESC
-      LIMIT 6
-    `, [req.session.parentLocationId, today]);
-    res.json(rows);
-  } catch (err) {
-    console.error('Parent events error:', err);
-    res.status(500).json({ error: 'Failed to load events' });
-  }
-});
-
-// GET /api/parent/schedule?today=YYYY-MM-DD
-//
-// How busy the center is, hour by hour, for the week around `today`: every
-// check-in at the center (not just this family's) bucketed by the hour it
-// happened, rounded to the nearest. Counts only, no names. The client owns
-// the opening hours and clamps an arrival to the nearest open slot, so the
-// server hands back raw hours and lets it draw.
-//
-// Hours are read in the centers' own zone. All three are in California and
-// the server clock is UTC, so without the conversion a 4 PM arrival would
-// report as 11 PM. `today` is the parent's local date for the same reason
-// as /events: the server's CURRENT_DATE is already tomorrow every evening.
-//
-// daily_assignments has no location: a ninja's check-in is attributed to the
-// centers they belong to, which double-counts the rare ninja at two centers.
-const CENTER_TZ = 'America/Los_Angeles';
-router.get('/schedule', requireParent, async (req, res) => {
-  const pool = req.app.get('db');
-  const today = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.today || '')) ? req.query.today : null;
-  try {
-    const { rows } = await pool.query(`
-      WITH wk AS (SELECT date_trunc('week', COALESCE($2::date, CURRENT_DATE))::date AS start)
-      SELECT to_char(wk.start, 'YYYY-MM-DD') AS week_start,
-             to_char(da.session_date, 'YYYY-MM-DD') AS day,
-             EXTRACT(HOUR FROM (da.checked_in_at AT TIME ZONE $3) + interval '30 minutes')::int AS hour,
-             COUNT(*)::int AS count
-      FROM daily_assignments da, wk
-      WHERE da.session_date >= wk.start AND da.session_date < wk.start + 7
-        AND EXISTS (SELECT 1 FROM student_locations sl WHERE sl.student_id = da.student_id AND sl.location_id = $1)
-      GROUP BY 1, 2, 3
-      ORDER BY 2, 3
-    `, [req.session.parentLocationId, today, CENTER_TZ]);
-    res.json({ slots: rows.map(({ day, hour, count }) => ({ day, hour, count })) });
-  } catch (err) {
-    console.error('Parent schedule error:', err);
-    res.status(500).json({ error: 'Failed to load schedule' });
   }
 });
 

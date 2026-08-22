@@ -41,6 +41,7 @@ const ParentHome = lazy(() => import('./pages/parent/ParentHome'));
 const ParentCourses = lazy(() => import('./pages/parent/ParentCourses'));
 const ParentProfile = lazy(() => import('./pages/parent/ParentProfile'));
 const ParentWelcomePage = lazy(() => import('./pages/parent/ParentWelcomePage'));
+const ParentAccountPage = lazy(() => import('./pages/parent/ParentAccountPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const AccessibilityPage = lazy(() => import('./pages/AccessibilityPage'));
@@ -98,6 +99,7 @@ export default function App() {
             <Route path="/parent/courses"     element={<ParentRoute><ParentCourses /></ParentRoute>} />
             <Route path="/parent/courses/:program" element={<ParentRoute><ParentCourses /></ParentRoute>} />
             <Route path="/parent/students/:id" element={<ParentRoute><ParentProfile /></ParentRoute>} />
+            <Route path="/parent/account"     element={<ParentRoute><ParentAccountPage /></ParentRoute>} />
             <Route path="/parent/note"        element={<Navigate to="/parent/dashboard" replace />} />
             <Route path="/parent/sessions"    element={<Navigate to="/parent/dashboard" replace />} />
 
