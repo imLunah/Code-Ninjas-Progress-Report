@@ -2,6 +2,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const { requireParent } = require('../middleware/auth');
+const { DELETION_REASONS, cleanDetails } = require('../lib/deleteStaffUser');
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -281,6 +282,66 @@ router.post('/profile', requireParent, async (req, res) => {
   } catch (err) {
     console.error('Parent profile error:', err);
     res.status(500).json({ error: 'Failed to save your profile' });
+  }
+});
+
+// POST /api/parent/delete-account — a parent deletes their own account.
+//
+// Center code and email again, typed, as the confirmation: a parent has no
+// password, and these two are the whole of how they sign in. What goes is
+// the parent's own data: the profile row, and their name, email, phone and
+// the note they wrote for senseis, off every ninja record that carried
+// their address — at every center, since the address is the identity. The
+// ninjas' own records (belts, classes, progress) belong to the center and
+// stay. With no email left on the records there is nothing to sign in with,
+// which is the point. Only the reason survives, in account_deletions,
+// without a name on it.
+const deleteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test',
+  message: { error: 'Too many attempts. Try again in 15 minutes.' },
+});
+router.post('/delete-account', requireParent, deleteLimiter, async (req, res) => {
+  const pool = req.app.get('db');
+  const { centerCode, email, reason, details } = req.body || {};
+  if (!centerCode || !email) return res.status(400).json({ error: 'Enter your center code and email to confirm.' });
+  if (!DELETION_REASONS.includes(reason)) return res.status(400).json({ error: 'Choose a reason.' });
+
+  try {
+    const { rows: [loc] } = await pool.query('SELECT center_code FROM locations WHERE id = $1', [req.session.parentLocationId]);
+    const codeOk = loc && String(centerCode).trim().toUpperCase() === String(loc.center_code).toUpperCase();
+    const emailOk = String(email).trim().toLowerCase() === req.session.parentEmail;
+    if (!codeOk || !emailOk) return res.status(401).json({ error: "That center code and email don't match this account." });
+
+    const parentEmail = req.session.parentEmail;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        'INSERT INTO account_deletions (role, location_id, reason, details) VALUES ($1, $2, $3, $4)',
+        ['parent', req.session.parentLocationId, reason, cleanDetails(details)]
+      );
+      await client.query('DELETE FROM parent_profiles WHERE email = $1', [parentEmail]);
+      await client.query(
+        `UPDATE students
+            SET parent_email = NULL, parent_name = NULL, parent_phone = NULL, special_instructions = NULL
+          WHERE LOWER(parent_email) = $1`,
+        [parentEmail]
+      );
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw err;
+    } finally {
+      client.release();
+    }
+    req.session.destroy(() => res.json({ ok: true }));
+  } catch (err) {
+    console.error('Parent delete account error:', err);
+    res.status(500).json({ error: 'Failed to delete your account' });
   }
 });
 

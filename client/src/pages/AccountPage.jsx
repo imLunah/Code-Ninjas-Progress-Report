@@ -12,6 +12,7 @@ import { CARD } from '../lib/surfaces';
 import useIsDesktop from '../lib/useIsDesktop';
 import { MoonIcon, SunIcon } from '../components/ui/icons';
 import MyStudioConnect, { MyStudioRow } from '../components/manager/MyStudioConnect';
+import DeleteAccountCard from '../components/shared/DeleteAccountCard';
 import {
   UserIcon,
   LockIcon,
@@ -22,6 +23,7 @@ import {
   SettingsIcon,
   MapPinIcon,
   PanelTopIcon,
+  Trash2Icon,
 } from 'lucide-react';
 
 const FIELD =
@@ -591,6 +593,24 @@ export default function AccountPage() {
     </>
   );
 
+  // Deleting the account. Username and password again, typed, then the
+  // director's permanent delete runs on this user: logged sessions stay on
+  // the ninjas' records with no author. Admins can't from here.
+  const deleteCard = user?.role === 'admin' ? null : (
+    <DeleteAccountCard
+      intro="This permanently deletes your DojoLink account. Sessions you logged stay on the ninjas' records, with no name on them. Type your username and password to confirm; this can't be undone."
+      fields={[
+        { id: 'username', label: 'Username', autoComplete: 'username' },
+        { id: 'password', label: 'Password', type: 'password', autoComplete: 'current-password' },
+      ]}
+      onDelete={async ({ reason, details, username, password }) => {
+        await api.post('/auth/delete-account', { reason, details, username, password });
+        setUser(null);
+        navigate('/login', { replace: true });
+      }}
+    />
+  );
+
   const signOut = (
     <button
       onClick={async () => { try { await logout(); } catch { /* sign out locally anyway */ } navigate('/login'); }}
@@ -629,6 +649,7 @@ export default function AccountPage() {
       { title: 'Your account', items: [
         { key: 'profile', label: 'Edit profile', Icon: UserIcon },
         { key: 'password', label: 'Password', Icon: LockIcon },
+        ...(deleteCard ? [{ key: 'delete', label: 'Delete account', Icon: Trash2Icon }] : []),
       ] },
       { title: 'Preferences', items: [
         { key: 'display', label: 'Display', Icon: PanelTopIcon },
@@ -651,6 +672,7 @@ export default function AccountPage() {
       display: 'Display',
       preferences: 'Preferences',
       help: 'Getting started',
+      delete: 'Delete account',
     };
 
     return (
@@ -753,6 +775,7 @@ export default function AccountPage() {
               {section === 'display' && displayCard}
               {section === 'preferences' && experimentalCard}
               {section === 'help' && gettingStarted}
+              {section === 'delete' && deleteCard}
             </motion.section>
           </div>
         </div>
@@ -781,6 +804,7 @@ export default function AccountPage() {
         </form>
 
         {signOut}
+        {deleteCard}
       </div>
       {myStudioPanel}
     </Layout>

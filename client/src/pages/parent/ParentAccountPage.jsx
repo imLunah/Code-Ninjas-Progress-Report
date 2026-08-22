@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserRoundIcon } from 'lucide-react';
+import { UserRoundIcon, Trash2Icon } from 'lucide-react';
+import { api } from '../../api/client';
 import ParentLayout from '../../components/layout/ParentLayout';
 import FamilyPass from '../../components/shared/FamilyPass';
+import DeleteAccountCard from '../../components/shared/DeleteAccountCard';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { CARD } from '../../lib/surfaces';
@@ -10,8 +12,8 @@ import useIsDesktop from '../../lib/useIsDesktop';
 import { calcAge } from '../../lib/parentProgress';
 
 // The parent's settings. The same shape as the staff settings screen: a
-// rail with the sections and Sign Out, and a pane with the section. There is
-// one section, Edit profile: the family pass up top printing the draft as it
+// rail with the sections and Sign Out, and a pane with the section. Two
+// sections: Delete account, and Edit profile: the family pass up top printing the draft as it
 // is typed, then the form — first name, last name, email, relationship — and
 // the center code, shown and not editable, because the center hands it out
 // and a parent cannot move themselves to another center by retyping it.
@@ -44,6 +46,7 @@ export default function ParentAccountPage() {
   const [relationship, setRelationship] = useState(parent?.relationship || '');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null); // { ok, text }
+  const [section, setSection] = useState('profile'); // 'profile' | 'delete'
 
   // A save that changes the email re-keys the parent; follow it.
   useEffect(() => {
@@ -151,6 +154,25 @@ export default function ParentAccountPage() {
     </form>
   );
 
+  // Deleting the account: center code and email again, typed, since those
+  // are the whole of how a parent signs in. What goes is the parent's own
+  // data off the ninjas' records; the ninjas' belts and progress stay with
+  // the center.
+  const deleteCard = (
+    <DeleteAccountCard
+      intro={`This removes your name, email and phone from your ninjas' records at Code Ninjas ${parent?.centerName || ''} and deletes your parent account. Your ninjas' belts, classes and progress stay with the center. Type your center code and email to confirm; this can't be undone.`}
+      fields={[
+        { id: 'centerCode', label: 'Center code', autoComplete: 'off', transform: (v) => v.toUpperCase() },
+        { id: 'email', label: 'Email', type: 'email', autoComplete: 'email' },
+      ]}
+      onDelete={async ({ reason, details, centerCode, email }) => {
+        await api.post('/parent/delete-account', { reason, details, centerCode, email });
+        try { await logout(); } catch { /* the session is already gone */ }
+        navigate('/login?tab=parent', { replace: true });
+      }}
+    />
+  );
+
   const signOut = (
     <button
       type="button"
@@ -171,23 +193,41 @@ export default function ParentAccountPage() {
                 <h1 className="font-ninja font-black text-2xl text-ninja-navy tracking-tight">Settings</h1>
                 <nav aria-label="Settings sections">
                   <p className="px-3 mb-1.5 font-ninja text-xs font-bold uppercase tracking-wide text-ninja-muted">Your account</p>
-                  <button
-                    type="button"
-                    aria-current="page"
-                    className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left font-ninja text-sm font-semibold bg-ninja-bg text-ninja-navy"
-                  >
-                    <UserRoundIcon className="w-[18px] h-[18px] flex-shrink-0" />
-                    Edit profile
-                  </button>
+                  <div className="space-y-0.5">
+                    {[
+                      { key: 'profile', label: 'Edit profile', Icon: UserRoundIcon },
+                      { key: 'delete', label: 'Delete account', Icon: Trash2Icon },
+                    ].map(({ key, label, Icon }) => {
+                      const active = section === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setSection(key)}
+                          aria-current={active ? 'page' : undefined}
+                          className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left font-ninja text-sm font-semibold transition-colors ${
+                            active ? 'bg-ninja-bg text-ninja-navy' : 'text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg/60'
+                          }`}
+                        >
+                          <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </nav>
                 <div className="pt-4 border-t border-ninja-border">{signOut}</div>
               </div>
             </div>
             <div className="pl-8">
               <div className="max-w-2xl space-y-6">
-                <h2 className="font-ninja font-bold text-xl text-ninja-navy">Edit profile</h2>
-                {pass}
-                {form}
+                <h2 className="font-ninja font-bold text-xl text-ninja-navy">{section === 'delete' ? 'Delete account' : 'Edit profile'}</h2>
+                {section === 'delete' ? deleteCard : (
+                  <>
+                    {pass}
+                    {form}
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -203,6 +243,7 @@ export default function ParentAccountPage() {
         {pass}
         {form}
         {signOut}
+        {deleteCard}
       </div>
     </ParentLayout>
   );

@@ -446,6 +446,23 @@ ALTER TABLE ONLY public.parent_profiles ADD CONSTRAINT parent_profiles_pkey PRIM
 ALTER TABLE ONLY public.parent_profiles ADD CONSTRAINT parent_profiles_email_key UNIQUE (email);
 
 
+CREATE TABLE public.account_deletions (
+    id integer NOT NULL,
+    role text NOT NULL,
+    location_id integer,
+    reason text NOT NULL,
+    details text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT account_deletions_role_check CHECK ((role = ANY (ARRAY['parent'::text, 'sensei'::text, 'manager'::text]))),
+    CONSTRAINT account_deletions_reason_check CHECK ((reason = ANY (ARRAY['leaving'::text, 'not_useful'::text, 'privacy'::text, 'broken'::text, 'other'::text])))
+);
+
+CREATE SEQUENCE public.account_deletions_id_seq AS integer START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;
+ALTER SEQUENCE public.account_deletions_id_seq OWNED BY public.account_deletions.id;
+ALTER TABLE ONLY public.account_deletions ALTER COLUMN id SET DEFAULT nextval('public.account_deletions_id_seq'::regclass);
+ALTER TABLE ONLY public.account_deletions ADD CONSTRAINT account_deletions_pkey PRIMARY KEY (id);
+
+
 CREATE TABLE public.daily_assignments (
     id integer NOT NULL,
     student_id integer NOT NULL,
