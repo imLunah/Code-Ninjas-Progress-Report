@@ -54,6 +54,7 @@ function LiveSchedule({ center }) {
   const [now, setNow] = useState(() => new Date());
   const today = ymd(now);
   const [slots, setSlots] = useState(null);
+  const [hover, setHover] = useState(null); // hour whose count is showing
 
   useEffect(() => {
     let alive = true;
@@ -152,10 +153,34 @@ function LiveSchedule({ center }) {
               const future = nowSlot == null ? nowHour < h : h > nowSlot;
               const shown = future ? (usual.get(h) || 0) : n;
               const pct = Math.min(100, Math.round((shown / weekMax) * 100));
+              const showing = hover === h;
+              const count = future
+                ? `usually ${Math.round(shown)}`
+                : `${n} ninja${n === 1 ? '' : 's'}`;
+              const lift = `calc(${shown > 0 ? Math.max(pct, 6) : 2}% + 6px)`;
               return (
-                <div key={h} className="relative flex-1 min-w-0 h-full flex flex-col justify-end">
-                  {live && (
-                    <span className="absolute left-1/2 -translate-x-1/2 -top-1 font-ninja text-[10px] font-extrabold uppercase tracking-wide text-ninja-blue-ink whitespace-nowrap" style={{ bottom: `calc(${Math.max(pct, 6)}% + 4px)`, top: 'auto' }}>
+                <div
+                  key={h}
+                  className="relative flex-1 min-w-0 h-full flex flex-col justify-end cursor-default"
+                  onMouseEnter={() => setHover(h)}
+                  onMouseLeave={() => setHover((v) => (v === h ? null : v))}
+                  onClick={() => setHover((v) => (v === h ? null : h))}
+                  onFocus={() => setHover(h)}
+                  onBlur={() => setHover((v) => (v === h ? null : v))}
+                  tabIndex={0}
+                  aria-label={`${fmtHour(h)}: ${count}`}
+                >
+                  {/* The count pops over the bar on hover, tap or focus; the
+                      live bar's own label steps aside for it. */}
+                  {showing ? (
+                    <span
+                      className="absolute left-1/2 -translate-x-1/2 px-2 py-1 rounded-md bg-ninja-navy text-white font-ninja text-[11px] font-bold whitespace-nowrap shadow-sm pointer-events-none z-10"
+                      style={{ bottom: lift }}
+                    >
+                      {count}
+                    </span>
+                  ) : live && (
+                    <span className="absolute left-1/2 -translate-x-1/2 font-ninja text-[10px] font-extrabold uppercase tracking-wide text-ninja-blue-ink whitespace-nowrap" style={{ bottom: lift }}>
                       Live
                     </span>
                   )}
@@ -163,8 +188,7 @@ function LiveSchedule({ center }) {
                     initial={{ height: 0 }}
                     animate={{ height: `${shown > 0 ? Math.max(pct, 6) : 2}%` }}
                     transition={{ type: 'spring', stiffness: 240, damping: 28, delay: i * 0.04 }}
-                    className={`w-full rounded-t-md ${live ? 'bg-ninja-blue' : future ? 'bg-ninja-blue/20' : 'bg-ninja-blue/55'}`}
-                    title={future ? `${fmtHour(h)}: usually ${Math.round(shown)} this week` : `${fmtHour(h)}: ${n} check-in${n === 1 ? '' : 's'}`}
+                    className={`w-full rounded-t-md transition-colors ${live ? 'bg-ninja-blue' : future ? (showing ? 'bg-ninja-blue/30' : 'bg-ninja-blue/20') : (showing ? 'bg-ninja-blue/75' : 'bg-ninja-blue/55')}`}
                   />
                 </div>
               );
