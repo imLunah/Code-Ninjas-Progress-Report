@@ -86,6 +86,8 @@ function ProgramCardBanner({ program, lastDate, sessions }) {
           style={{
             position: 'absolute', inset: 0, width: '100%', height: '100%',
             objectFit: 'cover', objectPosition: 'center 30%', pointerEvents: 'none',
+            // Zoomed 4%: the art carries a hard band along its edges.
+            transform: 'scale(1.04)',
           }}
         />
       )}

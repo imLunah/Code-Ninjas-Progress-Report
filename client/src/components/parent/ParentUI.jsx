@@ -39,9 +39,6 @@ export function PageTitle({ eyebrow, title, right, className = '' }) {
 export function Hero({ program, size = 'card', className = '', style = {}, children }) {
   const banner = PROGRAM_BANNERS[program];
   const gradient = PROGRAM_GRADIENTS[program] || PROGRAM_GRADIENTS.CREATE;
-  const background = banner
-    ? `linear-gradient(90deg, rgb(6 13 26 / 0.72) 0%, rgb(6 13 26 / 0.45) 55%, rgb(6 13 26 / 0.25) 100%), url(${banner}) center / cover no-repeat`
-    : gradient;
   // A page hero on a phone is the top of the screen: it starts at the very
   // top, edge to edge, square along the top so no page shows at the corners,
   // and rounded only along the bottom. On desktop it is a card in the right column like
@@ -49,8 +46,28 @@ export function Hero({ program, size = 'card', className = '', style = {}, child
   const pad = size === 'page'
     ? '-mx-4 sm:-mx-6 -mt-5 rounded-t-none rounded-b-[34px] px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6 lg:mx-0 lg:mt-0 lg:rounded-[26px] lg:px-7 lg:pt-7 lg:pb-6'
     : 'p-4 rounded-[18px]';
+  // The banner art is an <img> zoomed 4%, not a background: the files carry
+  // a hard band a few pixels wide along their edges, and the zoom crops it
+  // off at every aspect ratio. Art and scrim sit at z -1 inside the hero's
+  // own stacking context, so the children paint over them without a wrapper
+  // (ChildCard lays the hero out as a flex of its direct children).
   return (
-    <div className={`relative overflow-hidden text-white ${pad} ${className}`} style={{ background, ...style }}>
+    <div className={`relative overflow-hidden text-white ${pad} ${className}`} style={{ background: gradient, isolation: 'isolate', ...style }}>
+      {banner && (
+        <>
+          <img
+            src={banner}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transform: 'scale(1.04)', pointerEvents: 'none', zIndex: -1 }}
+          />
+          <div
+            aria-hidden="true"
+            style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgb(6 13 26 / 0.72) 0%, rgb(6 13 26 / 0.45) 55%, rgb(6 13 26 / 0.25) 100%)', pointerEvents: 'none', zIndex: -1 }}
+          />
+        </>
+      )}
       {children}
     </div>
   );
