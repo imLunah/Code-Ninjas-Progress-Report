@@ -10,7 +10,8 @@ import Logo from '../../components/ui/Logo';
 
 // A parent's first sign-in. The same shape as the staff welcome: a short
 // walk, with the family's pass beside it printing what they type. Name, then
-// relationship, then the pass turns over to show the ninjas it belongs to. Saving writes the parent_profiles row; having one is what
+// relationship, then the pass; it stays face up, and a tap or a drag turns it
+// over to the ninjas it belongs to. Saving writes the parent_profiles row; having one is what
 // lets ParentRoute through to the rest of the portal.
 //
 // Light only, like the rest of the parent portal.
@@ -77,7 +78,7 @@ export default function ParentWelcomePage() {
     center: parent?.centerName,
     centerCode: parent?.centerCode,
     ninjas,
-    side: step === 3 ? 'back' : 'front',
+    side: 'front',
   };
 
   const go = (delta) => { setError(''); setDir(delta); setStep((s) => Math.min(Math.max(s + delta, 0), STEPS.length - 1)); };

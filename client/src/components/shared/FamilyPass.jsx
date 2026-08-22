@@ -216,11 +216,11 @@ export default function FamilyPass({ parentName, relationship, phone, center, ce
                 <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {ninjas.length === 0 && <span className="font-ninja font-bold" style={{ fontSize: 15, color: '#8a9bb8' }}>No ninjas linked yet</span>}
                   {ninjas.slice(0, 4).map((n, i) => (
-                    <div key={`${n.name}-${i}`} className="flex items-center" style={{ gap: 10 }}>
-                      <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: 4, background: BELT_COLOR[n.belt] || '#d6dfeb', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.12)', flexShrink: 0 }} />
+                    <div key={`${n.name}-${i}`} style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+                      <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: 4, background: BELT_COLOR[n.belt] || '#d6dfeb', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.12)', flexShrink: 0, alignSelf: 'center' }} />
                       <b className="font-ninja font-extrabold" style={{ fontSize: 16, color: NAVY, overflowWrap: 'anywhere' }}>{n.name}</b>
                       {n.age != null && (
-                        <span className="font-ninja font-bold" style={{ fontSize: 12.5, color: '#506690', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+                        <span className="font-ninja font-bold" style={{ fontSize: 12.5, color: '#506690', whiteSpace: 'nowrap' }}>
                           Age {n.age}
                         </span>
                       )}
