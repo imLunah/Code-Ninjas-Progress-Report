@@ -275,7 +275,33 @@ function EventSlideshow({ events }) {
     const t = setInterval(() => setIdx((n) => (n + 1) % events.length), 6000);
     return () => clearInterval(t);
   }, [events.length, paused, expanded]);
-  if (!events.length) return null;
+  // No listings is still a banner: the hero holds its place with the house
+  // gradient and says so, instead of the page opening on a hole.
+  if (!events.length) {
+    return (
+      <section
+        className="relative left-1/2 -translate-x-1/2 w-[100cqw] -mt-5 lg:-mt-7 overflow-hidden text-white"
+        style={{ background: 'linear-gradient(135deg, #12264d 0%, #0b3d8f 100%)' }}
+        aria-label="Events at the center"
+      >
+        <span aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgb(6 11 24 / 0.82) 0%, rgb(6 11 24 / 0.55) 55%, rgb(6 11 24 / 0.2) 100%)' }} />
+        <div className="relative h-56 sm:h-64 lg:h-72">
+          <div className="relative h-full max-w-6xl mx-auto flex items-center px-4 sm:px-6">
+            {/* Opacity on the element, not the color: the mark's paths
+                overlap, and a translucent color doubles up where they do. */}
+            <span aria-hidden className="absolute right-6 top-1/2 -translate-y-1/2 hidden sm:block" style={{ color: '#ffffff', opacity: 0.22 }}>
+              <Logo variant="mark" className="h-24" />
+            </span>
+            <div className="min-w-0">
+              <p className="font-ninja text-[12px] sm:text-[13px] font-extrabold uppercase tracking-[0.08em] opacity-90 truncate">Announcements</p>
+              <p className="font-ninja font-extrabold text-[28px] sm:text-[34px] lg:text-[40px] leading-tight mt-1.5">No upcoming events</p>
+              <p className="font-ninja text-[14px] sm:text-[16px] font-bold opacity-90 mt-1.5">When the center plans something, it will show up here.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   const ev = events[Math.min(idx, events.length - 1)];
   const isToday = ev.event_date === ymd(new Date());
