@@ -22,7 +22,7 @@ const btn = (active, bare) => {
   return `${base} w-8 h-8 ${active ? 'bg-ninja-blue/15 text-ninja-blue' : 'text-ninja-muted hover:bg-ninja-bg'}`;
 };
 
-export default function MarkdownEditor({ value, onChange, placeholder, variant = 'card' }) {
+export default function MarkdownEditor({ value, onChange, placeholder, variant = 'card', bodyClass = '' }) {
   const bare = variant === 'bare';
   const editor = useEditor({
     extensions: [
@@ -79,7 +79,7 @@ export default function MarkdownEditor({ value, onChange, placeholder, variant =
           <button type="button" title="Numbered list" onClick={() => editor.chain().focus().toggleOrderedList().run()} className={btn(editor.isActive('orderedList'), bare)}>1.</button>
         </div>
       )}
-      <EditorContent editor={editor} className={bare ? 'flex-1 min-h-0 overflow-y-auto' : 'px-3 py-2.5'} />
+      <EditorContent editor={editor} className={`${bare ? 'flex-1 min-h-0 overflow-y-auto' : 'px-3 py-2.5'} ${bodyClass}`.trim()} />
     </div>
   );
 }

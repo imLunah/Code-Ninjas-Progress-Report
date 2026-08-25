@@ -85,7 +85,8 @@ function ListingForm({ initial, onSave, onCancel, busy, error }) {
   return (
     <div className="space-y-5">
       {/* Two columns so the form reads as a desk, not a tunnel: the words on
-          the left, the picture and the long text on the right. */}
+          the left, the picture on the right, and the long text full width
+          underneath. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
        <div className="space-y-4">
       <div>
@@ -151,17 +152,21 @@ function ListingForm({ initial, onSave, onCancel, busy, error }) {
         )}
       </div>
 
+       </div>
+      </div>
+
       <div>
         <label className={label}>Description {optional}</label>
         {/* The same editor senseis log with, storing markdown; the parent
-            banner renders it formatted. */}
+            banner renders it formatted. Full width under the columns, and a
+            long description scrolls inside the box instead of growing the
+            form. */}
         <LazyMarkdownEditor
           value={description}
           onChange={setDescription}
+          bodyClass="max-h-60 overflow-y-auto"
           placeholder="What families should know. Try **bold** or start a line with '- ' for a list."
         />
-      </div>
-       </div>
       </div>
 
       {error && <p className="font-ninja text-sm text-ninja-red">{error}</p>}
