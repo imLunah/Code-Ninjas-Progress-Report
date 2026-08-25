@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useEditor, EditorContent } from '@tiptap/react';
 import '../../styles/markdown.css';
 import StarterKit from '@tiptap/starter-kit';
@@ -27,6 +28,10 @@ export default function MarkdownEditor({ value, onChange, placeholder, variant =
   const bare = variant === 'bare';
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkHref, setLinkHref] = useState('');
+  const [linkText, setLinkText] = useState('');
+  const [linkPos, setLinkPos] = useState({ top: 0, left: 0 });
+  const [linkEditing, setLinkEditing] = useState(false);
+  const linkBtnRef = useRef(null);
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -79,17 +84,21 @@ export default function MarkdownEditor({ value, onChange, placeholder, variant =
           </button>
           <button
             type="button"
-            title={editor.isActive('link') ? 'Remove link' : 'Link'}
+            ref={linkBtnRef}
+            title={editor.isActive('link') ? 'Edit link' : 'Insert link'}
             onClick={() => {
-              // On a link the button undoes it; otherwise it opens the URL
-              // row. The editor never navigates on click (openOnClick is
-              // off), so this is the one way in and out.
-              if (editor.isActive('link')) {
-                editor.chain().focus().extendMarkRange('link').unsetLink().run();
-              } else {
-                setLinkHref('');
-                setLinkOpen((o) => !o);
-              }
+              if (linkOpen) { setLinkOpen(false); return; }
+              // On an existing link, widen the selection to the whole link so
+              // the popup edits it rather than splitting it.
+              const onLink = editor.isActive('link');
+              if (onLink) editor.chain().extendMarkRange('link').run();
+              const { from, to } = editor.state.selection;
+              setLinkText(editor.state.doc.textBetween(from, to, ' '));
+              setLinkHref(onLink ? editor.getAttributes('link').href || '' : '');
+              setLinkEditing(onLink);
+              const r = linkBtnRef.current.getBoundingClientRect();
+              setLinkPos({ top: r.bottom + 6, left: Math.max(8, Math.min(r.left, window.innerWidth - 296)) });
+              setLinkOpen(true);
             }}
             className={btn(editor.isActive('link') || linkOpen, bare)}
           >
@@ -101,24 +110,30 @@ export default function MarkdownEditor({ value, onChange, placeholder, variant =
         </div>
       )}
       {editor && linkOpen && (
-        <LinkRow
-          bare={bare}
+        <LinkPopover
+          pos={linkPos}
+          text={linkText}
+          setText={setLinkText}
           href={linkHref}
           setHref={setLinkHref}
+          editing={linkEditing}
           onCancel={() => setLinkOpen(false)}
+          onRemove={() => {
+            editor.chain().focus().extendMarkRange('link').unsetLink().run();
+            setLinkOpen(false);
+          }}
           onApply={() => {
             let url = linkHref.trim();
-            if (!url) { setLinkOpen(false); return; }
+            if (!url) return;
             if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
-            // With text selected the selection becomes the link; with a bare
-            // caret the URL itself is inserted as its own link text.
-            if (editor.state.selection.empty) {
-              editor.chain().focus()
-                .insertContent({ type: 'text', text: url, marks: [{ type: 'link', attrs: { href: url } }] })
-                .run();
-            } else {
-              editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
-            }
+            const text = linkText.trim() || url;
+            // Replaces the (widened) selection with the text carrying the
+            // link, then drops the stored mark so typing after the link is
+            // plain text, not more link.
+            editor.chain().focus()
+              .insertContent({ type: 'text', text, marks: [{ type: 'link', attrs: { href: url } }] })
+              .unsetMark('link')
+              .run();
             setLinkOpen(false);
           }}
         />
@@ -128,46 +143,63 @@ export default function MarkdownEditor({ value, onChange, placeholder, variant =
   );
 }
 
-// The inline URL row the Link button opens: an input plus Add/discard, in the
-// same shell language as the toolbar above it. A prompt dialog would be the
-// easy version; this keeps the flow inside the editor.
-function LinkRow({ bare, href, setHref, onApply, onCancel }) {
-  return (
+// The insert-link popup: Text and URL, and the text becomes the link. A
+// solid little card portalled to the body (the editor's shell clips overflow)
+// and anchored under the toolbar button, in the same fixed-position pattern
+// as the pinned-note popover. Escape and Enter stop propagating so the form's
+// own Modal doesn't close underneath it.
+function LinkPopover({ pos, text, setText, href, setHref, editing, onApply, onRemove, onCancel }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const onDown = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) onCancel();
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [onCancel]);
+
+  const keys = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); onApply(); }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onCancel(); }
+  };
+  const fieldCls = 'w-full font-ninja text-sm text-ninja-navy bg-ninja-bg/60 border border-ninja-border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-ninja-blue transition-colors';
+  const labelCls = 'block font-ninja text-[11px] font-bold uppercase tracking-wide text-ninja-muted mb-1';
+
+  return createPortal(
     <div
-      className={
-        bare
-          ? 'flex items-center gap-1.5 pb-1.5 mb-1.5 border-b flex-shrink-0'
-          : 'flex items-center gap-1.5 px-3 py-1.5 border-b border-ninja-border bg-ninja-bg/60'
-      }
-      style={bare ? { borderColor: 'rgba(0,0,0,0.1)' } : undefined}
+      ref={ref}
+      role="dialog"
+      aria-label={editing ? 'Edit link' : 'Insert link'}
+      className="fixed z-[110] w-72 rounded-xl bg-white border border-ninja-border shadow-xl p-3"
+      style={{ top: pos.top, left: pos.left }}
     >
-      <input
-        value={href}
-        onChange={(e) => setHref(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') { e.preventDefault(); onApply(); }
-          if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
-        }}
-        placeholder="https://…"
-        autoFocus
-        className={`flex-1 min-w-0 font-ninja text-sm bg-transparent focus:outline-none ${bare ? '' : 'text-ninja-navy placeholder:text-ninja-muted'}`}
-      />
-      <button
-        type="button"
-        onClick={onApply}
-        className={`font-ninja text-xs font-bold rounded px-2 py-1 ${bare ? 'opacity-80 hover:opacity-100' : 'text-ninja-blue hover:bg-ninja-blue/10'}`}
-      >
-        Add
-      </button>
-      <button
-        type="button"
-        title="Cancel"
-        aria-label="Cancel"
-        onClick={onCancel}
-        className={`font-ninja text-sm font-bold rounded px-1.5 py-0.5 ${bare ? 'opacity-60 hover:opacity-100' : 'text-ninja-muted hover:text-ninja-navy'}`}
-      >
-        ×
-      </button>
-    </div>
+      <div className="mb-2">
+        <label className={labelCls}>Text</label>
+        <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={keys}
+          placeholder="What it says" autoFocus className={fieldCls} />
+      </div>
+      <div className="mb-2.5">
+        <label className={labelCls}>URL</label>
+        <input value={href} onChange={(e) => setHref(e.target.value)} onKeyDown={keys}
+          placeholder="https://…" type="url" className={fieldCls} />
+      </div>
+      <div className="flex items-center gap-2">
+        {editing && (
+          <button type="button" onClick={onRemove}
+            className="font-ninja text-xs font-bold text-ninja-red hover:underline rounded mr-auto">
+            Remove
+          </button>
+        )}
+        <button type="button" onClick={onCancel}
+          className={`font-ninja text-xs font-bold text-ninja-muted hover:text-ninja-navy rounded px-2 py-1.5 ${editing ? '' : 'ml-auto'}`}>
+          Cancel
+        </button>
+        <button type="button" onClick={onApply} disabled={!href.trim()}
+          className="font-ninja text-xs font-bold text-white bg-ninja-blue hover:opacity-90 rounded-lg px-3 py-1.5 disabled:opacity-50 transition-opacity">
+          {editing ? 'Save' : 'Add link'}
+        </button>
+      </div>
+    </div>,
+    document.body
   );
 }
