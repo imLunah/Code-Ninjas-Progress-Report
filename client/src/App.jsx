@@ -30,6 +30,7 @@ const StaffPage = lazy(() => import('./pages/manager/StaffPage'));
 const ReportsPage = lazy(() => import('./pages/manager/ReportsPage'));
 const TasksPage = lazy(() => import('./pages/manager/TasksPage'));
 const EventsPage = lazy(() => import('./pages/manager/EventsPage'));
+const EventListingEditorPage = lazy(() => import('./pages/manager/EventListingEditorPage'));
 const AccountPage = lazy(() => import('./pages/AccountPage'));
 const SenseiDashboard = lazy(() => import('./pages/sensei/SenseiDashboard'));
 const LogProgressPage = lazy(() => import('./pages/sensei/LogProgressPage'));
@@ -79,6 +80,8 @@ export default function App() {
             <Route path="/manager/reports"  element={<ProtectedRoute role="manager"><ReportsPage /></ProtectedRoute>} />
             <Route path="/manager/tasks"    element={<ProtectedRoute role="manager"><TasksPage /></ProtectedRoute>} />
             <Route path="/manager/events"   element={<ProtectedRoute role="manager"><EventsPage /></ProtectedRoute>} />
+            <Route path="/manager/events/new" element={<ProtectedRoute role="manager"><EventListingEditorPage /></ProtectedRoute>} />
+            <Route path="/manager/events/:id/edit" element={<ProtectedRoute role="manager"><EventListingEditorPage /></ProtectedRoute>} />
             <Route path="/manager/students/new" element={<ProtectedRoute role="manager"><AddStudentPage /></ProtectedRoute>} />
             <Route path="/manager/students/:id" element={<ProtectedRoute role="sensei"><StudentProfile /></ProtectedRoute>} />
 
