@@ -17,6 +17,19 @@ const field = 'w-full rounded-lg border border-ninja-border bg-white px-3 py-2 f
 const label = 'block font-ninja text-xs font-bold uppercase tracking-wide text-ninja-muted mb-1.5';
 const optional = <span className="opacity-60 normal-case font-semibold">(optional)</span>;
 
+// The count appears once the field has ink and matches the server's caps.
+// Only the description can actually go over (the inputs clamp themselves),
+// and there it turns red and holds the save.
+const MAX_DESC = 2000;
+function Count({ len, max }) {
+  if (!len) return null;
+  return (
+    <span className={`float-right normal-case tracking-normal font-semibold ${len >= max ? 'text-ninja-red' : 'opacity-60'}`}>
+      {len.toLocaleString()}/{max.toLocaleString()}
+    </span>
+  );
+}
+
 function ListingForm({ initial, onSave, onCancel, busy, error }) {
   const [title, setTitle] = useState(initial.title || '');
   const [subtitle, setSubtitle] = useState(initial.subtitle || '');
@@ -53,7 +66,8 @@ function ListingForm({ initial, onSave, onCancel, busy, error }) {
     setRemoveImage(Boolean(initial.image_url));
   };
 
-  const canSave = title.trim();
+  const descOver = description.length > MAX_DESC;
+  const canSave = title.trim() && !descOver;
   const wasPublished = Boolean(initial.id) && initial.published !== false;
   const submit = (pub) => onSave(
     {
@@ -72,19 +86,19 @@ function ListingForm({ initial, onSave, onCancel, busy, error }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
        <div className="space-y-4">
       <div>
-        <label className={label}>Title</label>
+        <label className={label}>Title <Count len={title.length} max={200} /></label>
         <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200}
           placeholder="e.g. Parent's Night Out" className={field} autoFocus />
       </div>
 
       <div>
-        <label className={label}>Subtitle {optional}</label>
+        <label className={label}>Subtitle {optional} <Count len={subtitle.length} max={200} /></label>
         <input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} maxLength={200}
           placeholder="e.g. Drop them off. Just remember to pick them up!" className={field} />
       </div>
 
       <div>
-        <label className={label}>Sign-up link {optional}</label>
+        <label className={label}>Sign-up link {optional} <Count len={eventUrl.length} max={500} /></label>
         <input value={eventUrl} onChange={(e) => setEventUrl(e.target.value)} maxLength={500} type="url"
           placeholder="https://…" className={field} />
         <p className="font-ninja text-xs text-ninja-muted mt-1">Where the banner sends a family who taps it: a MyStudio event page, a form, anything.</p>
@@ -138,7 +152,7 @@ function ListingForm({ initial, onSave, onCancel, busy, error }) {
       </div>
 
       <div>
-        <label className={label}>Description {optional}</label>
+        <label className={label}>Description {optional} <Count len={description.length} max={MAX_DESC} /></label>
         {/* The same editor senseis log with, storing markdown; the parent
             banner renders it formatted. Full width under the columns, and a
             long description scrolls inside the box instead of growing the
@@ -149,6 +163,11 @@ function ListingForm({ initial, onSave, onCancel, busy, error }) {
           bodyClass="max-h-60 overflow-y-auto"
           placeholder="What families should know. Try **bold** or start a line with '- ' for a list."
         />
+        {descOver && (
+          <p className="font-ninja text-xs text-ninja-red mt-1">
+            The description is over the {MAX_DESC.toLocaleString()}-character limit — trim it to save.
+          </p>
+        )}
       </div>
 
       {error && <p className="font-ninja text-sm text-ninja-red">{error}</p>}
