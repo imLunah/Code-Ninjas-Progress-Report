@@ -353,7 +353,7 @@ export default function EventsPage() {
       {/* Centered and wide, not a side panel: authoring a listing is a
           sit-down task, and two columns keep it from becoming a tall
           tunnel of fields. */}
-      <Modal isOpen={!!editor} onClose={() => setEditor(null)} title={editor?.listing?.id ? 'Edit listing' : 'New listing'} width="max-w-3xl">
+      <Modal isOpen={!!editor} onClose={() => setEditor(null)} title={editor?.listing?.id ? 'Edit listing' : 'New listing'} width="max-w-6xl">
         {editor && (
           <ListingForm initial={editor.listing} onSave={save} onCancel={() => setEditor(null)} busy={busy} error={formError} />
         )}
