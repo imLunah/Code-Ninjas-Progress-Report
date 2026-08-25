@@ -169,11 +169,11 @@ function ParentSideNav({ switcher, parentName, centerName, onLogout, onReport })
       <div className="mt-auto">
         {/* The account row, same shape as the staff sidebar's: the parent's
             initials, their name over their center, and the report + sign
-            out glyphs. The initials and name open Settings. On the rail the
-            glyphs stack under the initials. */}
+            out glyphs. The initials and name open Settings. The rail keeps
+            only the initials; report and sign out live in Settings. */}
         <div className="p-3 border-t border-ninja-border">
           {collapsed ? (
-            <div className="flex flex-col items-center gap-2 py-1">
+            <div className="flex flex-col items-center py-1">
               <button
                 type="button"
                 onClick={() => navigate('/parent/account')}
@@ -183,22 +183,6 @@ function ParentSideNav({ switcher, parentName, centerName, onLogout, onReport })
                 className="rounded-full hover:opacity-80 transition-opacity"
               >
                 {avatar}
-              </button>
-              <button
-                onClick={onReport}
-                title="Report a bug or suggest a feature"
-                aria-label="Report a bug or suggest a feature"
-                className="text-ninja-muted hover:text-ninja-red transition-colors p-1"
-              >
-                <RocketIcon className="w-4 h-4" />
-              </button>
-              <button
-                onClick={onLogout}
-                title="Sign out"
-                aria-label="Sign out"
-                className="text-ninja-muted hover:text-ninja-red transition-colors p-1"
-              >
-                <LogOutIcon className="w-4 h-4" />
               </button>
             </div>
           ) : (
