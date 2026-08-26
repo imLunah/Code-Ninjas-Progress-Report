@@ -107,11 +107,10 @@ function LiveSchedule({ center }) {
   const todayHours = hoursFor(now);
   const openNow = todayHours && nowHour >= todayHours.open && nowHour < todayHours.close;
   const nowSlot = openNow ? Math.floor(nowHour) : null;
-  const inNow = nowSlot != null ? counts.get(`${today}|${nowSlot}`) || 0 : 0;
 
   let status;
   if (openNow) {
-    status = `Open until ${fmtHour(todayHours.close)} · ${inNow === 0 ? 'quiet right now' : `${inNow} ninja${inNow === 1 ? '' : 's'} in now`}`;
+    status = `Open until ${fmtHour(todayHours.close)}`;
   } else if (todayHours && nowHour < todayHours.open) {
     status = `Opens today at ${fmtHour(todayHours.open)}`;
   } else {
@@ -123,7 +122,6 @@ function LiveSchedule({ center }) {
     }
   }
 
-  const dayTotal = hourSlots.reduce((a, h) => a + (counts.get(`${today}|${h}`) || 0), 0);
   const tick = (h) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'a' : 'p'}`;
 
   return (
@@ -202,13 +200,6 @@ function LiveSchedule({ center }) {
               );
             })}
           </div>
-          {slots && (
-            <p className="mt-3 font-ninja text-[12px] text-ninja-muted" aria-live="polite">
-              {busiestHour != null ? `Busiest around ${fmtHour(busiestHour)} this week` : 'A quiet week so far'}
-              {' · '}
-              {dayTotal === 0 ? 'no check-ins yet today' : `${dayTotal} check-in${dayTotal === 1 ? '' : 's'} so far today`}
-            </p>
-          )}
         </div>
       )}
     </section>

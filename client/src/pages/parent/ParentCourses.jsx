@@ -12,6 +12,7 @@ import { BELTS, getLevels } from '../../utils/beltConfig';
 import { levelProjects, levelStates, levelTitle, realSessions, trackModel, fmtDay } from '../../lib/parentProgress';
 import { KIT_SHORT } from '../../lib/programTheme';
 import { useCurriculum } from '../../context/CurriculumContext';
+import BeltIcon from '../../components/ui/BeltIcon';
 
 // Courses: one card per program the child is in.
 //
@@ -142,10 +143,19 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
   return (
     <div className="space-y-4">
       <Hero program="CREATE" size="page">
+        {/* Desktop: the belt IS the hero's art. Pinned to the hero's own
+            height (a touch past it, so it meets both edges), square, cut off
+            at the right, and behind the ink: the hero's isolation lets a
+            negative z sit above the gradient but under everything written. */}
+        <span
+          aria-hidden
+          className="hidden lg:block absolute inset-y-[-3%] right-[-3.5rem] aspect-square pointer-events-none"
+          style={{ zIndex: -1 }}
+        >
+          <BeltIcon belt={belt} style={{ width: '100%', height: '100%' }} />
+        </span>
         {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to courses" /></div>}
-        {/* Phone: the belt on the right of the title, as drawn. Desktop: the
-            belt is the hero's art — oversized on the right, run off the
-            corner and clipped by the hero's own edge. */}
+        {/* Phone: the belt on the right of the title, as drawn. */}
         <div className="flex items-center lg:items-start justify-between gap-5">
           <div className="flex items-center gap-4 min-w-0">
             <div className="min-w-0">
@@ -157,11 +167,7 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
             </div>
           </div>
           <span className="lg:hidden flex-shrink-0"><Emblem program="CREATE" belt={belt} size={96} /></span>
-          {/* Art, not a control: level picking lives in All levels below.
-              Negative margins push it past the padding so the corner cuts it. */}
-          <span aria-hidden className="hidden lg:block flex-shrink-0 pointer-events-none -mr-16 -mt-12 -mb-4">
-            <Emblem program="CREATE" belt={belt} size={190} />
-          </span>
+
         </div>
         <div className="lg:hidden mt-4">
           <LevelPills states={states} value={level} onChange={pick} onHero layoutId="level-pill-mobile" />
