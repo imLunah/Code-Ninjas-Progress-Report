@@ -104,9 +104,16 @@ export function ProgramMark({ program, size = 40 }) {
 // the others with the connectors behind it lit — the trail walked so far —
 // and the ones ahead dimmed. No ring around the current belt: the size and
 // the trail are the marker. `onHero` draws its labels and connectors in white
-// for use on a blue banner; otherwise navy on white. Scrolls sideways where
-// thirteen do not fit; mouse users drag it (the scrollbar is hidden and a
-// wheel is vertical, so without the drag only a trackpad could move it).
+// for use on a blue banner; otherwise navy on white.
+//
+// It is a scroller on phones ONLY. Below lg the columns are a fixed width and
+// the row is `max-content`, so thirteen belts run off the side and the road
+// swipes (mouse users drag it: the scrollbar is hidden and a wheel is
+// vertical, so without the drag only a trackpad could move it). At lg the
+// columns become flex-1 and the row spreads across whatever it is given, so
+// all thirteen are on screen at once and there is nothing to scroll — a
+// desktop banner is wide enough to hold the whole road, and letting it scroll
+// there only parked the last four belts against a field of empty gradient.
 export function BeltRoad({ current, onHero = false, compact = false, className = '' }) {
   const idx = BELTS.findIndex((b) => b.name === current);
   const icon = compact ? 22 : 26;
@@ -120,7 +127,7 @@ export function BeltRoad({ current, onHero = false, compact = false, className =
   // itself does not move.
   useEffect(() => {
     const el = scroller.current;
-    if (!el || idx < 0) return;
+    if (!el || idx < 0 || el.scrollWidth <= el.clientWidth) return;
     const col = compact ? 40 : 46;
     const centre = idx * col + col / 2;
     el.scrollLeft = Math.max(0, centre - el.clientWidth / 2);
@@ -130,8 +137,12 @@ export function BeltRoad({ current, onHero = false, compact = false, className =
     <div
       ref={scroller}
       onPointerDown={(e) => {
-        if (e.pointerType !== 'mouse' || !scroller.current) return;
-        drag.current = { x: e.clientX, left: scroller.current.scrollLeft };
+        const el = scroller.current;
+        // Nothing to drag where the road already fits, which is every
+        // desktop: without this the whole banner answers a press with a
+        // grabbing cursor and then does not move.
+        if (e.pointerType !== 'mouse' || !el || el.scrollWidth <= el.clientWidth) return;
+        drag.current = { x: e.clientX, left: el.scrollLeft };
         scroller.current.setPointerCapture(e.pointerId);
       }}
       onPointerMove={(e) => {
@@ -140,15 +151,15 @@ export function BeltRoad({ current, onHero = false, compact = false, className =
       }}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
-      className={`overflow-x-auto no-scrollbar cursor-grab active:cursor-grabbing select-none -mx-1 px-1 ${className}`}
+      className={`overflow-x-auto lg:overflow-x-visible no-scrollbar cursor-grab active:cursor-grabbing lg:cursor-default lg:active:cursor-default select-none -mx-1 px-1 ${className}`}
       aria-label="Belt road" role="img">
-      <div className="flex items-start" style={{ minWidth: 'max-content' }}>
+      <div className="flex items-start min-w-max lg:min-w-0">
         {BELTS.map((b, i) => {
           const state = idx < 0 ? 'ahead' : i < idx ? 'earned' : i === idx ? 'current' : 'ahead';
           const size = state === 'current' ? cur : icon;
           return (
-            <div key={b.name} className="flex items-start">
-              <div className="flex flex-col items-center" style={{ width: compact ? 40 : 46 }}>
+            <div key={b.name} className="flex items-start lg:flex-1 lg:min-w-0">
+              <div className={`flex flex-col items-center flex-shrink-0 lg:flex-1 lg:w-auto lg:min-w-0 ${compact ? 'w-10' : 'w-[46px]'}`}>
                 <span className="flex items-center justify-center" style={{ height: cur }}>
                   <BeltIcon belt={b.name} size={size} dimmed={state === 'ahead'} />
                 </span>
