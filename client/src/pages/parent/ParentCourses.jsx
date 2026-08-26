@@ -181,13 +181,16 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
             Big enough to be cropped, small enough that the piece in frame is
             still recognisably the belt.
 
-            The fade is a MASK, not a flat opacity. Weight sits in the top
-            right corner and dissolves toward the bottom left, which is
-            exactly where the words and the belt road are — so the art never
-            has an edge that crosses content, and the dimmed belts at the end
-            of the road are not asked to hold their own against the brightest
-            part of a picture. Opacity alone gave one even wash and left the
-            ring's outline drawn straight through the road.
+            The art is at FULL strength — no opacity at all. The fade is
+            entirely the MASK: weight in the top right corner, dissolving
+            toward the bottom left, which is exactly where the words and the
+            belt road are. So the art never has an edge that crosses content,
+            and the dimmed belts at the end of the road are never asked to
+            hold their own against the brightest part of a picture. A flat
+            opacity was tried at several values and each one did the same two
+            things wrong: it drained the belt's colour, which is the one thing
+            the art is there to say, and it still left the ring's outline
+            drawn straight through the road.
 
             `large` asks for the 768px copy, because the banner paints one at
             around 330 CSS px — over 600 device pixels on a retina screen —
@@ -204,7 +207,7 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
             everything written. */}
         <span
           aria-hidden
-          className="hidden lg:block absolute inset-y-[-15%] right-[calc(50%-50cqw-3rem)] aspect-square pointer-events-none opacity-[0.4]"
+          className="hidden lg:block absolute inset-y-[-15%] right-[calc(50%-50cqw-3rem)] aspect-square pointer-events-none"
           style={{
             zIndex: -1,
             maskImage: 'linear-gradient(to bottom left, #000 28%, transparent 78%)',
