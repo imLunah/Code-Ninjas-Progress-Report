@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown';
 import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { PageTitle, Row, StatusText, MoreLink } from '../../components/parent/ParentUI';
 import ProgressVisuals from '../../components/parent/ProgressVisuals';
-import { Pin, MARKDOWN_COMPONENTS } from '../../components/shared/PinnedNote';
+import { Pin } from '../../components/shared/PinnedNote';
 import LazyMarkdownEditor from '../../components/shared/LazyMarkdownEditor';
 import { FLAT } from '../../lib/surfaces';
 import { SkeletonProfile } from '../../components/ui/Skeleton';
+import Modal from '../../components/ui/Modal';
 import { activityFeed, fmtLongDay } from '../../lib/parentProgress';
 
 // The full profile: everything about one child on one page.
@@ -26,65 +26,65 @@ function monthKey(dateStr) {
   return Number.isNaN(d.getTime()) ? 'Undated' : d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
-function NoteCard({ child, text, onSave }) {
-  const [editing, setEditing] = useState(false);
+// The note a parent keeps for the senseis, behind a pin in the page title.
+//
+// It used to be a card of its own, and after the About card came off it ran
+// the full width of the page for the sake of one line somebody writes once a
+// term. A note is a thing you go and change, not a thing you read on arrival,
+// so it is an icon that opens the box you type in. The pin fills in amber when
+// there is a note, which is the only glance the page owes it.
+function NoteButton({ child, text, onSave }) {
+  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(text);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  useEffect(() => { setEditing(false); setDraft(text); }, [child?.id, text]);
+  useEffect(() => { setOpen(false); setDraft(text); }, [child?.id, text]);
 
+  const has = Boolean(text.trim());
+  const first = child?.full_name?.split(' ')[0];
+
+  const close = () => { setOpen(false); setDraft(text); setError(''); };
   const handleSave = async () => {
     setSaving(true); setError('');
-    try { await onSave(draft); setEditing(false); }
+    try { await onSave(draft); setOpen(false); }
     catch { setError('Could not save the note. Try again.'); }
     finally { setSaving(false); }
   };
 
-  const first = child?.full_name?.split(' ')[0];
   return (
-    <section className="tint-amber rounded-[22px] px-5 py-4">
-      <div className="flex items-center justify-between gap-3 mb-2.5">
-        <div className="flex items-center gap-2" style={{ color: 'var(--tint-ink)' }}>
-          <Pin className="w-4 h-4 -rotate-12" />
-          <h2 className="font-ninja font-extrabold text-[15px]">Note for Senseis</h2>
-        </div>
-        {!editing && (
-          <button type="button" onClick={() => { setDraft(text); setEditing(true); }}
-            className="font-ninja text-xs font-extrabold hover:underline" style={{ color: 'var(--tint-ink)' }}>
-            {text.trim() ? 'Edit' : 'Add note'}
-          </button>
-        )}
-      </div>
-      {editing ? (
-        <div className="space-y-2.5">
+    <>
+      <button
+        type="button"
+        onClick={() => { setDraft(text); setError(''); setOpen(true); }}
+        title="Note for Senseis"
+        aria-label={has ? 'Edit the note for senseis' : 'Add a note for senseis'}
+        className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors ${has ? 'tint-amber' : 'bg-white border border-ninja-border text-ninja-muted hover:text-ninja-navy hover:border-ninja-navy/25'}`}
+        style={has ? { color: 'var(--tint-ink)' } : undefined}
+      >
+        <Pin className="w-[18px] h-[18px] -rotate-12" />
+      </button>
+
+      <Modal isOpen={open} onClose={close} title="Note for Senseis">
+        <div className="space-y-3">
+          <p className="font-ninja text-[13px] text-ninja-muted">
+            Allergies, pickup notes, learning style, or anything else the senseis should know. It shows on {first}&rsquo;s profile for every sensei at the center.
+          </p>
           <LazyMarkdownEditor value={draft} onChange={setDraft}
-            placeholder="Allergies, pickup notes, learning style, or anything else the senseis should know." />
+            placeholder={`Anything the senseis should know about ${first}.`} />
           {error && <p className="text-ninja-red font-ninja text-xs">{error}</p>}
           <div className="flex items-center gap-1">
             <button type="button" onClick={handleSave} disabled={saving}
               className="font-ninja text-xs font-extrabold bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 active:scale-95">
               {saving ? 'Saving…' : 'Save note'}
             </button>
-            <button type="button" onClick={() => { setEditing(false); setDraft(text); }}
-              className="font-ninja text-xs font-extrabold px-3 py-1.5" style={{ color: 'var(--tint-ink)' }}>
+            <button type="button" onClick={close}
+              className="font-ninja text-xs font-extrabold px-3 py-1.5 text-ninja-muted hover:text-ninja-navy transition-colors">
               Cancel
             </button>
           </div>
         </div>
-      ) : text.trim() ? (
-        <div className="font-ninja text-sm leading-relaxed text-ninja-navy">
-          {/* MARKDOWN_COMPONENTS keeps img: () => null. Parent-authored text is
-              rendered in staff context; a remote image would be a tracking pixel. */}
-          <ReactMarkdown components={MARKDOWN_COMPONENTS} urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}>
-            {text}
-          </ReactMarkdown>
-        </div>
-      ) : (
-        <p className="font-ninja text-sm leading-relaxed" style={{ color: 'var(--tint-ink-soft)' }}>
-          Nothing pinned yet. Anything you write here shows on {first}'s profile for every sensei at the center.
-        </p>
-      )}
-    </section>
+      </Modal>
+    </>
   );
 }
 
@@ -135,10 +135,9 @@ export default function ParentProfile() {
   return (
     <ParentLayout switcher={switcher}>
       <div className="space-y-4 lg:space-y-5">
-        <PageTitle eyebrow="Full profile" title={child.full_name} />
+        <PageTitle eyebrow="Full profile" title={child.full_name}
+          right={<NoteButton child={child} text={detail?.special_instructions || ''} onSave={(text) => saveNote(child.id, text)} />} />
         <div className="lg:hidden"><ChildSwitcher layoutId="parent-child-mobile" /></div>
-
-        <NoteCard child={child} text={detail?.special_instructions || ''} onSave={(text) => saveNote(child.id, text)} />
 
         {detail && programs.length > 0 && (
           <ProgressVisuals programs={programs} sessionLogs={detail.session_logs || []} />
