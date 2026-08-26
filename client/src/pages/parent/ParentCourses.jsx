@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronRightIcon, XIcon } from 'lucide-react';
+import { PlusIcon, XIcon } from 'lucide-react';
 import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
 import { useParentPortal } from '../../context/ParentPortalContext';
-import { PageTitle, Hero, Emblem, ProgramMark, BeltRoad, LevelPills, Group, Row, Tile, StatusDot, StatusText, BackChip } from '../../components/parent/ParentUI';
+import { PageTitle, Hero, Emblem, BeltRoad, LevelPills, Group, Row, Tile, StatusDot, StatusText, BackChip } from '../../components/parent/ParentUI';
 import useIsDesktop from '../../lib/useIsDesktop';
 import { FLAT } from '../../lib/surfaces';
 import { SkeletonCards } from '../../components/ui/Skeleton';
@@ -73,22 +73,36 @@ const COURSE_ABOUT = {
 function CourseCard({ enrollment, logs, onOpen }) {
   const p = enrollment.program;
   const model = useTrackModel(enrollment, logs);
+  // The art IS the card: the program banner fills it, the name sits on a
+  // bottom wash, and the round plus is the whole affordance.
   return (
     <motion.button
       type="button"
       layoutId={`course-${p}`}
       onClick={onOpen}
-      className={`relative w-full text-left ${FLAT} p-4 transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none`}
+      className="relative w-full text-left rounded-[18px] overflow-hidden shadow-sm transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none"
       style={{ transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)' }}
     >
-      <div className="flex items-center gap-3">
-        <ProgramMark program={p} />
-        <div className="min-w-0 flex-1">
-          <p className="font-ninja font-extrabold text-[16px] text-ninja-navy leading-tight truncate">{p}</p>
-          <p className="font-ninja text-[12.5px] v2 text-ninja-muted truncate">{whereLine(enrollment, logs, model)}</p>
+      <Hero program={p} className="aspect-[16/10] flex flex-col justify-end">
+        <span
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-28 pointer-events-none"
+          style={{ background: 'linear-gradient(180deg, rgb(6 13 26 / 0) 0%, rgb(6 13 26 / 0.68) 100%)' }}
+        />
+        <div className="relative flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-ninja font-extrabold text-[20px] leading-tight truncate">{p}</p>
+            <p className="font-ninja text-[12.5px] font-bold opacity-85 truncate mt-0.5">{whereLine(enrollment, logs, model)}</p>
+          </div>
+          <span
+            aria-hidden
+            className="inline-flex items-center justify-center w-9 h-9 rounded-full flex-shrink-0"
+            style={{ background: 'rgb(255 255 255 / 0.18)', border: '1px solid rgb(255 255 255 / 0.28)' }}
+          >
+            <PlusIcon size={18} strokeWidth={2.5} />
+          </span>
         </div>
-        <ChevronRightIcon size={18} className="text-ninja-muted/60 flex-shrink-0" aria-hidden />
-      </div>
+      </Hero>
     </motion.button>
   );
 }
@@ -431,7 +445,7 @@ export default function ParentCourses() {
   }
 
   const list = (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
       {enrollments.map((e) => (
         <CourseCard key={e.id || e.program} enrollment={e} logs={logsFor(e.program)} onOpen={() => setPreview(e.program)} />
       ))}
