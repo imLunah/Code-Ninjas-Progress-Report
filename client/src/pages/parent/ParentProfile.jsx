@@ -20,8 +20,6 @@ import { activityFeed, calcAge, fmtLongDay } from '../../lib/parentProgress';
 // session grouped by month. The URL names the child, so the link on a Home
 // card lands here for that child even when another is selected.
 
-const INITIAL_MONTHS = 3;
-
 function whereLine(p) {
   if (p.program === 'CREATE') return p.belt_level ? `${p.belt_level} belt${p.belt_sublevel ? ` · Level ${p.belt_sublevel}` : ''}` : 'Just getting started';
   return [p.last_sub_program, p.last_module_name].filter(Boolean).join(' · ') || 'Just getting started';
@@ -101,14 +99,12 @@ export default function ParentProfile() {
   const target = Number(id);
   const child = (students || []).find((s) => s.id === target) || null;
   const detail = detailFor(target);
-  const [monthsShown, setMonthsShown] = useState(INITIAL_MONTHS);
 
   // Landing here IS choosing this child, so the switchers agree with the page.
   useEffect(() => {
     if (child) { setActiveId(child.id); setViewAll(false); }
   }, [child?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (child) loadDetail(child.id); }, [child?.id, loadDetail]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { setMonthsShown(INITIAL_MONTHS); }, [target]);
 
   const feed = useMemo(() => activityFeed(detail), [detail]);
   const months = useMemo(() => {
@@ -169,23 +165,24 @@ export default function ParentProfile() {
           {months.length === 0 && (
             <div className={`${FLAT} p-8 text-center`}><p className="text-ninja-muted font-ninja text-sm">Sessions show up here as soon as a sensei logs one for {first}.</p></div>
           )}
-          {months.slice(0, monthsShown).map((m) => (
-            <Group key={m.key} title={m.key}>
-              {m.items.map((it, i) => it._type === 'club' ? (
-                <Row key={`c${it.session_date}${it.club_name}${i}`} first={i === 0} title={it.club_name} subtitle={`Club · ${fmtLongDay(it.session_date)}`} trailing={<StatusText status="club" />} />
-              ) : (
-                <Row key={`s${it.session_date}${i}`} first={i === 0}
-                  title={it.project_at || it.lesson_name || it.module_name || it.sub_program || `${it.program} session`}
-                  subtitle={[it.program, it.program === 'CREATE' && it.belt_level_at ? `${it.belt_level_at} belt${it.belt_sublevel_at ? `, level ${it.belt_sublevel_at}` : ''}` : [it.sub_program, it.module_name].filter(Boolean).join(' · ') || null, fmtLongDay(it.session_date), it.sensei_name ? `Sensei ${String(it.sensei_name).split(' ')[0]}` : null].filter(Boolean).join(' · ')}
-                  trailing={it.status_at ? <StatusText status={it.status_at} /> : null} />
-              ))}
-            </Group>
-          ))}
-          {months.length > monthsShown && (
-            <button type="button" onClick={() => setMonthsShown((n) => n + INITIAL_MONTHS)}
-              className={`${FLAT} w-full py-3 font-ninja text-[13px] font-extrabold text-ninja-blue-ink hover:bg-ninja-navy/[0.03] active:scale-[0.99] transition-colors`}>
-              Show earlier months
-            </button>
+          {months.length > 0 && (
+            <div className={`${FLAT} overflow-hidden`}>
+              <div className="max-h-[min(58vh,520px)] overflow-y-auto overscroll-contain">
+                {months.map((m, mi) => (
+                  <div key={m.key} className={mi ? 'border-t border-ninja-navy/[0.08]' : ''}>
+                    <p className="sticky top-0 z-10 bg-white px-4 pt-3.5 pb-1.5 font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted">{m.key}</p>
+                    {m.items.map((it, i) => it._type === 'club' ? (
+                      <Row key={`c${it.session_date}${it.club_name}${i}`} first={i === 0} title={it.club_name} subtitle={`Club · ${fmtLongDay(it.session_date)}`} trailing={<StatusText status="club" />} />
+                    ) : (
+                      <Row key={`s${it.session_date}${i}`} first={i === 0}
+                        title={it.project_at || it.lesson_name || it.module_name || it.sub_program || `${it.program} session`}
+                        subtitle={[it.program, it.program === 'CREATE' && it.belt_level_at ? `${it.belt_level_at} belt${it.belt_sublevel_at ? `, level ${it.belt_sublevel_at}` : ''}` : [it.sub_program, it.module_name].filter(Boolean).join(' · ') || null, fmtLongDay(it.session_date), it.sensei_name ? `Sensei ${String(it.sensei_name).split(' ')[0]}` : null].filter(Boolean).join(' · ')}
+                        trailing={it.status_at ? <StatusText status={it.status_at} /> : null} />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </div>
