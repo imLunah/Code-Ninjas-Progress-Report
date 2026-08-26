@@ -189,6 +189,15 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
             part of a picture. Opacity alone gave one even wash and left the
             ring's outline drawn straight through the road.
 
+            The blur is not a style choice so much as an honest one. The belt
+            PNGs are 256px, which is the whole of the art we have, and the
+            banner paints one at around 330 CSS px — over 600 device pixels on
+            a retina screen. Upscaled that far it looks like a bad JPEG. Two
+            pixels of blur turns a soft image into a deliberately soft one:
+            background art with a depth of field reads as intent, a fuzzy logo
+            reads as a mistake. Swap in higher resolution art and this line is
+            the one to delete.
+
             Phone: a bit smaller and centered, so the pills row underneath
             still breathes. Both sit behind the ink either way — the hero's
             isolation lets a negative z sit above the gradient but under
@@ -198,6 +207,7 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
           className="hidden lg:block absolute inset-y-[-15%] right-[calc(50%-50cqw-3rem)] aspect-square pointer-events-none opacity-[0.16]"
           style={{
             zIndex: -1,
+            filter: 'blur(2px)',
             maskImage: 'linear-gradient(to bottom left, #000 28%, transparent 78%)',
             WebkitMaskImage: 'linear-gradient(to bottom left, #000 28%, transparent 78%)',
           }}
