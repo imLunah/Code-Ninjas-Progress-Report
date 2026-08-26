@@ -143,10 +143,12 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
   return (
     <div className="space-y-4">
       <Hero program="CREATE" size="page">
-        {/* Desktop: the belt IS the hero's art. Pinned to the hero's own
-            height (a touch past it, so it meets both edges), square, cut off
-            at the right, and behind the ink: the hero's isolation lets a
-            negative z sit above the gradient but under everything written. */}
+        {/* The belt IS the hero's art on every width. Desktop: pinned to the
+            hero's own height (a touch past it, so it meets both edges).
+            Phone: a bit smaller and centered, so the pills row underneath
+            still breathes. Both are square, cut off at the right, and behind
+            the ink: the hero's isolation lets a negative z sit above the
+            gradient but under everything written. */}
         <span
           aria-hidden
           className="hidden lg:block absolute inset-y-[-3%] right-[-3.5rem] aspect-square pointer-events-none"
@@ -154,20 +156,24 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
         >
           <BeltIcon belt={belt} style={{ width: '100%', height: '100%' }} />
         </span>
+        <span
+          aria-hidden
+          className="lg:hidden absolute top-1/2 -translate-y-1/2 right-[-2rem] h-[72%] aspect-square pointer-events-none"
+          style={{ zIndex: -1 }}
+        >
+          <BeltIcon belt={belt} style={{ width: '100%', height: '100%' }} />
+        </span>
         {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to courses" /></div>}
-        {/* Phone: the belt on the right of the title, as drawn. */}
         <div className="flex items-center lg:items-start justify-between gap-5">
           <div className="flex items-center gap-4 min-w-0">
             <div className="min-w-0">
-              <p className="hidden lg:block font-ninja text-[12px] font-extrabold opacity-85 truncate">CREATE · {childName}</p>
+              <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">CREATE · {childName}</p>
               <p className="font-ninja font-extrabold text-[36px] lg:text-[32px] leading-none mt-1 tracking-[-0.015em]">{belt} belt</p>
               <p className="font-ninja text-[13px] opacity-85 mt-2 truncate">
                 {[`Level ${currentLevel}`, levels.length ? `${pos} of ${levels.length}` : null, next ? `earns ${next}` : null, sessions.length ? `${sessions.length} session${sessions.length === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ')}
               </p>
             </div>
           </div>
-          <span className="lg:hidden flex-shrink-0"><Emblem program="CREATE" belt={belt} size={96} /></span>
-
         </div>
         <div className="lg:hidden mt-4">
           <LevelPills states={states} value={level} onChange={pick} onHero layoutId="level-pill-mobile" />
