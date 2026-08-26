@@ -127,18 +127,26 @@ export function ProgramMark({ program, size = 40 }) {
 // vertical, so without the drag only a trackpad could move it). At lg all
 // thirteen are on screen at once and there is nothing to scroll.
 //
-// What stretches at lg is the CONNECTOR. The ceiling is 64px, which is high
-// enough that inside a content column the connectors never actually reach it
-// and the road simply fills the width from the left edge — no leftover space,
-// so nothing to align and nowhere for it to drift. The cap only bites on a
-// banner wider than the column, where without one thirteen belts spread out
-// into a long thin rule with beads on it. A 30px cap was tried and was the
-// opposite mistake: it left slack, and slack has to be put somewhere.
+// What stretches at lg is the CONNECTOR, between a floor of 34px and a
+// ceiling of 64px, and that floor is the whole of what keeps the road
+// breathing. Work it out and the connector's own length IS the gap between
+// two resting belts: the column is 68px, the belt inside it is 30px, and the
+// connector pulls 19px into the column at each end, so the arithmetic cancels
+// to exactly the connector. Without a floor it collapsed to 8px on a narrow
+// banner, and the grown belt — 58px in a 46px column at the time — actually
+// overlapped its neighbour rather than merely crowding it.
 //
-// The line runs BEHIND the belts (negative margins into the columns, belts
-// lifted with z-10) instead of butting up against them. A belt is 30px inside
-// a 46px column, so an unmargined connector stopped 8px short at both ends
-// and the road read as thirteen separate dashes.
+// The ceiling matters at the other end: uncapped, thirteen belts spread
+// across a wide banner into a long thin rule with beads on it.
+//
+// The 19px pull is what makes the line reach the belts instead of stopping at
+// the column's edge, which had the road reading as thirteen separate dashes.
+// Behind, not through: the belts are lifted with z-10, so where the line runs
+// under the grown one it simply disappears.
+//
+// It stays `overflow-x-auto` at every width. Below lg it is a real scroller;
+// at lg it only becomes one on a narrow desktop where 836px of road will not
+// fit, and scrolling there beats spilling out of the banner.
 export function BeltRoad({ current, selected, onSelect, onHero = false, compact = false, className = '' }) {
   const idx = BELTS.findIndex((b) => b.name === current);
   // `current` is where the ninja actually IS — it lights the trail and decides
@@ -180,9 +188,9 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
       }}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
-      className={`overflow-x-auto lg:overflow-x-visible no-scrollbar cursor-grab active:cursor-grabbing lg:cursor-default lg:active:cursor-default select-none -mx-1 px-1 ${className}`}
+      className={`overflow-x-auto no-scrollbar cursor-grab active:cursor-grabbing lg:cursor-default lg:active:cursor-default select-none -mx-1 px-1 ${className}`}
       aria-label="Belt road" role={onSelect ? 'group' : 'img'}>
-      <div className="flex items-start min-w-max lg:min-w-0">
+      <div className="flex items-start min-w-max">
         {BELTS.map((b, i) => {
           const state = idx < 0 ? 'ahead' : i < idx ? 'earned' : i === idx ? 'current' : 'ahead';
           const size = i === sel ? cur : icon;
@@ -202,7 +210,7 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
                     <BeltIcon belt={b.name} style={{ width: '100%', height: '100%' }} dimmed={state === 'ahead'} />
                   </motion.span>
                 </span>
-                <span className={`font-ninja mt-1 leading-none ${compact ? 'text-[9px]' : 'text-[10px]'} ${i === sel ? 'font-extrabold' : 'font-bold'} ${onHero ? (state === 'ahead' ? 'text-white/45' : 'text-white') : (state === 'ahead' ? 'text-ninja-muted/60' : 'text-ninja-navy')}`}>
+                <span className={`font-ninja mt-1 leading-none whitespace-nowrap ${compact ? 'text-[9px]' : 'text-[10px]'} ${i === sel ? 'font-extrabold' : 'font-bold'} ${onHero ? (state === 'ahead' ? 'text-white/45' : 'text-white') : (state === 'ahead' ? 'text-ninja-muted/60' : 'text-ninja-navy')}`}>
                   {b.name}
                 </span>
               </Cell>
@@ -214,7 +222,7 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
                   they are wider at lg because the gap either side of a belt
                   inside its column is wider there. */}
               {i < BELTS.length - 1 && (
-                <span aria-hidden className="block flex-shrink-0 -mx-[3px] lg:-mx-[9px] lg:flex-1 lg:max-w-[64px]" style={{ width: compact ? 6 : 8, height: 2, background: i < idx ? trail : line, marginTop: cur / 2 - 1 }} />
+                <span aria-hidden className="block flex-shrink-0 -mx-[8px] lg:-mx-[19px] lg:flex-1 lg:min-w-[34px] lg:max-w-[64px]" style={{ width: compact ? 6 : 8, height: 2, background: i < idx ? trail : line, marginTop: cur / 2 - 1 }} />
               )}
             </div>
           );
@@ -228,7 +236,9 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
 // it is a control — the same box either way, because a road that changed shape
 // when it became clickable would read as two components.
 function Cell({ belt, onSelect, isSel, compact, children }) {
-  const box = `flex flex-col items-center flex-shrink-0 ${compact ? 'w-10' : 'w-[46px]'}`;
+  // Wider at lg so the grown belt (58px) sits inside its own cell with room
+  // to spare instead of bulging out over the two beside it.
+  const box = `flex flex-col items-center flex-shrink-0 ${compact ? 'w-10' : 'w-[46px] lg:w-[68px]'}`;
   if (!onSelect) return <div className={box}>{children}</div>;
   return (
     <button
