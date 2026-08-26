@@ -51,12 +51,16 @@ export function Hero({ program, size = 'card', className = '', style = {}, child
   // left edge. `100vw` would reach under the sidebar and past the scrollbar.
   // The words do NOT go with it — they stay in an inner box the same width as
   // the content column, so the title still lines up with the cards below it
-  // instead of drifting off to the far left of a wide screen.
+  // instead of drifting off to the far left of a wide screen. At lg that box
+  // carries the hero's vertical padding rather than the banner doing it, so
+  // the box is exactly as tall as the banner: art hung off it with `inset-y-0`
+  // then spans the full height, and `right: calc(50% - 50cqw)` walks it back
+  // out to the banner's own edge. Both halves of the gap, from one anchor.
   // 'block' is the same hero as a card on the page rather than at the top of
   // it: the page's own radius and the page hero's breathing room, but no
   // bleed to the screen edges.
   const pad = size === 'page'
-    ? '-mx-4 sm:-mx-6 -mt-5 rounded-t-none rounded-b-[34px] px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6 lg:mr-0 lg:ml-[calc(50%-50cqw)] lg:w-[100cqw] lg:-mt-7 lg:rounded-b-[40px] lg:px-0 lg:pt-14 lg:pb-12'
+    ? '-mx-4 sm:-mx-6 -mt-5 rounded-t-none rounded-b-[34px] px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6 lg:mr-0 lg:ml-[calc(50%-50cqw)] lg:w-[100cqw] lg:-mt-7 lg:rounded-b-[40px] lg:p-0'
     : size === 'block'
       ? 'rounded-[22px] px-5 py-5 lg:rounded-[26px] lg:px-7 lg:py-6'
       : 'p-4 rounded-[18px]';
@@ -83,7 +87,7 @@ export function Hero({ program, size = 'card', className = '', style = {}, child
         </>
       )}
       {size === 'page'
-        ? <div className="lg:relative lg:max-w-6xl lg:mx-auto lg:px-6">{children}</div>
+        ? <div className="lg:relative lg:max-w-6xl lg:mx-auto lg:px-6 lg:pt-14 lg:pb-12">{children}</div>
         : children}
     </div>
   );
