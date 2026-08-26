@@ -127,11 +127,13 @@ export function ProgramMark({ program, size = 40 }) {
 // vertical, so without the drag only a trackpad could move it). At lg all
 // thirteen are on screen at once and there is nothing to scroll.
 //
-// What stretches at lg is the CONNECTOR, and only up to a point. Letting it
-// grow without a ceiling spread thirteen belts across a 1100px banner and the
-// result read as a long thin rule with beads on it. Capped at 30px the road
-// takes the width it wants and centres in what it is given, which is a road
-// rather than a ruler.
+// What stretches at lg is the CONNECTOR. The ceiling is 64px, which is high
+// enough that inside a content column the connectors never actually reach it
+// and the road simply fills the width from the left edge — no leftover space,
+// so nothing to align and nowhere for it to drift. The cap only bites on a
+// banner wider than the column, where without one thirteen belts spread out
+// into a long thin rule with beads on it. A 30px cap was tried and was the
+// opposite mistake: it left slack, and slack has to be put somewhere.
 //
 // The line runs BEHIND the belts (negative margins into the columns, belts
 // lifted with z-10) instead of butting up against them. A belt is 30px inside
@@ -180,7 +182,7 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
       onPointerCancel={endDrag}
       className={`overflow-x-auto lg:overflow-x-visible no-scrollbar cursor-grab active:cursor-grabbing lg:cursor-default lg:active:cursor-default select-none -mx-1 px-1 ${className}`}
       aria-label="Belt road" role={onSelect ? 'group' : 'img'}>
-      <div className="flex items-start min-w-max lg:min-w-0 lg:justify-center">
+      <div className="flex items-start min-w-max lg:min-w-0">
         {BELTS.map((b, i) => {
           const state = idx < 0 ? 'ahead' : i < idx ? 'earned' : i === idx ? 'current' : 'ahead';
           const size = i === sel ? cur : icon;
@@ -212,7 +214,7 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
                   they are wider at lg because the gap either side of a belt
                   inside its column is wider there. */}
               {i < BELTS.length - 1 && (
-                <span aria-hidden className="block flex-shrink-0 -mx-[3px] lg:-mx-[9px] lg:flex-1 lg:max-w-[30px]" style={{ width: compact ? 6 : 8, height: 2, background: i < idx ? trail : line, marginTop: cur / 2 - 1 }} />
+                <span aria-hidden className="block flex-shrink-0 -mx-[3px] lg:-mx-[9px] lg:flex-1 lg:max-w-[64px]" style={{ width: compact ? 6 : 8, height: 2, background: i < idx ? trail : line, marginTop: cur / 2 - 1 }} />
               )}
             </div>
           );
