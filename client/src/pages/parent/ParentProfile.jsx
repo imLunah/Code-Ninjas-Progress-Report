@@ -31,9 +31,12 @@ function monthKey(dateStr) {
 // It used to be a card of its own, and after the About card came off it ran
 // the full width of the page for the sake of one line somebody writes once a
 // term. A note is a thing you go and change, not a thing you read on arrival,
-// so it is an icon that opens the box you type in. The pin fills in the
-// portal's own blue when there is a note, which is the only glance the page
-// owes it — amber was tried and read as a warning sitting beside the name.
+// so it is an icon that opens the box you type in. It rests quiet at every
+// state and takes the portal's blue on hover, because a colour that is always
+// on is decoration rather than an answer — amber was tried first and read as a
+// warning sitting beside the name. Whether a note EXISTS is said by the pin
+// itself, filled when there is one and hollow when there is not, so the glance
+// the page owes it survives without the button being lit all day.
 function NoteButton({ child, text, onSave }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(text);
@@ -59,16 +62,15 @@ function NoteButton({ child, text, onSave }) {
         onClick={() => { setDraft(text); setError(''); setOpen(true); }}
         title="Note for Senseis"
         aria-label={has ? 'Edit the note for senseis' : 'Add a note for senseis'}
-        className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors ${has ? 'tint-blue' : 'bg-white border border-ninja-border text-ninja-muted hover:text-ninja-navy hover:border-ninja-navy/25'}`}
-        style={has ? { color: 'var(--tint-ink)' } : undefined}
+        className="flex items-center justify-center w-10 h-10 rounded-full transition-colors bg-white border border-ninja-border text-ninja-muted hover:text-ninja-blue hover:border-ninja-blue/40"
       >
-        <Pin className="w-[18px] h-[18px] -rotate-12" />
+        <Pin className="w-[18px] h-[18px] -rotate-12" fill={has ? 'currentColor' : 'none'} />
       </button>
 
       <Modal isOpen={open} onClose={close} title="Note for Senseis">
         <div className="space-y-3">
           <p className="font-ninja text-[13px] text-ninja-muted">
-            Allergies, pickup notes, learning style, or anything else the senseis should know. It shows on {first}&rsquo;s profile for every sensei at the center.
+            Allergies, pickup notes, learning style, or anything else the senseis should know.
           </p>
           <LazyMarkdownEditor value={draft} onChange={setDraft}
             placeholder={`Anything the senseis should know about ${first}.`} />
