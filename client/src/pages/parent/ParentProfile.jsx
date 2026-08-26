@@ -31,8 +31,9 @@ function monthKey(dateStr) {
 // It used to be a card of its own, and after the About card came off it ran
 // the full width of the page for the sake of one line somebody writes once a
 // term. A note is a thing you go and change, not a thing you read on arrival,
-// so it is an icon that opens the box you type in. The pin fills in amber when
-// there is a note, which is the only glance the page owes it.
+// so it is an icon that opens the box you type in. The pin fills in the
+// portal's own blue when there is a note, which is the only glance the page
+// owes it — amber was tried and read as a warning sitting beside the name.
 function NoteButton({ child, text, onSave }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(text);
@@ -58,7 +59,7 @@ function NoteButton({ child, text, onSave }) {
         onClick={() => { setDraft(text); setError(''); setOpen(true); }}
         title="Note for Senseis"
         aria-label={has ? 'Edit the note for senseis' : 'Add a note for senseis'}
-        className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors ${has ? 'tint-amber' : 'bg-white border border-ninja-border text-ninja-muted hover:text-ninja-navy hover:border-ninja-navy/25'}`}
+        className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors ${has ? 'tint-blue' : 'bg-white border border-ninja-border text-ninja-muted hover:text-ninja-navy hover:border-ninja-navy/25'}`}
         style={has ? { color: 'var(--tint-ink)' } : undefined}
       >
         <Pin className="w-[18px] h-[18px] -rotate-12" />
@@ -74,7 +75,7 @@ function NoteButton({ child, text, onSave }) {
           {error && <p className="text-ninja-red font-ninja text-xs">{error}</p>}
           <div className="flex items-center gap-1">
             <button type="button" onClick={handleSave} disabled={saving}
-              className="font-ninja text-xs font-extrabold bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 active:scale-95">
+              className="font-ninja text-xs font-extrabold bg-ninja-blue hover:bg-ninja-blue/90 text-white px-3.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 active:scale-95">
               {saving ? 'Saving…' : 'Save note'}
             </button>
             <button type="button" onClick={close}
