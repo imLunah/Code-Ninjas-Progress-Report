@@ -158,8 +158,8 @@ export function BeltRoad({ current, onHero = false, compact = false, className =
           const state = idx < 0 ? 'ahead' : i < idx ? 'earned' : i === idx ? 'current' : 'ahead';
           const size = state === 'current' ? cur : icon;
           return (
-            <div key={b.name} className="flex items-start lg:flex-1 lg:min-w-0">
-              <div className={`flex flex-col items-center flex-shrink-0 lg:flex-1 lg:w-auto lg:min-w-0 ${compact ? 'w-10' : 'w-[46px]'}`}>
+            <div key={b.name} className={`flex items-start ${i < BELTS.length - 1 ? 'lg:flex-1 lg:min-w-0' : ''}`}>
+              <div className={`flex flex-col items-center flex-shrink-0 ${compact ? 'w-10' : 'w-[46px]'}`}>
                 <span className="flex items-center justify-center" style={{ height: cur }}>
                   <BeltIcon belt={b.name} size={size} dimmed={state === 'ahead'} />
                 </span>
@@ -167,8 +167,14 @@ export function BeltRoad({ current, onHero = false, compact = false, className =
                   {b.name}
                 </span>
               </div>
+              {/* At lg the CONNECTOR is what stretches, never the column:
+                  give the columns the slack and each belt floats in the
+                  middle of a wide empty cell with a stub of a dash pinned to
+                  one side. Growing the line reads as the road it is named
+                  after, and it is what closes the gap between the last belt
+                  and the edge of a desktop banner. */}
               {i < BELTS.length - 1 && (
-                <span aria-hidden className="block flex-shrink-0" style={{ width: compact ? 6 : 8, height: 2, background: i < idx ? trail : line, marginTop: cur / 2 - 1, marginLeft: -3, marginRight: -3 }} />
+                <span aria-hidden className="block flex-shrink-0 lg:flex-1" style={{ width: compact ? 6 : 8, height: 2, background: i < idx ? trail : line, marginTop: cur / 2 - 1, marginLeft: -3, marginRight: -3 }} />
               )}
             </div>
           );
