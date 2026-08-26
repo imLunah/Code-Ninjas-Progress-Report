@@ -39,15 +39,24 @@ export function PageTitle({ eyebrow, title, right, className = '' }) {
 export function Hero({ program, size = 'card', className = '', style = {}, children }) {
   const banner = PROGRAM_BANNERS[program];
   const gradient = PROGRAM_GRADIENTS[program] || PROGRAM_GRADIENTS.CREATE;
-  // A page hero on a phone is the top of the screen: it starts at the very
-  // top, edge to edge, square along the top so no page shows at the corners,
-  // and rounded only along the bottom. On desktop it is a card in the right column like
-  // everything else.
+  // A page hero is the top of the screen at EVERY width now: it starts at the
+  // very top, edge to edge, square along the top so no page shows at the
+  // corners, and rounded only along the bottom. On desktop it used to be a
+  // card sitting in the content column with page showing all around it, which
+  // made the biggest thing on the page look like the smallest.
+  //
+  // Breaking out of that column is done with container units, not viewport
+  // ones: `main` is already `container-type: inline-size`, so `100cqw` is the
+  // width beside the nav and `calc(50% - 50cqw)` is the walk back out to its
+  // left edge. `100vw` would reach under the sidebar and past the scrollbar.
+  // The words do NOT go with it — they stay in an inner box the same width as
+  // the content column, so the title still lines up with the cards below it
+  // instead of drifting off to the far left of a wide screen.
   // 'block' is the same hero as a card on the page rather than at the top of
   // it: the page's own radius and the page hero's breathing room, but no
   // bleed to the screen edges.
   const pad = size === 'page'
-    ? '-mx-4 sm:-mx-6 -mt-5 rounded-t-none rounded-b-[34px] px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6 lg:mx-0 lg:mt-0 lg:rounded-[26px] lg:px-7 lg:pt-7 lg:pb-6'
+    ? '-mx-4 sm:-mx-6 -mt-5 rounded-t-none rounded-b-[34px] px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6 lg:mr-0 lg:ml-[calc(50%-50cqw)] lg:w-[100cqw] lg:-mt-7 lg:rounded-b-[40px] lg:px-0 lg:pt-14 lg:pb-12'
     : size === 'block'
       ? 'rounded-[22px] px-5 py-5 lg:rounded-[26px] lg:px-7 lg:py-6'
       : 'p-4 rounded-[18px]';
@@ -73,7 +82,9 @@ export function Hero({ program, size = 'card', className = '', style = {}, child
           />
         </>
       )}
-      {children}
+      {size === 'page'
+        ? <div className="lg:relative lg:max-w-6xl lg:mx-auto lg:px-6">{children}</div>
+        : children}
     </div>
   );
 }

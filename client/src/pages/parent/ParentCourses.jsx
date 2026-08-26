@@ -143,15 +143,20 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
   return (
     <div className="space-y-4">
       <Hero program="CREATE" size="page">
-        {/* The belt IS the hero's art on every width. Desktop: pinned to the
-            hero's own height (a touch past it, so it meets both edges).
-            Phone: a bit smaller and centered, so the pills row underneath
-            still breathes. Both are square, cut off at the right, and behind
-            the ink: the hero's isolation lets a negative z sit above the
-            gradient but under everything written. */}
+        {/* The belt IS the hero's art on every width. Desktop: a fixed 16rem
+            square hung off the right of the CONTENT box, not of the banner —
+            the banner runs the full width of the page now, and art pinned to
+            its edge would sit somewhere different on every screen, which is
+            exactly what a fixed clearance on the road below cannot follow.
+            Fixed rather than sized off the hero's height for the same reason:
+            the height moved, so the width would move with it. Phone: a bit
+            smaller and centered, so the pills row underneath still breathes.
+            Both are square, cut off at the right, and behind the ink: the
+            hero's isolation lets a negative z sit above the gradient but
+            under everything written. */}
         <span
           aria-hidden
-          className="hidden lg:block absolute inset-y-[-3%] right-[-3.5rem] aspect-square pointer-events-none"
+          className="hidden lg:block absolute top-1/2 -translate-y-1/2 right-[-3.5rem] w-[16rem] aspect-square pointer-events-none"
           style={{ zIndex: -1 }}
         >
           <BeltIcon belt={belt} style={{ width: '100%', height: '100%' }} />
@@ -178,10 +183,11 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
         <div className="lg:hidden mt-4">
           <LevelPills states={states} value={level} onChange={pick} onHero layoutId="level-pill-mobile" />
         </div>
-        {/* Same clearance as the profile hero, but wider: this hero carries a
-            back chip above the words, so it is taller, so its belt art is a
-            bigger square and reaches further in. See BeltJourney. */}
-        <BeltRoad current={belt} onHero className="mt-5 hidden lg:block lg:mr-[13rem]" />
+        {/* The belt art's own room: 16rem of square hung 3.5rem past the
+            content box leaves 200px of it inside, and the road stops a
+            thumb's width short of that. It is a constant here, unlike the
+            profile hero, because the art above it is a constant. */}
+        <BeltRoad current={belt} onHero className="mt-5 hidden lg:block lg:mr-[13.5rem]" />
       </Hero>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
