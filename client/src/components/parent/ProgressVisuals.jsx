@@ -246,15 +246,21 @@ function BeltJourney({ enrollment, logs = [], childName }) {
       >
         <BeltIcon belt={belt} style={{ width: '100%', height: '100%' }} />
       </span>
-      <span
-        aria-hidden
-        className="lg:hidden absolute top-1/2 -translate-y-1/2 right-[-2rem] h-[72%] aspect-square pointer-events-none"
-        style={{ zIndex: -1 }}
-      >
-        <BeltIcon belt={belt} style={{ width: '100%', height: '100%' }} />
-      </span>
 
-      <div className="min-w-0">
+      {/* On a phone the belt is anchored to the WORDS, not to the hero: it
+          bleeds an even amount above and below them and stops there, so the
+          road underneath runs across clear gradient instead of through the
+          ninja's face. Centering it on the hero put it straight over the
+          road, where the belts ahead are dimmed and had nothing to be dim
+          against. The bleed is what keeps it the size it was. */}
+      <div className="relative min-w-0">
+        <span
+          aria-hidden
+          className="lg:hidden absolute -top-6 -bottom-6 right-[-2rem] aspect-square pointer-events-none"
+          style={{ zIndex: -1 }}
+        >
+          <BeltIcon belt={belt} style={{ width: '100%', height: '100%' }} />
+        </span>
         <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">{eyebrow}</p>
         <p className="font-ninja font-extrabold text-[36px] lg:text-[32px] leading-none mt-1 tracking-[-0.015em]">{belt} belt</p>
         <p className="font-ninja text-[13px] opacity-85 mt-2 truncate">
@@ -265,7 +271,7 @@ function BeltJourney({ enrollment, logs = [], childName }) {
       {/* Shown at every width here, unlike the course page: there the level
           pills take the phone's room and the card below redraws the road, and
           on this page the road is the whole of what the hero is for. */}
-      <BeltRoad current={belt} onHero className="mt-5" />
+      <BeltRoad current={belt} onHero className="mt-7 lg:mt-5" />
     </Hero>
   );
 }
