@@ -178,7 +178,10 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
         <div className="lg:hidden mt-4">
           <LevelPills states={states} value={level} onChange={pick} onHero layoutId="level-pill-mobile" />
         </div>
-        <BeltRoad current={belt} onHero className="mt-5 hidden lg:block" />
+        {/* Same clearance as the profile hero, but wider: this hero carries a
+            back chip above the words, so it is taller, so its belt art is a
+            bigger square and reaches further in. See BeltJourney. */}
+        <BeltRoad current={belt} onHero className="mt-5 hidden lg:block lg:mr-[13rem]" />
       </Hero>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">

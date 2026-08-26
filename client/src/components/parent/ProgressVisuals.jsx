@@ -273,8 +273,17 @@ function BeltJourney({ enrollment, logs = [], childName }) {
 
       {/* Shown at every width here, unlike the course page: there the level
           pills take the phone's room and the card below redraws the road, and
-          on this page the road is the whole of what the hero is for. */}
-      <BeltRoad current={belt} onHero className="mt-7 lg:mt-5" />
+          on this page the road is the whole of what the hero is for.
+
+          The right margin is the belt art's own room. On desktop the art is a
+          square as tall as the hero, hung 3.5rem off the right edge, so it
+          eats roughly 10rem of the content box — and the road, which now
+          stretches to fill whatever it is given, stretched straight into the
+          ninja's face. The number is per-hero because the art's width tracks
+          that hero's height; this one is the shorter of the two. On a phone
+          there is nothing to clear: the art is up in the corner above the
+          road by then. */}
+      <BeltRoad current={belt} onHero className="mt-7 lg:mt-5 lg:mr-[10.5rem]" />
     </Hero>
   );
 }
