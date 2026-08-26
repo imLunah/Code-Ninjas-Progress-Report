@@ -70,9 +70,9 @@ function LiveSchedule({ center }) {
     return () => { alive = false; clearInterval(t); document.removeEventListener('visibilitychange', load); };
   }, []);
 
-  // "day|slot" -> ninjas in that hour, the week's busiest hour, and the
-  // week's busiest hour-of-day (summed across days) for the footnote.
-  const { counts, weekMax, usual, busiestHour } = useMemo(() => {
+  // "day|slot" -> ninjas in that hour, plus the week's busiest hour as the
+  // ceiling every bar is measured against.
+  const { counts, weekMax } = useMemo(() => {
     const counts = new Map();
     const byDay = new Map(days.map((d) => [ymd(d), d]));
     for (const { day: d, hour, count } of slots || []) {
@@ -83,24 +83,8 @@ function LiveSchedule({ center }) {
       const k = `${d}|${slot}`;
       counts.set(k, (counts.get(k) || 0) + count);
     }
-    // What earlier days this week did at each hour, averaged, for the hours
-    // of today still to come.
-    const sums = new Map();
-    const seen = new Map();
-    const totals = new Map();
-    for (const [k, n] of counts) {
-      const [d, h] = k.split('|');
-      totals.set(h, (totals.get(h) || 0) + n);
-      if (d >= today) continue;
-      sums.set(h, (sums.get(h) || 0) + n);
-      seen.set(h, (seen.get(h) || 0) + 1);
-    }
-    const usual = new Map([...sums].map(([h, sum]) => [Number(h), sum / seen.get(h)]));
-    let busiestHour = null;
-    let best = 0;
-    for (const [h, n] of totals) if (n > best) { best = n; busiestHour = Number(h); }
-    return { counts, weekMax: Math.max(1, ...counts.values()), usual, busiestHour };
-  }, [slots, days, today]);
+    return { counts, weekMax: Math.max(1, ...counts.values()) };
+  }, [slots, days]);
 
   const hourSlots = slotsFor(now);
   const nowHour = now.getHours() + now.getMinutes() / 60;
@@ -149,13 +133,10 @@ function LiveSchedule({ center }) {
               const n = counts.get(`${today}|${h}`) || 0;
               const live = nowSlot === h;
               const future = nowSlot == null ? nowHour < h : h > nowSlot;
-              const shown = future ? (usual.get(h) || 0) : n;
-              const pct = Math.min(100, Math.round((shown / weekMax) * 100));
+              const pct = Math.min(100, Math.round((n / weekMax) * 100));
               const showing = hover === h;
-              const count = future
-                ? `usually ${Math.round(shown)}`
-                : `${n} ninja${n === 1 ? '' : 's'}`;
-              const lift = `calc(${shown > 0 ? Math.max(pct, 6) : 2}% + 6px)`;
+              const count = `${n} ninja${n === 1 ? '' : 's'}`;
+              const lift = `calc(${n > 0 ? Math.max(pct, 6) : 2}% + 6px)`;
               return (
                 <div
                   key={h}
@@ -184,7 +165,7 @@ function LiveSchedule({ center }) {
                   )}
                   <motion.div
                     initial={{ height: 0 }}
-                    animate={{ height: `${shown > 0 ? Math.max(pct, 6) : 2}%` }}
+                    animate={{ height: `${n > 0 ? Math.max(pct, 6) : 2}%` }}
                     transition={{ type: 'spring', stiffness: 240, damping: 28, delay: i * 0.04 }}
                     className={`w-full rounded-t-md transition-colors ${live ? 'bg-ninja-blue' : future ? (showing ? 'bg-ninja-blue/30' : 'bg-ninja-blue/20') : (showing ? 'bg-ninja-blue/75' : 'bg-ninja-blue/55')}`}
                   />
