@@ -129,8 +129,12 @@ export function ProgramMark({ program, size = 40 }) {
 // all thirteen are on screen at once and there is nothing to scroll — a
 // desktop banner is wide enough to hold the whole road, and letting it scroll
 // there only parked the last four belts against a field of empty gradient.
-export function BeltRoad({ current, onHero = false, compact = false, className = '' }) {
+export function BeltRoad({ current, selected, onSelect, onHero = false, compact = false, className = '' }) {
   const idx = BELTS.findIndex((b) => b.name === current);
+  // `current` is where the ninja actually IS — it lights the trail and decides
+  // what is dimmed ahead. `selected` is only what is being LOOKED at, and it
+  // is what grows. They are the same belt until somebody taps another one.
+  const sel = BELTS.findIndex((b) => b.name === (selected || current));
   const icon = compact ? 22 : 26;
   const cur = compact ? 36 : 42;
   const line = onHero ? 'rgb(255 255 255 / 0.35)' : 'rgb(var(--ninja-navy) / 0.15)';
@@ -142,11 +146,11 @@ export function BeltRoad({ current, onHero = false, compact = false, className =
   // itself does not move.
   useEffect(() => {
     const el = scroller.current;
-    if (!el || idx < 0 || el.scrollWidth <= el.clientWidth) return;
+    if (!el || sel < 0 || el.scrollWidth <= el.clientWidth) return;
     const col = compact ? 40 : 46;
-    const centre = idx * col + col / 2;
+    const centre = sel * col + col / 2;
     el.scrollLeft = Math.max(0, centre - el.clientWidth / 2);
-  }, [idx, compact]);
+  }, [sel, compact]);
   const endDrag = () => { drag.current = null; };
   return (
     <div
@@ -167,21 +171,31 @@ export function BeltRoad({ current, onHero = false, compact = false, className =
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
       className={`overflow-x-auto lg:overflow-x-visible no-scrollbar cursor-grab active:cursor-grabbing lg:cursor-default lg:active:cursor-default select-none -mx-1 px-1 ${className}`}
-      aria-label="Belt road" role="img">
+      aria-label="Belt road" role={onSelect ? 'group' : 'img'}>
       <div className="flex items-start min-w-max lg:min-w-0">
         {BELTS.map((b, i) => {
           const state = idx < 0 ? 'ahead' : i < idx ? 'earned' : i === idx ? 'current' : 'ahead';
-          const size = state === 'current' ? cur : icon;
+          const size = i === sel ? cur : icon;
           return (
             <div key={b.name} className={`flex items-start ${i < BELTS.length - 1 ? 'lg:flex-1 lg:min-w-0' : ''}`}>
-              <div className={`flex flex-col items-center flex-shrink-0 ${compact ? 'w-10' : 'w-[46px]'}`}>
+              <Cell belt={b.name} onSelect={onSelect} isSel={i === sel} compact={compact}>
+                {/* The icon springs between the two sizes rather than cutting
+                    to them: the row's own height is pinned to the big size, so
+                    the belts either side hold still while one grows. */}
                 <span className="flex items-center justify-center" style={{ height: cur }}>
-                  <BeltIcon belt={b.name} size={size} dimmed={state === 'ahead'} />
+                  <motion.span
+                    className="block"
+                    initial={false}
+                    animate={{ width: size, height: size }}
+                    transition={{ type: 'spring', stiffness: 460, damping: 34 }}
+                  >
+                    <BeltIcon belt={b.name} style={{ width: '100%', height: '100%' }} dimmed={state === 'ahead'} />
+                  </motion.span>
                 </span>
-                <span className={`font-ninja mt-1 leading-none ${compact ? 'text-[9px]' : 'text-[10px]'} ${state === 'current' ? 'font-extrabold' : 'font-bold'} ${onHero ? (state === 'ahead' ? 'text-white/45' : 'text-white') : (state === 'ahead' ? 'text-ninja-muted/60' : 'text-ninja-navy')}`}>
+                <span className={`font-ninja mt-1 leading-none ${compact ? 'text-[9px]' : 'text-[10px]'} ${i === sel ? 'font-extrabold' : 'font-bold'} ${onHero ? (state === 'ahead' ? 'text-white/45' : 'text-white') : (state === 'ahead' ? 'text-ninja-muted/60' : 'text-ninja-navy')}`}>
                   {b.name}
                 </span>
-              </div>
+              </Cell>
               {/* At lg the CONNECTOR is what stretches, never the column:
                   give the columns the slack and each belt floats in the
                   middle of a wide empty cell with a stub of a dash pinned to
@@ -196,6 +210,25 @@ export function BeltRoad({ current, onHero = false, compact = false, className =
         })}
       </div>
     </div>
+  );
+}
+
+// One belt's column. A plain div where the road is a picture, a button where
+// it is a control — the same box either way, because a road that changed shape
+// when it became clickable would read as two components.
+function Cell({ belt, onSelect, isSel, compact, children }) {
+  const box = `flex flex-col items-center flex-shrink-0 ${compact ? 'w-10' : 'w-[46px]'}`;
+  if (!onSelect) return <div className={box}>{children}</div>;
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(belt)}
+      aria-pressed={isSel}
+      aria-label={`Show the ${belt} belt`}
+      className={`${box} rounded-xl py-0.5 -my-0.5 transition-opacity ${isSel ? '' : 'opacity-80 hover:opacity-100'}`}
+    >
+      {children}
+    </button>
   );
 }
 

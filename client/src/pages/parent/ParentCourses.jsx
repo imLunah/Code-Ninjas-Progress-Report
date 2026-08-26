@@ -107,25 +107,51 @@ function ProjectRow({ p, first }) {
 function CreateDetail({ enrollment, logs, childName, backTo }) {
   const belt = enrollment.belt_level;
   const currentLevel = Number(enrollment.belt_sublevel) || (getLevels(belt)[0] ?? 1);
-  const levels = getLevels(belt);
-  const pos = levels.indexOf(currentLevel) + 1;
+  const beltIdx = BELTS.findIndex((b) => b.name === belt);
+  const pos = getLevels(belt).indexOf(currentLevel) + 1;
+
+  // The belt being READ, which starts as the belt being worn. Tapping the road
+  // walks the page to another belt's curriculum without pretending the ninja
+  // moved: `belt` still lights the road's trail and still writes the summary
+  // line, `viewBelt` decides which levels and projects are on screen.
+  const [viewBelt, setViewBelt] = useState(belt);
   const [level, setLevel] = useState(currentLevel);
   const [dir, setDir] = useState(1);
-  useEffect(() => { setLevel(currentLevel); }, [enrollment.id, currentLevel]);
+  useEffect(() => { setViewBelt(belt); setLevel(currentLevel); }, [enrollment.id, belt, currentLevel]);
 
-  const states = useMemo(() => levelStates(belt, currentLevel), [belt, currentLevel]);
-  const projects = useMemo(() => levelProjects(belt, level, logs), [belt, level, logs]);
+  const viewIdx = BELTS.findIndex((b) => b.name === viewBelt);
+  const onBelt = viewBelt === belt;
+  const earned = viewIdx >= 0 && beltIdx >= 0 && viewIdx < beltIdx;
+  const levels = getLevels(viewBelt);
+  const next = viewIdx >= 0 ? BELTS[viewIdx + 1]?.name : null;
+
+  // A belt behind the ninja is finished top to bottom; one ahead has not been
+  // opened at all. Only the belt actually being worn has a level part way in,
+  // which is the one case levelStates was written for.
+  const states = useMemo(
+    () => levelStates(viewBelt, onBelt ? currentLevel : earned ? Infinity : -1),
+    [viewBelt, onBelt, earned, currentLevel]);
+  const projects = useMemo(() => levelProjects(viewBelt, level, logs), [viewBelt, level, logs]);
   const done = projects.filter((p) => p.status === 'done').length;
   const sessions = realSessions(logs);
-  const beltIdx = BELTS.findIndex((b) => b.name === belt);
-  const next = beltIdx >= 0 ? BELTS[beltIdx + 1]?.name : null;
   const levelState = states.find((s) => s.level === level)?.state;
   const started = useMemo(() => {
-    const ds = sessions.filter((l) => l.belt_level_at === belt && Number(l.belt_sublevel_at) === Number(level)).map((l) => String(l.session_date).split('T')[0]).sort();
+    const ds = sessions.filter((l) => l.belt_level_at === viewBelt && Number(l.belt_sublevel_at) === Number(level)).map((l) => String(l.session_date).split('T')[0]).sort();
     return ds[0] || null;
-  }, [sessions, belt, level]);
+  }, [sessions, viewBelt, level]);
 
   const pick = (lv) => { setDir(lv > level ? 1 : -1); setLevel(lv); };
+  const pickBelt = (name) => {
+    if (name === viewBelt) return;
+    const i = BELTS.findIndex((b) => b.name === name);
+    setDir(i > viewIdx ? 1 : -1);
+    setViewBelt(name);
+    setLevel(name === belt ? currentLevel : (getLevels(name)[0] ?? 1));
+  };
+
+  const summary = onBelt
+    ? [`Level ${currentLevel}`, levels.length ? `${pos} of ${levels.length}` : null, next ? `earns ${next}` : null, sessions.length ? `${sessions.length} session${sessions.length === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ')
+    : [earned ? 'Earned' : 'Ahead', levels.length ? `${levels.length} level${levels.length === 1 ? '' : 's'}` : null, next ? `earns ${next}` : null].filter(Boolean).join(' · ');
 
   if (!belt) {
     return (
@@ -163,24 +189,22 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
           className="hidden lg:block absolute inset-y-[-45%] right-[calc(50%-50cqw-7rem)] aspect-square pointer-events-none opacity-[0.2]"
           style={{ zIndex: -1 }}
         >
-          <BeltIcon belt={belt} style={{ width: '100%', height: '100%' }} />
+          <BeltIcon belt={viewBelt} style={{ width: '100%', height: '100%' }} />
         </span>
         <span
           aria-hidden
           className="lg:hidden absolute top-1/2 -translate-y-1/2 right-[-2rem] h-[72%] aspect-square pointer-events-none"
           style={{ zIndex: -1 }}
         >
-          <BeltIcon belt={belt} style={{ width: '100%', height: '100%' }} />
+          <BeltIcon belt={viewBelt} style={{ width: '100%', height: '100%' }} />
         </span>
         {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to courses" /></div>}
         <div className="flex items-center lg:items-start justify-between gap-5">
           <div className="flex items-center gap-4 min-w-0">
             <div className="min-w-0">
               <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">CREATE · {childName}</p>
-              <p className="font-ninja font-extrabold text-[36px] lg:text-[32px] leading-none mt-1 tracking-[-0.015em]">{belt} belt</p>
-              <p className="font-ninja text-[13px] opacity-85 mt-2 truncate">
-                {[`Level ${currentLevel}`, levels.length ? `${pos} of ${levels.length}` : null, next ? `earns ${next}` : null, sessions.length ? `${sessions.length} session${sessions.length === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ')}
-              </p>
+              <p className="font-ninja font-extrabold text-[36px] lg:text-[32px] leading-none mt-1 tracking-[-0.015em]">{viewBelt} belt</p>
+              <p className="font-ninja text-[13px] opacity-85 mt-2 truncate">{summary}</p>
             </div>
           </div>
         </div>
@@ -189,13 +213,13 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
         </div>
         {/* No clearance for the art any more: it is faded into the gradient
             now, so the road crosses it instead of stopping short of it. */}
-        <BeltRoad current={belt} onHero className="mt-5 hidden lg:block" />
+        <BeltRoad current={belt} selected={viewBelt} onSelect={pickBelt} onHero className="mt-5 hidden lg:block" />
       </Hero>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
-            key={level}
+            key={`${viewBelt}-${level}`}
             initial={{ opacity: 0, x: 10 * dir }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -8 * dir }}
@@ -206,8 +230,8 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
                 <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em]" style={levelState ? { color: 'var(--tint-ink)' } : undefined}>
                   Level {level}{levelState === 'current' ? ' · now' : levelState === 'done' ? ' · done' : ' · ahead'}
                 </p>
-                {levelTitle(belt, level) !== `Level ${level}` && (
-                  <p className="font-ninja font-extrabold text-[20px] text-ninja-navy leading-tight mt-0.5">{levelTitle(belt, level)}</p>
+                {levelTitle(viewBelt, level) !== `Level ${level}` && (
+                  <p className="font-ninja font-extrabold text-[20px] text-ninja-navy leading-tight mt-0.5">{levelTitle(viewBelt, level)}</p>
                 )}
                 <p className="font-ninja text-[12.5px] v2 text-ninja-muted mt-0.5">
                   {[`${done} of ${projects.length} projects`, started ? `started ${fmtDay(started)}` : null].filter(Boolean).join(' · ')}
@@ -222,9 +246,9 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
         </AnimatePresence>
 
         <div className="space-y-4">
-          <Group title="All levels">
+          <Group title={onBelt ? 'All levels' : `${viewBelt} levels`}>
             {states.map((s, i) => {
-              const finished = sessions.filter((l) => l.belt_level_at === belt && Number(l.belt_sublevel_at) === s.level && l.status_at === 'Completed').map((l) => String(l.session_date).split('T')[0]).sort();
+              const finished = sessions.filter((l) => l.belt_level_at === viewBelt && Number(l.belt_sublevel_at) === s.level && l.status_at === 'Completed').map((l) => String(l.session_date).split('T')[0]).sort();
               const lastDone = finished[finished.length - 1] || null;
               return (
                 <Row key={s.level} first={i === 0} onClick={() => pick(s.level)} active={s.level === level} dim={s.state === 'ahead'}
