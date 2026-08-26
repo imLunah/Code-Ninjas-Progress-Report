@@ -228,6 +228,8 @@ function ParentTabBar() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const tabs = useParentTabs();
+  const { parent } = useParentAuth();
+  const accountActive = isActive(pathname, '/parent/account');
   return (
     <nav
       aria-label="Parent portal"
@@ -259,6 +261,29 @@ function ParentTabBar() {
           </button>
         );
       })}
+      {/* The account rides the bar as the initials bubble, same pill as the
+          tabs; Settings is where sign out and the rest live. */}
+      <button
+        type="button"
+        onClick={() => navigate('/parent/account')}
+        aria-current={accountActive ? 'page' : undefined}
+        aria-label="Settings"
+        className="relative h-[46px] rounded-full flex items-center gap-1.5 px-2.5"
+      >
+        {accountActive && (
+          <motion.span
+            layoutId="parent-tab-pill"
+            transition={{ type: 'spring', stiffness: 480, damping: 36 }}
+            className="absolute inset-0 rounded-full bg-white/90 dark:bg-white/[0.14] shadow-[0_2px_8px_rgb(26_46_74/0.12),inset_0_1px_0_#fff] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]"
+          />
+        )}
+        <span className="relative z-10 flex items-center gap-1.5">
+          <span className={`w-7 h-7 rounded-full bg-ninja-blue flex items-center justify-center text-white font-ninja font-bold text-[10px] ${accountActive ? '' : 'opacity-80'}`} aria-hidden>
+            {initialsOf(parent?.parentName)}
+          </span>
+          {accountActive && <span className="font-ninja font-extrabold text-[13px] text-ninja-blue-ink pr-1">Account</span>}
+        </span>
+      </button>
     </nav>
   );
 }
@@ -305,15 +330,6 @@ export default function ParentLayout({ children, switcher = null, bleed = false 
             <Logo variant="lockup" className="h-8 text-ninja-navy" />
             <span className="text-ninja-muted font-ninja text-[13px] v2 hidden sm:inline">Parent Portal</span>
           </div>
-          {/* The initials open Settings, where Sign out lives. */}
-          <button
-            type="button"
-            onClick={() => navigate('/parent/account')}
-            aria-label="Settings"
-            className="w-9 h-9 rounded-full bg-ninja-blue flex items-center justify-center text-white font-ninja font-bold text-xs flex-shrink-0"
-          >
-            {initialsOf(parent?.parentName)}
-          </button>
         </div>
       </header>
 
