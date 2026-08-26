@@ -143,18 +143,24 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
   return (
     <div className="space-y-4">
       <Hero program="CREATE" size="page">
-        {/* The belt IS the hero's art on every width. Desktop: it fills the
-            corner the banner leaves empty — `inset-y-0` off a content box
-            that is as tall as the banner takes the whole vertical, and
-            `right: calc(50% - 50cqw)` is the walk from that box's edge out to
-            the banner's, so it takes the whole horizontal too. Square, so its
-            width follows its height. Phone: a bit smaller and centered, so
-            the pills row underneath still breathes. Both are cut off at the
-            right and sit behind the ink: the hero's isolation lets a negative
-            z sit above the gradient but under everything written. */}
+        {/* The belt IS the hero's art on every width. Desktop: it is scenery
+            rather than an emblem — near twice the banner's height so only a
+            piece of the face is ever in frame, walked out past the banner's
+            own right edge (`calc(50% - 50cqw)` is the gap from this box to
+            that edge; the extra 7rem is how much more of it goes over), and
+            dropped to a fifth opacity so it reads as texture in the gradient.
+            That last part is what lets the belt road below run its full width
+            again: at full strength the road had to be held back out of the
+            ninja's face, and holding it back left a field of empty banner on
+            a wide screen. Faded, the road simply crosses it.
+
+            Phone: a bit smaller and centered, so the pills row underneath
+            still breathes. Both sit behind the ink either way — the hero's
+            isolation lets a negative z sit above the gradient but under
+            everything written. */}
         <span
           aria-hidden
-          className="hidden lg:block absolute inset-y-0 right-[calc(50%-50cqw)] aspect-square pointer-events-none"
+          className="hidden lg:block absolute inset-y-[-45%] right-[calc(50%-50cqw-7rem)] aspect-square pointer-events-none opacity-[0.2]"
           style={{ zIndex: -1 }}
         >
           <BeltIcon belt={belt} style={{ width: '100%', height: '100%' }} />
@@ -181,15 +187,9 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
         <div className="lg:hidden mt-4">
           <LevelPills states={states} value={level} onChange={pick} onHero layoutId="level-pill-mobile" />
         </div>
-        {/* The belt art's own room, and it cannot be a constant: the art
-            reaches from the banner's right edge inward, so how far it lands
-            INSIDE this box depends on how wide the page is. The margin is the
-            same sum backwards — the art is about 17rem across, the gap out to
-            the banner edge is `50cqw - 50%`, and what is left over is what
-            the road has to give up. Floored at zero, because on a wide enough
-            screen the art never reaches the column at all and the road should
-            run the whole way. */}
-        <BeltRoad current={belt} onHero className="mt-5 hidden lg:block lg:mr-[max(0px,calc(50%_-_50cqw_+_17rem))]" />
+        {/* No clearance for the art any more: it is faded into the gradient
+            now, so the road crosses it instead of stopping short of it. */}
+        <BeltRoad current={belt} onHero className="mt-5 hidden lg:block" />
       </Hero>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
