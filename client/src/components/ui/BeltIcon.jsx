@@ -4,14 +4,27 @@ import { getBelt } from '../../utils/beltConfig';
 // back to a colored swatch tinted with the belt's color.
 const IMAGE_BELTS = new Set(['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black', 'Bronze', 'Silver', 'Gold', 'Platinum']);
 
-export default function BeltIcon({ belt, size = 40, dimmed = false, className = '', style = {} }) {
+// Belts that ALSO ship a 768px copy, for the handful of places one is painted
+// far bigger than an icon (the course banner's art, the profile hero). The
+// everyday files stay 256px because the belt road draws all thirteen at 26px
+// and has no business fetching a megabyte to do it. Only these nine exist:
+// the metallic four have no transparent source art yet, and `large` quietly
+// falls back to the small file for them rather than requesting a 404.
+const LARGE_BELTS = new Set(['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black']);
+
+export function hasLargeBelt(belt) {
+  return LARGE_BELTS.has(belt);
+}
+
+export default function BeltIcon({ belt, size = 40, dimmed = false, large = false, className = '', style = {} }) {
   if (!belt) return null;
   const dim = dimmed ? 'opacity-25 grayscale' : '';
 
   if (IMAGE_BELTS.has(belt)) {
+    const file = `belt-${belt.toLowerCase()}${large && LARGE_BELTS.has(belt) ? '-lg' : ''}.png`;
     return (
       <img
-        src={`/belts/belt-${belt.toLowerCase()}.png`}
+        src={`/belts/${file}`}
         alt={belt}
         draggable={false}
         style={{ width: size, height: size, ...style }}

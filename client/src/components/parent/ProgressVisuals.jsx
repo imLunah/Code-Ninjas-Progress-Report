@@ -244,7 +244,7 @@ function BeltJourney({ enrollment, logs = [], childName }) {
         className="hidden lg:block absolute inset-y-[-3%] right-[-3.5rem] aspect-square pointer-events-none"
         style={{ zIndex: -1 }}
       >
-        <BeltIcon belt={belt} style={{ width: '100%', height: '100%' }} />
+        <BeltIcon belt={belt} large style={{ width: '100%', height: '100%' }} />
       </span>
 
       {/* On a phone the belt is anchored to the WORDS, not to the hero, and
@@ -262,7 +262,7 @@ function BeltJourney({ enrollment, logs = [], childName }) {
           className="lg:hidden absolute -top-14 -bottom-5 right-[-3rem] aspect-square pointer-events-none"
           style={{ zIndex: -1 }}
         >
-          <BeltIcon belt={belt} style={{ width: '100%', height: '100%' }} />
+          <BeltIcon belt={belt} large style={{ width: '100%', height: '100%' }} />
         </span>
         <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">{eyebrow}</p>
         <p className="font-ninja font-extrabold text-[36px] lg:text-[32px] leading-none mt-1 tracking-[-0.015em]">{belt} belt</p>

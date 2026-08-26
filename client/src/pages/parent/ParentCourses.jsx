@@ -12,7 +12,7 @@ import { BELTS, getLevels } from '../../utils/beltConfig';
 import { levelProjects, levelStates, levelTitle, realSessions, trackModel, fmtDay } from '../../lib/parentProgress';
 import { KIT_SHORT } from '../../lib/programTheme';
 import { useCurriculum } from '../../context/CurriculumContext';
-import BeltIcon from '../../components/ui/BeltIcon';
+import BeltIcon, { hasLargeBelt } from '../../components/ui/BeltIcon';
 
 // Courses: one card per program the child is in.
 //
@@ -189,14 +189,15 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
             part of a picture. Opacity alone gave one even wash and left the
             ring's outline drawn straight through the road.
 
-            The blur is not a style choice so much as an honest one. The belt
-            PNGs are 256px, which is the whole of the art we have, and the
-            banner paints one at around 330 CSS px — over 600 device pixels on
-            a retina screen. Upscaled that far it looks like a bad JPEG. Two
-            pixels of blur turns a soft image into a deliberately soft one:
-            background art with a depth of field reads as intent, a fuzzy logo
-            reads as a mistake. Swap in higher resolution art and this line is
-            the one to delete.
+            `large` asks for the 768px copy, because the banner paints one at
+            around 330 CSS px — over 600 device pixels on a retina screen —
+            and the everyday 256px file upscaled that far looks like a bad
+            JPEG. The nine belts that have one get it. The metallic four do
+            not have transparent source art yet, so they fall back to the small
+            file and earn two pixels of blur to cover for it: background art
+            with a depth of field reads as intent, a fuzzy logo reads as a
+            mistake. When their art arrives, add them to LARGE_BELTS and the
+            blur turns itself off.
 
             Phone: a bit smaller and centered, so the pills row underneath
             still breathes. Both sit behind the ink either way — the hero's
@@ -207,19 +208,19 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
           className="hidden lg:block absolute inset-y-[-15%] right-[calc(50%-50cqw-3rem)] aspect-square pointer-events-none opacity-[0.16]"
           style={{
             zIndex: -1,
-            filter: 'blur(2px)',
+            filter: hasLargeBelt(viewBelt) ? undefined : 'blur(2px)',
             maskImage: 'linear-gradient(to bottom left, #000 28%, transparent 78%)',
             WebkitMaskImage: 'linear-gradient(to bottom left, #000 28%, transparent 78%)',
           }}
         >
-          <BeltIcon belt={viewBelt} style={{ width: '100%', height: '100%' }} />
+          <BeltIcon belt={viewBelt} large style={{ width: '100%', height: '100%' }} />
         </span>
         <span
           aria-hidden
           className="lg:hidden absolute top-1/2 -translate-y-1/2 right-[-2rem] h-[72%] aspect-square pointer-events-none"
           style={{ zIndex: -1 }}
         >
-          <BeltIcon belt={viewBelt} style={{ width: '100%', height: '100%' }} />
+          <BeltIcon belt={viewBelt} large style={{ width: '100%', height: '100%' }} />
         </span>
         {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to courses" /></div>}
         <div className="flex items-center lg:items-start justify-between gap-5">
