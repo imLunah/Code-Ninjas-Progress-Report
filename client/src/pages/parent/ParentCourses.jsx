@@ -169,16 +169,25 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
   return (
     <div className="space-y-4">
       <Hero program="CREATE" size="page">
-        {/* The belt IS the hero's art on every width. Desktop: it is scenery
-            rather than an emblem — near twice the banner's height so only a
-            piece of the face is ever in frame, walked out past the banner's
-            own right edge (`calc(50% - 50cqw)` is the gap from this box to
-            that edge; the extra 7rem is how much more of it goes over), and
-            dropped to a fifth opacity so it reads as texture in the gradient.
-            That last part is what lets the belt road below run its full width
-            again: at full strength the road had to be held back out of the
-            ninja's face, and holding it back left a field of empty banner on
-            a wide screen. Faded, the road simply crosses it.
+        {/* The belt IS the hero's art on every width. Desktop: it is scenery,
+            and scenery has to stay legible as the thing it is. Blown up to
+            twice the banner it stopped being a belt at all — the frame filled
+            with the mask band and two eyes, which reads as shapes rather than
+            as a ninja, and the hard arc of the ring cut a line across the
+            middle of the banner that nothing in the design had asked for.
+
+            So: 1.3x the banner's height, hung 3rem past its right edge
+            (`calc(50% - 50cqw)` is the walk from this box out to that edge).
+            Big enough to be cropped, small enough that the piece in frame is
+            still recognisably the belt.
+
+            The fade is a MASK, not a flat opacity. Weight sits in the top
+            right corner and dissolves toward the bottom left, which is
+            exactly where the words and the belt road are — so the art never
+            has an edge that crosses content, and the dimmed belts at the end
+            of the road are not asked to hold their own against the brightest
+            part of a picture. Opacity alone gave one even wash and left the
+            ring's outline drawn straight through the road.
 
             Phone: a bit smaller and centered, so the pills row underneath
             still breathes. Both sit behind the ink either way — the hero's
@@ -186,8 +195,12 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
             everything written. */}
         <span
           aria-hidden
-          className="hidden lg:block absolute inset-y-[-45%] right-[calc(50%-50cqw-7rem)] aspect-square pointer-events-none opacity-[0.2]"
-          style={{ zIndex: -1 }}
+          className="hidden lg:block absolute inset-y-[-15%] right-[calc(50%-50cqw-3rem)] aspect-square pointer-events-none opacity-[0.16]"
+          style={{
+            zIndex: -1,
+            maskImage: 'linear-gradient(to bottom left, #000 28%, transparent 78%)',
+            WebkitMaskImage: 'linear-gradient(to bottom left, #000 28%, transparent 78%)',
+          }}
         >
           <BeltIcon belt={viewBelt} style={{ width: '100%', height: '100%' }} />
         </span>
