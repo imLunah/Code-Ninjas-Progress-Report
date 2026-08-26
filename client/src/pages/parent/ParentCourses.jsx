@@ -190,11 +190,22 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
             opacity was tried at several values and each one did the same two
             things wrong: it drained the belt's colour, which is the one thing
             the art is there to say, and it still left the ring's outline
-            drawn straight through the road.
+            drawn straight through the road. The stops are late on purpose —
+            solid for the first 55% and not gone until 96% — so most of what
+            is on screen is the belt at its true colour and only the tail of
+            it thins out over the words.
 
-            `large` asks for the 768px copy, because the banner paints one at
-            around 330 CSS px — over 600 device pixels on a retina screen —
-            and the everyday 256px file upscaled that far looks like a bad
+            One belt is not the sticker sheet's own: `belt-white-lg.png` is
+            the BLUE belt with its ring recoloured white, because the sheet's
+            white belt carries a black outer stroke so it stays visible on
+            white paper. Right for a sticker, wrong on a blue banner, and the
+            other twelve carry no such stroke. The small `belt-white.png`
+            keeps its outline — it is drawn on white cards all over the staff
+            side, where without one there would be nothing to see.
+
+            `large` asks for the 1280px copy, because the banner paints one
+            at around 650 CSS px — some 1300 device pixels on a retina screen
+            — and the everyday 256px file upscaled that far looks like a bad
             JPEG. The nine belts that have one get it; the metallic four have
             no transparent source art yet and fall back to the small file.
             They are NOT blurred to cover for it: blur took the one thing a
@@ -210,8 +221,8 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
           className="hidden lg:block absolute inset-y-[-15%] right-[calc(50%-50cqw-3rem)] aspect-square pointer-events-none"
           style={{
             zIndex: -1,
-            maskImage: 'linear-gradient(to bottom left, #000 28%, transparent 78%)',
-            WebkitMaskImage: 'linear-gradient(to bottom left, #000 28%, transparent 78%)',
+            maskImage: 'linear-gradient(to bottom left, #000 55%, transparent 96%)',
+            WebkitMaskImage: 'linear-gradient(to bottom left, #000 55%, transparent 96%)',
           }}
         >
           <BeltIcon belt={viewBelt} large style={{ width: '100%', height: '100%' }} />
