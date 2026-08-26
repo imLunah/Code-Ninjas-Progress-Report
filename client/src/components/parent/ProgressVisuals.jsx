@@ -247,16 +247,19 @@ function BeltJourney({ enrollment, logs = [], childName }) {
         <BeltIcon belt={belt} style={{ width: '100%', height: '100%' }} />
       </span>
 
-      {/* On a phone the belt is anchored to the WORDS, not to the hero: it
-          bleeds an even amount above and below them and stops there, so the
-          road underneath runs across clear gradient instead of through the
-          ninja's face. Centering it on the hero put it straight over the
-          road, where the belts ahead are dimmed and had nothing to be dim
-          against. The bleed is what keeps it the size it was. */}
+      {/* On a phone the belt is anchored to the WORDS, not to the hero, and
+          the bleed is lopsided on purpose: it runs far past the top and the
+          right so it sits INTO the corner and leaves by two edges, and stops
+          just short of the road below. Centering it on the hero laid it over
+          the road, where the belts ahead are dimmed and had nothing to be dim
+          against; bleeding it evenly left it hanging off one edge in the
+          middle of the banner, which read as a disc somebody had misplaced.
+          Corner art is cropped art, so the more it leaves the frame the less
+          it looks stranded. */}
       <div className="relative min-w-0">
         <span
           aria-hidden
-          className="lg:hidden absolute -top-6 -bottom-6 right-[-2rem] aspect-square pointer-events-none"
+          className="lg:hidden absolute -top-14 -bottom-5 right-[-3rem] aspect-square pointer-events-none"
           style={{ zIndex: -1 }}
         >
           <BeltIcon belt={belt} style={{ width: '100%', height: '100%' }} />
