@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { PlusIcon, XIcon } from 'lucide-react';
+import { PlusIcon } from 'lucide-react';
 import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { PageTitle, Hero, Emblem, BeltRoad, LevelPills, Group, Row, Tile, StatusDot, StatusText, BackChip } from '../../components/parent/ParentUI';
@@ -16,10 +15,9 @@ import { useCurriculum } from '../../context/CurriculumContext';
 
 // Courses: one card per program the child is in.
 //
-// The list shows just the programs. Tapping a card grows it into a modal
-// (a layoutId morph, card to sheet) that says what the course IS, with one
-// button to open it; /parent/courses/:program is the opened course, a full
-// page of progress and curriculum with a way back at the top of its hero.
+// The list shows just the programs as art cards. Tapping one opens it:
+// /parent/courses/:program is the course, a full page of progress and
+// curriculum with a way back at the top of its hero.
 //
 // CREATE is the star. Its card carries the level and the belt road; opened,
 // it leads with a hero in the CREATE blue (the belt shows as its icon, not as
@@ -58,27 +56,14 @@ function useTrackModel(enrollment, logs) {
   return useMemo(() => (enrollment.program === 'CREATE' ? null : trackModel({ program: enrollment.program, enrollment, logs, curriculum, subPrograms, shortNames: KIT_SHORT })), [enrollment, logs, curriculum, subPrograms]);
 }
 
-// What each course IS, written for a parent reading over breakfast.
-const COURSE_ABOUT = {
-  CREATE: "The flagship coding journey. Ninjas climb the belt ladder from White toward Black, building real video games in JavaScript as they go. Every level ends with a project they can show off, and every belt is a skill milestone they earned.",
-  JR: "Where the youngest ninjas begin, around ages 5 to 7. Visual, hands-on activities build the foundations of coding: sequencing, loops, and problem solving, all through play.",
-  'Robotics Academy': "Hands-on engineering with real robots. Ninjas build, wire, and program their bots kit by kit, learning how sensors, motors, and code come together to make something move.",
-  'AI Academy': "A guided look inside artificial intelligence. Ninjas learn how AI actually works, then put it to use in their own creative projects.",
-  'VR Coding': "Ninjas design and code their own virtual reality worlds, then step inside what they built.",
-  Silver: "Advanced game development for ninjas who have pushed past the core belts. Bigger projects, deeper code, more independence.",
-  'Gold Unity': "Professional game development in Unity with C#, the same engine behind many of the games they already play.",
-  'Gold Godot': "Game development in the Godot engine: full games, built with a modern open toolkit.",
-};
-
 function CourseCard({ enrollment, logs, onOpen }) {
   const p = enrollment.program;
   const model = useTrackModel(enrollment, logs);
   // The art IS the card: the program banner fills it, the name sits on a
   // bottom wash, and the round plus is the whole affordance.
   return (
-    <motion.button
+    <button
       type="button"
-      layoutId={`course-${p}`}
       onClick={onOpen}
       className="relative w-full text-left rounded-[18px] overflow-hidden shadow-sm transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none"
       style={{ transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)' }}
@@ -103,76 +88,7 @@ function CourseCard({ enrollment, logs, onOpen }) {
           </span>
         </div>
       </Hero>
-    </motion.button>
-  );
-}
-
-// The card, grown into a sheet: full screen on a phone, a centered card on
-// desktop. Same layoutId as the card, so it morphs out of the tap instead of
-// blinking on. Portalled to the body per the dialog tier.
-function CoursePreviewModal({ enrollment, logs, childName, onClose }) {
-  const p = enrollment.program;
-  const isCreate = p === 'CREATE';
-  const model = useTrackModel(enrollment, logs);
-  const navigate = useNavigate();
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
-  const about = COURSE_ABOUT[p] || `${p} at Code Ninjas: projects, curriculum, and progress, logged session by session.`;
-
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex sm:items-center sm:justify-center sm:p-6" role="dialog" aria-modal="true" aria-label={`About ${p}`}>
-      <motion.span
-        aria-hidden
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/40 backdrop-blur-[3px]"
-        onClick={onClose}
-      />
-      <motion.div
-        layoutId={`course-${p}`}
-        transition={SNAP}
-        className="relative w-full h-full sm:h-auto sm:max-w-xl bg-white sm:rounded-3xl sm:shadow-xl overflow-y-auto flex flex-col"
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          title="Close"
-          aria-label="Close"
-          className="absolute top-3.5 right-3.5 z-10 flex items-center justify-center w-9 h-9 rounded-full text-white bg-black/25 hover:bg-black/40 transition-colors"
-        >
-          <XIcon size={18} aria-hidden />
-        </button>
-        <Hero program={p}>
-          <div className="flex items-center justify-between gap-3 py-1">
-            <div className="min-w-0">
-              <p className="font-ninja text-[12px] font-extrabold uppercase tracking-[0.08em] opacity-85">Course</p>
-              <p className="font-ninja font-extrabold text-[28px] leading-tight mt-0.5 truncate">{p}</p>
-              <p className="font-ninja text-[13px] opacity-85 mt-0.5 truncate">{whereLine(enrollment, logs, model)}</p>
-            </div>
-            <Emblem program={p} belt={isCreate ? enrollment.belt_level : null} size={64} />
-          </div>
-        </Hero>
-        <div className="p-5 flex-1 flex flex-col gap-4">
-          <p className="font-ninja text-[14.5px] leading-relaxed text-ninja-navy">{about}</p>
-          <div className="mt-auto space-y-2">
-            <button
-              type="button"
-              onClick={() => navigate(`/parent/courses/${enc(p)}`)}
-              className="w-full font-ninja font-extrabold text-[15px] text-white bg-ninja-blue rounded-xl px-4 py-3 transition-transform duration-150 active:scale-[0.98]"
-              style={{ transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)' }}
-            >
-              Open course
-            </button>
-            <p className="font-ninja text-xs text-ninja-muted text-center">
-              {childName ? `${childName}'s progress and the full curriculum` : 'Progress and the full curriculum'}
-            </p>
-          </div>
-        </div>
-      </motion.div>
-    </div>,
-    document.body
+    </button>
   );
 }
 
@@ -407,8 +323,6 @@ export default function ParentCourses() {
   const first = active?.full_name?.split(' ')[0] || '';
 
   const open = name ? enrollments.find((e) => e.program === name) : null;
-  const [preview, setPreview] = useState(null); // program whose modal is up
-  const pv = preview ? enrollments.find((e) => e.program === preview) : null;
 
   // A course in the URL that this child is not in (the switcher moved to a
   // sibling, or an old link): fall back to the list.
@@ -447,7 +361,7 @@ export default function ParentCourses() {
   const list = (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
       {enrollments.map((e) => (
-        <CourseCard key={e.id || e.program} enrollment={e} logs={logsFor(e.program)} onOpen={() => setPreview(e.program)} />
+        <CourseCard key={e.id || e.program} enrollment={e} logs={logsFor(e.program)} onOpen={() => navigate(`/parent/courses/${enc(e.program)}`)} />
       ))}
       {enrollments.length === 0 && (
         <div className={`${FLAT} p-8 text-center sm:col-span-2`}><p className="text-ninja-muted font-ninja text-sm">{first} is not enrolled in a program yet.</p></div>
@@ -472,16 +386,6 @@ export default function ParentCourses() {
         {header}
         {list}
       </div>
-      <AnimatePresence>
-        {pv && (
-          <CoursePreviewModal
-            enrollment={pv}
-            logs={logsFor(pv.program)}
-            childName={first}
-            onClose={() => setPreview(null)}
-          />
-        )}
-      </AnimatePresence>
     </ParentLayout>
   );
 }
