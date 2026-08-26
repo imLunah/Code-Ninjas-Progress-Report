@@ -12,7 +12,7 @@ import { BELTS, getLevels } from '../../utils/beltConfig';
 import { levelProjects, levelStates, levelTitle, realSessions, trackModel, fmtDay } from '../../lib/parentProgress';
 import { KIT_SHORT } from '../../lib/programTheme';
 import { useCurriculum } from '../../context/CurriculumContext';
-import BeltIcon, { hasLargeBelt } from '../../components/ui/BeltIcon';
+import BeltIcon from '../../components/ui/BeltIcon';
 
 // Courses: one card per program the child is in.
 //
@@ -192,12 +192,11 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
             `large` asks for the 768px copy, because the banner paints one at
             around 330 CSS px — over 600 device pixels on a retina screen —
             and the everyday 256px file upscaled that far looks like a bad
-            JPEG. The nine belts that have one get it. The metallic four do
-            not have transparent source art yet, so they fall back to the small
-            file and earn two pixels of blur to cover for it: background art
-            with a depth of field reads as intent, a fuzzy logo reads as a
-            mistake. When their art arrives, add them to LARGE_BELTS and the
-            blur turns itself off.
+            JPEG. The nine belts that have one get it; the metallic four have
+            no transparent source art yet and fall back to the small file.
+            They are NOT blurred to cover for it: blur took the one thing a
+            metal belt has to say — its colour — and stirred it into the
+            gradient. Soft and coloured beats smooth and grey.
 
             Phone: a bit smaller and centered, so the pills row underneath
             still breathes. Both sit behind the ink either way — the hero's
@@ -205,10 +204,9 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
             everything written. */}
         <span
           aria-hidden
-          className="hidden lg:block absolute inset-y-[-15%] right-[calc(50%-50cqw-3rem)] aspect-square pointer-events-none opacity-[0.16]"
+          className="hidden lg:block absolute inset-y-[-15%] right-[calc(50%-50cqw-3rem)] aspect-square pointer-events-none opacity-[0.22]"
           style={{
             zIndex: -1,
-            filter: hasLargeBelt(viewBelt) ? undefined : 'blur(2px)',
             maskImage: 'linear-gradient(to bottom left, #000 28%, transparent 78%)',
             WebkitMaskImage: 'linear-gradient(to bottom left, #000 28%, transparent 78%)',
           }}

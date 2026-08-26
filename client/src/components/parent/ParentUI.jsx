@@ -124,19 +124,27 @@ export function ProgramMark({ program, size = 40 }) {
 // It is a scroller on phones ONLY. Below lg the columns are a fixed width and
 // the row is `max-content`, so thirteen belts run off the side and the road
 // swipes (mouse users drag it: the scrollbar is hidden and a wheel is
-// vertical, so without the drag only a trackpad could move it). At lg the
-// columns become flex-1 and the row spreads across whatever it is given, so
-// all thirteen are on screen at once and there is nothing to scroll — a
-// desktop banner is wide enough to hold the whole road, and letting it scroll
-// there only parked the last four belts against a field of empty gradient.
+// vertical, so without the drag only a trackpad could move it). At lg all
+// thirteen are on screen at once and there is nothing to scroll.
+//
+// What stretches at lg is the CONNECTOR, and only up to a point. Letting it
+// grow without a ceiling spread thirteen belts across a 1100px banner and the
+// result read as a long thin rule with beads on it. Capped at 30px the road
+// takes the width it wants and centres in what it is given, which is a road
+// rather than a ruler.
+//
+// The line runs BEHIND the belts (negative margins into the columns, belts
+// lifted with z-10) instead of butting up against them. A belt is 30px inside
+// a 46px column, so an unmargined connector stopped 8px short at both ends
+// and the road read as thirteen separate dashes.
 export function BeltRoad({ current, selected, onSelect, onHero = false, compact = false, className = '' }) {
   const idx = BELTS.findIndex((b) => b.name === current);
   // `current` is where the ninja actually IS — it lights the trail and decides
   // what is dimmed ahead. `selected` is only what is being LOOKED at, and it
   // is what grows. They are the same belt until somebody taps another one.
   const sel = BELTS.findIndex((b) => b.name === (selected || current));
-  const icon = compact ? 22 : 26;
-  const cur = compact ? 36 : 42;
+  const icon = compact ? 22 : 30;
+  const cur = compact ? 36 : 58;
   const line = onHero ? 'rgb(255 255 255 / 0.35)' : 'rgb(var(--ninja-navy) / 0.15)';
   const trail = onHero ? 'rgb(255 255 255 / 0.85)' : 'rgb(var(--ninja-navy) / 0.45)';
   const scroller = useRef(null);
@@ -172,17 +180,17 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
       onPointerCancel={endDrag}
       className={`overflow-x-auto lg:overflow-x-visible no-scrollbar cursor-grab active:cursor-grabbing lg:cursor-default lg:active:cursor-default select-none -mx-1 px-1 ${className}`}
       aria-label="Belt road" role={onSelect ? 'group' : 'img'}>
-      <div className="flex items-start min-w-max lg:min-w-0">
+      <div className="flex items-start min-w-max lg:min-w-0 lg:justify-center">
         {BELTS.map((b, i) => {
           const state = idx < 0 ? 'ahead' : i < idx ? 'earned' : i === idx ? 'current' : 'ahead';
           const size = i === sel ? cur : icon;
           return (
-            <div key={b.name} className={`flex items-start ${i < BELTS.length - 1 ? 'lg:flex-1 lg:min-w-0' : ''}`}>
+            <div key={b.name} className="flex items-start">
               <Cell belt={b.name} onSelect={onSelect} isSel={i === sel} compact={compact}>
                 {/* The icon springs between the two sizes rather than cutting
                     to them: the row's own height is pinned to the big size, so
                     the belts either side hold still while one grows. */}
-                <span className="flex items-center justify-center" style={{ height: cur }}>
+                <span className="relative z-10 flex items-center justify-center" style={{ height: cur }}>
                   <motion.span
                     className="block"
                     initial={false}
@@ -199,11 +207,12 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
               {/* At lg the CONNECTOR is what stretches, never the column:
                   give the columns the slack and each belt floats in the
                   middle of a wide empty cell with a stub of a dash pinned to
-                  one side. Growing the line reads as the road it is named
-                  after, and it is what closes the gap between the last belt
-                  and the edge of a desktop banner. */}
+                  one side. The negative margins are what let the line reach
+                  under the belts rather than stopping at the column's edge —
+                  they are wider at lg because the gap either side of a belt
+                  inside its column is wider there. */}
               {i < BELTS.length - 1 && (
-                <span aria-hidden className="block flex-shrink-0 lg:flex-1" style={{ width: compact ? 6 : 8, height: 2, background: i < idx ? trail : line, marginTop: cur / 2 - 1, marginLeft: -3, marginRight: -3 }} />
+                <span aria-hidden className="block flex-shrink-0 -mx-[3px] lg:-mx-[9px] lg:flex-1 lg:max-w-[30px]" style={{ width: compact ? 6 : 8, height: 2, background: i < idx ? trail : line, marginTop: cur / 2 - 1 }} />
               )}
             </div>
           );
