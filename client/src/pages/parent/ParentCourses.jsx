@@ -204,7 +204,7 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
             everything written. */}
         <span
           aria-hidden
-          className="hidden lg:block absolute inset-y-[-15%] right-[calc(50%-50cqw-3rem)] aspect-square pointer-events-none opacity-[0.22]"
+          className="hidden lg:block absolute inset-y-[-15%] right-[calc(50%-50cqw-3rem)] aspect-square pointer-events-none opacity-[0.4]"
           style={{
             zIndex: -1,
             maskImage: 'linear-gradient(to bottom left, #000 28%, transparent 78%)',
