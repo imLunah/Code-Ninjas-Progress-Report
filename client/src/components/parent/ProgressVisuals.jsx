@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { BELTS, PROGRAM_LOGOS, PROGRAM_BANNERS, getLevels, getBelt } from '../../utils/beltConfig';
+import { BELTS, PROGRAM_LOGOS, PROGRAM_BANNERS, getLevels } from '../../utils/beltConfig';
 import { PROGRAM_GRADIENTS, PROGRAM_BAR_COLORS, JR_CODING_MODULES, SNAP_CIRCUITS_TOTAL, KIT_ORDER, KIT_SHORT, KIT_TOTALS } from '../../lib/programTheme';
 import BeltIcon from '../ui/BeltIcon';
+import { Hero, BeltRoad } from './ParentUI';
 import { useCurriculum } from '../../context/CurriculumContext';
 import { formatDate } from '../../utils/dateUtils';
 import { CARD } from '../../lib/surfaces';
@@ -10,21 +11,6 @@ import { CARD } from '../../lib/surfaces';
 // Program colours, kit and module vocab live in lib/programTheme so the parent
 // portal's own pages read the same values.
 
-const BELT_IMAGES = {
-  White:  '/belts/belt-white.png',
-  Yellow: '/belts/belt-yellow.png',
-  Orange: '/belts/belt-orange.png',
-  Green:  '/belts/belt-green.png',
-  Blue:   '/belts/belt-blue.png',
-  Purple: '/belts/belt-purple.png',
-  Brown:  '/belts/belt-brown.png',
-  Red:    '/belts/belt-red.png',
-  Black:  '/belts/belt-black.png',
-  Bronze: '/belts/belt-bronze.png',
-  Silver: '/belts/belt-silver.png',
-  Platinum: '/belts/belt-platinum.png',
-  Gold:   '/belts/belt-gold.png',
-};
 
 function abbrevModule(name) {
   return name
@@ -40,11 +26,6 @@ function toMonthKey(dateStr) {
 }
 
 // ─── Animation variants ───────────────────────────────────────────────────────
-
-// The ladder's icon row is as tall as its largest icon: the current belt is
-// drawn bigger than the rest, and without a fixed row the taller one would
-// shift its own label down out of line with its neighbours.
-const ICON_ROW = 34;
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -228,214 +209,64 @@ function ActivityChart({ logs }) {
 
 // ─── Belt journey (CREATE only) ───────────────────────────────────────────────
 
-function BeltJourney({ enrollment }) {
-  const { belt_level, belt_sublevel, last_session_date, current_project, project_status } = enrollment;
-  const currentIndex = belt_level ? BELTS.findIndex((b) => b.name === belt_level) : -1;
-  const levels = belt_level ? getLevels(belt_level) : [];
-  const maxLevel = levels.length ? levels[levels.length - 1] : null;
-  const sublevel = belt_sublevel != null ? parseInt(belt_sublevel) : null;
-  // Progress within the belt = position of the current level among the belt's
-  // levels (handles non-1-based belts like Green = levels 6–10).
-  const levelPos = sublevel != null ? levels.indexOf(sublevel) : -1;
-  const progress = levels.length && levelPos >= 0 ? Math.round(((levelPos + 1) / levels.length) * 100) : null;
+// The same hero the CREATE course opens with, so a parent meets one picture of
+// the belt road and not two. It used to be its own gradient card with a
+// "Current Belt" eyebrow, a 76px belt beside the words, a hand-rolled ladder
+// and a sublevel bar — a second design for the one thing the portal already
+// draws. Everything here now comes from ParentUI: the hero, its banner art and
+// the road itself.
+function BeltJourney({ enrollment, logs = [], childName }) {
+  const belt = enrollment.belt_level;
+  const levels = belt ? getLevels(belt) : [];
+  const level = Number(enrollment.belt_sublevel) || levels[0] || null;
+  const pos = level != null ? levels.indexOf(level) + 1 : 0;
+  const beltIdx = BELTS.findIndex((b) => b.name === belt);
+  const next = beltIdx >= 0 ? BELTS[beltIdx + 1]?.name : null;
+  const eyebrow = `CREATE${childName ? ` · ${childName}` : ''}`;
 
-  if (!belt_level) {
+  if (!belt) {
     return (
-      <div className={`${CARD} p-5`}>
-        <h2 className="text-ninja-navy font-ninja font-bold text-lg mb-1">CREATE</h2>
-        <p className="text-ninja-muted font-ninja text-sm italic text-center py-4">
-          Belt journey starting soon!
-        </p>
-      </div>
+      <Hero program="CREATE" size="block">
+        <p className="font-ninja text-[12px] font-extrabold opacity-85">{eyebrow}</p>
+        <p className="font-ninja font-extrabold text-[32px] leading-tight mt-1">White belt ahead</p>
+        <p className="font-ninja text-[13px] opacity-85 mt-1">The belt road starts with the first logged session.</p>
+      </Hero>
     );
   }
 
   return (
-    <motion.div
-      className="rounded-2xl shadow-lg overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #006ADD 0%, #004fa8 100%)' }}
-      variants={cardVariants}
-      initial="hidden"
-      animate="show"
-    >
-      {/* Laid out like ProgramCardBanner above: the text takes the room that is
-          left and the belt sits beside it at a fixed size, rather than being a
-          watermark pinned to the corner.
+    <Hero program="CREATE" size="block">
+      {/* The belt is the hero's art: square, pinned to the right and cut off
+          by the hero's own overflow, sitting above the gradient but under
+          every word (the hero isolates, so a negative z can do that). */}
+      <span
+        aria-hidden
+        className="hidden lg:block absolute inset-y-[-3%] right-[-3.5rem] aspect-square pointer-events-none"
+        style={{ zIndex: -1 }}
+      >
+        <BeltIcon belt={belt} style={{ width: '100%', height: '100%' }} />
+      </span>
+      <span
+        aria-hidden
+        className="lg:hidden absolute top-1/2 -translate-y-1/2 right-[-2rem] h-[72%] aspect-square pointer-events-none"
+        style={{ zIndex: -1 }}
+      >
+        <BeltIcon belt={belt} style={{ width: '100%', height: '100%' }} />
+      </span>
 
-          The watermark was 110px on a phone and grew to 208px past `md`, on a
-          card whose own width does not grow at the same rate, so between
-          breakpoints it swallowed the card and ran off the edge. A size that
-          answers to the viewport inside a box that answers to its container is
-          the whole bug. A flex-shrink-0 square beside a min-w-0 column
-          cannot overlap anything at any width, which is why every other program
-          card already works. */}
-      <div className="p-5">
-        <div className="flex items-center gap-4">
-          <div className="flex-1 min-w-0">
-            <p className="font-ninja text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.75)' }}>
-              Current Belt
-            </p>
-
-            <div className="flex items-baseline gap-2 mb-1">
-              <p className="text-white font-ninja font-black" style={{ fontSize: '28px', lineHeight: 1 }}>{belt_level}</p>
-              {sublevel && <p className="font-ninja font-bold text-xl" style={{ color: 'rgba(255,255,255,0.85)' }}>#{sublevel}</p>}
-            </div>
-
-            {(current_project || last_session_date) && (
-              <p className="font-ninja text-xs" style={{ color: 'rgba(255,255,255,0.65)' }}>
-                {current_project ? `${current_project}${project_status ? ` · ${project_status}` : ''}` : ''}
-                {current_project && last_session_date ? ' · ' : ''}
-                {last_session_date ? `Last: ${formatDate(last_session_date)}` : ''}
-              </p>
-            )}
-          </div>
-
-          {/* Same entrance, size and shadow the program logos use, so the two
-              cards read as one family. Opaque now: it is the card's emblem
-              rather than something behind the words. */}
-          {BELT_IMAGES[belt_level] ? (
-            <motion.img
-              src={BELT_IMAGES[belt_level]}
-              alt=""
-              aria-hidden="true"
-              draggable={false}
-              initial={{ opacity: 0, scale: 0.7, x: 16 }}
-              animate={{ opacity: 1, scale: 1, x: 0 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
-              style={{
-                width: 76, height: 76, objectFit: 'contain', flexShrink: 0,
-                filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.5))',
-              }}
-            />
-          ) : (
-            <div
-              aria-hidden="true"
-              className="rounded-full flex items-center justify-center font-ninja font-black"
-              style={{
-                width: 76, height: 76, flexShrink: 0, fontSize: '1.75rem',
-                backgroundColor: getBelt(belt_level)?.color || '#9ca3af',
-                color: getBelt(belt_level)?.textColor || '#fff',
-                filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.5))',
-              }}
-            >
-              {belt_level[0]}
-            </div>
-          )}
-        </div>
-
-        {/* The negative side margin lets the ladder's glow bleed past the
-            padding; the top margin has to live in the same shorthand or the
-            inline rule silently zeroes a Tailwind mt-* class. */}
-        {/* One column per belt, icon above its own label, rather than two
-            parallel rows that have to agree on where each belt starts.
-
-            They did not agree. The label sat in a box the width of the icon
-            with white-space nowrap, so every name longer than 26 pixels
-            overflowed its own cell and ran into the next one: OrangeGreen,
-            BronzeSilver, PlatinumGold. Sizing the cell to the icon while
-            filling it with a word is the bug, and widening the cell to fit the
-            longest word would pad Red and Blue out to match Platinum.
-
-            A column sizes itself to whichever of its two children is wider, so
-            short names stay tight and long ones simply take the room they need.
-            The connector keeps its own margin-top rather than being centred by
-            the flex row, because the row is now as tall as an icon plus a label
-            and centring would drop the line down among the words.
-
-            overflow-x: auto clips vertically as well, so the container needs
-            headroom for the current belt's glow: a 6px blur reaches about ten
-            pixels out, and with four of padding it was sliced flat along the
-            top. The top margin comes down by the same amount so the ladder
-            sits where it did. Both live in the one shorthand, because an inline
-            margin silently zeroes a Tailwind mt-* class beside it. */}
-        <div className="overflow-x-auto no-scrollbar" style={{ margin: '14px -4px 0', padding: '10px 4px 4px' }}>
-          <div className="flex items-start" style={{ minWidth: 'max-content' }}>
-            {BELTS.map((belt, i) => {
-              const reached = i <= currentIndex;
-              const isCurrent = i === currentIndex;
-              const imgSize = isCurrent ? 34 : 26;
-              return (
-                <React.Fragment key={belt.name}>
-                  {i > 0 && (
-                    <div style={{
-                      width: '12px', height: '2px', flexShrink: 0,
-                      // Half of ICON_ROW, less half the line, so it meets the
-                      // icons at their centre whichever size they are.
-                      marginTop: ICON_ROW / 2 - 1,
-                      backgroundColor: reached ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.22)',
-                    }} />
-                  )}
-                  <div style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    flexShrink: 0, padding: '0 3px',
-                  }}>
-                    {/* Fixed height so the current belt's larger icon does not
-                        push its own label out of line with the rest. */}
-                    <div style={{ height: ICON_ROW, display: 'flex', alignItems: 'center' }}>
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: reached ? 1 : 0.45, scale: 1 }}
-                        transition={{ type: 'spring', stiffness: 340, damping: 18, delay: i * 0.04 + 0.2 }}
-                        style={{ flexShrink: 0, display: 'block' }}
-                      >
-                        <BeltIcon
-                          belt={belt.name}
-                          size={imgSize}
-                          style={{
-                            filter: isCurrent
-                              ? 'drop-shadow(0 0 6px rgba(255,255,255,0.55))'
-                              : reached ? 'none' : 'grayscale(100%)',
-                          }}
-                        />
-                      </motion.div>
-                    </div>
-                    <span style={{
-                      fontSize: '12px', fontFamily: 'Nunito, sans-serif',
-                      fontWeight: isCurrent ? 700 : 400,
-                      color: reached ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)',
-                      whiteSpace: 'nowrap', display: 'block', marginTop: '5px',
-                    }}>
-                      {belt.name}
-                    </span>
-                  </div>
-                </React.Fragment>
-              );
-            })}
-          </div>
-        </div>
+      <div className="min-w-0">
+        <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">{eyebrow}</p>
+        <p className="font-ninja font-extrabold text-[36px] lg:text-[32px] leading-none mt-1 tracking-[-0.015em]">{belt} belt</p>
+        <p className="font-ninja text-[13px] opacity-85 mt-2 truncate">
+          {[level != null ? `Level ${level}` : null, levels.length ? `${pos} of ${levels.length}` : null, next ? `earns ${next}` : null, logs.length ? `${logs.length} session${logs.length === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ')}
+        </p>
       </div>
 
-      {progress !== null && (
-        <div className="px-5 pb-5">
-          <div className="flex justify-between font-ninja mb-1.5" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
-            <span>Sublevel progress</span>
-            <motion.span
-              className="font-bold"
-              style={{ color: 'rgba(255,255,255,0.9)' }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-            >
-              {progress}%
-            </motion.span>
-          </div>
-          <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
-            <motion.div
-              className="h-full rounded-full"
-              style={{ backgroundColor: 'rgba(255,255,255,0.8)' }}
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
-            />
-          </div>
-          {maxLevel && sublevel && (
-            <p className="font-ninja mt-1" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.55)' }}>
-              Level {sublevel} of {maxLevel}
-            </p>
-          )}
-        </div>
-      )}
-    </motion.div>
+      {/* Shown at every width here, unlike the course page: there the level
+          pills take the phone's room and the card below redraws the road, and
+          on this page the road is the whole of what the hero is for. */}
+      <BeltRoad current={belt} onHero className="mt-5" />
+    </Hero>
   );
 }
 
@@ -780,7 +611,7 @@ function ModuleProgress({ program, enrollment, logs }) {
 
 // ─── Entry point ──────────────────────────────────────────────────────────────
 
-export default function ProgressVisuals({ programs, sessionLogs }) {
+export default function ProgressVisuals({ programs, sessionLogs, childName }) {
   const create = programs.find((p) => p.program === 'CREATE');
   const others = programs.filter((p) => p.program !== 'CREATE');
 
@@ -791,7 +622,7 @@ export default function ProgressVisuals({ programs, sessionLogs }) {
       </div>
       {create && (
         <div className="xl:col-span-2">
-          <BeltJourney enrollment={create} />
+          <BeltJourney enrollment={create} logs={sessionLogs.filter((l) => l.program === 'CREATE')} childName={childName} />
         </div>
       )}
       {others.map((p) => (

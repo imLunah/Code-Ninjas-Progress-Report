@@ -43,9 +43,14 @@ export function Hero({ program, size = 'card', className = '', style = {}, child
   // top, edge to edge, square along the top so no page shows at the corners,
   // and rounded only along the bottom. On desktop it is a card in the right column like
   // everything else.
+  // 'block' is the same hero as a card on the page rather than at the top of
+  // it: the page's own radius and the page hero's breathing room, but no
+  // bleed to the screen edges.
   const pad = size === 'page'
     ? '-mx-4 sm:-mx-6 -mt-5 rounded-t-none rounded-b-[34px] px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6 lg:mx-0 lg:mt-0 lg:rounded-[26px] lg:px-7 lg:pt-7 lg:pb-6'
-    : 'p-4 rounded-[18px]';
+    : size === 'block'
+      ? 'rounded-[22px] px-5 py-5 lg:rounded-[26px] lg:px-7 lg:py-6'
+      : 'p-4 rounded-[18px]';
   // The banner art is an <img> zoomed 4%, not a background: the files carry
   // a hard band a few pixels wide along their edges, and the zoom crops it
   // off at every aspect ratio. Art and scrim sit at z -1 inside the hero's

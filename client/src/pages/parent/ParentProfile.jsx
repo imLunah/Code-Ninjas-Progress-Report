@@ -141,7 +141,7 @@ export default function ParentProfile() {
         <div className="lg:hidden"><ChildSwitcher layoutId="parent-child-mobile" /></div>
 
         {detail && programs.length > 0 && (
-          <ProgressVisuals programs={programs} sessionLogs={detail.session_logs || []} />
+          <ProgressVisuals programs={programs} sessionLogs={detail.session_logs || []} childName={first} />
         )}
 
         <div className="space-y-3">
