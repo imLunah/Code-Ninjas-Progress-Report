@@ -471,12 +471,16 @@ export function levelShot(belt, level) {
 // the Code.AI login avatar set the JR ninjas pick from, and its names are
 // pinned to a DB CHECK.
 //
-// Cut from the posters, so the count is whatever that belt was drawn with
-// rather than a number we chose: Red was given two, Yellow three, most belts
-// five. Black and the four Degrees belts have no poster cluster at all and
-// get none; anything reading this has to cope with an empty list.
+// They are the original transparent uploads out of the franchise asset set,
+// not crops off a poster, so every one carries its own white rim and none of
+// them needed keying out of a sky.
+//
+// The count is whatever that belt has to give rather than a number we chose:
+// Red ships two achievement icons and Black one, Yellow three, most belts
+// five. The four Degrees belts have none at all, so anything reading this has
+// to cope with an empty list.
 const BELT_STICKERS = {
-  White: 4, Yellow: 3, Orange: 5, Green: 5, Blue: 5, Purple: 5, Brown: 5, Red: 2,
+  White: 4, Yellow: 3, Orange: 5, Green: 5, Blue: 5, Purple: 5, Brown: 5, Red: 2, Black: 1,
 };
 
 export function beltStickers(belt) {

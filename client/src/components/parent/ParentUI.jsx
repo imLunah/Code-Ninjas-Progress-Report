@@ -346,8 +346,10 @@ function Cell({ belt, onSelect, isSel, compact, children }) {
   );
 }
 
-// The medal a level is actually awarded with, lifted straight off the IMPACT
-// wall posters: one per belt colour, numbered, White 1 through Black 1. Only
+// The medal a level is actually awarded with: one per belt colour, numbered,
+// White 1 through Black 1. These are the original transparent artwork out of
+// the franchise asset set rather than crops off a printed poster, so they are
+// clean at the edges and sharp well past the size anything draws them. Only
 // CREATE has them — the Degrees belts (Bronze, Silver, Platinum, Gold) are not
 // in the IMPACT set, and neither is any other program, so `LevelMedal` returns
 // null rather than guessing and the caller falls back to whatever it drew
@@ -355,15 +357,17 @@ function Cell({ belt, onSelect, isSel, compact, children }) {
 // grayscale the belt road uses for belts still to come, so one visual rule
 // covers both ladders.
 //
-// The files are the rosette and its two ribbon tails, and NOT the flat band
-// that sits above the badge on the poster. That band is not damaged art and it
-// was not cropped by us — it is a rectangle with a hard top edge, because on
-// the poster the word LEVEL is printed on top of it. Lifted out on its own it
-// reads as a medal somebody cut in half, which is exactly what it was reported
-// as. The first ~15% of every file (22-25 rows of 128 wide) is that band, and
-// it is gone: below it the band runs behind the star and comes out as the
-// tails, so nothing else is lost. Do NOT re-cut these from the poster without
-// taking the band off again.
+// The files are the rosette and its two ribbon tails, and NOT the mint-and-teal
+// ribbon that sits above the badge. That ribbon is undamaged, intentional art
+// — the word LEVEL is printed over it on the poster — but on its own it reads
+// as a medal somebody cut in half, which is exactly how it was reported. It is
+// gone from every file. Below the star the same ribbon runs behind the badge
+// and comes out as the tails, so nothing else is lost.
+//
+// Taking it off is fiddlier than a crop: the ribbon is wider than the star's
+// top point, so its two teal corners stand up either side like ears and
+// survive any crop that keeps the point. Do NOT re-cut these without erasing
+// the ribbon rather than cropping to it.
 const MEDAL_BELTS = new Set(['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black']);
 
 export function hasLevelMedal(belt, level) {
