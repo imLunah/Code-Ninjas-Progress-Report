@@ -270,44 +270,55 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
             transition={{ duration: 0.18, ease: EASE_OUT }}
           >
             <Group tint={levelState === 'current' ? 'green' : levelState === 'done' ? 'blue' : undefined}>
-              {/* The game itself, straight off the wall poster. A level that
-                  leads with a text panel rather than a screenshot has none,
-                  and shows nothing rather than borrowing its neighbour's.
+              {/* The game itself, straight off the wall poster, tilted into
+                  the corner like a photo dropped on the card.
 
-                  The box is given the FILE's aspect (424x163) rather than a
-                  fixed height. Pinned to 124px it was a 2.6:1 picture in a
-                  5:1 box, and `object-cover` answered that by blowing the
-                  image up until one wrench filled the card. Matching the
-                  ratio means cover has nothing to crop and nothing to zoom. */}
-              {shot && (
-                <img
-                  src={shot}
-                  alt=""
-                  aria-hidden="true"
-                  draggable={false}
-                  className="w-full block object-cover rounded-t-[16px]"
-                  style={{ aspectRatio: '424 / 163' }}
-                />
-              )}
-              <div className={`px-4 pb-3 ${shot ? 'pt-3' : 'pt-3.5'}`}>
-                <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em]" style={levelState ? { color: 'var(--tint-ink)' } : undefined}>
-                  Level {level}{levelState === 'current' ? ' · now' : levelState === 'done' ? ' · done' : ' · ahead'}
-                </p>
-                {/* The poster's name for the level. Only when we have none
-                    does it fall back to the old guess made from the level's
-                    last project. */}
-                {(info?.topic || levelTitle(viewBelt, level) !== `Level ${level}`) && (
-                  <p className="font-ninja font-extrabold text-[20px] text-ninja-navy leading-tight mt-0.5">
-                    {info?.topic || levelTitle(viewBelt, level)}
+                  It was a full-bleed banner first and that was the wrong
+                  shape twice over: stretched to the card's width it upscaled
+                  a 424px file past 1.6x, and no aspect ratio fixes that — a
+                  wide strip of one screenshot is not a picture of a game, it
+                  is a crop of a wrench. Held at its own size and turned a few
+                  degrees it stays sharp, it reads as an object rather than a
+                  header, and it sits with the rest of the bento instead of
+                  fighting it. The card clips whatever hangs over the edge. */}
+              <div>
+                {/* A row, not an overlay: the picture is a flex item, so the
+                    header grows to hold ALL of it. Floated into the corner it
+                    was clipped by whatever height the words happened to need,
+                    which is how you end up showing two thirds of a game. The
+                    tilt is a transform, so it costs no layout — only the four
+                    corners drift, and the card has room for them. */}
+                <div className="flex items-start gap-3 pl-4 pr-4 pt-3.5 pb-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em]" style={levelState ? { color: 'var(--tint-ink)' } : undefined}>
+                    Level {level}{levelState === 'current' ? ' · now' : levelState === 'done' ? ' · done' : ' · ahead'}
                   </p>
+                  {/* The poster's name for the level. Only when we have none
+                      does it fall back to the old guess made from the level's
+                      last project. */}
+                  {(info?.topic || levelTitle(viewBelt, level) !== `Level ${level}`) && (
+                    <p className="font-ninja font-extrabold text-[20px] text-ninja-navy leading-tight mt-0.5">
+                      {info?.topic || levelTitle(viewBelt, level)}
+                    </p>
+                  )}
+                  <p className="font-ninja text-[12.5px] v2 text-ninja-muted mt-0.5">
+                    {[`${done} of ${projects.length} projects`, started ? `started ${fmtDay(started)}` : null].filter(Boolean).join(' · ')}
+                  </p>
+                </div>
+                {shot && (
+                  <img
+                    src={shot}
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                    className="flex-shrink-0 select-none w-[132px] sm:w-[176px] rounded-[10px] rotate-[3deg] mt-0.5 ring-1 ring-black/10 shadow-[0_12px_28px_-12px_rgb(6_13_26_/_0.5)]"
+                  />
                 )}
-                <p className="font-ninja text-[12.5px] v2 text-ninja-muted mt-0.5">
-                  {[`${done} of ${projects.length} projects`, started ? `started ${fmtDay(started)}` : null].filter(Boolean).join(' · ')}
-                </p>
+                </div>
                 {/* What the ninja actually builds at the end of the level. It
                     is the one sentence a parent can read and picture. */}
                 {info?.quest && (
-                  <p className="font-ninja text-[13.5px] leading-relaxed text-ninja-navy/85 mt-2.5">{info.quest}</p>
+                  <p className="font-ninja text-[13.5px] leading-relaxed text-ninja-navy/85 px-4 pb-3 -mt-1">{info.quest}</p>
                 )}
               </div>
               <div className={`mx-3 mb-3 rounded-[14px] overflow-hidden ${levelState ? 'border border-ninja-navy/[0.06]' : ''}`}>
