@@ -440,3 +440,24 @@ export function levelInfo(belt, level) {
 export function beltInfo(belt) {
   return CREATE_CURRICULUM[belt] || null;
 }
+
+// The levels that ship a screenshot of the game being built, cut from the same
+// posters. Not all of them do: Brown 5 and 10 lead with a pixel-art panel
+// rather than a game, Red 2 opens on the Tower Defense write-up, and Black is
+// a capstone with nothing to show yet. Those levels simply have no picture,
+// which is honester than borrowing one from a level next door.
+const LEVEL_SHOTS = new Set([
+  'white-1', 'white-2', 'white-3', 'white-4',
+  'yellow-1', 'yellow-2', 'yellow-3', 'yellow-4',
+  'orange-1', 'orange-2', 'orange-3', 'orange-4', 'orange-5',
+  'green-1', 'green-2', 'green-3', 'green-4', 'green-5',
+  'blue-1', 'blue-2', 'blue-3', 'blue-4', 'blue-5', 'blue-6',
+  'purple-1', 'purple-2', 'purple-3', 'purple-4', 'purple-5', 'purple-6',
+  'brown-1', 'brown-2', 'brown-3', 'brown-4', 'brown-6', 'brown-7', 'brown-8', 'brown-9',
+  'red-1',
+]);
+
+export function levelShot(belt, level) {
+  const key = `${String(belt).toLowerCase()}-${Number(level)}`;
+  return LEVEL_SHOTS.has(key) ? `/levels/shots/${key}.png` : null;
+}

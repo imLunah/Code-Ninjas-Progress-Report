@@ -10,7 +10,7 @@ import { FLAT } from '../../lib/surfaces';
 import { SkeletonCards } from '../../components/ui/Skeleton';
 import { BELTS, getLevels } from '../../utils/beltConfig';
 import { levelProjects, levelStates, levelTitle, realSessions, trackModel, fmtDay } from '../../lib/parentProgress';
-import { levelInfo, beltInfo } from '../../lib/createCurriculum';
+import { levelInfo, beltInfo, levelShot } from '../../lib/createCurriculum';
 import { KIT_SHORT } from '../../lib/programTheme';
 import { useCurriculum } from '../../context/CurriculumContext';
 import BeltIcon from '../../components/ui/BeltIcon';
@@ -154,6 +154,7 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
   const info = levelInfo(viewBelt, level);
   const belted = beltInfo(viewBelt);
   const concepts = (info?.sets || []).map((st) => st.explore).filter(Boolean);
+  const shot = levelShot(viewBelt, level);
   const lastLevel = levels.length ? levels[levels.length - 1] : null;
 
   const summary = onBelt
@@ -269,7 +270,19 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
             transition={{ duration: 0.18, ease: EASE_OUT }}
           >
             <Group tint={levelState === 'current' ? 'green' : levelState === 'done' ? 'blue' : undefined}>
-              <div className="px-4 pt-3.5 pb-3">
+              {/* The game itself, straight off the wall poster. A level that
+                  leads with a text panel rather than a screenshot has none,
+                  and shows nothing rather than borrowing its neighbour's. */}
+              {shot && (
+                <img
+                  src={shot}
+                  alt=""
+                  aria-hidden="true"
+                  draggable={false}
+                  className="w-full h-[124px] object-cover object-left-top rounded-t-[16px]"
+                />
+              )}
+              <div className={`px-4 pb-3 ${shot ? 'pt-3' : 'pt-3.5'}`}>
                 <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em]" style={levelState ? { color: 'var(--tint-ink)' } : undefined}>
                   Level {level}{levelState === 'current' ? ' · now' : levelState === 'done' ? ' · done' : ' · ahead'}
                 </p>
