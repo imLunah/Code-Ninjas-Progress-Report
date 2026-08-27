@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import ParentLayout, { ChildSwitcher, GLASS, REFRACT } from '../../components/layout/ParentLayout';
+import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
 import { api } from '../../api/client';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
@@ -191,8 +191,8 @@ function LiveSchedule({ center }) {
 // react-markdown is too heavy to ride along on every home visit.
 const ReactMarkdown = lazy(() => import('react-markdown'));
 
-// Listing descriptions are CD-authored markdown shown on the banner's glass
-// sheet, so every ink is inline navy (the sheet is a light pane in both
+// Listing descriptions are CD-authored markdown shown on the banner's detail
+// sheet, so every ink is inline navy (the sheet is white paper in both
 // themes). `img: () => null` stays: markdown never gets to draw an image on
 // this surface (same rule as the note maps, session 32).
 const NAVY = '#1a2e4a';
@@ -367,9 +367,18 @@ function EventSlideshow({ events }) {
         )}
       </div>
 
-      {/* The detail sheet the banner grows into: a pane of the same liquid
-          glass as the phone nav, floating on the artwork, with navy ink. The
-          banner still gets taller; the sheet is what it grows to show. */}
+      {/* The detail sheet the banner grows into. It was a pane of the same
+          liquid glass as the phone nav, and it read beautifully and scanned
+          badly: a listing's description is the longest prose in the portal,
+          and navy paragraphs over moving artwork is the one place this app
+          asks somebody to read properly. So the sheet is solid paper — which
+          is also the standing rule, that glass is for what stays and anything
+          that OPENS is opaque. The banner still gets taller; the sheet is
+          what it grows to show.
+
+          The white is an inline hex, never `bg-white`: the ink here is fixed
+          navy, and `.dark .bg-white` would turn the paper slate and leave the
+          words unreadable on it. */}
       <AnimatePresence initial={false}>
         {expanded && (
           <motion.div
@@ -381,7 +390,10 @@ function EventSlideshow({ events }) {
             className="relative overflow-hidden"
           >
             <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-5">
-            <div className={`rounded-[22px] p-5 space-y-3 ${GLASS}`} style={{ ...REFRACT, color: NAVY }}>
+            <div
+              className="rounded-[22px] p-5 space-y-3"
+              style={{ background: '#ffffff', color: NAVY, boxShadow: '0 18px 40px -22px rgb(6 13 26 / 0.55)' }}
+            >
               {when && (
                 <p className="font-ninja text-[13px] font-extrabold">
                   {isToday ? 'Today' : fmtLongDay(ev.event_date)}{ev.event_time ? ` · ${ev.event_time}` : ''}
