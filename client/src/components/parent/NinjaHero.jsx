@@ -170,7 +170,7 @@ export default function NinjaHero({ program, name, eyebrow, belt, level, program
             type="button"
             onClick={cheer}
             aria-label={`Make ${first} cheer`}
-            className="absolute right-[-0.75rem] sm:right-0 lg:right-4 bottom-[-1rem] lg:bottom-[-2.25rem] focus-visible:outline-none"
+            className="absolute right-[-2.5rem] sm:right-[-1rem] lg:right-6 bottom-[-5rem] sm:bottom-[-6.5rem] lg:bottom-[-11rem] focus-visible:outline-none"
             style={{ x: ninjaX, y: ninjaY }}
             initial={still ? false : { opacity: 0, y: 40, scale: 0.94 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -186,7 +186,7 @@ export default function NinjaHero({ program, name, eyebrow, belt, level, program
                 src={ninjaSrc(belt, cheering ? 'cheer' : 'wave')}
                 alt=""
                 draggable={false}
-                className="block h-[164px] sm:h-[220px] lg:h-[348px] w-auto select-none pointer-events-none drop-shadow-[0_18px_28px_rgba(4,10,24,0.45)]"
+                className="block h-[240px] sm:h-[320px] lg:h-[500px] w-auto select-none pointer-events-none drop-shadow-[0_18px_28px_rgba(4,10,24,0.45)]"
               />
             </motion.span>
             {/* Both poses are fetched up front: swapping to a file the browser
