@@ -111,9 +111,12 @@ function LiveSchedule({ center }) {
   return (
     <section className={`${FLAT} px-4 py-3.5 sm:px-5`}>
       <div className="flex items-baseline justify-between gap-3">
-        <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted truncate flex items-center gap-1.5">
+        {/* The truncate belongs to the words, not the row: the pinging ring
+            grows past the dot's own 8px box, and an overflow-hidden wrapper
+            shaves the half of it that reaches left. */}
+        <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted min-w-0 flex items-center gap-1.5">
           {openNow && <span className="relative flex w-2 h-2 flex-shrink-0" aria-hidden><span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-60" /><span className="relative rounded-full w-2 h-2 bg-green-500" /></span>}
-          {openNow ? 'Live' : 'Today'}{center ? ` at ${center}` : ''}
+          <span className="truncate">{openNow ? 'Live' : 'Today'}{center ? ` at ${center}` : ''}</span>
         </p>
         <p className="font-ninja text-[12px] v2 text-ninja-muted flex-shrink-0 truncate">{status}</p>
       </div>
