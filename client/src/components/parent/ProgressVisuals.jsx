@@ -55,19 +55,19 @@ const nodeVariants = {
 // nav: the card that DESCRIBES a program is the card that opens it.
 //
 // The whole card is the target, because a parent should not have to hunt for a
-// small control on a card that is already about one thing. The footer says so
-// in words anyway — a card that is only silently clickable is a card nobody
-// clicks — and it is the last thing in the card so it reads as the door out of
-// it rather than a label on it.
+// small control on a card that is already about one thing. All the footer adds
+// is a chevron at the trailing edge — it said "Open the Robotics Academy
+// course" for one commit and that was the card's own title read back to it in
+// smaller type. The arrow alone is the convention, and the link carries the
+// sentence as its accessible name so nothing is lost to a screen reader.
 function CourseShell({ href, program, children }) {
   const shell = 'block rounded-2xl overflow-hidden border border-ninja-border shadow-sm';
   const body = (
     <>
       {children}
       {href && (
-        <div className="flex items-center justify-between gap-3 bg-white px-5 py-3 border-t border-ninja-border">
-          <span className="font-ninja text-[13px] font-extrabold text-ninja-blue-ink">Open the {program} course</span>
-          <ChevronRightIcon size={16} strokeWidth={2.6} aria-hidden className="text-ninja-blue-ink flex-shrink-0" />
+        <div className="flex items-center justify-end bg-white px-5 py-2.5 border-t border-ninja-border">
+          <ChevronRightIcon size={18} strokeWidth={2.6} aria-hidden className="text-ninja-blue-ink flex-shrink-0" />
         </div>
       )}
     </>
@@ -75,23 +75,32 @@ function CourseShell({ href, program, children }) {
   return (
     <motion.div variants={cardVariants} initial="hidden" animate="show">
       {href
-        ? <Link to={href} className={`${shell} transition-shadow hover:shadow-md focus-visible:outline-none`}>{body}</Link>
+        ? <Link to={href} aria-label={`Open the ${program} course`} className={`${shell} transition-shadow hover:shadow-md focus-visible:outline-none`}>{body}</Link>
         : <div className={shell}>{body}</div>}
     </motion.div>
   );
 }
 
-// The same door, worn on a hero instead of under a card: the belt journey has
-// no white body to put a footer row in, so it takes a chip in the words.
-function OpenChip({ href, children }) {
-  if (!href) return null;
+// The belt journey's door. It has no white body to put a footer row in, and
+// anything added BELOW the words pushes the belt road down the banner, so the
+// door is a chevron on the title's own line: it costs the block no height, and
+// the title is the thing a parent would reach for anyway.
+function Title({ href, className = '', children }) {
+  // The type and the spacing both live on the OUTER element, so the link and
+  // the plain heading occupy the same box to the pixel — a margin on the inner
+  // span would be a flex item's margin and would push the chevron off the
+  // text's own centre line.
+  const type = `font-ninja font-extrabold ${className}`;
+  if (!href) return <p className={type}>{children}</p>;
   return (
-    <Link
-      to={href}
-      className="inline-flex items-center gap-1 mt-2 rounded-full border border-white/35 bg-white/20 px-3 py-1 font-ninja text-[12.5px] font-extrabold text-white transition-colors hover:bg-white/30"
-    >
-      {children}
-      <ChevronRightIcon size={14} strokeWidth={2.8} aria-hidden />
+    <Link to={href} className={`group inline-flex items-center gap-1.5 max-w-full ${type}`}>
+      <span className="truncate">{children}</span>
+      <ChevronRightIcon
+        size={24}
+        strokeWidth={3}
+        aria-hidden
+        className="flex-shrink-0 opacity-60 transition-all group-hover:opacity-100 group-hover:translate-x-0.5"
+      />
     </Link>
   );
 }
@@ -277,9 +286,8 @@ function BeltJourney({ enrollment, logs = [], childName, href }) {
     return (
       <Hero program="CREATE" size="block">
         <p className="font-ninja text-[12px] font-extrabold opacity-85">{eyebrow}</p>
-        <p className="font-ninja font-extrabold text-[32px] leading-tight mt-1">White belt ahead</p>
+        <Title href={href} className="text-[32px] leading-tight mt-1">White belt ahead</Title>
         <p className="font-ninja text-[13px] opacity-85 mt-1">The belt road starts with the first logged session.</p>
-        <OpenChip href={href}>See the CREATE course</OpenChip>
       </Hero>
     );
   }
@@ -314,23 +322,32 @@ function BeltJourney({ enrollment, logs = [], childName, href }) {
         >
           <BeltIcon belt={belt} large style={{ width: '100%', height: '100%' }} />
         </span>
-        <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">{eyebrow}</p>
-        <p className="font-ninja font-extrabold text-[36px] lg:text-[32px] leading-none mt-1 tracking-[-0.015em]">{belt} belt</p>
-        {/* The level's own medal off the IMPACT poster, stamped beside the
-            line that names the level. The belt behind the hero says which
-            belt; this says how far into it, in the art the centre already
-            hangs on its wall. The nine CREATE belts have one; the Degrees
-            belts do not, and LevelMedal draws nothing rather than borrowing a
-            neighbour's, so the line simply sits where it always did. */}
-        <div className="flex items-center gap-3 mt-2 min-w-0">
+        {/* The medal sits BESIDE the whole block, not under the title, and
+            that is a layout decision rather than a taste one: this hero's job
+            is to hold the belt road, and the road's position in it must not
+            drift. Stacked under the summary the medal added its own 60-odd
+            pixels and the door added 30 more, and the road — the one thing on
+            the card a parent looks for — slid down the banner. Alongside, the
+            medal is shorter than the three lines it stands next to, so it
+            costs the block nothing and the road stays where it has always
+            been. Same reason the door is a chevron on the title's own line
+            and not a chip beneath it.
+
+            The level's own medal off the IMPACT poster. The belt behind the
+            hero says which belt; this says how far into it, in the art the
+            centre already hangs on its wall. The nine CREATE belts have one;
+            the Degrees belts do not, and LevelMedal draws nothing rather than
+            borrowing a neighbour's. */}
+        <div className="flex items-center gap-3.5 min-w-0">
           {level != null && hasLevelMedal(belt, level) && (
-            <LevelMedal belt={belt} level={level} size={48} className="drop-shadow-[0_4px_10px_rgba(0,0,0,0.35)]" />
+            <LevelMedal belt={belt} level={level} size={58} className="drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)]" />
           )}
           <div className="min-w-0">
-            <p className="font-ninja text-[13px] opacity-85 truncate">
+            <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">{eyebrow}</p>
+            <Title href={href} className="text-[36px] lg:text-[32px] leading-none mt-1 tracking-[-0.015em]">{belt} belt</Title>
+            <p className="font-ninja text-[13px] opacity-85 mt-2 truncate">
               {[level != null ? `Level ${level}` : null, levels.length ? `${pos} of ${levels.length}` : null, next ? `earns ${next}` : null, logs.length ? `${logs.length} session${logs.length === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ')}
             </p>
-            <OpenChip href={href}>Open the CREATE course</OpenChip>
           </div>
         </div>
       </div>

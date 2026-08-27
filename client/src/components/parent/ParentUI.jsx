@@ -268,6 +268,16 @@ function Cell({ belt, onSelect, isSel, compact, children }) {
 // before. `ahead` dims a level the ninja has not reached, the same 25% and
 // grayscale the belt road uses for belts still to come, so one visual rule
 // covers both ladders.
+//
+// The files are the rosette and its two ribbon tails, and NOT the flat band
+// that sits above the badge on the poster. That band is not damaged art and it
+// was not cropped by us — it is a rectangle with a hard top edge, because on
+// the poster the word LEVEL is printed on top of it. Lifted out on its own it
+// reads as a medal somebody cut in half, which is exactly what it was reported
+// as. The first ~15% of every file (22-25 rows of 128 wide) is that band, and
+// it is gone: below it the band runs behind the star and comes out as the
+// tails, so nothing else is lost. Do NOT re-cut these from the poster without
+// taking the band off again.
 const MEDAL_BELTS = new Set(['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black']);
 
 export function hasLevelMedal(belt, level) {
