@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Hero, Emblem, BeltRoad, LevelPills, LevelMedal, hasLevelMedal, Group, Row, Tile, StatusDot, StatusText, BackChip } from './ParentUI';
+import { Hero, Emblem, BeltRoad, BeltStickers, LevelPills, LevelMedal, hasLevelMedal, Group, Row, Tile, StatusDot, StatusText, BackChip } from './ParentUI';
 import { BELTS, getLevels } from '../../utils/beltConfig';
 import { levelProjects, levelStates, levelTitle, realSessions, trackModel, fmtDay } from '../../lib/parentProgress';
 import { levelInfo, beltInfo, levelShot } from '../../lib/createCurriculum';
@@ -188,6 +188,9 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
         >
           <BeltIcon belt={viewBelt} large style={{ width: '100%', height: '100%' }} />
         </span>
+        {/* The belt's own poster stickers, after the belt art so they land in
+            front of it rather than behind. */}
+        <BeltStickers belt={viewBelt} />
         {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to profile" /></div>}
         <div className="flex items-center lg:items-start justify-between gap-5">
           <div className="flex items-center gap-4 min-w-0">

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { CheckIcon, ChevronRightIcon, StarIcon } from 'lucide-react';
 import { FLAT } from '../../lib/surfaces';
 import { BELTS, PROGRAM_LOGOS, PROGRAM_BANNERS } from '../../utils/beltConfig';
+import { beltStickers } from '../../lib/createCurriculum';
 import { PROGRAM_GRADIENTS } from '../../lib/programTheme';
 import BeltIcon from '../ui/BeltIcon';
 import useIsDesktop from '../../lib/useIsDesktop';
@@ -91,6 +92,91 @@ export function Hero({ program, size = 'card', className = '', style = {}, child
         ? <div className="lg:relative lg:max-w-6xl lg:mx-auto lg:px-6 lg:pt-14 lg:pb-12">{children}</div>
         : children}
     </div>
+  );
+}
+
+// The belt's own spot art, scattered across its banner the way the poster
+// scatters it beside the ninjas: small white-rimmed stickers saying what the
+// belt is about before a word is read.
+//
+// The slots are FIXED, not random. A scatter that reshuffles on every render
+// makes the banner twitch as you walk the road, and a seeded random still has
+// to be tuned to miss the words — so they are simply placed, once, in the
+// empty band between the title on the left and the belt art on the right.
+// Sizes and tilts vary because a grid of identical squares reads as a toolbar
+// rather than as stickers dropped on a page.
+//
+// The band is shaped around the belt art, which moves with the window: its
+// left edge sits far out on a wide screen but reaches in to about 60% of this
+// box at 1024px, and it reaches FURTHEST at mid height, where the ninja's
+// bandana juts out past the head. So the rightmost slot is also the highest
+// one, up where the circle has curved away again, and the low slots stay
+// left. Tuned against the narrowest desktop; a wide one just has more air.
+//
+// Belts that ship fewer stickers use fewer slots; the metal belts and Black
+// have none and render nothing at all.
+const STICKER_SLOTS = [
+  { left: '32%', top: '40%', size: 48, rot: -11 },
+  { left: '39%', top: '4%',  size: 44, rot: 9 },
+  { left: '46%', top: '46%', size: 40, rot: -7 },
+  { left: '51%', top: '12%', size: 50, rot: 13 },
+  { left: '59%', top: '1%',  size: 42, rot: -6 },
+];
+
+// A phone has one gap and it is small: above the title, left of the belt,
+// right of the back chip. Two stickers fit there and a third crowds it, so
+// the belt's remaining art simply is not shown at this width.
+//
+// Both sit HIGH, because the belt is a circle centred in the banner and it is
+// at its widest across the middle: a slot that clears it at 390px is touching
+// it at 320px. Up near the top edge the circle has barely started, so the
+// right-hand slot can sit further across than the mid-band would allow.
+const STICKER_SLOTS_SM = [
+  { left: '30%', top: '8%', size: 34, rot: -10 },
+  { left: '52%', top: '3%', size: 30, rot: 9 },
+];
+
+export function BeltStickers({ belt }) {
+  const desktop = useIsDesktop();
+  const slots = desktop ? STICKER_SLOTS : STICKER_SLOTS_SM;
+  const art = beltStickers(belt);
+  if (!art.length) return null;
+  return (
+    // Absolute and inset, so the slots measure against the hero's own content
+    // box and the whole cluster sits in the same layer as the belt art: above
+    // the gradient, under every word. It comes after the belt in the markup,
+    // so the stickers land in front of it rather than behind.
+    <span
+      aria-hidden
+      className="pointer-events-none"
+      style={{ position: 'absolute', inset: 0, zIndex: -1 }}
+    >
+      {art.slice(0, slots.length).map((src, i, all) => {
+        // Spread whatever a belt has across the WHOLE band rather than
+        // filling from the left: Red ships two stickers and Yellow three, and
+        // taking the first slots each time left them huddled by the title
+        // with a hole where the rest of the cluster should be.
+        const last = slots.length - 1;
+        const s = slots[all.length > 1
+          ? Math.round((i * last) / (all.length - 1))
+          : Math.round(last / 2)];
+        return (
+          <img
+            key={src}
+            src={src}
+            alt=""
+            draggable={false}
+            style={{
+              position: 'absolute', left: s.left, top: s.top,
+              width: s.size, height: s.size,
+              transform: `rotate(${s.rot}deg)`,
+              filter: 'drop-shadow(0 6px 12px rgb(6 13 26 / 0.45))',
+              pointerEvents: 'none',
+            }}
+          />
+        );
+      })}
+    </span>
   );
 }
 

@@ -461,3 +461,26 @@ export function levelShot(belt, level) {
   const key = `${String(belt).toLowerCase()}-${Number(level)}`;
   return LEVEL_SHOTS.has(key) ? `/levels/shots/${key}.png` : null;
 }
+
+// The spot art each belt's poster hangs beside its ninjas: little app-icon
+// stickers, white-rimmed, one set per belt. They say what the belt is about
+// before a word is read — a compass and a speech frame on Blue, a treasure
+// chest and a tilemap on Brown — which is the same job the poster gives them.
+//
+// They live in /belt-stickers, deliberately NOT in /stickers: that folder is
+// the Code.AI login avatar set the JR ninjas pick from, and its names are
+// pinned to a DB CHECK.
+//
+// Cut from the posters, so the count is whatever that belt was drawn with
+// rather than a number we chose: Red was given two, Yellow three, most belts
+// five. Black and the four Degrees belts have no poster cluster at all and
+// get none; anything reading this has to cope with an empty list.
+const BELT_STICKERS = {
+  White: 4, Yellow: 3, Orange: 5, Green: 5, Blue: 5, Purple: 5, Brown: 5, Red: 2,
+};
+
+export function beltStickers(belt) {
+  const n = BELT_STICKERS[belt] || 0;
+  const key = String(belt).toLowerCase();
+  return Array.from({ length: n }, (_, i) => `/belt-stickers/${key}-${i + 1}.png`);
+}
