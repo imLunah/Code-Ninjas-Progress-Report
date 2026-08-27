@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { PageTitle, Row, StatusText, MoreLink } from '../../components/parent/ParentUI';
@@ -7,19 +8,31 @@ import ProgressVisuals from '../../components/parent/ProgressVisuals';
 import { Pin } from '../../components/shared/PinnedNote';
 import LazyMarkdownEditor from '../../components/shared/LazyMarkdownEditor';
 import { FLAT } from '../../lib/surfaces';
-import { SkeletonProfile } from '../../components/ui/Skeleton';
+import { SkeletonProfile, SkeletonCards } from '../../components/ui/Skeleton';
 import Modal from '../../components/ui/Modal';
+import useIsDesktop from '../../lib/useIsDesktop';
 import { activityFeed, fmtLongDay } from '../../lib/parentProgress';
 
-// The full profile: everything about one child on one page.
+// The course a program card opens into. Lazy because it carries the whole
+// CREATE curriculum (43 levels of the poster's own words) and a profile that
+// is never opened into a course should not pay for it.
+const CourseDetail = lazy(() => import('../../components/parent/CourseDetail'));
+
+// The full profile: everything about one child on one page, and the way into
+// each of their courses.
 //
-// Home and Courses are the glance; this is the record: the note the parent
+// Home is the glance; this is the record: the note the parent
 // keeps for the senseis (the one thing in the portal a parent writes rather
 // than reads), the progress visuals, and every session grouped by month. Who
-// they are and what they are in lives on Home and Courses, so the About card
-// that used to sit here was the third printing of it. The URL names the child,
-// so the link on a Home card lands here for that child even when another is
-// selected.
+// they are and what they are in lives on Home, so the About card that used to
+// sit here was a second printing of it. The URL names the child, so the link
+// on a Home card lands here for that child even when another is selected.
+//
+// Courses used to be a section of its own with a grid of art cards in front of
+// it, and that grid was a menu of the programs this page already draws. It is
+// gone. A program card here IS the way in: it opens
+// /parent/students/:id/courses/:program, which is the same page it always was,
+// rendered in place of the profile with Back going to the profile.
 
 function monthKey(dateStr) {
   const d = new Date(String(dateStr).split('T')[0] + 'T00:00:00');
@@ -91,18 +104,35 @@ function NoteButton({ child, text, onSave }) {
   );
 }
 
+const EASE_OUT = [0.23, 1, 0.32, 1];
+const enc = (p) => encodeURIComponent(p);
+
 export default function ParentProfile() {
-  const { id } = useParams();
+  const { id, program } = useParams();
+  const navigate = useNavigate();
+  const desktop = useIsDesktop();
   const { students, setActiveId, setViewAll, detailFor, loadDetail, detailLoading, saveNote } = useParentPortal();
   const target = Number(id);
   const child = (students || []).find((s) => s.id === target) || null;
   const detail = detailFor(target);
+  const courseName = program ? decodeURIComponent(program) : null;
 
   // Landing here IS choosing this child, so the switchers agree with the page.
   useEffect(() => {
     if (child) { setActiveId(child.id); setViewAll(false); }
   }, [child?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (child) loadDetail(child.id); }, [child?.id, loadDetail]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A course in the URL this child is not in — an old link, or the switcher
+  // moved to a sibling who is in different programs. Fall back to the profile
+  // rather than showing a course that is not theirs.
+  useEffect(() => {
+    if (courseName && detail && !(detail.programs || []).some((p) => p.program === courseName)) {
+      navigate(`/parent/students/${target}`, { replace: true });
+    }
+  }, [courseName, detail, target, navigate]);
+
+  const courseHref = useCallback((name) => `/parent/students/${target}/courses/${enc(name)}`, [target]);
 
   const feed = useMemo(() => activityFeed(detail), [detail]);
   const months = useMemo(() => {
@@ -134,6 +164,30 @@ export default function ParentProfile() {
 
   const programs = detail?.programs || child.programs || [];
   const first = child.full_name.split(' ')[0];
+  // Only ever off the loaded detail: the enrollment on the students list is a
+  // summary, and the course reads fields (last kit, last module) that only the
+  // full record carries. Without it the page falls back to the profile, which
+  // is already fetching.
+  const openCourse = courseName && detail ? programs.find((p) => p.program === courseName) : null;
+
+  // With a course open, the course is the page — the same full-bleed hero it
+  // had as its own section, with Back returning to the child it belongs to.
+  if (openCourse) {
+    return (
+      <ParentLayout switcher={switcher} bleed={!desktop}>
+        <Suspense fallback={<SkeletonCards count={1} height={260} label={`Loading ${openCourse.program}`} />}>
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, ease: EASE_OUT }}>
+            <CourseDetail
+              enrollment={openCourse}
+              logs={(detail?.session_logs || []).filter((l) => l.program === openCourse.program)}
+              childName={first}
+              backTo={`/parent/students/${target}`}
+            />
+          </motion.div>
+        </Suspense>
+      </ParentLayout>
+    );
+  }
 
   return (
     <ParentLayout switcher={switcher}>
@@ -142,8 +196,10 @@ export default function ParentProfile() {
           right={<NoteButton child={child} text={detail?.special_instructions || ''} onSave={(text) => saveNote(child.id, text)} />} />
         <div className="lg:hidden"><ChildSwitcher layoutId="parent-child-mobile" /></div>
 
+        {/* Activity, then the Courses section that Courses used to be a page
+            of. Every card in it opens the course it describes. */}
         {detail && programs.length > 0 && (
-          <ProgressVisuals programs={programs} sessionLogs={detail.session_logs || []} childName={first} />
+          <ProgressVisuals programs={programs} sessionLogs={detail.session_logs || []} childName={first} courseHref={courseHref} />
         )}
 
         <div className="space-y-3">

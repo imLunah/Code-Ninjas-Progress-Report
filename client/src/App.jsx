@@ -39,7 +39,6 @@ const ClubsPage = lazy(() => import('./pages/ClubsPage'));
 const ClubProfilePage = lazy(() => import('./pages/ClubProfilePage'));
 const ClubSessionPage = lazy(() => import('./pages/ClubSessionPage'));
 const ParentHome = lazy(() => import('./pages/parent/ParentHome'));
-const ParentCourses = lazy(() => import('./pages/parent/ParentCourses'));
 const ParentProfile = lazy(() => import('./pages/parent/ParentProfile'));
 const ParentWelcomePage = lazy(() => import('./pages/parent/ParentWelcomePage'));
 const ParentAccountPage = lazy(() => import('./pages/parent/ParentAccountPage'));
@@ -99,10 +98,15 @@ export default function App() {
             <Route path="/parent/login"       element={<Navigate to="/login?tab=parent" replace />} />
             <Route path="/parent/welcome"     element={<ParentRoute onboarding><ParentWelcomePage /></ParentRoute>} />
             <Route path="/parent/dashboard"   element={<ParentRoute><ParentHome /></ParentRoute>} />
-            <Route path="/parent/courses"     element={<ParentRoute><ParentCourses /></ParentRoute>} />
-            <Route path="/parent/courses/:program" element={<ParentRoute><ParentCourses /></ParentRoute>} />
             <Route path="/parent/students/:id" element={<ParentRoute><ParentProfile /></ParentRoute>} />
+            <Route path="/parent/students/:id/courses/:program" element={<ParentRoute><ParentProfile /></ParentRoute>} />
             <Route path="/parent/account"     element={<ParentRoute><ParentAccountPage /></ParentRoute>} />
+            {/* Courses was its own section until the grid in front of it turned
+                out to be a menu of what the profile already shows. A course is
+                opened from the child it belongs to now; the old links land on
+                Home rather than nowhere. */}
+            <Route path="/parent/courses"     element={<Navigate to="/parent/dashboard" replace />} />
+            <Route path="/parent/courses/*"   element={<Navigate to="/parent/dashboard" replace />} />
             <Route path="/parent/note"        element={<Navigate to="/parent/dashboard" replace />} />
             <Route path="/parent/sessions"    element={<Navigate to="/parent/dashboard" replace />} />
 

@@ -1,49 +1,30 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { PlusIcon } from 'lucide-react';
-import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
-import { useParentPortal } from '../../context/ParentPortalContext';
-import { PageTitle, Hero, Emblem, BeltRoad, LevelPills, LevelMedal, hasLevelMedal, Group, Row, Tile, StatusDot, StatusText, BackChip } from '../../components/parent/ParentUI';
-import useIsDesktop from '../../lib/useIsDesktop';
-import { FLAT } from '../../lib/surfaces';
-import { SkeletonCards } from '../../components/ui/Skeleton';
+import { Hero, Emblem, BeltRoad, LevelPills, LevelMedal, hasLevelMedal, Group, Row, Tile, StatusDot, StatusText, BackChip } from './ParentUI';
 import { BELTS, getLevels } from '../../utils/beltConfig';
 import { levelProjects, levelStates, levelTitle, realSessions, trackModel, fmtDay } from '../../lib/parentProgress';
 import { levelInfo, beltInfo, levelShot } from '../../lib/createCurriculum';
 import { KIT_SHORT } from '../../lib/programTheme';
 import { useCurriculum } from '../../context/CurriculumContext';
-import BeltIcon from '../../components/ui/BeltIcon';
+import BeltIcon from '../ui/BeltIcon';
 
-// Courses: one card per program the child is in.
+// One course, opened from a child's profile.
 //
-// The list shows just the programs as art cards. Tapping one opens it:
-// /parent/courses/:program is the course, a full page of progress and
-// curriculum with a way back at the top of its hero.
+// This used to be its own Courses section with a grid of art cards in front of
+// it. The grid was a menu of five things a parent already sees on the profile,
+// so the section came off and the profile's own program cards became the way
+// in: /parent/students/:id/courses/:program. The page itself is unchanged —
+// what changed is only where it is reached from, and where Back goes.
 //
-// CREATE is the star. Its card carries the level and the belt road; opened,
-// it leads with a hero in the CREATE blue (the belt shows as its icon, not as
-// the banner's colour), the level pills, the chosen level's real projects from
-// the curriculum with what the log says about each, and the other levels.
-// Programs without belts are tracks of modules (kits for Robotics), read off
-// the curriculum and the log by trackModel: the same hero in their own art,
-// the tracks as pills, the open track's modules, and the other tracks.
+// CREATE is the star. It leads with a hero in the CREATE blue (the belt shows
+// as its icon, not as the banner's colour), the level pills, the chosen
+// level's real projects from the curriculum with what the log says about each,
+// and the other levels. Programs without belts are tracks of modules (kits for
+// Robotics), read off the curriculum and the log by trackModel: the same hero
+// in their own art, the tracks as pills, the open track's modules, and the
+// other tracks.
 
 const EASE_OUT = [0.23, 1, 0.32, 1];
-const SNAP = { type: 'spring', stiffness: 480, damping: 36 }; // critically damped, ~0.3s
-const enc = (p) => encodeURIComponent(p);
-
-// A short line about where the child is in a program.
-function whereLine(enrollment, logs, model) {
-  if (enrollment.program === 'CREATE') {
-    return enrollment.belt_level ? `${enrollment.belt_level} belt${enrollment.belt_sublevel ? ` · Level ${enrollment.belt_sublevel}` : ''}` : 'Just getting started';
-  }
-  const t = model?.current;
-  if (t && t.sessions > 0) {
-    return [model.multi ? t.name : null, t.working ? t.working.name : null].filter(Boolean).join(' · ') || `${t.sessions} session${t.sessions === 1 ? '' : 's'}`;
-  }
-  return 'Just getting started';
-}
 
 // The line under a track's name: "Module 2 of 4 · Sensors".
 function trackLine(t) {
@@ -58,41 +39,6 @@ function useTrackModel(enrollment, logs) {
   return useMemo(() => (enrollment.program === 'CREATE' ? null : trackModel({ program: enrollment.program, enrollment, logs, curriculum, subPrograms, shortNames: KIT_SHORT })), [enrollment, logs, curriculum, subPrograms]);
 }
 
-function CourseCard({ enrollment, logs, onOpen }) {
-  const p = enrollment.program;
-  const model = useTrackModel(enrollment, logs);
-  // The art IS the card: the program banner fills it, the name sits on a
-  // bottom wash, and the round plus is the whole affordance.
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="relative w-full text-left rounded-[18px] overflow-hidden shadow-sm transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none"
-      style={{ transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)' }}
-    >
-      <Hero program={p} className="aspect-[16/10] flex flex-col justify-end">
-        <span
-          aria-hidden
-          className="absolute inset-x-0 bottom-0 h-28 pointer-events-none"
-          style={{ background: 'linear-gradient(180deg, rgb(6 13 26 / 0) 0%, rgb(6 13 26 / 0.68) 100%)' }}
-        />
-        <div className="relative flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <p className="font-ninja font-extrabold text-[20px] leading-tight truncate">{p}</p>
-            <p className="font-ninja text-[12.5px] font-bold opacity-85 truncate mt-0.5">{whereLine(enrollment, logs, model)}</p>
-          </div>
-          <span
-            aria-hidden
-            className="inline-flex items-center justify-center w-9 h-9 rounded-full flex-shrink-0"
-            style={{ background: 'rgb(255 255 255 / 0.18)', border: '1px solid rgb(255 255 255 / 0.28)' }}
-          >
-            <PlusIcon size={18} strokeWidth={2.5} />
-          </span>
-        </div>
-      </Hero>
-    </button>
-  );
-}
 
 function ProjectRow({ p, first }) {
   const adventure = p.kind === 'Adventure';
@@ -165,7 +111,7 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
     return (
       <div className="space-y-4">
         <Hero program="CREATE" size="page">
-          {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to courses" /></div>}
+          {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to profile" /></div>}
           <p className="font-ninja text-[12px] font-extrabold opacity-85">CREATE · {childName}</p>
           <p className="font-ninja font-extrabold text-[32px] leading-tight mt-1">White belt ahead</p>
           <p className="font-ninja text-[13px] opacity-85 mt-1">The belt road starts with the first logged session.</p>
@@ -242,7 +188,7 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
         >
           <BeltIcon belt={viewBelt} large style={{ width: '100%', height: '100%' }} />
         </span>
-        {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to courses" /></div>}
+        {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to profile" /></div>}
         <div className="flex items-center lg:items-start justify-between gap-5">
           <div className="flex items-center gap-4 min-w-0">
             <div className="min-w-0">
@@ -404,7 +350,7 @@ function TrackDetail({ enrollment, logs, childName, backTo }) {
   return (
     <div className="space-y-4">
       <Hero program={p} size="page">
-        {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to courses" /></div>}
+        {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to profile" /></div>}
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="hidden lg:block font-ninja text-[12px] font-extrabold opacity-85 truncate">{p} · {childName}</p>
@@ -462,86 +408,8 @@ function TrackDetail({ enrollment, logs, childName, backTo }) {
   );
 }
 
-function CourseDetail({ enrollment, logs, childName, backTo }) {
+export default function CourseDetail({ enrollment, logs, childName, backTo }) {
   return enrollment.program === 'CREATE'
     ? <CreateDetail enrollment={enrollment} logs={logs} childName={childName} backTo={backTo} />
     : <TrackDetail enrollment={enrollment} logs={logs} childName={childName} backTo={backTo} />;
-}
-
-export default function ParentCourses() {
-  const { program } = useParams();
-  const navigate = useNavigate();
-  const desktop = useIsDesktop();
-  const { students, active, detail, detailLoading } = useParentPortal();
-  const name = program ? decodeURIComponent(program) : null;
-  const enrollments = detail?.programs || [];
-  const logsFor = (p) => (detail?.session_logs || []).filter((l) => l.program === p);
-  const first = active?.full_name?.split(' ')[0] || '';
-
-  const open = name ? enrollments.find((e) => e.program === name) : null;
-
-  // A course in the URL that this child is not in (the switcher moved to a
-  // sibling, or an old link): fall back to the list.
-  useEffect(() => {
-    if (name && detail && !enrollments.some((e) => e.program === name)) navigate('/parent/courses', { replace: true });
-  }, [name, detail, enrollments, navigate]);
-
-  const switcher = <ChildSwitcher layoutId="parent-child-desktop" />;
-  const loading = students === null || (active && detailLoading && !detail);
-
-  const header = (
-    <>
-      <PageTitle title="Courses" eyebrow={active ? `${first} · ${enrollments.length} program${enrollments.length === 1 ? '' : 's'}` : ''} />
-      <div className="lg:hidden"><ChildSwitcher layoutId="parent-child-mobile" /></div>
-    </>
-  );
-
-  if (loading) {
-    return (
-      <ParentLayout switcher={switcher}>
-        <div className="space-y-4">{header}<SkeletonCards count={2} cols="lg:grid-cols-2" height={220} label="Loading courses" /></div>
-      </ParentLayout>
-    );
-  }
-
-  if (!active) {
-    return (
-      <ParentLayout switcher={switcher}>
-        <div className="space-y-4">{header}
-          <div className={`${FLAT} p-8 text-center`}><p className="text-ninja-muted font-ninja text-sm">No ninjas are linked to this email yet.</p></div>
-        </div>
-      </ParentLayout>
-    );
-  }
-
-  const list = (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-      {enrollments.map((e) => (
-        <CourseCard key={e.id || e.program} enrollment={e} logs={logsFor(e.program)} onOpen={() => navigate(`/parent/courses/${enc(e.program)}`)} />
-      ))}
-      {enrollments.length === 0 && (
-        <div className={`${FLAT} p-8 text-center sm:col-span-2`}><p className="text-ninja-muted font-ninja text-sm">{first} is not enrolled in a program yet.</p></div>
-      )}
-    </div>
-  );
-
-  // With a course open, the course is the page on every width.
-  if (open) {
-    return (
-      <ParentLayout switcher={switcher} bleed={!desktop}>
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, ease: EASE_OUT }}>
-          <CourseDetail enrollment={open} logs={logsFor(open.program)} childName={first} backTo="/parent/courses" />
-        </motion.div>
-      </ParentLayout>
-    );
-  }
-
-  return (
-    <ParentLayout switcher={switcher}>
-      <div className="space-y-4 lg:space-y-5">
-        {header}
-        {list}
-      </div>
-    </ParentLayout>
-  );
 }

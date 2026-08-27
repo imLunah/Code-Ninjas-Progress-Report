@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { HomeIcon, BookOpenIcon, UserRoundIcon, LogOutIcon, ChevronLeftIcon } from 'lucide-react';
+import { HomeIcon, UserRoundIcon, LogOutIcon, ChevronLeftIcon } from 'lucide-react';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { useLightOnly } from '../../context/ThemeContext';
@@ -32,9 +32,11 @@ import { RocketIcon } from '../ui/icons';
 const EXPANDED_W = 240; // matches w-60
 const COLLAPSED_W = 76;
 
+// Home and the active child's profile. Courses was a third section and it is
+// gone: its grid was a menu of the programs the profile already lists, and a
+// course now opens from the card that describes it.
 const TABS = [
-  { to: '/parent/dashboard', label: 'Home',    Glyph: HomeIcon },
-  { to: '/parent/courses',   label: 'Courses', Glyph: BookOpenIcon },
+  { to: '/parent/dashboard', label: 'Home', Glyph: HomeIcon },
 ];
 
 // Same look as MobileNav: near-transparent capsule, refracting where the browser can.
@@ -70,8 +72,8 @@ export function ChildSwitcher({ withAll = false, size = 'sm', layoutId = 'parent
   return <Segmented options={options} value={value} onChange={onChange} label="Which ninja" layoutId={layoutId} size={size} />;
 }
 
-// Home, Courses, and the active child's profile — the same three sections as
-// the phone capsule, built the same way.
+// Home and the active child's profile — the same two sections as the phone
+// capsule, built the same way.
 function useParentTabs() {
   const { activeId } = useParentPortal();
   return [...TABS, { to: activeId ? `/parent/students/${activeId}` : '/parent/dashboard', match: '/parent/students', label: 'Profile', Glyph: UserRoundIcon }];

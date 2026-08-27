@@ -1,9 +1,11 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { ChevronRightIcon } from 'lucide-react';
 import { BELTS, PROGRAM_LOGOS, PROGRAM_BANNERS, getLevels } from '../../utils/beltConfig';
 import { PROGRAM_GRADIENTS, PROGRAM_BAR_COLORS, JR_CODING_MODULES, SNAP_CIRCUITS_TOTAL, KIT_ORDER, KIT_SHORT, KIT_TOTALS } from '../../lib/programTheme';
 import BeltIcon from '../ui/BeltIcon';
-import { Hero, BeltRoad } from './ParentUI';
+import { Hero, BeltRoad, PageTitle, LevelMedal, hasLevelMedal } from './ParentUI';
 import { useCurriculum } from '../../context/CurriculumContext';
 import { formatDate } from '../../utils/dateUtils';
 import { CARD } from '../../lib/surfaces';
@@ -46,6 +48,53 @@ const nodeVariants = {
   hidden: { opacity: 0, scale: 0.3 },
   show: { opacity: 1, scale: 1, transition: { type: 'spring', stiffness: 320, damping: 16 } },
 };
+
+// ─── Opening a course ─────────────────────────────────────────────────────────
+
+// The way into a course, and the reason the Courses section could come off the
+// nav: the card that DESCRIBES a program is the card that opens it.
+//
+// The whole card is the target, because a parent should not have to hunt for a
+// small control on a card that is already about one thing. The footer says so
+// in words anyway — a card that is only silently clickable is a card nobody
+// clicks — and it is the last thing in the card so it reads as the door out of
+// it rather than a label on it.
+function CourseShell({ href, program, children }) {
+  const shell = 'block rounded-2xl overflow-hidden border border-ninja-border shadow-sm';
+  const body = (
+    <>
+      {children}
+      {href && (
+        <div className="flex items-center justify-between gap-3 bg-white px-5 py-3 border-t border-ninja-border">
+          <span className="font-ninja text-[13px] font-extrabold text-ninja-blue-ink">Open the {program} course</span>
+          <ChevronRightIcon size={16} strokeWidth={2.6} aria-hidden className="text-ninja-blue-ink flex-shrink-0" />
+        </div>
+      )}
+    </>
+  );
+  return (
+    <motion.div variants={cardVariants} initial="hidden" animate="show">
+      {href
+        ? <Link to={href} className={`${shell} transition-shadow hover:shadow-md focus-visible:outline-none`}>{body}</Link>
+        : <div className={shell}>{body}</div>}
+    </motion.div>
+  );
+}
+
+// The same door, worn on a hero instead of under a card: the belt journey has
+// no white body to put a footer row in, so it takes a chip in the words.
+function OpenChip({ href, children }) {
+  if (!href) return null;
+  return (
+    <Link
+      to={href}
+      className="inline-flex items-center gap-1 mt-2 rounded-full border border-white/35 bg-white/20 px-3 py-1 font-ninja text-[12.5px] font-extrabold text-white transition-colors hover:bg-white/30"
+    >
+      {children}
+      <ChevronRightIcon size={14} strokeWidth={2.8} aria-hidden />
+    </Link>
+  );
+}
 
 // ─── Program card banner ──────────────────────────────────────────────────────
 
@@ -215,7 +264,7 @@ function ActivityChart({ logs }) {
 // and a sublevel bar — a second design for the one thing the portal already
 // draws. Everything here now comes from ParentUI: the hero, its banner art and
 // the road itself.
-function BeltJourney({ enrollment, logs = [], childName }) {
+function BeltJourney({ enrollment, logs = [], childName, href }) {
   const belt = enrollment.belt_level;
   const levels = belt ? getLevels(belt) : [];
   const level = Number(enrollment.belt_sublevel) || levels[0] || null;
@@ -230,6 +279,7 @@ function BeltJourney({ enrollment, logs = [], childName }) {
         <p className="font-ninja text-[12px] font-extrabold opacity-85">{eyebrow}</p>
         <p className="font-ninja font-extrabold text-[32px] leading-tight mt-1">White belt ahead</p>
         <p className="font-ninja text-[13px] opacity-85 mt-1">The belt road starts with the first logged session.</p>
+        <OpenChip href={href}>See the CREATE course</OpenChip>
       </Hero>
     );
   }
@@ -266,9 +316,23 @@ function BeltJourney({ enrollment, logs = [], childName }) {
         </span>
         <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">{eyebrow}</p>
         <p className="font-ninja font-extrabold text-[36px] lg:text-[32px] leading-none mt-1 tracking-[-0.015em]">{belt} belt</p>
-        <p className="font-ninja text-[13px] opacity-85 mt-2 truncate">
-          {[level != null ? `Level ${level}` : null, levels.length ? `${pos} of ${levels.length}` : null, next ? `earns ${next}` : null, logs.length ? `${logs.length} session${logs.length === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ')}
-        </p>
+        {/* The level's own medal off the IMPACT poster, stamped beside the
+            line that names the level. The belt behind the hero says which
+            belt; this says how far into it, in the art the centre already
+            hangs on its wall. The nine CREATE belts have one; the Degrees
+            belts do not, and LevelMedal draws nothing rather than borrowing a
+            neighbour's, so the line simply sits where it always did. */}
+        <div className="flex items-center gap-3 mt-2 min-w-0">
+          {level != null && hasLevelMedal(belt, level) && (
+            <LevelMedal belt={belt} level={level} size={48} className="drop-shadow-[0_4px_10px_rgba(0,0,0,0.35)]" />
+          )}
+          <div className="min-w-0">
+            <p className="font-ninja text-[13px] opacity-85 truncate">
+              {[level != null ? `Level ${level}` : null, levels.length ? `${pos} of ${levels.length}` : null, next ? `earns ${next}` : null, logs.length ? `${logs.length} session${logs.length === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ')}
+            </p>
+            <OpenChip href={href}>Open the CREATE course</OpenChip>
+          </div>
+        </div>
       </div>
 
       {/* Shown at every width here, unlike the course page: there the level
@@ -384,7 +448,7 @@ function KitPath({ kitOrder, kitShort, currentKitIndex, barColor }) {
   );
 }
 
-function ModuleProgress({ program, enrollment, logs }) {
+function ModuleProgress({ program, enrollment, logs, href }) {
   const { curriculum: CURRICULUM } = useCurriculum();
   const totalSessions = logs.filter((l) => !l.from_roadmap).length;
   const lastDate = enrollment?.last_session_date;
@@ -405,12 +469,7 @@ function ModuleProgress({ program, enrollment, logs }) {
     const visitedModules = new Set(logs.map((l) => l.module_name).filter(Boolean));
 
     return (
-      <motion.div
-        className="rounded-2xl overflow-hidden border border-ninja-border shadow-sm"
-        variants={cardVariants}
-        initial="hidden"
-        animate="show"
-      >
+      <CourseShell href={href} program={program}>
         <ProgramCardBanner program="AI Academy" lastDate={lastDate} />
         <div className="bg-white p-5">
           {currentModule ? (
@@ -439,7 +498,7 @@ function ModuleProgress({ program, enrollment, logs }) {
           </p>
           <ModuleGrid modules={aiCurriculum} visited={visitedModules} accentColor={barColor} />
         </div>
-      </motion.div>
+      </CourseShell>
     );
   }
 
@@ -460,12 +519,7 @@ function ModuleProgress({ program, enrollment, logs }) {
     const hasSnap = snapLogs.length > 0;
 
     return (
-      <motion.div
-        className="rounded-2xl overflow-hidden border border-ninja-border shadow-sm"
-        variants={cardVariants}
-        initial="hidden"
-        animate="show"
-      >
+      <CourseShell href={href} program={program}>
         <ProgramCardBanner program="JR" lastDate={lastDate} sessions={totalSessions} />
         <div className="bg-white p-5 space-y-5">
           {hasJrCoding && (
@@ -538,7 +592,7 @@ function ModuleProgress({ program, enrollment, logs }) {
             <p className="text-ninja-muted font-ninja text-sm italic">No sessions logged yet.</p>
           )}
         </div>
-      </motion.div>
+      </CourseShell>
     );
   }
 
@@ -557,12 +611,7 @@ function ModuleProgress({ program, enrollment, logs }) {
       : new Set();
 
     return (
-      <motion.div
-        className="rounded-2xl overflow-hidden border border-ninja-border shadow-sm"
-        variants={cardVariants}
-        initial="hidden"
-        animate="show"
-      >
+      <CourseShell href={href} program={program}>
         <ProgramCardBanner program="Robotics Academy" lastDate={lastDate} />
         <div className="bg-white p-5">
           {currentKit ? (
@@ -603,7 +652,7 @@ function ModuleProgress({ program, enrollment, logs }) {
             </>
           )}
         </div>
-      </motion.div>
+      </CourseShell>
     );
   }
 
@@ -612,45 +661,63 @@ function ModuleProgress({ program, enrollment, logs }) {
   const modules = CURRICULUM[program] || [];
   const visited = new Set(logs.map((l) => l.module_name).filter(Boolean));
 
+  // The banner is not a decoration Robotics and AI happen to get: every
+  // program has its own lockup off the Canva sheet, and a card that opened
+  // with a heading in navy while its neighbours opened with art read as the
+  // one program nobody had finished. Silver, VR Coding and both Golds land
+  // here, and they arrive with their own logo on their own gradient.
   return (
-    <div className={`${CARD} p-5`}>
-      <div className="flex items-center justify-between mb-1">
-        <h2 className="text-ninja-navy font-ninja font-bold text-lg">{program}</h2>
-        <span className="text-ninja-muted font-ninja text-sm">{totalSessions} sessions</span>
+    <CourseShell href={href} program={program}>
+      <ProgramCardBanner program={program} lastDate={lastDate} sessions={totalSessions} />
+      <div className="bg-white p-5">
+        <ProgressBar pct={pct} color={barColor} delay={0.2} label="Progress" value={`${pct}%`} />
+        <ModuleGrid modules={modules} visited={visited} accentColor={barColor} />
+        {modules.length === 0 && totalSessions === 0 && (
+          <p className="text-ninja-muted font-ninja text-sm italic">No sessions logged yet.</p>
+        )}
       </div>
-      {lastDate && (
-        <p className="text-ninja-muted font-ninja text-xs mb-3">Last: {formatDate(lastDate)}</p>
-      )}
-      <ProgressBar pct={pct} color={barColor} delay={0.2} label="Progress" value={`${pct}%`} />
-      <ModuleGrid modules={modules} visited={visited} accentColor={barColor} />
-    </div>
+    </CourseShell>
   );
 }
 
 // ─── Entry point ──────────────────────────────────────────────────────────────
 
-export default function ProgressVisuals({ programs, sessionLogs, childName }) {
+// Activity, then Courses. `courseHref` is what turns the second half into a
+// section rather than a read-out: given one, every card opens the course it
+// describes. Without it the cards are exactly what they were.
+export default function ProgressVisuals({ programs, sessionLogs, childName, courseHref }) {
   const create = programs.find((p) => p.program === 'CREATE');
   const others = programs.filter((p) => p.program !== 'CREATE');
+  const href = (name) => (courseHref ? courseHref(name) : null);
+  const count = programs.length;
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 xl:items-start">
-      <div className="xl:col-span-2">
-        <ActivityChart logs={sessionLogs} />
-      </div>
-      {create && (
-        <div className="xl:col-span-2">
-          <BeltJourney enrollment={create} logs={sessionLogs.filter((l) => l.program === 'CREATE')} childName={childName} />
-        </div>
-      )}
-      {others.map((p) => (
-        <ModuleProgress
-          key={p.program}
-          program={p.program}
-          enrollment={p}
-          logs={sessionLogs.filter((l) => l.program === p.program)}
+    <div className="space-y-4 lg:space-y-5">
+      <ActivityChart logs={sessionLogs} />
+
+      <div className="space-y-3">
+        <PageTitle
+          title="Courses"
+          eyebrow={[childName, `${count} program${count === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}
+          className="pt-2"
         />
-      ))}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 xl:items-start">
+          {create && (
+            <div className="xl:col-span-2">
+              <BeltJourney enrollment={create} logs={sessionLogs.filter((l) => l.program === 'CREATE')} childName={childName} href={href('CREATE')} />
+            </div>
+          )}
+          {others.map((p) => (
+            <ModuleProgress
+              key={p.program}
+              program={p.program}
+              enrollment={p}
+              logs={sessionLogs.filter((l) => l.program === p.program)}
+              href={href(p.program)}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
