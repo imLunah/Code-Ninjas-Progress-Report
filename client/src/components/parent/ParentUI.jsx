@@ -6,6 +6,7 @@ import { FLAT } from '../../lib/surfaces';
 import { BELTS, PROGRAM_LOGOS, PROGRAM_BANNERS } from '../../utils/beltConfig';
 import { PROGRAM_GRADIENTS } from '../../lib/programTheme';
 import BeltIcon from '../ui/BeltIcon';
+import useIsDesktop from '../../lib/useIsDesktop';
 
 // The parent portal's small vocabulary, in one file so the pages read the same.
 //
@@ -153,8 +154,14 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
   // what is dimmed ahead. `selected` is only what is being LOOKED at, and it
   // is what grows. They are the same belt until somebody taps another one.
   const sel = BELTS.findIndex((b) => b.name === (selected || current));
-  const icon = compact ? 22 : 30;
-  const cur = compact ? 36 : 58;
+  // The belts grew for the desktop banner, where the road has 1100px to live
+  // in. A phone has a third of that and the road is a scroller, so it keeps
+  // the smaller pair: at 30/58 on a 390px screen the current belt swallowed
+  // its neighbours and the labels ran together. Asked in JS because these
+  // numbers are inline styles and a spring target, not classes.
+  const desktop = useIsDesktop();
+  const icon = compact ? 22 : desktop ? 30 : 24;
+  const cur = compact ? 36 : desktop ? 58 : 40;
   const line = onHero ? 'rgb(255 255 255 / 0.35)' : 'rgb(var(--ninja-navy) / 0.15)';
   const trail = onHero ? 'rgb(255 255 255 / 0.85)' : 'rgb(var(--ninja-navy) / 0.45)';
   const scroller = useRef(null);
@@ -222,7 +229,7 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
                   they are wider at lg because the gap either side of a belt
                   inside its column is wider there. */}
               {i < BELTS.length - 1 && (
-                <span aria-hidden className="block flex-shrink-0 -mx-[8px] lg:-mx-[19px] lg:flex-1 lg:min-w-[34px] lg:max-w-[64px]" style={{ width: compact ? 6 : 8, height: 2, background: i < idx ? trail : line, marginTop: cur / 2 - 1 }} />
+                <span aria-hidden className="block flex-shrink-0 -mx-[11px] lg:-mx-[19px] lg:flex-1 lg:min-w-[34px] lg:max-w-[64px]" style={{ width: compact ? 6 : 8, height: 2, background: i < idx ? trail : line, marginTop: cur / 2 - 1 }} />
               )}
             </div>
           );
