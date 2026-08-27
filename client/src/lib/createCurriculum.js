@@ -476,11 +476,15 @@ export function levelShot(belt, level) {
 // them needed keying out of a sky.
 //
 // The count is whatever that belt has to give rather than a number we chose:
-// Red ships two achievement icons and Black one, Yellow three, most belts
-// five. The four Degrees belts have none at all, so anything reading this has
-// to cope with an empty list.
+// Red ships two achievement icons, Yellow three, most belts five. The four
+// Degrees belts have none at all, so anything reading this has to cope with
+// an empty list.
+//
+// Black is deliberately empty too. Its one icon is the IMPACT lockup rather
+// than anything a Black belt does, and a single sticker in the middle of a
+// banner reads as a stray mark rather than a scatter.
 const BELT_STICKERS = {
-  White: 4, Yellow: 3, Orange: 5, Green: 5, Blue: 5, Purple: 5, Brown: 5, Red: 2, Black: 1,
+  White: 4, Yellow: 3, Orange: 5, Green: 5, Blue: 5, Purple: 5, Brown: 5, Red: 2,
 };
 
 export function beltStickers(belt) {
