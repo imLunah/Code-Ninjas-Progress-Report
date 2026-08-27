@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { PlusIcon } from 'lucide-react';
 import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
 import { useParentPortal } from '../../context/ParentPortalContext';
-import { PageTitle, Hero, Emblem, BeltRoad, LevelPills, Group, Row, Tile, StatusDot, StatusText, BackChip } from '../../components/parent/ParentUI';
+import { PageTitle, Hero, Emblem, BeltRoad, LevelPills, LevelMedal, hasLevelMedal, Group, Row, Tile, StatusDot, StatusText, BackChip } from '../../components/parent/ParentUI';
 import useIsDesktop from '../../lib/useIsDesktop';
 import { FLAT } from '../../lib/surfaces';
 import { SkeletonCards } from '../../components/ui/Skeleton';
@@ -288,7 +288,9 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
               const lastDone = finished[finished.length - 1] || null;
               return (
                 <Row key={s.level} first={i === 0} onClick={() => pick(s.level)} active={s.level === level} dim={s.state === 'ahead'}
-                  lead={<Tile tint={s.state === 'done' ? 'rgb(34 197 94 / 0.14)' : s.state === 'current' ? 'rgb(var(--ninja-blue) / 0.14)' : 'rgb(var(--ninja-navy) / 0.06)'} color={s.state === 'done' ? '#15803d' : s.state === 'current' ? undefined : 'rgb(var(--ninja-muted))'}>{s.level}</Tile>}
+                  lead={hasLevelMedal(viewBelt, s.level)
+                    ? <LevelMedal belt={viewBelt} level={s.level} ahead={s.state === 'ahead'} />
+                    : <Tile tint={s.state === 'done' ? 'rgb(34 197 94 / 0.14)' : s.state === 'current' ? 'rgb(var(--ninja-blue) / 0.14)' : 'rgb(var(--ninja-navy) / 0.06)'} color={s.state === 'done' ? '#15803d' : s.state === 'current' ? undefined : 'rgb(var(--ninja-muted))'}>{s.level}</Tile>}
                   title={`Level ${s.level}`}
                   subtitle={[`${s.projectCount} project${s.projectCount === 1 ? '' : 's'}`, s.state === 'current' ? 'now' : s.state === 'done' && lastDone ? `done ${fmtDay(lastDone)}` : null].filter(Boolean).join(' · ')}
                 />

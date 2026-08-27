@@ -253,6 +253,33 @@ function Cell({ belt, onSelect, isSel, compact, children }) {
   );
 }
 
+// The medal a level is actually awarded with, lifted straight off the IMPACT
+// wall posters: one per belt colour, numbered, White 1 through Black 1. Only
+// CREATE has them — the Degrees belts (Bronze, Silver, Platinum, Gold) are not
+// in the IMPACT set, and neither is any other program, so `LevelMedal` returns
+// null rather than guessing and the caller falls back to whatever it drew
+// before. `ahead` dims a level the ninja has not reached, the same 25% and
+// grayscale the belt road uses for belts still to come, so one visual rule
+// covers both ladders.
+const MEDAL_BELTS = new Set(['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black']);
+
+export function hasLevelMedal(belt, level) {
+  return MEDAL_BELTS.has(belt) && Number.isFinite(Number(level));
+}
+
+export function LevelMedal({ belt, level, size = 40, ahead = false, className = '' }) {
+  if (!hasLevelMedal(belt, level)) return null;
+  return (
+    <img
+      src={`/levels/${belt.toLowerCase()}-${Number(level)}.png`}
+      alt={`Level ${level}`}
+      draggable={false}
+      style={{ width: size, height: 'auto' }}
+      className={`object-contain flex-shrink-0 ${ahead ? 'opacity-25 grayscale' : ''} ${className}`}
+    />
+  );
+}
+
 // Level pills (and kit pills, via `label`). `states` is levelStates() from parentProgress: done levels
 // carry a check, the current one is solid, the ones ahead are quiet. On a
 // hero the solid pill is white; on a card it is the CREATE blue. The solid
