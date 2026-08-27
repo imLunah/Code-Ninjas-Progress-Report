@@ -272,14 +272,21 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
             <Group tint={levelState === 'current' ? 'green' : levelState === 'done' ? 'blue' : undefined}>
               {/* The game itself, straight off the wall poster. A level that
                   leads with a text panel rather than a screenshot has none,
-                  and shows nothing rather than borrowing its neighbour's. */}
+                  and shows nothing rather than borrowing its neighbour's.
+
+                  The box is given the FILE's aspect (424x163) rather than a
+                  fixed height. Pinned to 124px it was a 2.6:1 picture in a
+                  5:1 box, and `object-cover` answered that by blowing the
+                  image up until one wrench filled the card. Matching the
+                  ratio means cover has nothing to crop and nothing to zoom. */}
               {shot && (
                 <img
                   src={shot}
                   alt=""
                   aria-hidden="true"
                   draggable={false}
-                  className="w-full h-[124px] object-cover object-left-top rounded-t-[16px]"
+                  className="w-full block object-cover rounded-t-[16px]"
+                  style={{ aspectRatio: '424 / 163' }}
                 />
               )}
               <div className={`px-4 pb-3 ${shot ? 'pt-3' : 'pt-3.5'}`}>
