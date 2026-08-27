@@ -10,6 +10,7 @@ import { FLAT } from '../../lib/surfaces';
 import { SkeletonCards } from '../../components/ui/Skeleton';
 import { BELTS, getLevels } from '../../utils/beltConfig';
 import { levelProjects, levelStates, levelTitle, realSessions, trackModel, fmtDay } from '../../lib/parentProgress';
+import { levelInfo, beltInfo } from '../../lib/createCurriculum';
 import { KIT_SHORT } from '../../lib/programTheme';
 import { useCurriculum } from '../../context/CurriculumContext';
 import BeltIcon from '../../components/ui/BeltIcon';
@@ -149,9 +150,15 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
     setLevel(name === belt ? currentLevel : (getLevels(name)[0] ?? 1));
   };
 
+  // The poster's own words for this belt and level, where we have them.
+  const info = levelInfo(viewBelt, level);
+  const belted = beltInfo(viewBelt);
+  const concepts = (info?.sets || []).map((st) => st.explore).filter(Boolean);
+  const lastLevel = levels.length ? levels[levels.length - 1] : null;
+
   const summary = onBelt
-    ? [`Level ${currentLevel}`, levels.length ? `${pos} of ${levels.length}` : null, next ? `earns ${next}` : null, sessions.length ? `${sessions.length} session${sessions.length === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ')
-    : [earned ? 'Earned' : 'Ahead', levels.length ? `${levels.length} level${levels.length === 1 ? '' : 's'}` : null, next ? `earns ${next}` : null].filter(Boolean).join(' · ');
+    ? [`Level ${currentLevel}`, levels.length ? `${pos} of ${levels.length}` : null, belted?.language, next ? `earns ${next}` : null, sessions.length ? `${sessions.length} session${sessions.length === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ')
+    : [earned ? 'Earned' : 'Ahead', levels.length ? `${levels.length} level${levels.length === 1 ? '' : 's'}` : null, belted?.language, next ? `earns ${next}` : null].filter(Boolean).join(' · ');
 
   if (!belt) {
     return (
@@ -266,17 +273,48 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
                 <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em]" style={levelState ? { color: 'var(--tint-ink)' } : undefined}>
                   Level {level}{levelState === 'current' ? ' · now' : levelState === 'done' ? ' · done' : ' · ahead'}
                 </p>
-                {levelTitle(viewBelt, level) !== `Level ${level}` && (
-                  <p className="font-ninja font-extrabold text-[20px] text-ninja-navy leading-tight mt-0.5">{levelTitle(viewBelt, level)}</p>
+                {/* The poster's name for the level. Only when we have none
+                    does it fall back to the old guess made from the level's
+                    last project. */}
+                {(info?.topic || levelTitle(viewBelt, level) !== `Level ${level}`) && (
+                  <p className="font-ninja font-extrabold text-[20px] text-ninja-navy leading-tight mt-0.5">
+                    {info?.topic || levelTitle(viewBelt, level)}
+                  </p>
                 )}
                 <p className="font-ninja text-[12.5px] v2 text-ninja-muted mt-0.5">
                   {[`${done} of ${projects.length} projects`, started ? `started ${fmtDay(started)}` : null].filter(Boolean).join(' · ')}
                 </p>
+                {/* What the ninja actually builds at the end of the level. It
+                    is the one sentence a parent can read and picture. */}
+                {info?.quest && (
+                  <p className="font-ninja text-[13.5px] leading-relaxed text-ninja-navy/85 mt-2.5">{info.quest}</p>
+                )}
               </div>
               <div className={`mx-3 mb-3 rounded-[14px] overflow-hidden ${levelState ? 'border border-ninja-navy/[0.06]' : ''}`}>
                 {projects.map((p, i) => <ProjectRow key={p.name} p={p} first={i === 0} />)}
                 {projects.length === 0 && <p className="px-4 py-3 font-ninja text-sm text-ninja-muted">No projects listed for this level yet.</p>}
               </div>
+              {/* The concepts the level teaches, which is the EXPLORE half of
+                  each build/explore/solve set. The project rows say what gets
+                  made; this says what it was for. */}
+              {concepts.length > 0 && (
+                <div className="px-4 pb-4 -mt-1">
+                  <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted">Concepts</p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {concepts.map((c) => (
+                      <span key={c} className="font-ninja text-[12px] font-bold rounded-lg px-2.5 py-1 bg-ninja-navy/[0.05] text-ninja-navy/80">{c}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* A belt that closes a pair ends with a Mastery Mission. It
+                  belongs on the last level, where it actually happens. */}
+              {belted?.mastery && level === lastLevel && (
+                <div className="mx-3 mb-3 rounded-[14px] px-4 py-3" style={{ background: 'rgb(var(--ninja-blue) / 0.07)' }}>
+                  <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-blue">Mastery mission</p>
+                  <p className="font-ninja text-[13px] leading-relaxed text-ninja-navy/85 mt-1">{belted.mastery}</p>
+                </div>
+              )}
             </Group>
           </motion.div>
         </AnimatePresence>
