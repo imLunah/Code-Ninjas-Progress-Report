@@ -1,5 +1,5 @@
 import { PROGRAM_LOGOS } from '../../utils/beltConfig';
-import BeltIcon from './BeltIcon';
+import BeltIcon, { beltIconSrc } from './BeltIcon';
 import { GraduationCapIcon } from 'lucide-react';
 
 // Program class tags keep their OWN fixed identity colors — they do NOT follow
@@ -31,7 +31,7 @@ const AVATAR = {
 // Resolve the symbol image for a class: CREATE uses the ninja's belt icon when
 // a belt is known; everything else uses the program logo.
 const symbolSrc = (program, belt) => {
-  if (program === 'CREATE' && belt) return `/belts/belt-${belt.toLowerCase()}.png`;
+  if (program === 'CREATE' && belt) return beltIconSrc(belt);
   return (program && PROGRAM_LOGOS[program]) || null;
 };
 
