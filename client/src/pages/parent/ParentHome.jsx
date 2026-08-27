@@ -267,7 +267,6 @@ function EventSlideshow({ events }) {
             <div className="min-w-0">
               <p className="font-ninja text-[12px] sm:text-[13px] font-extrabold uppercase tracking-[0.08em] opacity-90 truncate">Announcements</p>
               <p className="font-ninja font-extrabold text-[28px] sm:text-[34px] lg:text-[40px] leading-tight mt-1.5">No upcoming events</p>
-              <p className="font-ninja text-[14px] sm:text-[16px] font-bold opacity-90 mt-1.5">When the center plans something, it will show up here.</p>
             </div>
           </div>
         </div>
