@@ -381,11 +381,17 @@ router.get('/events', requireParent, async (req, res) => {
 
 // GET /api/parent/schedule?today=YYYY-MM-DD
 //
-// How busy the center is, hour by hour, for the week around `today`: every
-// check-in at the center (not just this family's) bucketed by the hour it
-// happened, rounded to the nearest. Counts only, no names. The client owns
-// the opening hours and clamps an arrival to the nearest open slot, so the
-// server hands back raw hours and lets it draw.
+// How busy the center is, for the week around `today`: every check-in at the
+// center (not just this family's) bucketed by the FIVE MINUTES it happened
+// in, as minutes since midnight. Counts only, no names.
+//
+// Five minutes rather than the hour it used to be, because a check-in is an
+// hour of a ninja in the building and an hourly bucket cannot say when that
+// hour ends. At 4:21 the ninjas who arrived at half three are still here, and
+// the old shape had already filed them under 3 and moved on. Minutes let the
+// client work out who is actually in the room; five of them is fine enough to
+// do that and coarse enough that this never reports the exact moment a named
+// child walked in.
 //
 // Hours are read in the centers' own zone. All three are in California and
 // the server clock is UTC, so without the conversion a 4 PM arrival would
@@ -403,15 +409,17 @@ router.get('/schedule', requireParent, async (req, res) => {
       WITH wk AS (SELECT date_trunc('week', COALESCE($2::date, CURRENT_DATE))::date AS start)
       SELECT to_char(wk.start, 'YYYY-MM-DD') AS week_start,
              to_char(da.session_date, 'YYYY-MM-DD') AS day,
-             EXTRACT(HOUR FROM (da.checked_in_at AT TIME ZONE $3) + interval '30 minutes')::int AS hour,
+             (EXTRACT(HOUR FROM (da.checked_in_at AT TIME ZONE $3))::int * 60
+               + FLOOR(EXTRACT(MINUTE FROM (da.checked_in_at AT TIME ZONE $3)) / 5)::int * 5) AS minute,
              COUNT(*)::int AS count
       FROM daily_assignments da, wk
       WHERE da.session_date >= wk.start AND da.session_date < wk.start + 7
+        AND da.checked_in_at IS NOT NULL
         AND EXISTS (SELECT 1 FROM student_locations sl WHERE sl.student_id = da.student_id AND sl.location_id = $1)
       GROUP BY 1, 2, 3
       ORDER BY 2, 3
     `, [req.session.parentLocationId, today, CENTER_TZ]);
-    res.json({ slots: rows.map(({ day, hour, count }) => ({ day, hour, count })) });
+    res.json({ slots: rows.map(({ day, minute, count }) => ({ day, minute, count })) });
   } catch (err) {
     console.error('Parent schedule error:', err);
     res.status(500).json({ error: 'Failed to load schedule' });

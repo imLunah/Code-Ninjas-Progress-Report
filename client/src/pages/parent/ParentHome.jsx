@@ -9,7 +9,7 @@ import Logo from '../../components/ui/Logo';
 import { FLAT } from '../../lib/surfaces';
 import { SkeletonCards } from '../../components/ui/Skeleton';
 import { fmtDay, fmtLongDay, calcAge } from '../../lib/parentProgress';
-import { hoursFor, slotsFor, slotForHour, fmtHour } from '../../lib/centerHours';
+import { hoursFor, slotsFor, fmtHour } from '../../lib/centerHours';
 
 // Home: the family at a glance.
 //
@@ -45,7 +45,9 @@ const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 // "popular times": bars on a baseline, a dashed line at the week's peak,
 // hour ticks underneath, and the hour happening now in the strong colour
 // with a Live marker. Every check-in is an hour of a ninja in the building,
-// filed under the open hour it was closest to. Hours still to come show
+// so a bar counts everyone whose hour touched it rather than everyone who
+// walked in during it, and the live bar counts whoever is in the room this
+// minute. Hours still to come show
 // what this week's earlier days did at that hour, faintly, so the shape of
 // the afternoon is there before it happens. Refreshes every minute while the
 // tab is showing, so a parent deciding whether to come now is looking at now.
@@ -70,20 +72,35 @@ function LiveSchedule({ center }) {
     return () => { alive = false; clearInterval(t); document.removeEventListener('visibilitychange', load); };
   }, []);
 
-  // "day|slot" -> ninjas in that hour, plus the week's busiest hour as the
-  // ceiling every bar is measured against.
-  const { counts, weekMax } = useMemo(() => {
-    const counts = new Map();
-    const byDay = new Map(days.map((d) => [ymd(d), d]));
-    for (const { day: d, hour, count } of slots || []) {
-      const date = byDay.get(d);
-      if (!date) continue;
-      const slot = slotForHour(date, hour);
-      if (slot == null) continue;
-      const k = `${d}|${slot}`;
-      counts.set(k, (counts.get(k) || 0) + count);
+  // A check-in is an HOUR of a ninja in the building, not a moment. So a bar
+  // is not "who arrived in this hour", it is "who was in the room during it":
+  // an arrival at 3:40 is still here at 4:21 and belongs to both bars. That is
+  // why a ninja can be counted twice across the day and why the bars do not
+  // sum to the number of children who came — the chart answers how busy the
+  // room was, the way a map app draws popular times, and nobody adds those up.
+  //
+  // "day|hour" -> ninjas in the room at some point in that hour, plus the
+  // week's busiest hour as the ceiling every bar is measured against.
+  const { counts, weekMax, byDay } = useMemo(() => {
+    const byDay = new Map();
+    for (const { day: d, minute, count } of slots || []) {
+      if (!byDay.has(d)) byDay.set(d, []);
+      byDay.get(d).push({ minute, count });
     }
-    return { counts, weekMax: Math.max(1, ...counts.values()) };
+    const counts = new Map();
+    for (const date of days) {
+      const d = ymd(date);
+      const arrivals = byDay.get(d);
+      if (!arrivals) continue;
+      for (const h of slotsFor(date)) {
+        // [start, start + 60) overlaps [h:00, h+1:00) exactly when the arrival
+        // falls in the two hours either side of the bar's own start.
+        const n = arrivals.reduce((sum, a) =>
+          (a.minute > h * 60 - 60 && a.minute < h * 60 + 60 ? sum + a.count : sum), 0);
+        if (n) counts.set(`${d}|${h}`, n);
+      }
+    }
+    return { counts, weekMax: Math.max(1, ...counts.values()), byDay };
   }, [slots, days]);
 
   const hourSlots = slotsFor(now);
@@ -91,6 +108,15 @@ function LiveSchedule({ center }) {
   const todayHours = hoursFor(now);
   const openNow = todayHours && nowHour >= todayHours.open && nowHour < todayHours.close;
   const nowSlot = openNow ? Math.floor(nowHour) : null;
+
+  // The live bar answers a different question from the rest: not "how busy
+  // was this hour" but "who is in the room this minute", which is the only
+  // thing the word LIVE can honestly mean on an hour that has not finished.
+  // A ninja is here if their hour has not run out — arrived within the last
+  // sixty minutes, and not in the future.
+  const nowMinute = now.getHours() * 60 + now.getMinutes();
+  const presentNow = (byDay.get(today) || []).reduce(
+    (sum, a) => (a.minute > nowMinute - 60 && a.minute <= nowMinute ? sum + a.count : sum), 0);
 
   let status;
   if (openNow) {
@@ -131,14 +157,14 @@ function LiveSchedule({ center }) {
             <span className="flex-1 border-t border-dashed border-ninja-border" aria-hidden />
             <span className="font-ninja text-[10px] text-ninja-muted">peak</span>
           </div>
-          <div className="flex items-end gap-1.5 sm:gap-2 h-24 border-b border-ninja-border" role="img" aria-label={`Check-ins by hour today: ${hourSlots.map((h) => `${fmtHour(h)} ${counts.get(`${today}|${h}`) || 0}`).join(', ')}`}>
+          <div className="flex items-end gap-1.5 sm:gap-2 h-24 border-b border-ninja-border" role="img" aria-label={`How busy the center is today: ${hourSlots.map((h) => `${fmtHour(h)} ${nowSlot === h ? presentNow : (counts.get(`${today}|${h}`) || 0)}`).join(', ')}`}>
             {hourSlots.map((h, i) => {
-              const n = counts.get(`${today}|${h}`) || 0;
               const live = nowSlot === h;
+              const n = live ? presentNow : (counts.get(`${today}|${h}`) || 0);
               const future = nowSlot == null ? nowHour < h : h > nowSlot;
               const pct = Math.min(100, Math.round((n / weekMax) * 100));
               const showing = hover === h;
-              const count = `${n} ninja${n === 1 ? '' : 's'}`;
+              const count = `${n} ninja${n === 1 ? '' : 's'}${live ? ' here now' : ''}`;
               const lift = `calc(${n > 0 ? Math.max(pct, 6) : 2}% + 6px)`;
               return (
                 <div
