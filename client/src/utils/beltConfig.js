@@ -24,8 +24,11 @@ export const PROGRAMS = ['CREATE', 'Robotics Academy', 'AI Academy', 'JR', 'VR C
 export const PROGRAM_LOGOS = {
   'CREATE':           '/programs/create_logo.webp',
   'JR':               '/programs/jr_logo.webp',
-  'Robotics Academy': '/programs/robotics_logo.webp',
-  'AI Academy':       '/programs/ai_logo.webp',
+  // PNG, not webp, and not by preference: these two were recut from the
+  // official lockups (badge only, wordmark dropped) and there is no webp
+  // encoder on the machine that cut them. Convert whenever one is to hand.
+  'Robotics Academy': '/programs/robotics_logo.png',
+  'AI Academy':       '/programs/ai_logo.png',
   'VR Coding':        '/programs/vr_coding_logo.webp',
   'Silver':           '/programs/silver_logo.webp',
   'Gold Unity':       '/programs/gold_unity_logo.webp',
