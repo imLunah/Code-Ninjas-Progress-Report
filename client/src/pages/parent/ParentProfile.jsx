@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { PageTitle, Row, StatusText, MoreLink } from '../../components/parent/ParentUI';
+import NinjaHero from '../../components/parent/NinjaHero';
 import ProgressVisuals from '../../components/parent/ProgressVisuals';
 import { Pin } from '../../components/shared/PinnedNote';
 import LazyMarkdownEditor from '../../components/shared/LazyMarkdownEditor';
@@ -164,6 +165,18 @@ export default function ParentProfile() {
 
   const programs = detail?.programs || child.programs || [];
   const first = child.full_name.split(' ')[0];
+  // What the banner leads with. CREATE is the spine of the centre, so its belt
+  // is the ninja's belt where they are in it; otherwise the banner takes the
+  // colour of whatever they ARE in and shows no belt at all rather than
+  // inventing a White one for a JR-only ninja.
+  const createEnrollment = programs.find((p) => p.program === 'CREATE');
+  const heroProgram = createEnrollment ? 'CREATE' : (programs[0]?.program || 'CREATE');
+  const belt = createEnrollment?.belt_level || null;
+  const level = createEnrollment?.belt_sublevel || null;
+  const since = child.created_at
+    ? new Date(child.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : null;
+  const eyebrow = since ? `Ninja since ${since}` : 'Full profile';
   // Only ever off the loaded detail: the enrollment on the students list is a
   // summary, and the course reads fields (last kit, last module) that only the
   // full record carries. Without it the page falls back to the profile, which
@@ -192,8 +205,20 @@ export default function ParentProfile() {
   return (
     <ParentLayout switcher={switcher}>
       <div className="space-y-4 lg:space-y-5">
-        <PageTitle eyebrow="Full profile" title={child.full_name}
-          right={<NoteButton child={child} text={detail?.special_instructions || ''} onSave={(text) => saveNote(child.id, text)} />} />
+        {/* The banner IS the page title. A ninja's own profile opening on a
+            line of grey text said nothing their name did not; this says the
+            belt, the programs and the sessions before a word is read, and
+            puts the child in it at size. */}
+        <NinjaHero
+          program={heroProgram}
+          name={child.full_name}
+          eyebrow={eyebrow}
+          belt={belt}
+          level={level}
+          programCount={programs.length}
+          sessionCount={feed.length}
+          right={<NoteButton child={child} text={detail?.special_instructions || ''} onSave={(text) => saveNote(child.id, text)} />}
+        />
         <div className="lg:hidden"><ChildSwitcher layoutId="parent-child-mobile" /></div>
 
         {/* Activity, then the Courses section that Courses used to be a page
