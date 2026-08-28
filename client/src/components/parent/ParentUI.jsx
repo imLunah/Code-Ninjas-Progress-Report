@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { createContext, useContext, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { CheckIcon, ChevronRightIcon, StarIcon } from 'lucide-react';
@@ -122,6 +122,11 @@ export function Hero({ program, size = 'card', className = '', style = {}, child
 // so it reads the banner's place on the page from a box that never moves —
 // asking a pinned element where it is only ever gets the answer "the top".
 // The hero it wraps should be handed `!mt-0` to give that margin up.
+// How far the sheet has ridden over the banner, 0 to 1, shared by the pair so
+// the sheet's edge can light up on the way in without measuring the page a
+// second time.
+const Covered = createContext(null);
+
 export function PinnedHero({ children }) {
   const still = useReducedMotion();
   const mark = useRef(null);
@@ -158,12 +163,12 @@ export function PinnedHero({ children }) {
   const filter = useTransform(covered, (p) => `brightness(${1 - p * 0.34})`);
 
   return (
-    <>
+    <Covered.Provider value={covered}>
       <div ref={mark} aria-hidden className="h-0 -mt-5 lg:-mt-7" />
       <div ref={box} className="sticky top-0 z-0">
         <motion.div style={still ? undefined : { y, filter }}>{children}</motion.div>
       </div>
-    </>
+    </Covered.Provider>
   );
 }
 
@@ -171,17 +176,70 @@ export function PinnedHero({ children }) {
 //
 // It is the page's own colour, so at rest it is invisible: the sheet's top
 // edge sits exactly where the banner ends and page-on-page shows nothing. It
-// only appears once it is over the blue, and then it is a lit edge with a
-// shadow under it and corners turned the other way from the banner's — a
-// sheet of paper laid on a card, which is the whole of the effect.
+// only appears once it is over the blue.
 //
 // It bleeds to the edges of the content region the way a page hero does, for
 // the same reason and by the same means (container units, not viewport ones),
 // then puts the content column back inside itself so nothing below it moves.
+//
+// THE CORNERS. The sheet's top corners are cut the other way — scooped out
+// rather than rounded off — and they are cut to exactly the radius the
+// banner's bottom corners are rounded to. That one fact is what makes the
+// join seamless: the scoop is the precise complement of the banner's corner,
+// so wherever the sheet's edge happens to be, the blue above it still ends in
+// a proper rounded corner. Two corners rounded the SAME way, which is what
+// this was first, leave a lens of daylight between them that opens and closes
+// as you scroll — the banner's curve falling away from the sheet's, with the
+// page showing through the gap. There is no radius, matching or otherwise,
+// that fixes that; the corner has to be cut the other way.
+//
+// The scoop is a radial gradient rather than a border radius because CSS
+// rounds corners off and has no way to round one in. The circle sits at the
+// corner box's INNER corner, page colour outside it and nothing inside, which
+// paints the sliver the banner's corner vacates and leaves the corner itself
+// clear.
+const SHEET = 'rgb(var(--ninja-bg))';
+const LIP = [
+  // The two scooped corners, each one corner-box square.
+  `radial-gradient(circle at 100% 0%, transparent calc(var(--lip) - 0.5px), ${SHEET} var(--lip)) left top / var(--lip) var(--lip) no-repeat`,
+  `radial-gradient(circle at 0% 0%, transparent calc(var(--lip) - 0.5px), ${SHEET} var(--lip)) right top / var(--lip) var(--lip) no-repeat`,
+  // A shallow strip of the sheet itself, so the straight run of the edge has
+  // something to cast from. It stays inside the sheet's top padding.
+  `linear-gradient(${SHEET}, ${SHEET}) left bottom / 100% 12px no-repeat`,
+].join(', ');
+
 export function PageSheet({ className = '', children }) {
+  const zero = useMotionValue(0);
+  const covered = useContext(Covered) || zero;
+  // The shadow is the sheet's edge lifting off the banner, so it belongs to
+  // the moment the sheet starts to ride and not to the page at rest, where it
+  // would only smudge the banner's bottom edge with grey. It is a drop-shadow
+  // on the lip rather than a box-shadow on the sheet because a box-shadow
+  // follows the box, which is square across the top: it would cut a hard
+  // corner over the blue exactly where the corner is supposed to be seamless.
+  // A drop-shadow follows what is actually painted, scooped corners included.
+  const lift = useTransform(covered, (p) => {
+    const a = Math.min(p * 8, 1) * 0.4;
+    return `drop-shadow(0 -12px 16px rgba(6, 13, 26, ${a.toFixed(3)}))`;
+  });
+
   return (
-    <div className={`relative z-10 -mx-4 sm:-mx-6 lg:ml-[calc(50%-50cqw)] lg:mr-0 lg:w-[100cqw] bg-ninja-bg rounded-t-[26px] lg:rounded-t-[32px] shadow-[0_-22px_44px_-24px_rgba(6,13,26,0.45)] pt-4 lg:pt-5 ${className}`}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">{children}</div>
+    <div className={`relative z-10 -mx-4 sm:-mx-6 lg:ml-[calc(50%-50cqw)] lg:mr-0 lg:w-[100cqw] bg-ninja-bg pt-4 lg:pt-5 ${className}`}>
+      {/* The lip: the sheet's top edge and its shadow, drawn as one shape.
+          Clipped on three sides so the shadow only ever falls upward, onto
+          the banner — never out past the sheet's own width and never down
+          onto the page. The radius follows the banner's, 34 then 40. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 overflow-hidden [--lip:34px] lg:[--lip:40px]"
+        style={{ top: 'calc(-1 * (var(--lip) + 40px))', height: 'calc(var(--lip) + 52px)' }}
+      >
+        <motion.div
+          className="absolute inset-x-0 bottom-0"
+          style={{ height: 'calc(var(--lip) + 12px)', background: LIP, filter: lift }}
+        />
+      </div>
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6">{children}</div>
     </div>
   );
 }
