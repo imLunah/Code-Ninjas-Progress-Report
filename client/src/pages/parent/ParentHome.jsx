@@ -265,11 +265,12 @@ function stripMd(text = '') {
 // nav, where w-screen would run underneath it. Its ink stays in its own inner
 // max-w-6xl column so the text still lines up with the page content below.
 //
-// Square along the top, rounded along the bottom, at the same radii as the
-// ninja's own banner (`Hero size="page"`): both are the top of their page, so
-// the top corners have no page to show at and the bottom ones do. Keep the two
-// in step — they are the first thing a parent sees on either screen, and one
-// squared corner between them reads as a bug.
+// Square on all four corners, on purpose, and taller than a card wants to be:
+// this is the one surface the centre advertises on, so it is a poster rather
+// than a component. A radius here rounds off the artwork somebody chose, and
+// the height is what makes a parent look at it before they scroll past to
+// their own ninja. The ninja's banner rounds its bottom corners because it is
+// a page's header; this one does not, because it is the page's billboard.
 function EventSlideshow({ events }) {
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -287,12 +288,12 @@ function EventSlideshow({ events }) {
   if (!events.length) {
     return (
       <section
-        className="relative left-1/2 -translate-x-1/2 w-[100cqw] -mt-5 lg:-mt-7 overflow-hidden rounded-b-[34px] lg:rounded-b-[40px] text-white"
+        className="relative left-1/2 -translate-x-1/2 w-[100cqw] -mt-5 lg:-mt-7 overflow-hidden text-white"
         style={{ background: 'linear-gradient(135deg, #12264d 0%, #0b3d8f 100%)' }}
         aria-label="Events at the center"
       >
         <span aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgb(6 11 24 / 0.82) 0%, rgb(6 11 24 / 0.55) 55%, rgb(6 11 24 / 0.2) 100%)' }} />
-        <div className="relative h-56 sm:h-64 lg:h-72">
+        <div className="relative h-64 sm:h-80 lg:h-[24rem]">
           <div className="relative h-full max-w-6xl mx-auto flex items-center px-4 sm:px-6">
             {/* Opacity on the element, not the color: the mark's paths
                 overlap, and a translucent color doubles up where they do. */}
@@ -301,7 +302,7 @@ function EventSlideshow({ events }) {
             </span>
             <div className="min-w-0">
               <p className="font-ninja text-[12px] sm:text-[13px] font-extrabold uppercase tracking-[0.08em] opacity-90 truncate">Announcements</p>
-              <p className="font-ninja font-extrabold text-[28px] sm:text-[34px] lg:text-[40px] leading-tight mt-1.5">No upcoming events</p>
+              <p className="font-ninja font-extrabold text-[32px] sm:text-[40px] lg:text-[52px] leading-tight mt-1.5">No upcoming events</p>
             </div>
           </div>
         </div>
@@ -319,7 +320,7 @@ function EventSlideshow({ events }) {
 
   return (
     <section
-      className="relative left-1/2 -translate-x-1/2 w-[100cqw] -mt-5 lg:-mt-7 overflow-hidden rounded-b-[34px] lg:rounded-b-[40px] text-white"
+      className="relative left-1/2 -translate-x-1/2 w-[100cqw] -mt-5 lg:-mt-7 overflow-hidden text-white"
       style={{ background: '#0e1c3a' }}
       aria-label="Events at the center"
       onPointerEnter={(e) => { if (e.pointerType === 'mouse') setPaused(true); }}
@@ -345,7 +346,7 @@ function EventSlideshow({ events }) {
       {/* The wash that keeps white ink readable on any artwork. */}
       <span aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgb(6 11 24 / 0.82) 0%, rgb(6 11 24 / 0.55) 55%, rgb(6 11 24 / 0.2) 100%)' }} />
 
-      <div className="relative h-56 sm:h-64 lg:h-72">
+      <div className="relative h-64 sm:h-80 lg:h-[24rem]">
         <AnimatePresence initial={false}>
           <motion.div
             key={ev.id}
@@ -367,7 +368,7 @@ function EventSlideshow({ events }) {
                 <p className="font-ninja text-[12px] sm:text-[13px] font-extrabold uppercase tracking-[0.08em] opacity-90 truncate">
                   {ev.event_date ? (isToday ? 'Happening today' : 'Coming up') : 'Announcement'}{when ? ` · ${when}` : ''}
                 </p>
-                <p className="font-ninja font-extrabold text-[28px] sm:text-[34px] lg:text-[40px] leading-tight mt-1.5 truncate">{ev.title}</p>
+                <p className="font-ninja font-extrabold text-[32px] sm:text-[40px] lg:text-[52px] leading-[1.05] mt-1.5 truncate">{ev.title}</p>
                 {hook && <p className="font-ninja text-[14px] sm:text-[16px] font-bold opacity-90 mt-1.5 line-clamp-2 sm:line-clamp-1">{hook}</p>}
                 {hasMore && (
                   <button
