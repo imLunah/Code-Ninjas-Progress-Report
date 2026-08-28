@@ -64,7 +64,7 @@ function CourseShell({ href, program, children }) {
   return (
     <motion.div variants={cardVariants} initial="hidden" animate="show">
       {href
-        ? <Link to={href} aria-label={`Open the ${program} course`} className={`${shell} transition-shadow hover:shadow-md focus-visible:outline-none`}>{children}</Link>
+        ? <Link to={href} aria-label={`Open the ${program} course`} className={`${shell} group transition-shadow hover:shadow-md focus-visible:outline-none`}>{children}</Link>
         : <div className={shell}>{children}</div>}
     </motion.div>
   );
