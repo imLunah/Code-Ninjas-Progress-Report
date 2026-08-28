@@ -416,15 +416,18 @@ export function LevelMedal({ belt, level, size = 40, ahead = false, tilt = false
 // `belt` is what turns the done marker into the real medal, the same artwork
 // the All levels list leads its rows with, so one earned level looks the same
 // in both places. Without it (kit pills, and any program outside CREATE) there
-// is no medal to draw and the check stands in, which is why the belt is a prop
-// rather than something the pills reach for themselves. The pill still writes
-// the number beside it: at 18px the one printed on the medal is decoration,
-// not a label, so the medal is hidden from screen readers.
+// is no medal to draw and the check plus the number stand in.
+//
+// A pill showing its medal shows NOTHING ELSE: the medal has the level number
+// printed on it, and a pill that draws both says the same thing twice. That
+// leaves the button with no text, so the accessible name is set by hand and
+// the medal stays hidden from screen readers.
 export function LevelPills({ states, value, onChange, belt, onHero = false, layoutId = 'level-pill', className = '' }) {
   return (
     <div className={`flex flex-wrap gap-1.5 ${className}`} role="tablist" aria-label="Levels">
       {states.map((s) => {
         const selected = s.level === value;
+        const medal = s.state === 'done' && hasLevelMedal(belt, s.level);
         const ink = onHero
           ? (selected ? 'text-[#0c3d99]' : s.state === 'done' ? 'text-white' : 'text-white/80')
           : (selected ? 'text-white' : s.state === 'done' ? 'text-ninja-navy' : 'text-ninja-muted');
@@ -433,7 +436,8 @@ export function LevelPills({ states, value, onChange, belt, onHero = false, layo
           : 'bg-ninja-bg border border-ninja-border';
         return (
           <button key={s.level} type="button" role="tab" aria-selected={selected} onClick={() => onChange?.(s.level)}
-            className={`relative inline-flex items-center justify-center gap-1 h-9 min-w-[44px] px-3.5 rounded-[12px] font-ninja font-extrabold text-[13px] transition-colors duration-150 active:scale-95 ${selected ? '' : rest} ${ink}`}>
+            aria-label={s.label ?? `Level ${s.level}`}
+            className={`relative inline-flex items-center justify-center gap-1 h-9 min-w-[44px] rounded-[12px] font-ninja font-extrabold text-[13px] transition-colors duration-150 active:scale-95 ${medal ? 'px-2.5' : 'px-3.5'} ${selected ? '' : rest} ${ink}`}>
             {selected && (
               <motion.span layoutId={layoutId} transition={{ type: 'spring', stiffness: 480, damping: 36 }} aria-hidden
                 className={`absolute inset-0 rounded-[12px] ${onHero ? '' : 'bg-ninja-blue'}`}
@@ -441,10 +445,14 @@ export function LevelPills({ states, value, onChange, belt, onHero = false, layo
                 style={onHero ? { background: '#ffffff' } : undefined} />
             )}
             <span className="relative z-10 inline-flex items-center gap-1">
-              {s.state === 'done' && (hasLevelMedal(belt, s.level)
-                ? <span aria-hidden className="-ml-1 -my-1 inline-flex"><LevelMedal belt={belt} level={s.level} size={18} /></span>
-                : <CheckIcon size={12} strokeWidth={3.2} aria-hidden />)}
-              {s.label ?? s.level}
+              {medal ? (
+                <span aria-hidden className="-my-1 inline-flex"><LevelMedal belt={belt} level={s.level} size={24} /></span>
+              ) : (
+                <>
+                  {s.state === 'done' && <CheckIcon size={12} strokeWidth={3.2} aria-hidden />}
+                  {s.label ?? s.level}
+                </>
+              )}
             </span>
           </button>
         );
