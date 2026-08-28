@@ -6,6 +6,7 @@ import { useParentPortal } from '../../context/ParentPortalContext';
 import { PageTitle, Row, StatusText, MoreLink } from '../../components/parent/ParentUI';
 import NinjaHero from '../../components/parent/NinjaHero';
 import ProgressVisuals from '../../components/parent/ProgressVisuals';
+import { StickerBook } from '../../components/parent/StickerCollection';
 import { Pin } from '../../components/shared/PinnedNote';
 import LazyMarkdownEditor from '../../components/shared/LazyMarkdownEditor';
 import { FLAT } from '../../lib/surfaces';
@@ -225,6 +226,20 @@ export default function ParentProfile() {
             of. Every card in it opens the course it describes. */}
         {detail && programs.length > 0 && (
           <ProgressVisuals programs={programs} sessionLogs={detail.session_logs || []} childName={first} courseHref={courseHref} />
+        )}
+
+        {/* The stickers this ninja has actually earned, newest first, after
+            the courses that explain where they came from. Only for a ninja in
+            CREATE: the stickers are CREATE's belt art and there is nothing to
+            show a JR or Robotics ninja here. */}
+        {detail && createEnrollment && (
+          <StickerBook
+            belt={belt}
+            level={level}
+            logs={(detail.session_logs || []).filter((l) => l.program === 'CREATE')}
+            childName={first}
+            href={courseHref('CREATE')}
+          />
         )}
 
         <div className="space-y-3">

@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { CheckIcon, LockKeyholeIcon, SparklesIcon, XIcon } from 'lucide-react';
+import { CheckIcon, ChevronRightIcon, LockKeyholeIcon, SparklesIcon, XIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { CREATE_STICKERS, STICKER_BELTS, stickerRequirement, stickersForBelt } from '../../lib/createStickers';
+import { stickerProgress } from '../../lib/stickerProgress';
 import { levelInfo } from '../../lib/createCurriculum';
 import { Group } from './ParentUI';
+import { fmtDay } from '../../lib/parentProgress';
 import ModalPortal from '../ui/ModalPortal';
 import { Tilt, TiltLayer } from '../ui/Tilt';
 
@@ -35,6 +38,28 @@ function stickerTopics(item) {
   return item.levels
     .map((level) => ({ level, topic: levelInfo(item.belt, level)?.topic }))
     .filter((entry) => entry.topic);
+}
+
+// Opening a sticker is the same act in the album and in the book, down to
+// handing focus back to the sticker that was clicked, so both call this.
+function useStickerZoom() {
+  const [zoomed, setZoomed] = useState(null);
+  const opener = useRef(null);
+
+  const open = useCallback((item) => {
+    opener.current = document.activeElement;
+    setZoomed(item);
+  }, []);
+
+  // Focus goes back to the sticker that opened the dialog, not the top of the
+  // page, once it has flown home.
+  const close = useCallback(() => {
+    setZoomed(null);
+    const el = opener.current;
+    if (el && typeof el.focus === 'function' && document.contains(el)) el.focus();
+  }, []);
+
+  return { zoomed, open, close };
 }
 
 function StickerCard({ item, isEarned, onOpen, flat }) {
@@ -190,11 +215,124 @@ function StickerZoom({ item, isEarned, childName, onClose, flat }) {
   );
 }
 
+// The sticker book: the newest stickers, stuck on a page.
+//
+// It lives on the ninja's profile, where the belt's spot art used to float
+// loose on the banner. That art was decoration with nothing behind it (one
+// IMPACT sticker on a Black belt, in the middle of the sky); the same
+// pictures mean something once they are the ones this ninja earned, in the
+// order they earned them. The album with all 35 stays on the CREATE course,
+// one tap away through the link at the bottom.
+//
+// Each sticker sits at its own small angle, the way a sticker ends up on a
+// page, and turns off that angle under the pointer rather than from square.
+// The angles are fixed per position, not random per render, so a sticker
+// does not jump every time the page re-renders.
+const BOOK_ANGLES = [-6, 4, -3, 7, -5];
+const BOOK_COUNT = 5;
+
+export function StickerBook({ belt, level, logs, childName, href, className = '' }) {
+  const flat = useReducedMotion();
+  const { zoomed, open, close } = useStickerZoom();
+  const progress = useMemo(() => stickerProgress({ belt, level, logs }), [belt, level, logs]);
+  const recent = useMemo(() => progress.recent(BOOK_COUNT), [progress]);
+  const empty = recent.length === 0;
+  // Nothing earned yet is not an empty state to apologise for: it is the
+  // first sticker, shown as the thing to go and get.
+  const shown = empty ? [progress.next].filter(Boolean) : recent;
+
+  return (
+    <Group className={`relative ${className}`}>
+      <div className="flex items-start justify-between gap-4 px-4 pb-3 pt-4 sm:px-5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-ninja-navy">
+            <SparklesIcon size={17} strokeWidth={2.5} aria-hidden />
+            <h2 className="font-ninja text-[17px] font-extrabold">Sticker book</h2>
+          </div>
+          <p className="mt-1 font-ninja text-[12.5px] text-ninja-muted">
+            {empty
+              ? 'The first sticker is one level away.'
+              : `Newest first. Tap one to see what it took.`}
+          </p>
+        </div>
+        <div className="flex-shrink-0 whitespace-nowrap pt-0.5 font-ninja text-[12px] font-extrabold text-ninja-blue">
+          {progress.earned.length} of {CREATE_STICKERS.length} earned
+        </div>
+      </div>
+
+      <div className="mx-3 mb-3 rounded-[18px] px-2 pb-3 pt-4 sm:mx-4" style={{ background: 'rgb(var(--ninja-blue) / 0.05)' }}>
+        {/* Flex rather than a grid so a book holding one sticker centres it
+            instead of pinning it to a column and leaving four empty. Three
+            across on a phone, five on a desktop, whatever the count. */}
+        <div className="flex flex-wrap justify-center gap-1">
+          {shown.map((item, i) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => open(item)}
+              aria-label={`${item.title}, ${item.earned ? 'earned' : stickerRequirement(item)}`}
+              className="group flex w-[31%] flex-col items-center gap-1.5 rounded-[14px] px-1 pb-2 pt-1 text-center transition-colors hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue/60 sm:w-[18.5%]"
+            >
+              <Tilt
+                as={motion.span}
+                amount={14}
+                scale={1.08}
+                rest={BOOK_ANGLES[i % BOOK_ANGLES.length]}
+                disabled={flat}
+                className="inline-flex"
+              >
+                <img
+                  src={item.src}
+                  alt=""
+                  aria-hidden="true"
+                  draggable={false}
+                  className={`h-[68px] w-[68px] select-none object-contain ${item.earned ? 'drop-shadow-[0_8px_10px_rgb(6_13_26_/_0.18)]' : 'grayscale opacity-25'}`}
+                />
+              </Tilt>
+              <span className={`font-ninja text-[11.5px] font-extrabold leading-tight ${item.earned ? 'text-ninja-navy' : 'text-ninja-navy/55'}`}>
+                {item.title}
+              </span>
+              {/* The date only where the log actually has one. A ninja
+                  imported at Green belt earned their White stickers before
+                  DojoLink ever saw them. */}
+              <span className="font-ninja text-[10.5px] leading-tight text-ninja-muted">
+                {item.earned ? (item.earnedOn ? fmtDay(item.earnedOn) : `${item.belt} belt`) : stickerRequirement(item)}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {href && (
+        <Link
+          to={href}
+          className="flex items-center justify-center gap-1 border-t border-ninja-navy/[0.08] px-4 py-3 font-ninja text-[12.5px] font-extrabold text-ninja-blue transition-colors hover:bg-ninja-blue/[0.04]"
+        >
+          See all {CREATE_STICKERS.length} stickers
+          <ChevronRightIcon size={15} strokeWidth={3} aria-hidden />
+        </Link>
+      )}
+
+      <AnimatePresence>
+        {zoomed && (
+          <StickerZoom
+            key={zoomed.id}
+            item={zoomed}
+            isEarned={!!zoomed.earned}
+            childName={childName}
+            onClose={close}
+            flat={flat}
+          />
+        )}
+      </AnimatePresence>
+    </Group>
+  );
+}
+
 export default function StickerCollection({ belt, earnedIds, earnedTotal, childName }) {
   const firstBelt = STICKER_BELTS.includes(belt) ? belt : STICKER_BELTS[STICKER_BELTS.length - 1];
   const [openBelt, setOpenBelt] = useState(firstBelt);
-  const [zoomed, setZoomed] = useState(null);
-  const opener = useRef(null);
+  const { zoomed, open, close } = useStickerZoom();
   const flat = useReducedMotion();
 
   useEffect(() => {
@@ -202,19 +340,6 @@ export default function StickerCollection({ belt, earnedIds, earnedTotal, childN
   }, [belt]);
 
   const stickers = stickersForBelt(openBelt);
-
-  const open = useCallback((item) => {
-    opener.current = document.activeElement;
-    setZoomed(item);
-  }, []);
-
-  // Hand focus back to the card that opened the dialog, not the top of the
-  // page, once the sticker has flown home.
-  const close = useCallback(() => {
-    setZoomed(null);
-    const el = opener.current;
-    if (el && typeof el.focus === 'function' && document.contains(el)) el.focus();
-  }, []);
 
   return (
     <Group className="relative">

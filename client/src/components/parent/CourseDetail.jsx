@@ -6,6 +6,7 @@ import { BELTS, getLevels } from '../../utils/beltConfig';
 import { levelProjects, levelStates, levelTitle, realSessions, trackModel, fmtDay } from '../../lib/parentProgress';
 import { levelInfo, beltInfo, levelShot } from '../../lib/createCurriculum';
 import { CREATE_STICKERS } from '../../lib/createStickers';
+import { stickerProgress } from '../../lib/stickerProgress';
 import StickerCollection from './StickerCollection';
 import { Tilt } from '../ui/Tilt';
 import { KIT_SHORT } from '../../lib/programTheme';
@@ -81,19 +82,6 @@ function ProjectRow({ p, first }) {
   );
 }
 
-function isLevelComplete(targetBelt, targetLevel, currentBelt, currentLevel, logs) {
-  const targetIdx = BELTS.findIndex((item) => item.name === targetBelt);
-  const currentIdx = BELTS.findIndex((item) => item.name === currentBelt);
-  if (targetIdx < 0 || currentIdx < 0) return false;
-  if (targetIdx < currentIdx) return true;
-  if (targetIdx > currentIdx) return false;
-  if (Number(targetLevel) < Number(currentLevel)) return true;
-  if (Number(targetLevel) > Number(currentLevel)) return false;
-
-  const projects = levelProjects(targetBelt, targetLevel, logs);
-  return projects.length > 0 && projects[projects.length - 1].status === 'done';
-}
-
 function CreateDetail({ enrollment, logs, childName, backTo }) {
   const belt = enrollment.belt_level;
   const currentLevel = Number(enrollment.belt_sublevel) || (getLevels(belt)[0] ?? 1);
@@ -145,13 +133,9 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
   const concepts = (info?.sets || []).map((st) => st.explore).filter(Boolean);
   const shot = levelShot(viewBelt, level);
   const lastLevel = levels.length ? levels[levels.length - 1] : null;
-  const earnedStickerIds = useMemo(() => new Set(
-    CREATE_STICKERS
-      .filter((item) => item.levels.every((requiredLevel) => (
-        isLevelComplete(item.belt, requiredLevel, belt, currentLevel, logs)
-      )))
-      .map((item) => item.id)
-  ), [belt, currentLevel, logs]);
+  const earnedStickerIds = useMemo(
+    () => stickerProgress({ belt, level: currentLevel, logs }).earnedIds,
+    [belt, currentLevel, logs]);
 
   const summary = onBelt
     ? [`Level ${currentLevel}`, levels.length ? `${pos} of ${levels.length}` : null, belted?.language, next ? `earns ${next}` : null, sessions.length ? `${sessions.length} session${sessions.length === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ')

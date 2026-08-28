@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { animate, motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
-import { Hero, BeltStickers } from './ParentUI';
+import { Hero } from './ParentUI';
 import BeltIcon from '../ui/BeltIcon';
 
 // The top of a ninja's profile: the child, at size, standing in their own
@@ -83,8 +83,8 @@ export default function NinjaHero({ program, name, eyebrow, belt, level, program
   const sy = useSpring(py, { stiffness: 90, damping: 18, mass: 0.4 });
   const ninjaX = useTransform(sx, (v) => v * 20);
   const ninjaY = useTransform(sy, (v) => v * 10);
-  const backX = useTransform(sx, (v) => v * -26);
-  const backY = useTransform(sy, (v) => v * -12);
+  // The counter-drift that went with these belonged to the belt stickers,
+  // which now live in the sticker book on the profile.
 
   const onMove = (e) => {
     if (still || e.pointerType === 'touch') return;
@@ -107,15 +107,12 @@ export default function NinjaHero({ program, name, eyebrow, belt, level, program
   return (
     <Hero program={program} size="page">
       <div ref={wrap} onPointerMove={onMove} onPointerLeave={onLeave} className="relative">
-        {/* Behind everything: the belt's own stickers, drifting the other way
-            from the ninja so the banner has some depth to it. Their slots are
-            the course banner's, which puts them where its title is NOT — and
-            on a phone that title sits at the bottom while this one sits at the
-            top, so there they land squarely on the name. The ninja is the
-            decoration at that width; the stickers sit this one out. */}
-        <motion.div aria-hidden className="hidden sm:block absolute inset-0" style={{ x: backX, y: backY, zIndex: -1 }}>
-          <BeltStickers belt={belt} />
-        </motion.div>
+        {/* The belt's spot art used to drift here, behind the ninja. It came
+            off: on a Black belt it was one IMPACT sticker alone in the sky,
+            decoration with nothing behind it. The same pictures now mean
+            something a page down, in the sticker book, where they are the
+            ones this ninja earned. `BeltStickers` still dresses the CREATE
+            course banner, which is a belt's own page. */}
 
         {/* Above the ninja rather than beside it: the banner's corner is the
             only spot that stays clear of the art at every width, and the
