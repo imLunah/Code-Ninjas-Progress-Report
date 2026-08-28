@@ -54,13 +54,13 @@ const RECORDS = [
 // takes under the pointer.
 function RecordSticker({ art, rest }) {
   return (
-    <Tilt amount={13} rest={rest} scale={1.06} className="inline-flex flex-shrink-0">
+    <Tilt amount={13} rest={rest} scale={1.05} className="-ml-2 inline-flex self-start">
       <img
         src={art}
         alt=""
         aria-hidden="true"
         draggable={false}
-        className="h-[106px] w-[106px] select-none object-contain drop-shadow-[0_12px_12px_rgb(6_13_26/0.2)] sm:h-[120px] sm:w-[120px]"
+        className="h-[152px] w-[152px] select-none object-contain drop-shadow-[0_16px_16px_rgb(6_13_26/0.18)] sm:h-[176px] sm:w-[176px]"
       />
     </Tilt>
   );
@@ -76,21 +76,19 @@ function RecordSticker({ art, rest }) {
 function RecordCard({ record, value, caption, art, headline = false, flat, index = 0 }) {
   return (
     <motion.article
-      className={`tint-${record.tint} tint-ink-only flex min-w-[244px] flex-1 flex-col sm:min-w-[266px]`}
+      className={`tint-${record.tint} tint-ink-only flex min-w-[240px] flex-1 flex-col sm:min-w-[262px]`}
       initial={flat ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.06 * index }}
     >
-      <div className="flex items-end justify-between gap-3">
-        <p
-          className={`min-w-0 font-ninja font-extrabold tracking-[-0.02em] ${headline ? 'line-clamp-3 text-[20px] leading-[1.15]' : 'text-[40px] leading-[0.9]'}`}
-          style={{ color: 'var(--tint-ink)' }}
-        >
-          {value}
-        </p>
-        {art && <RecordSticker art={art} rest={record.rest} />}
-      </div>
-      <p className="mt-3.5 font-ninja text-[14.5px] font-extrabold text-ninja-navy">{record.title}</p>
+      {art && <RecordSticker art={art} rest={record.rest} />}
+      <p
+        className={`mt-3 font-ninja font-extrabold tracking-[-0.02em] ${headline ? 'line-clamp-2 text-[22px] leading-[1.15]' : 'text-[42px] leading-[0.9]'}`}
+        style={{ color: 'var(--tint-ink)' }}
+      >
+        {value}
+      </p>
+      <p className="mt-2.5 font-ninja text-[14.5px] font-extrabold text-ninja-navy">{record.title}</p>
       <p className="mt-1 font-ninja text-[12px] font-bold text-ninja-muted">{caption}</p>
     </motion.article>
   );
@@ -253,7 +251,12 @@ export default function ParentStickerBook() {
           <section aria-labelledby="records-heading">
             <h2 id="records-heading" className="font-ninja text-[24px] font-extrabold tracking-[-0.02em] text-ninja-navy">Personal records</h2>
 
-            <div className="-mx-4 mt-4 flex gap-7 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-9 sm:px-6 lg:mx-0 lg:px-0">
+            {/* `overflow-x` makes this a clipping box on BOTH axes, so the
+                padding has to clear the tallest thing that leaves an
+                element's border box: a 176px sticker's shadow, and the same
+                sticker scaled up under the pointer. Too little and the art
+                gets a straight edge cut across it mid-hover. */}
+            <div className="-mx-4 mt-4 flex gap-7 overflow-x-auto px-4 pb-7 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-9 sm:px-6 lg:-mx-2 lg:px-2">
               {records.map((record, i) => (
                 <RecordCard key={record.key} record={record} flat={flat} index={i} {...recordValues[record.key]} />
               ))}
