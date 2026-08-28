@@ -4,6 +4,7 @@ import { CheckIcon, ChevronRightIcon, LockKeyholeIcon, SparklesIcon, XIcon } fro
 import { Link } from 'react-router-dom';
 import { CREATE_STICKERS, stickerRequirement, stickersForBelt } from '../../lib/createStickers';
 import { stickerProgress } from '../../lib/stickerProgress';
+import { useStickerRarity } from '../../lib/stickerRarity';
 import { levelInfo } from '../../lib/createCurriculum';
 import { Group } from './ParentUI';
 import { fmtDay } from '../../lib/parentProgress';
@@ -28,6 +29,13 @@ import { Tilt, TiltLayer } from '../ui/Tilt';
 // Everything here is decoration until it isn't: with prefers-reduced-motion
 // the tilt, the float and the flight are all skipped and the dialog simply
 // appears.
+//
+// Each sticker also wears how rare it is — Common through Legendary, worked
+// out from the share of the dojo who have earned it (lib/stickerRarity). It is
+// the one thing on a sticker that is not about this ninja, and it is on the
+// locked ones too: "Legendary" is a better reason to go and get a sticker than
+// the level number that unlocks it. Rarity is allowed to be absent (a small
+// roster, a failed request), and every surface below renders without it.
 
 const TILT = 13;
 const SPRING = { type: 'spring', stiffness: 320, damping: 26, mass: 0.5 };
@@ -64,6 +72,21 @@ export function useLockedShake() {
   return { controls, shake };
 }
 
+// The rarity word, in the tier's own colour. `size` is the only thing that
+// changes between the album card and the smaller book sticker, so the two
+// cannot drift apart in wording or colour.
+export function RarityChip({ rarity, size = 'md' }) {
+  if (!rarity) return null;
+  const small = size === 'sm';
+  return (
+    <span
+      className={`inline-flex items-center rounded-full font-ninja font-extrabold uppercase leading-none tracking-[0.07em] ${rarity.chip} ${small ? 'px-1.5 py-[3px] text-[9px]' : 'px-2 py-[4px] text-[10px]'}`}
+    >
+      {rarity.label}
+    </span>
+  );
+}
+
 export function useStickerZoom() {
   const [zoomed, setZoomed] = useState(null);
   const opener = useRef(null);
@@ -84,7 +107,7 @@ export function useStickerZoom() {
   return { zoomed, open, close };
 }
 
-export function StickerCard({ item, isEarned, onOpen, flat }) {
+export function StickerCard({ item, isEarned, onOpen, flat, rarity }) {
   const { controls, shake } = useLockedShake();
   return (
     <motion.div animate={controls} className="flex">
@@ -95,11 +118,24 @@ export function StickerCard({ item, isEarned, onOpen, flat }) {
       disabled={flat}
       type="button"
       onClick={() => (isEarned ? onOpen(item) : shake())}
-      aria-label={`${item.title}, ${isEarned ? 'earned' : `locked, ${stickerRequirement(item)}`}`}
+      aria-label={`${item.title}${rarity ? `, ${rarity.label}` : ''}, ${isEarned ? 'earned' : `locked, ${stickerRequirement(item)}`}`}
       style={{ background: isEarned ? 'rgb(var(--ninja-blue) / 0.045)' : 'rgb(var(--ninja-navy) / 0.025)' }}
-      className="group relative flex w-full min-h-[184px] flex-col items-center rounded-[18px] border border-ninja-navy/[0.07] px-3 pb-3 pt-4 text-center transition-shadow duration-200 hover:shadow-[0_22px_36px_-20px_rgb(6_13_26_/_0.55)] active:brightness-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue/60"
+      // A rarity chip is one more line, and the card reserves the height for
+      // it only once it has one: rarity can fail to load, and a card holding
+      // an empty row for a label that never arrives is worse than no label.
+      className={`group relative flex w-full ${rarity ? 'min-h-[206px]' : 'min-h-[184px]'} flex-col items-center rounded-[18px] border border-ninja-navy/[0.07] px-3 pb-3 pt-4 text-center transition-shadow duration-200 hover:shadow-[0_22px_36px_-20px_rgb(6_13_26_/_0.55)] active:brightness-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue/60`}
     >
       <div className="relative flex h-[88px] w-full items-center justify-center" style={{ transformStyle: 'preserve-3d' }}>
+        {/* The rarest sticker in the book gets a light of its own, and only
+            once it is actually on the page: a gold halo behind grayscale art
+            reads as a bug rather than a prize. */}
+        {isEarned && rarity?.key === 'legendary' && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute h-[76px] w-[76px] rounded-full blur-[18px]"
+            style={{ background: 'rgb(245 158 11 / 0.38)' }}
+          />
+        )}
         <TiltLayer depth={64} as={motion.span} className="inline-flex">
           <motion.img
             layoutId={flat ? undefined : `sticker-art-${item.id}`}
@@ -121,7 +157,12 @@ export function StickerCard({ item, isEarned, onOpen, flat }) {
             : <LockKeyholeIcon size={14} strokeWidth={2.6} />}
         </TiltLayer>
       </div>
-      <TiltLayer depth={18} as={motion.p} className={`mt-2 font-ninja text-[13.5px] font-extrabold leading-tight ${isEarned ? 'text-ninja-navy' : 'text-ninja-navy/55'}`}>
+      {rarity && (
+        <TiltLayer depth={26} as={motion.span} className="mt-2 inline-flex">
+          <RarityChip rarity={rarity} />
+        </TiltLayer>
+      )}
+      <TiltLayer depth={18} as={motion.p} className={`${rarity ? 'mt-1.5' : 'mt-2'} font-ninja text-[13.5px] font-extrabold leading-tight ${isEarned ? 'text-ninja-navy' : 'text-ninja-navy/55'}`}>
         {item.title}
       </TiltLayer>
       <p className={`mt-1 font-ninja text-[11px] leading-snug ${isEarned ? 'font-bold text-emerald-600' : 'text-ninja-muted'}`}>
@@ -135,7 +176,7 @@ export function StickerCard({ item, isEarned, onOpen, flat }) {
 // Only an earned sticker opens this now (a locked one rattles instead), but
 // the locked half stays: it is one line, and it is the honest thing to show
 // if another surface ever opens a sticker that has not been earned.
-export function StickerZoom({ item, isEarned, childName, onClose, flat }) {
+export function StickerZoom({ item, isEarned, childName, onClose, flat, rarity }) {
   const closeRef = useRef(null);
   const topics = stickerTopics(item);
   const who = childName ? String(childName).split(' ')[0] : null;
@@ -209,10 +250,23 @@ export function StickerZoom({ item, isEarned, childName, onClose, flat }) {
 
           <h3 className="mt-4 font-ninja text-[21px] font-extrabold leading-tight text-ninja-navy">{item.title}</h3>
 
-          <span className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-ninja text-[11.5px] font-extrabold ${isEarned ? 'bg-emerald-500/12 text-emerald-600' : 'bg-ninja-navy/[0.06] text-ninja-muted'}`}>
-            {isEarned ? <CheckIcon size={13} strokeWidth={3.2} /> : <LockKeyholeIcon size={12} strokeWidth={2.6} />}
-            {isEarned ? 'Earned' : 'Not earned yet'}
-          </span>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-ninja text-[11.5px] font-extrabold ${isEarned ? 'bg-emerald-500/12 text-emerald-600' : 'bg-ninja-navy/[0.06] text-ninja-muted'}`}>
+              {isEarned ? <CheckIcon size={13} strokeWidth={3.2} /> : <LockKeyholeIcon size={12} strokeWidth={2.6} />}
+              {isEarned ? 'Earned' : 'Not earned yet'}
+            </span>
+            <RarityChip rarity={rarity} />
+          </div>
+
+          {/* The number behind the word, because "Legendary" on its own is a
+              label someone could have picked. A share, never a headcount: how
+              many ninjas are on the roster is the centers' business, not
+              something to print on a sticker. */}
+          {rarity && (
+            <p className="mt-2 font-ninja text-[12px] text-ninja-muted">
+              {rarity.percent}% of ninjas have earned this sticker.
+            </p>
+          )}
 
           {/* The blurb is written in the past tense, as the account of a thing
               that happened, so it only belongs on a sticker that has been
@@ -259,14 +313,14 @@ export function StickerZoom({ item, isEarned, childName, onClose, flat }) {
 const BOOK_ANGLES = [-6, 4, -3, 7, -5];
 const BOOK_COUNT = 5;
 
-function BookSticker({ item, angle, onOpen, flat }) {
+function BookSticker({ item, angle, onOpen, flat, rarity }) {
   const { controls, shake } = useLockedShake();
   return (
     <motion.div animate={controls} className="flex w-[31%] sm:w-[18.5%]">
       <button
         type="button"
         onClick={() => (item.earned ? onOpen(item) : shake())}
-        aria-label={`${item.title}, ${item.earned ? 'earned' : `locked, ${stickerRequirement(item)}`}`}
+        aria-label={`${item.title}${rarity ? `, ${rarity.label}` : ''}, ${item.earned ? 'earned' : `locked, ${stickerRequirement(item)}`}`}
         className="group flex w-full flex-col items-center gap-1.5 rounded-[14px] px-1 pb-2 pt-1 text-center transition-colors hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue/60"
       >
         <Tilt
@@ -285,6 +339,7 @@ function BookSticker({ item, angle, onOpen, flat }) {
             className={`h-[68px] w-[68px] select-none object-contain ${item.earned ? 'drop-shadow-[0_8px_10px_rgb(6_13_26_/_0.18)]' : 'grayscale opacity-25'}`}
           />
         </Tilt>
+        <RarityChip rarity={rarity} size="sm" />
         <span className={`font-ninja text-[11.5px] font-extrabold leading-tight ${item.earned ? 'text-ninja-navy' : 'text-ninja-navy/55'}`}>
           {item.title}
         </span>
@@ -301,6 +356,7 @@ function BookSticker({ item, angle, onOpen, flat }) {
 
 export function StickerBook({ belt, level, logs, childName, href, className = '' }) {
   const flat = useReducedMotion();
+  const rarity = useStickerRarity();
   const { zoomed, open, close } = useStickerZoom();
   const progress = useMemo(() => stickerProgress({ belt, level, logs }), [belt, level, logs]);
   const recent = useMemo(() => progress.recent(BOOK_COUNT), [progress]);
@@ -334,7 +390,7 @@ export function StickerBook({ belt, level, logs, childName, href, className = ''
             across on a phone, five on a desktop, whatever the count. */}
         <div className="flex flex-wrap justify-center gap-1">
           {shown.map((item, i) => (
-            <BookSticker key={item.id} item={item} angle={BOOK_ANGLES[i % BOOK_ANGLES.length]} onOpen={open} flat={flat} />
+            <BookSticker key={item.id} item={item} angle={BOOK_ANGLES[i % BOOK_ANGLES.length]} onOpen={open} flat={flat} rarity={rarity?.[item.id]} />
           ))}
         </div>
       </div>
@@ -358,6 +414,7 @@ export function StickerBook({ belt, level, logs, childName, href, className = ''
             childName={childName}
             onClose={close}
             flat={flat}
+            rarity={rarity?.[zoomed.id]}
           />
         )}
       </AnimatePresence>
@@ -377,6 +434,7 @@ export function StickerBook({ belt, level, logs, childName, href, className = ''
 export default function StickerCollection({ belt, earnedIds, earnedTotal, childName, bookHref }) {
   const { zoomed, open, close } = useStickerZoom();
   const flat = useReducedMotion();
+  const rarity = useStickerRarity();
 
   const stickers = stickersForBelt(belt);
   if (!stickers.length) return null;
@@ -408,6 +466,7 @@ export default function StickerCollection({ belt, earnedIds, earnedTotal, childN
             isEarned={earnedIds.has(item.id)}
             onOpen={open}
             flat={flat}
+            rarity={rarity?.[item.id]}
           />
         ))}
       </div>
@@ -431,6 +490,7 @@ export default function StickerCollection({ belt, earnedIds, earnedTotal, childN
             childName={childName}
             onClose={close}
             flat={flat}
+            rarity={rarity?.[zoomed.id]}
           />
         )}
       </AnimatePresence>

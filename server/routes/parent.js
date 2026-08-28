@@ -426,6 +426,44 @@ router.get('/schedule', requireParent, async (req, res) => {
   }
 });
 
+// GET /api/parent/sticker-rarity
+//
+// Where every CREATE ninja is standing on the belt ladder, as a histogram of
+// (belt, level) -> how many are there. The sticker book turns that into a
+// rarity for each sticker: a sticker is rare when few ninjas have walked past
+// the level it celebrates.
+//
+// The counting itself stays on the client, because the two things it needs are
+// already there and nowhere else: the belt order (utils/beltConfig) and which
+// levels each sticker covers (lib/createStickers). This route knows nothing
+// about stickers, so adding one never means touching it.
+//
+// Every active CREATE ninja, all centers, not just the parent's. "How rare is
+// this sticker" is a question about the whole dojo, and one center on its own
+// has too few Brown belts to divide into four tiers without the answer
+// flipping week to week. Counts only: no names, no ids, nothing that resolves
+// to a child, and the totals are never sent as raw numbers to the page (the
+// book prints a percentage).
+router.get('/sticker-rarity', requireParent, async (req, res) => {
+  const pool = req.app.get('db');
+  try {
+    // belt_sublevel is nullable on a belt a ninja has only just started, and
+    // "no level yet" is the first one.
+    const { rows } = await pool.query(`
+      SELECT sp.belt_level AS belt, COALESCE(sp.belt_sublevel, 1) AS level, COUNT(*)::int AS count
+        FROM student_programs sp
+        JOIN students s ON s.id = sp.student_id
+       WHERE sp.program = 'CREATE' AND s.active = true AND sp.belt_level IS NOT NULL
+       GROUP BY 1, 2
+    `);
+    const ninjas = rows.reduce((sum, row) => sum + row.count, 0);
+    res.json({ ninjas, positions: rows });
+  } catch (err) {
+    console.error('Parent sticker rarity error:', err);
+    res.status(500).json({ error: 'Failed to load sticker rarity' });
+  }
+});
+
 // GET /api/parent/students
 router.get('/students', requireParent, async (req, res) => {
   const pool = req.app.get('db');

@@ -7,6 +7,7 @@ import { Hero, PinnedHero, PageSheet, BackChip } from '../../components/parent/P
 import { StickerCard, StickerZoom, useStickerZoom } from '../../components/parent/StickerCollection';
 import { CREATE_STICKERS, STICKER_BELTS, stickersForBelt } from '../../lib/createStickers';
 import { stickerProgress } from '../../lib/stickerProgress';
+import { useStickerRarity } from '../../lib/stickerRarity';
 import { SkeletonProfile } from '../../components/ui/Skeleton';
 import { FLAT } from '../../lib/surfaces';
 import BeltIcon from '../../components/ui/BeltIcon';
@@ -33,7 +34,7 @@ import BeltIcon from '../../components/ui/BeltIcon';
 // lit scene, a book that bends as it turns), that is the moment to add it,
 // behind a lazy import of this route only.
 
-function BeltPage({ belt, progress, onOpen, flat }) {
+function BeltPage({ belt, progress, onOpen, flat, rarity }) {
   const stickers = stickersForBelt(belt);
   if (!stickers.length) return null;
   const earnedHere = stickers.filter((item) => progress.earnedIds.has(item.id)).length;
@@ -66,6 +67,7 @@ function BeltPage({ belt, progress, onOpen, flat }) {
             isEarned={progress.earnedIds.has(item.id)}
             onOpen={onOpen}
             flat={flat}
+            rarity={rarity?.[item.id]}
           />
         ))}
       </div>
@@ -77,6 +79,7 @@ export default function ParentStickerBook() {
   const { id } = useParams();
   const { students, setActiveId, setViewAll, detailFor, loadDetail, detailLoading } = useParentPortal();
   const flat = useReducedMotion();
+  const rarity = useStickerRarity();
   const { zoomed, open, close } = useStickerZoom();
 
   const target = Number(id);
@@ -156,7 +159,7 @@ export default function ParentStickerBook() {
         <PageSheet>
           <div className="space-y-4 lg:space-y-5">
             {STICKER_BELTS.map((name) => (
-              <BeltPage key={name} belt={name} progress={progress} onOpen={open} flat={flat} />
+              <BeltPage key={name} belt={name} progress={progress} onOpen={open} flat={flat} rarity={rarity} />
             ))}
           </div>
         </PageSheet>
@@ -171,6 +174,7 @@ export default function ParentStickerBook() {
             childName={first}
             onClose={close}
             flat={flat}
+            rarity={rarity?.[zoomed.id]}
           />
         )}
       </AnimatePresence>
