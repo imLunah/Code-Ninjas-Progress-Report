@@ -264,6 +264,12 @@ function stripMd(text = '') {
 // a size container in ParentLayout, so 100cqw is the region beside the side
 // nav, where w-screen would run underneath it. Its ink stays in its own inner
 // max-w-6xl column so the text still lines up with the page content below.
+//
+// Square along the top, rounded along the bottom, at the same radii as the
+// ninja's own banner (`Hero size="page"`): both are the top of their page, so
+// the top corners have no page to show at and the bottom ones do. Keep the two
+// in step — they are the first thing a parent sees on either screen, and one
+// squared corner between them reads as a bug.
 function EventSlideshow({ events }) {
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -281,7 +287,7 @@ function EventSlideshow({ events }) {
   if (!events.length) {
     return (
       <section
-        className="relative left-1/2 -translate-x-1/2 w-[100cqw] -mt-5 lg:-mt-7 overflow-hidden text-white"
+        className="relative left-1/2 -translate-x-1/2 w-[100cqw] -mt-5 lg:-mt-7 overflow-hidden rounded-b-[34px] lg:rounded-b-[40px] text-white"
         style={{ background: 'linear-gradient(135deg, #12264d 0%, #0b3d8f 100%)' }}
         aria-label="Events at the center"
       >
@@ -313,7 +319,7 @@ function EventSlideshow({ events }) {
 
   return (
     <section
-      className="relative left-1/2 -translate-x-1/2 w-[100cqw] -mt-5 lg:-mt-7 overflow-hidden text-white"
+      className="relative left-1/2 -translate-x-1/2 w-[100cqw] -mt-5 lg:-mt-7 overflow-hidden rounded-b-[34px] lg:rounded-b-[40px] text-white"
       style={{ background: '#0e1c3a' }}
       aria-label="Events at the center"
       onPointerEnter={(e) => { if (e.pointerType === 'mouse') setPaused(true); }}
