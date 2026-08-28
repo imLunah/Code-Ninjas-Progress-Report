@@ -17,17 +17,17 @@ import { fmtDay } from '../../lib/parentProgress';
 // Three numbers a parent cannot read off the rest of the page, each one
 // standing a sticker on a plinth.
 //
-// These were dark gradient tiles for a while, one arbitrary colour each, with
-// a blurred glow in the corner and a neon shadow under the number, and the
-// sticker dropped to a 25% watermark behind the text. Stripping all of that
-// off left three white boxes with a hole in the middle of each, which was the
-// other kind of wrong. The plinth is what the middle is for: a record IS a
-// thing on a shelf, and the artwork is the reward, so it gets a base, a
-// shadow it casts onto that base, and a size worth looking at.
+// No card under any of them. They went from dark gradient tiles, to flat
+// white boxes, to blocks of tint, and each of those was a container drawn
+// around three short pieces of text because a number on a page felt like it
+// needed one. It does not: the sheet they sit on is already a surface, and
+// what separates one record from the next is the space between them.
 //
-// Colour comes from the tints in index.css rather than a gradient invented
-// here, which is what puts these cards in the same room as the rest of the
-// portal and gets dark mode for nothing.
+// What is left is the number, the sticker on its base, and two lines. The
+// only colour on each is the number, which takes one of the four tint inks
+// from index.css rather than a value invented here, so it is a colour this
+// app already uses and it answers to dark mode. `tint-ink-only` is that
+// palette with the panel it normally comes with switched off.
 //
 // `rest` is the angle the sticker is stuck on at. Hand-set and different on
 // each, for the same reason BeltStickers hand-places its cluster: three
@@ -85,7 +85,7 @@ function Plinth({ art, rest }) {
 function RecordCard({ record, value, caption, art, headline = false, flat, index = 0 }) {
   return (
     <motion.article
-      className={`tint-${record.tint} tint-bare flex min-w-[228px] flex-1 flex-col rounded-[22px] p-4 sm:min-w-[242px]`}
+      className={`tint-${record.tint} tint-ink-only flex min-w-[214px] flex-1 flex-col sm:min-w-[228px]`}
       initial={flat ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.06 * index }}
@@ -99,8 +99,8 @@ function RecordCard({ record, value, caption, art, headline = false, flat, index
         </p>
         {art && <Plinth art={art} rest={record.rest} />}
       </div>
-      <p className="mt-4 font-ninja text-[14.5px] font-extrabold text-ninja-navy">{record.title}</p>
-      <p className="mt-1 font-ninja text-[12px] font-bold v2" style={{ color: 'var(--tint-ink-soft)' }}>{caption}</p>
+      <p className="mt-3.5 font-ninja text-[14.5px] font-extrabold text-ninja-navy">{record.title}</p>
+      <p className="mt-1 font-ninja text-[12px] font-bold text-ninja-muted">{caption}</p>
     </motion.article>
   );
 }
@@ -262,7 +262,7 @@ export default function ParentStickerBook() {
           <section aria-labelledby="records-heading">
             <h2 id="records-heading" className="font-ninja text-[24px] font-extrabold tracking-[-0.02em] text-ninja-navy">Personal records</h2>
 
-            <div className="-mx-4 mt-4 flex gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
+            <div className="-mx-4 mt-4 flex gap-7 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-9 sm:px-6 lg:mx-0 lg:px-0">
               {records.map((record, i) => (
                 <RecordCard key={record.key} record={record} flat={flat} index={i} {...recordValues[record.key]} />
               ))}
