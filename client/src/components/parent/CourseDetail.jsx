@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BugIcon, Globe2Icon, GraduationCapIcon, TrophyIcon, WrenchIcon } from 'lucide-react';
-import { Hero, Emblem, BeltRoad, BeltStickers, LevelPills, LevelMedal, hasLevelMedal, Group, Row, Tile, StatusDot, StatusText, BackChip } from './ParentUI';
+import { Hero, PinnedHero, PageSheet, Emblem, BeltRoad, BeltStickers, LevelPills, LevelMedal, hasLevelMedal, Group, Row, Tile, StatusDot, StatusText, BackChip } from './ParentUI';
 import { BELTS, getLevels } from '../../utils/beltConfig';
 import { levelProjects, levelStates, levelTitle, realSessions, trackModel, fmtDay } from '../../lib/parentProgress';
 import { levelInfo, beltInfo, levelShot } from '../../lib/createCurriculum';
@@ -155,225 +155,231 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
   }
 
   return (
-    <div className="space-y-4">
-      <Hero program="CREATE" size="page">
-        {/* The belt IS the hero's art on every width. Desktop: it is scenery,
-            and scenery has to stay legible as the thing it is. Blown up to
-            twice the banner it stopped being a belt at all — the frame filled
-            with the mask band and two eyes, which reads as shapes rather than
-            as a ninja, and the hard arc of the ring cut a line across the
-            middle of the banner that nothing in the design had asked for.
+    <div className="relative">
+      <PinnedHero>
+        <Hero program="CREATE" size="page" className="!mt-0">
+          {/* The belt IS the hero's art on every width. Desktop: it is scenery,
+              and scenery has to stay legible as the thing it is. Blown up to
+              twice the banner it stopped being a belt at all — the frame filled
+              with the mask band and two eyes, which reads as shapes rather than
+              as a ninja, and the hard arc of the ring cut a line across the
+              middle of the banner that nothing in the design had asked for.
 
-            So: 1.3x the banner's height, hung 3rem past its right edge
-            (`calc(50% - 50cqw)` is the walk from this box out to that edge).
-            Big enough to be cropped, small enough that the piece in frame is
-            still recognisably the belt.
+              So: 1.3x the banner's height, hung 3rem past its right edge
+              (`calc(50% - 50cqw)` is the walk from this box out to that edge).
+              Big enough to be cropped, small enough that the piece in frame is
+              still recognisably the belt.
 
-            The art is at FULL strength — no opacity at all. The fade is
-            entirely the MASK: weight in the top right corner, dissolving
-            toward the bottom left, which is exactly where the words and the
-            belt road are. So the art never has an edge that crosses content,
-            and the dimmed belts at the end of the road are never asked to
-            hold their own against the brightest part of a picture. A flat
-            opacity was tried at several values and each one did the same two
-            things wrong: it drained the belt's colour, which is the one thing
-            the art is there to say, and it still left the ring's outline
-            drawn straight through the road. The stops are late on purpose —
-            solid for the first 55% and not gone until 96% — so most of what
-            is on screen is the belt at its true colour and only the tail of
-            it thins out over the words.
+              The art is at FULL strength — no opacity at all. The fade is
+              entirely the MASK: weight in the top right corner, dissolving
+              toward the bottom left, which is exactly where the words and the
+              belt road are. So the art never has an edge that crosses content,
+              and the dimmed belts at the end of the road are never asked to
+              hold their own against the brightest part of a picture. A flat
+              opacity was tried at several values and each one did the same two
+              things wrong: it drained the belt's colour, which is the one thing
+              the art is there to say, and it still left the ring's outline
+              drawn straight through the road. The stops are late on purpose —
+              solid for the first 55% and not gone until 96% — so most of what
+              is on screen is the belt at its true colour and only the tail of
+              it thins out over the words.
 
-            One belt is not the sticker sheet's own: `belt-white-lg.png` is
-            the BLUE belt with its ring recoloured white, because the sheet's
-            white belt carries a black outer stroke so it stays visible on
-            white paper. Right for a sticker, wrong on a blue banner, and the
-            other twelve carry no such stroke. The small `belt-white.png`
-            keeps its outline — it is drawn on white cards all over the staff
-            side, where without one there would be nothing to see.
+              One belt is not the sticker sheet's own: `belt-white-lg.png` is
+              the BLUE belt with its ring recoloured white, because the sheet's
+              white belt carries a black outer stroke so it stays visible on
+              white paper. Right for a sticker, wrong on a blue banner, and the
+              other twelve carry no such stroke. The small `belt-white.png`
+              keeps its outline — it is drawn on white cards all over the staff
+              side, where without one there would be nothing to see.
 
-            `large` asks for the 1280px copy, because the banner paints one
-            at around 650 CSS px — some 1300 device pixels on a retina screen
-            — and the everyday 256px file upscaled that far looks like a bad
-            JPEG. The nine belts that have one get it; the metallic four have
-            no transparent source art yet and fall back to the small file.
-            They are NOT blurred to cover for it: blur took the one thing a
-            metal belt has to say — its colour — and stirred it into the
-            gradient. Soft and coloured beats smooth and grey.
+              `large` asks for the 1280px copy, because the banner paints one
+              at around 650 CSS px — some 1300 device pixels on a retina screen
+              — and the everyday 256px file upscaled that far looks like a bad
+              JPEG. The nine belts that have one get it; the metallic four have
+              no transparent source art yet and fall back to the small file.
+              They are NOT blurred to cover for it: blur took the one thing a
+              metal belt has to say — its colour — and stirred it into the
+              gradient. Soft and coloured beats smooth and grey.
 
-            Phone: a bit smaller and centered, so the pills row underneath
-            still breathes. Both sit behind the ink either way — the hero's
-            isolation lets a negative z sit above the gradient but under
-            everything written. */}
-        <span
-          aria-hidden
-          className="hidden lg:block absolute inset-y-[-15%] right-[calc(50%-50cqw-3rem)] aspect-square pointer-events-none"
-          style={{
-            zIndex: -1,
-            maskImage: 'linear-gradient(to bottom left, #000 55%, transparent 96%)',
-            WebkitMaskImage: 'linear-gradient(to bottom left, #000 55%, transparent 96%)',
-          }}
-        >
-          <BeltIcon belt={viewBelt} large style={{ width: '100%', height: '100%' }} />
-        </span>
-        <span
-          aria-hidden
-          className="lg:hidden absolute top-1/2 -translate-y-1/2 right-[-2rem] h-[72%] aspect-square pointer-events-none"
-          style={{ zIndex: -1 }}
-        >
-          <BeltIcon belt={viewBelt} large style={{ width: '100%', height: '100%' }} />
-        </span>
-        {/* The belt's own poster stickers, after the belt art so they land in
-            front of it rather than behind. */}
-        <BeltStickers belt={viewBelt} />
-        {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to profile" /></div>}
-        <div className="flex items-center lg:items-start justify-between gap-5">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="min-w-0">
-              <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">CREATE · {childName}</p>
-              <p className="font-ninja font-extrabold text-[36px] lg:text-[32px] leading-none mt-1 tracking-[-0.015em]">{viewBelt} belt</p>
-              <p className="font-ninja text-[13px] opacity-85 mt-2 truncate">{summary}</p>
+              Phone: a bit smaller and centered, so the pills row underneath
+              still breathes. Both sit behind the ink either way — the hero's
+              isolation lets a negative z sit above the gradient but under
+              everything written. */}
+          <span
+            aria-hidden
+            className="hidden lg:block absolute inset-y-[-15%] right-[calc(50%-50cqw-3rem)] aspect-square pointer-events-none"
+            style={{
+              zIndex: -1,
+              maskImage: 'linear-gradient(to bottom left, #000 55%, transparent 96%)',
+              WebkitMaskImage: 'linear-gradient(to bottom left, #000 55%, transparent 96%)',
+            }}
+          >
+            <BeltIcon belt={viewBelt} large style={{ width: '100%', height: '100%' }} />
+          </span>
+          <span
+            aria-hidden
+            className="lg:hidden absolute top-1/2 -translate-y-1/2 right-[-2rem] h-[72%] aspect-square pointer-events-none"
+            style={{ zIndex: -1 }}
+          >
+            <BeltIcon belt={viewBelt} large style={{ width: '100%', height: '100%' }} />
+          </span>
+          {/* The belt's own poster stickers, after the belt art so they land in
+              front of it rather than behind. */}
+          <BeltStickers belt={viewBelt} />
+          {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to profile" /></div>}
+          <div className="flex items-center lg:items-start justify-between gap-5">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="min-w-0">
+                <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">CREATE · {childName}</p>
+                <p className="font-ninja font-extrabold text-[36px] lg:text-[32px] leading-none mt-1 tracking-[-0.015em]">{viewBelt} belt</p>
+                <p className="font-ninja text-[13px] opacity-85 mt-2 truncate">{summary}</p>
+              </div>
             </div>
           </div>
-        </div>
-        {/* No clearance for the art any more: it is faded into the gradient
-            now, so the road crosses it instead of stopping short of it.
+          {/* No clearance for the art any more: it is faded into the gradient
+              now, so the road crosses it instead of stopping short of it.
             
-            One road at every width. The phone used to get a row of level
-            pills here instead, which answered a different question than the
-            banner was asking: the title says which BELT is open, and the
-            pills moved the level. Levels are still picked from the All levels
-            list below, where they have room for their names and dates, and
-            the road now says where the ninja is on the whole ladder from the
-            first screen — which is the thing a parent opens this page for. */}
-        <BeltRoad current={belt} selected={viewBelt} onSelect={pickBelt} onHero fit className="mt-5" />
-      </Hero>
+              One road at every width. The phone used to get a row of level
+              pills here instead, which answered a different question than the
+              banner was asking: the title says which BELT is open, and the
+              pills moved the level. Levels are still picked from the All levels
+              list below, where they have room for their names and dates, and
+              the road now says where the ninja is on the whole ladder from the
+              first screen — which is the thing a parent opens this page for. */}
+          <BeltRoad current={belt} selected={viewBelt} onSelect={pickBelt} onHero fit className="mt-5" />
+        </Hero>
+      </PinnedHero>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={`${viewBelt}-${level}`}
-            initial={{ opacity: 0, x: 10 * dir }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -8 * dir }}
-            transition={{ duration: 0.18, ease: EASE_OUT }}
-          >
-            <Group tint={levelState === 'current' ? 'green' : levelState === 'done' ? 'blue' : undefined}>
-              {/* The game itself, straight off the wall poster, tilted into
-                  the corner like a photo dropped on the card.
-
-                  It was a full-bleed banner first and that was the wrong
-                  shape twice over: stretched to the card's width it upscaled
-                  a 424px file past 1.6x, and no aspect ratio fixes that — a
-                  wide strip of one screenshot is not a picture of a game, it
-                  is a crop of a wrench. Held at its own size and turned a few
-                  degrees it stays sharp, it reads as an object rather than a
-                  header, and it sits with the rest of the bento instead of
-                  fighting it. The card clips whatever hangs over the edge. */}
-              <div>
-                {/* A row, not an overlay: the picture is a flex item, so the
-                    header grows to hold ALL of it. Floated into the corner it
-                    was clipped by whatever height the words happened to need,
-                    which is how you end up showing two thirds of a game. The
-                    tilt is a transform, so it costs no layout — only the four
-                    corners drift, and the card has room for them. */}
-                <div className="flex items-start gap-3 pl-4 pr-4 pt-3.5 pb-3">
-                <div className="min-w-0 flex-1">
-                  <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em]" style={levelState ? { color: 'var(--tint-ink)' } : undefined}>
-                    Level {level}{levelState === 'current' ? ' · now' : levelState === 'done' ? ' · done' : ' · ahead'}
-                  </p>
-                  {/* The poster's name for the level. Only when we have none
-                      does it fall back to the old guess made from the level's
-                      last project. */}
-                  {(info?.topic || levelTitle(viewBelt, level) !== `Level ${level}`) && (
-                    <p className="font-ninja font-extrabold text-[20px] text-ninja-navy leading-tight mt-0.5">
-                      {info?.topic || levelTitle(viewBelt, level)}
-                    </p>
-                  )}
-                  <p className="font-ninja text-[12.5px] v2 text-ninja-muted mt-0.5">
-                    {[`${done} of ${projects.length} projects`, started ? `started ${fmtDay(started)}` : null].filter(Boolean).join(' · ')}
-                  </p>
-                </div>
-                {/* The 3 degree rest angle is what pins it to the card like
-                    a photo; the pointer turns it off that angle rather than
-                    from square, so it never looks straightened. */}
-                {shot && (
-                  <Tilt
-                    rest={3}
-                    amount={9}
-                    glare
-                    className="relative flex-shrink-0 w-[132px] sm:w-[176px] mt-0.5 rounded-[10px] ring-1 ring-black/10 shadow-[0_12px_28px_-12px_rgb(6_13_26_/_0.5)]"
-                  >
-                    <img
-                      src={shot}
-                      alt=""
-                      aria-hidden="true"
-                      draggable={false}
-                      className="w-full select-none rounded-[10px]"
-                    />
-                  </Tilt>
-                )}
-                </div>
-                {/* What the ninja actually builds at the end of the level. It
-                    is the one sentence a parent can read and picture. */}
-                {info?.quest && (
-                  <p className="font-ninja text-[13.5px] leading-relaxed text-ninja-navy/85 px-4 pb-3 -mt-1">{info.quest}</p>
-                )}
-              </div>
-              <div className={`mx-3 mb-3 rounded-[14px] overflow-hidden ${levelState ? 'border border-ninja-navy/[0.06]' : ''}`}>
-                {projects.map((p, i) => <ProjectRow key={p.name} p={p} first={i === 0} />)}
-                {projects.length === 0 && <p className="px-4 py-3 font-ninja text-sm text-ninja-muted">No projects listed for this level yet.</p>}
-              </div>
-              {/* The concepts the level teaches, which is the EXPLORE half of
-                  each build/explore/solve set. The project rows say what gets
-                  made; this says what it was for. */}
-              {concepts.length > 0 && (
-                <div className="px-4 pb-4 -mt-1">
-                  <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted">Concepts</p>
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {concepts.map((c) => (
-                      <span key={c} className="font-ninja text-[12px] font-bold rounded-lg px-2.5 py-1 bg-ninja-navy/[0.05] text-ninja-navy/80">{c}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* A belt that closes a pair ends with a Mastery Mission. It
-                  belongs on the last level, where it actually happens. */}
-              {belted?.mastery && level === lastLevel && (
-                <div className="mx-3 mb-3 rounded-[14px] px-4 py-3" style={{ background: 'rgb(var(--ninja-blue) / 0.07)' }}>
-                  <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-blue">Mastery mission</p>
-                  <p className="font-ninja text-[13px] leading-relaxed text-ninja-navy/85 mt-1">{belted.mastery}</p>
-                </div>
-              )}
-            </Group>
-          </motion.div>
-        </AnimatePresence>
-
+      <PageSheet>
         <div className="space-y-4">
-          <Group title={onBelt ? 'All levels' : `${viewBelt} levels`}>
-            {states.map((s, i) => {
-              const finished = sessions.filter((l) => l.belt_level_at === viewBelt && Number(l.belt_sublevel_at) === s.level && l.status_at === 'Completed').map((l) => String(l.session_date).split('T')[0]).sort();
-              const lastDone = finished[finished.length - 1] || null;
-              return (
-                <Row key={s.level} first={i === 0} onClick={() => pick(s.level)} active={s.level === level} dim={s.state === 'ahead'}
-                  lead={hasLevelMedal(viewBelt, s.level)
-                    ? <LevelMedal belt={viewBelt} level={s.level} ahead={s.state === 'ahead'} tilt />
-                    : <Tile tint={s.state === 'done' ? 'rgb(34 197 94 / 0.14)' : s.state === 'current' ? 'rgb(var(--ninja-blue) / 0.14)' : 'rgb(var(--ninja-navy) / 0.06)'} color={s.state === 'done' ? '#15803d' : s.state === 'current' ? undefined : 'rgb(var(--ninja-muted))'}>{s.level}</Tile>}
-                  title={`Level ${s.level}`}
-                  subtitle={[`${s.projectCount} project${s.projectCount === 1 ? '' : 's'}`, s.state === 'current' ? 'now' : s.state === 'done' && lastDone ? `done ${fmtDay(lastDone)}` : null].filter(Boolean).join(' · ')}
-                />
-              );
-            })}
-          </Group>
-        </div>
-      </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={`${viewBelt}-${level}`}
+                initial={{ opacity: 0, x: 10 * dir }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -8 * dir }}
+                transition={{ duration: 0.18, ease: EASE_OUT }}
+              >
+                <Group tint={levelState === 'current' ? 'green' : levelState === 'done' ? 'blue' : undefined}>
+                  {/* The game itself, straight off the wall poster, tilted into
+                      the corner like a photo dropped on the card.
 
-      <StickerCollection
-        belt={viewBelt}
-        earnedIds={earnedStickerIds}
-        earnedTotal={earnedStickerIds.size}
-        childName={childName}
-        bookHref={backTo ? `${backTo}/stickers` : null}
-      />
+                      It was a full-bleed banner first and that was the wrong
+                      shape twice over: stretched to the card's width it upscaled
+                      a 424px file past 1.6x, and no aspect ratio fixes that — a
+                      wide strip of one screenshot is not a picture of a game, it
+                      is a crop of a wrench. Held at its own size and turned a few
+                      degrees it stays sharp, it reads as an object rather than a
+                      header, and it sits with the rest of the bento instead of
+                      fighting it. The card clips whatever hangs over the edge. */}
+                  <div>
+                    {/* A row, not an overlay: the picture is a flex item, so the
+                        header grows to hold ALL of it. Floated into the corner it
+                        was clipped by whatever height the words happened to need,
+                        which is how you end up showing two thirds of a game. The
+                        tilt is a transform, so it costs no layout — only the four
+                        corners drift, and the card has room for them. */}
+                    <div className="flex items-start gap-3 pl-4 pr-4 pt-3.5 pb-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em]" style={levelState ? { color: 'var(--tint-ink)' } : undefined}>
+                        Level {level}{levelState === 'current' ? ' · now' : levelState === 'done' ? ' · done' : ' · ahead'}
+                      </p>
+                      {/* The poster's name for the level. Only when we have none
+                          does it fall back to the old guess made from the level's
+                          last project. */}
+                      {(info?.topic || levelTitle(viewBelt, level) !== `Level ${level}`) && (
+                        <p className="font-ninja font-extrabold text-[20px] text-ninja-navy leading-tight mt-0.5">
+                          {info?.topic || levelTitle(viewBelt, level)}
+                        </p>
+                      )}
+                      <p className="font-ninja text-[12.5px] v2 text-ninja-muted mt-0.5">
+                        {[`${done} of ${projects.length} projects`, started ? `started ${fmtDay(started)}` : null].filter(Boolean).join(' · ')}
+                      </p>
+                    </div>
+                    {/* The 3 degree rest angle is what pins it to the card like
+                        a photo; the pointer turns it off that angle rather than
+                        from square, so it never looks straightened. */}
+                    {shot && (
+                      <Tilt
+                        rest={3}
+                        amount={9}
+                        glare
+                        className="relative flex-shrink-0 w-[132px] sm:w-[176px] mt-0.5 rounded-[10px] ring-1 ring-black/10 shadow-[0_12px_28px_-12px_rgb(6_13_26_/_0.5)]"
+                      >
+                        <img
+                          src={shot}
+                          alt=""
+                          aria-hidden="true"
+                          draggable={false}
+                          className="w-full select-none rounded-[10px]"
+                        />
+                      </Tilt>
+                    )}
+                    </div>
+                    {/* What the ninja actually builds at the end of the level. It
+                        is the one sentence a parent can read and picture. */}
+                    {info?.quest && (
+                      <p className="font-ninja text-[13.5px] leading-relaxed text-ninja-navy/85 px-4 pb-3 -mt-1">{info.quest}</p>
+                    )}
+                  </div>
+                  <div className={`mx-3 mb-3 rounded-[14px] overflow-hidden ${levelState ? 'border border-ninja-navy/[0.06]' : ''}`}>
+                    {projects.map((p, i) => <ProjectRow key={p.name} p={p} first={i === 0} />)}
+                    {projects.length === 0 && <p className="px-4 py-3 font-ninja text-sm text-ninja-muted">No projects listed for this level yet.</p>}
+                  </div>
+                  {/* The concepts the level teaches, which is the EXPLORE half of
+                      each build/explore/solve set. The project rows say what gets
+                      made; this says what it was for. */}
+                  {concepts.length > 0 && (
+                    <div className="px-4 pb-4 -mt-1">
+                      <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted">Concepts</p>
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {concepts.map((c) => (
+                          <span key={c} className="font-ninja text-[12px] font-bold rounded-lg px-2.5 py-1 bg-ninja-navy/[0.05] text-ninja-navy/80">{c}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* A belt that closes a pair ends with a Mastery Mission. It
+                      belongs on the last level, where it actually happens. */}
+                  {belted?.mastery && level === lastLevel && (
+                    <div className="mx-3 mb-3 rounded-[14px] px-4 py-3" style={{ background: 'rgb(var(--ninja-blue) / 0.07)' }}>
+                      <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-blue">Mastery mission</p>
+                      <p className="font-ninja text-[13px] leading-relaxed text-ninja-navy/85 mt-1">{belted.mastery}</p>
+                    </div>
+                  )}
+                </Group>
+              </motion.div>
+            </AnimatePresence>
+
+            <div className="space-y-4">
+              <Group title={onBelt ? 'All levels' : `${viewBelt} levels`}>
+                {states.map((s, i) => {
+                  const finished = sessions.filter((l) => l.belt_level_at === viewBelt && Number(l.belt_sublevel_at) === s.level && l.status_at === 'Completed').map((l) => String(l.session_date).split('T')[0]).sort();
+                  const lastDone = finished[finished.length - 1] || null;
+                  return (
+                    <Row key={s.level} first={i === 0} onClick={() => pick(s.level)} active={s.level === level} dim={s.state === 'ahead'}
+                      lead={hasLevelMedal(viewBelt, s.level)
+                        ? <LevelMedal belt={viewBelt} level={s.level} ahead={s.state === 'ahead'} tilt />
+                        : <Tile tint={s.state === 'done' ? 'rgb(34 197 94 / 0.14)' : s.state === 'current' ? 'rgb(var(--ninja-blue) / 0.14)' : 'rgb(var(--ninja-navy) / 0.06)'} color={s.state === 'done' ? '#15803d' : s.state === 'current' ? undefined : 'rgb(var(--ninja-muted))'}>{s.level}</Tile>}
+                      title={`Level ${s.level}`}
+                      subtitle={[`${s.projectCount} project${s.projectCount === 1 ? '' : 's'}`, s.state === 'current' ? 'now' : s.state === 'done' && lastDone ? `done ${fmtDay(lastDone)}` : null].filter(Boolean).join(' · ')}
+                    />
+                  );
+                })}
+              </Group>
+            </div>
+          </div>
+
+          <StickerCollection
+            belt={viewBelt}
+            earnedIds={earnedStickerIds}
+            earnedTotal={earnedStickerIds.size}
+            childName={childName}
+            bookHref={backTo ? `${backTo}/stickers` : null}
+          />
+        </div>
+      </PageSheet>
     </div>
   );
 }
@@ -408,62 +414,68 @@ function TrackDetail({ enrollment, logs, childName, backTo }) {
     : (current?.working ? `Module ${current.working.index} of ${current.modules.length} · ${current.working.name}` : started ? `${current.sessions} session${current.sessions === 1 ? '' : 's'}` : 'Just getting started');
 
   return (
-    <div className="space-y-4">
-      <Hero program={p} size="page">
-        {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to profile" /></div>}
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <p className="hidden lg:block font-ninja text-[12px] font-extrabold opacity-85 truncate">{p} · {childName}</p>
-            <p className="font-ninja font-extrabold text-[36px] lg:text-[32px] leading-[1.02] mt-1 tracking-[-0.015em]">{p}</p>
-            <p className="font-ninja text-[13px] opacity-85 mt-2 truncate">{meta}</p>
+    <div className="relative">
+      <PinnedHero>
+        <Hero program={p} size="page" className="!mt-0">
+          {backTo && <div className="mb-10 lg:mb-6"><BackChip to={backTo} label="Back to profile" /></div>}
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="hidden lg:block font-ninja text-[12px] font-extrabold opacity-85 truncate">{p} · {childName}</p>
+              <p className="font-ninja font-extrabold text-[36px] lg:text-[32px] leading-[1.02] mt-1 tracking-[-0.015em]">{p}</p>
+              <p className="font-ninja text-[13px] opacity-85 mt-2 truncate">{meta}</p>
+            </div>
+            <Emblem program={p} size={104} tilt />
           </div>
-          <Emblem program={p} size={104} tilt />
-        </div>
-        {multi && (
-          <>
-            <div className="hidden lg:block mt-5"><LevelPills states={pills} value={openIdx} onChange={pick} onHero layoutId="track-pill-desktop" /></div>
-            <div className="lg:hidden mt-4"><LevelPills states={pills} value={openIdx} onChange={pick} onHero layoutId="track-pill-mobile" /></div>
-          </>
-        )}
-      </Hero>
-
-      {open && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div key={open.index}
-              initial={{ opacity: 0, x: 10 * dir }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 * dir }}
-              transition={{ duration: 0.18, ease: EASE_OUT }}>
-              <Group tint={open.state === 'current' ? 'blue' : open.state === 'done' ? 'green' : undefined}>
-                <div className="px-4 pt-3.5 pb-3">
-                  <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em]" style={open.state !== 'ahead' ? { color: 'var(--tint-ink)' } : { color: 'rgb(var(--ninja-muted))' }}>
-                    {multi ? `${unit} ${open.index}` : 'Modules'}{open.state === 'current' ? (started ? ' · now' : ' · next') : open.state === 'done' ? ' · done' : ''}
-                  </p>
-                  {multi && <p className="font-ninja font-extrabold text-[20px] text-ninja-navy leading-tight mt-0.5">{open.name}</p>}
-                  <p className="font-ninja text-[12.5px] v2 text-ninja-muted mt-0.5">
-                    {[trackLine(open), open.first ? `started ${fmtDay(open.first)}` : null].filter(Boolean).join(' · ')}
-                  </p>
-                </div>
-                <div className="mx-3 mb-3 rounded-[14px] overflow-hidden border border-ninja-navy/[0.06]">
-                  {open.modules.map((m, i) => <ModuleRow key={m.name} m={m} first={i === 0} />)}
-                  {open.modules.length === 0 && <p className="px-4 py-3 font-ninja text-sm text-ninja-muted tint-inset">No modules listed for this {unit.toLowerCase()} yet.</p>}
-                </div>
-              </Group>
-            </motion.div>
-          </AnimatePresence>
-
           {multi && (
-            <Group title={`All ${unit.toLowerCase()}s`}>
-              {tracks.map((t, i) => (
-                <Row key={t.name} first={i === 0} onClick={() => pick(t.index)} active={t.index === openIdx} dim={t.state === 'ahead'}
-                  lead={<Tile tint={t.state === 'done' ? 'rgb(34 197 94 / 0.14)' : t.state === 'current' ? 'rgb(var(--ninja-blue) / 0.14)' : 'rgb(var(--ninja-navy) / 0.06)'} color={t.state === 'done' ? '#15803d' : t.state === 'current' ? undefined : 'rgb(var(--ninja-muted))'}>{t.index}</Tile>}
-                  title={t.name}
-                  subtitle={[`${t.modules.length} module${t.modules.length === 1 ? '' : 's'}`, t.state === 'current' ? (started ? 'now' : 'next') : t.state === 'done' && t.last ? `done ${fmtDay(t.last)}` : null].filter(Boolean).join(' · ')}
-                />
-              ))}
-            </Group>
+            <>
+              <div className="hidden lg:block mt-5"><LevelPills states={pills} value={openIdx} onChange={pick} onHero layoutId="track-pill-desktop" /></div>
+              <div className="lg:hidden mt-4"><LevelPills states={pills} value={openIdx} onChange={pick} onHero layoutId="track-pill-mobile" /></div>
+            </>
+          )}
+        </Hero>
+      </PinnedHero>
+
+      <PageSheet>
+        <div className="space-y-4">
+          {open && (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div key={open.index}
+                  initial={{ opacity: 0, x: 10 * dir }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 * dir }}
+                  transition={{ duration: 0.18, ease: EASE_OUT }}>
+                  <Group tint={open.state === 'current' ? 'blue' : open.state === 'done' ? 'green' : undefined}>
+                    <div className="px-4 pt-3.5 pb-3">
+                      <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em]" style={open.state !== 'ahead' ? { color: 'var(--tint-ink)' } : { color: 'rgb(var(--ninja-muted))' }}>
+                        {multi ? `${unit} ${open.index}` : 'Modules'}{open.state === 'current' ? (started ? ' · now' : ' · next') : open.state === 'done' ? ' · done' : ''}
+                      </p>
+                      {multi && <p className="font-ninja font-extrabold text-[20px] text-ninja-navy leading-tight mt-0.5">{open.name}</p>}
+                      <p className="font-ninja text-[12.5px] v2 text-ninja-muted mt-0.5">
+                        {[trackLine(open), open.first ? `started ${fmtDay(open.first)}` : null].filter(Boolean).join(' · ')}
+                      </p>
+                    </div>
+                    <div className="mx-3 mb-3 rounded-[14px] overflow-hidden border border-ninja-navy/[0.06]">
+                      {open.modules.map((m, i) => <ModuleRow key={m.name} m={m} first={i === 0} />)}
+                      {open.modules.length === 0 && <p className="px-4 py-3 font-ninja text-sm text-ninja-muted tint-inset">No modules listed for this {unit.toLowerCase()} yet.</p>}
+                    </div>
+                  </Group>
+                </motion.div>
+              </AnimatePresence>
+
+              {multi && (
+                <Group title={`All ${unit.toLowerCase()}s`}>
+                  {tracks.map((t, i) => (
+                    <Row key={t.name} first={i === 0} onClick={() => pick(t.index)} active={t.index === openIdx} dim={t.state === 'ahead'}
+                      lead={<Tile tint={t.state === 'done' ? 'rgb(34 197 94 / 0.14)' : t.state === 'current' ? 'rgb(var(--ninja-blue) / 0.14)' : 'rgb(var(--ninja-navy) / 0.06)'} color={t.state === 'done' ? '#15803d' : t.state === 'current' ? undefined : 'rgb(var(--ninja-muted))'}>{t.index}</Tile>}
+                      title={t.name}
+                      subtitle={[`${t.modules.length} module${t.modules.length === 1 ? '' : 's'}`, t.state === 'current' ? (started ? 'now' : 'next') : t.state === 'done' && t.last ? `done ${fmtDay(t.last)}` : null].filter(Boolean).join(' · ')}
+                    />
+                  ))}
+                </Group>
+              )}
+            </div>
           )}
         </div>
-      )}
+      </PageSheet>
     </div>
   );
 }

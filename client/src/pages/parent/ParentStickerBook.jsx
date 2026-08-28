@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
 import { useParentPortal } from '../../context/ParentPortalContext';
-import { Hero, BackChip } from '../../components/parent/ParentUI';
+import { Hero, PinnedHero, PageSheet, BackChip } from '../../components/parent/ParentUI';
 import { StickerCard, StickerZoom, useStickerZoom } from '../../components/parent/StickerCollection';
 import { CREATE_STICKERS, STICKER_BELTS, stickersForBelt } from '../../lib/createStickers';
 import { stickerProgress } from '../../lib/stickerProgress';
@@ -122,38 +122,44 @@ export default function ParentStickerBook() {
 
   return (
     <ParentLayout switcher={switcher}>
-      <div className="space-y-4 lg:space-y-5">
-        <Hero program="CREATE" size="page">
-          <div className="mb-8 lg:mb-6"><BackChip to={`/parent/students/${target}`} label="Back to profile" /></div>
-          <p className="font-ninja text-[12px] font-extrabold uppercase tracking-[0.08em] opacity-85 truncate">CREATE · {child.full_name}</p>
-          <h1 className="font-ninja font-extrabold text-[34px] lg:text-[42px] leading-none mt-1.5 tracking-[-0.02em]">Sticker book</h1>
-          <p className="font-ninja text-[13px] opacity-85 mt-2">
-            {earned === 0
-              ? `Every sticker ${first} can earn in CREATE, all ${total} of them.`
-              : `${earned} of ${total} earned. Tap any one to see what it took.`}
-          </p>
-
-          {/* The bar is the one number a parent came for, drawn rather than
-              written. It fills on arrival, from nothing, so the length is read
-              as a distance travelled instead of a static stripe. */}
-          <div className="mt-4 max-w-[360px]">
-            <div className="h-2 w-full overflow-hidden rounded-full bg-white/25">
-              <motion.div
-                className="h-full rounded-full bg-white"
-                initial={flat ? false : { width: 0 }}
-                animate={{ width: `${pct}%` }}
-                transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
-              />
-            </div>
-            <p className="font-ninja text-[11.5px] font-extrabold uppercase tracking-[0.08em] opacity-80 mt-2">
-              {pct}% complete
+      <div className="relative">
+        <PinnedHero>
+          <Hero program="CREATE" size="page" className="!mt-0">
+            <div className="mb-8 lg:mb-6"><BackChip to={`/parent/students/${target}`} label="Back to profile" /></div>
+            <p className="font-ninja text-[12px] font-extrabold uppercase tracking-[0.08em] opacity-85 truncate">CREATE · {child.full_name}</p>
+            <h1 className="font-ninja font-extrabold text-[34px] lg:text-[42px] leading-none mt-1.5 tracking-[-0.02em]">Sticker book</h1>
+            <p className="font-ninja text-[13px] opacity-85 mt-2">
+              {earned === 0
+                ? `Every sticker ${first} can earn in CREATE, all ${total} of them.`
+                : `${earned} of ${total} earned. Tap any one to see what it took.`}
             </p>
-          </div>
-        </Hero>
 
-        {STICKER_BELTS.map((name) => (
-          <BeltPage key={name} belt={name} progress={progress} onOpen={open} flat={flat} />
-        ))}
+            {/* The bar is the one number a parent came for, drawn rather than
+                written. It fills on arrival, from nothing, so the length is read
+                as a distance travelled instead of a static stripe. */}
+            <div className="mt-4 max-w-[360px]">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-white/25">
+                <motion.div
+                  className="h-full rounded-full bg-white"
+                  initial={flat ? false : { width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
+                />
+              </div>
+              <p className="font-ninja text-[11.5px] font-extrabold uppercase tracking-[0.08em] opacity-80 mt-2">
+                {pct}% complete
+              </p>
+            </div>
+          </Hero>
+        </PinnedHero>
+
+        <PageSheet>
+          <div className="space-y-4 lg:space-y-5">
+            {STICKER_BELTS.map((name) => (
+              <BeltPage key={name} belt={name} progress={progress} onOpen={open} flat={flat} />
+            ))}
+          </div>
+        </PageSheet>
       </div>
 
       <AnimatePresence>
