@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { CheckIcon, Layers3Icon, LockKeyholeIcon, SparklesIcon, TrendingUpIcon } from 'lucide-react';
+import { CheckIcon, LockKeyholeIcon } from 'lucide-react';
 import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { Hero, PinnedHero, PageSheet, BackChip } from '../../components/parent/ParentUI';
@@ -13,43 +13,50 @@ import { SkeletonProfile } from '../../components/ui/Skeleton';
 import { CARD, FLAT } from '../../lib/surfaces';
 import { fmtDay } from '../../lib/parentProgress';
 
-// Duolingo's achievements page works because the numbers get one compact,
-// high-contrast shelf and the awards themselves are allowed to be the art.
-// This follows that hierarchy without inventing XP or streaks DojoLink does
-// not record: every number below is derived from the same CREATE progress as
-// the stickers.
+// Three numbers a parent cannot read off the rest of the page, on the flat
+// white card the parent portal uses for everything else (lib/surfaces.js
+// says so out loud: softness lives inside these pages, not under them).
+//
+// They were dark gradient tiles for a while, one colour each, with a blurred
+// glow in the corner, a neon shadow under the number and the sticker dropped
+// to a 25% watermark behind the text. Three things were wrong with that. The
+// colours belonged to no palette in this app and did not answer to dark mode
+// at all. "PERSONAL RECORD" was stamped on all three under a heading that
+// already said Personal records. And the artwork, which is the actual reward,
+// was demoted to wallpaper and then run over by its own caption.
+//
+// So: the surface is the same for all three, and the one piece of colour on
+// each is the sticker, printed at full strength at a size worth looking at.
 
 const RECORDS = [
-  { key: 'percentile', title: 'Ahead of the dojo', Icon: TrendingUpIcon, background: 'linear-gradient(145deg, #5b2138 0%, #2f1221 100%)', glow: '#fb7185' },
-  { key: 'latest', title: 'Most recent sticker', Icon: SparklesIcon, background: 'linear-gradient(145deg, #66440b 0%, #302006 100%)', glow: '#facc15' },
-  { key: 'collection', title: 'Collection complete', Icon: Layers3Icon, background: 'linear-gradient(145deg, #3f2a69 0%, #211534 100%)', glow: '#c084fc' },
+  { key: 'percentile', title: 'Ahead of the dojo' },
+  { key: 'latest', title: 'Most recent sticker' },
+  { key: 'collection', title: 'Collection complete' },
 ];
 
-// `headline` carries a sticker's name rather than a number, so it drops to a
-// size a two-word title and a five-word one can both live at. The card is
-// otherwise identical: a shelf where one tile suddenly changed shape would
-// read as three unrelated things.
+// `headline` carries a sticker's name where the others carry a number, so it
+// drops to a size a two-word title and a four-word one can both live at. The
+// card around it does not change: a shelf where one tile suddenly took a
+// different shape would read as three unrelated things.
 function RecordCard({ record, value, caption, art, headline = false }) {
-  const { Icon } = record;
   return (
-    <article
-      className="relative min-h-[196px] min-w-[236px] flex-1 overflow-hidden rounded-[26px] border border-white/10 px-5 pb-5 pt-4 text-white shadow-[inset_0_-7px_0_rgb(0_0_0/0.17),0_16px_30px_-22px_rgb(6_13_26/0.7)] sm:min-w-[250px]"
-      style={{ background: record.background }}
-    >
-      <div aria-hidden="true" className="absolute -right-5 -top-5 h-36 w-36 rounded-full blur-3xl" style={{ backgroundColor: record.glow, opacity: 0.22 }} />
-      {art && <img src={art} alt="" aria-hidden="true" className="pointer-events-none absolute right-2 top-5 h-28 w-28 select-none object-contain opacity-25 saturate-150" />}
-      <div className="relative flex items-center gap-2 text-white/70">
-        <Icon size={17} strokeWidth={2.5} aria-hidden />
-        <span className="font-ninja text-[10.5px] font-extrabold uppercase tracking-[0.11em]">Personal record</span>
+    <article className={`${FLAT} flex min-h-[152px] min-w-[228px] flex-1 flex-col p-4 sm:min-w-[242px]`}>
+      <div className="flex items-start justify-between gap-2">
+        <p className={`min-w-0 font-ninja font-extrabold tracking-[-0.02em] text-ninja-navy ${headline ? 'line-clamp-2 pt-1 text-[19px] leading-[1.2]' : 'text-[38px] leading-none'}`}>
+          {value}
+        </p>
+        {art && (
+          <img
+            src={art}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            className="-mr-1 -mt-1 h-[66px] w-[66px] flex-shrink-0 select-none object-contain"
+          />
+        )}
       </div>
-      <p
-        className={`relative font-ninja font-black tracking-[-0.04em] ${headline ? 'mt-5 line-clamp-2 text-[23px] leading-[1.15]' : 'mt-6 text-[42px] leading-none'}`}
-        style={{ textShadow: `0 0 28px ${record.glow}66` }}
-      >
-        {value}
-      </p>
-      <p className="relative mt-4 font-ninja text-[15px] font-extrabold">{record.title}</p>
-      <p className="relative mt-1 font-ninja text-[11.5px] font-bold text-white/55">{caption}</p>
+      <p className="mt-auto pt-3 font-ninja text-[14.5px] font-extrabold text-ninja-navy">{record.title}</p>
+      <p className="mt-1 font-ninja text-[12px] font-bold text-ninja-muted">{caption}</p>
     </article>
   );
 }
@@ -148,13 +155,22 @@ export default function ParentStickerBook() {
   // shelf of two solid numbers beats three where one is an apology.
   const percentile = stickerPercentile(cohort, earned);
 
+  // The card shows the scarcest sticker in the book so far rather than the
+  // newest one, which the card beside it is already showing. It is also the
+  // honest illustration of the number: the stickers few ninjas hold are the
+  // ones putting this one ahead. Safe to reach for `rarity` here, because the
+  // roster that makes a percentile measurable is the roster that makes the
+  // tiers measurable.
+  const rarest = progress.earned.reduce(
+    (best, item) => (rarity?.[item.id] && (!best || rarity[item.id].share < rarity[best.id].share) ? item : best), null);
+
   const recordValues = {
     percentile: percentile == null ? null : {
       value: `${percentile}%`,
       caption: percentile === 0
         ? 'Every sticker from here moves this'
         : `More stickers than ${percentile}% of CREATE ninjas`,
-      art: latest?.src || CREATE_STICKERS[0].src,
+      art: (rarest || latest || CREATE_STICKERS[0]).src,
     },
     latest: {
       value: latest ? latest.title : 'Not yet',
@@ -200,12 +216,7 @@ export default function ParentStickerBook() {
 
         <PageSheet>
           <section aria-labelledby="records-heading">
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <h2 id="records-heading" className="font-ninja text-[24px] font-extrabold tracking-[-0.02em] text-ninja-navy">Personal records</h2>
-              </div>
-              <p className="hidden font-ninja text-[12px] font-bold text-ninja-muted sm:block">CREATE progress</p>
-            </div>
+            <h2 id="records-heading" className="font-ninja text-[24px] font-extrabold tracking-[-0.02em] text-ninja-navy">Personal records</h2>
 
             <div className="-mx-4 mt-4 flex gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
               {records.map((record) => (
