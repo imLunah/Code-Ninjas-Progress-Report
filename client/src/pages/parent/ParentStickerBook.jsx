@@ -10,54 +10,98 @@ import { CREATE_STICKERS } from '../../lib/createStickers';
 import { isLevelComplete, stickerProgress } from '../../lib/stickerProgress';
 import { stickerPercentile, useStickerCohort, useStickerRarity } from '../../lib/stickerRarity';
 import { SkeletonProfile } from '../../components/ui/Skeleton';
+import { Tilt } from '../../components/ui/Tilt';
 import { CARD, FLAT } from '../../lib/surfaces';
 import { fmtDay } from '../../lib/parentProgress';
 
-// Three numbers a parent cannot read off the rest of the page, on the flat
-// white card the parent portal uses for everything else (lib/surfaces.js
-// says so out loud: softness lives inside these pages, not under them).
+// Three numbers a parent cannot read off the rest of the page, each one
+// standing a sticker on a plinth.
 //
-// They were dark gradient tiles for a while, one colour each, with a blurred
-// glow in the corner, a neon shadow under the number and the sticker dropped
-// to a 25% watermark behind the text. Three things were wrong with that. The
-// colours belonged to no palette in this app and did not answer to dark mode
-// at all. "PERSONAL RECORD" was stamped on all three under a heading that
-// already said Personal records. And the artwork, which is the actual reward,
-// was demoted to wallpaper and then run over by its own caption.
+// These were dark gradient tiles for a while, one arbitrary colour each, with
+// a blurred glow in the corner and a neon shadow under the number, and the
+// sticker dropped to a 25% watermark behind the text. Stripping all of that
+// off left three white boxes with a hole in the middle of each, which was the
+// other kind of wrong. The plinth is what the middle is for: a record IS a
+// thing on a shelf, and the artwork is the reward, so it gets a base, a
+// shadow it casts onto that base, and a size worth looking at.
 //
-// So: the surface is the same for all three, and the one piece of colour on
-// each is the sticker, printed at full strength at a size worth looking at.
+// Colour comes from the tints in index.css rather than a gradient invented
+// here, which is what puts these cards in the same room as the rest of the
+// portal and gets dark mode for nothing.
+//
+// `rest` is the angle the sticker is stuck on at. Hand-set and different on
+// each, for the same reason BeltStickers hand-places its cluster: three
+// identical angles read as printing, and these are meant to read as vinyl.
+// Small angles only, since each one is standing on a base and a sticker
+// leaning 12 degrees off its own plinth reads as falling off it.
 
 const RECORDS = [
-  { key: 'percentile', title: 'Ahead of the dojo' },
-  { key: 'latest', title: 'Most recent sticker' },
-  { key: 'collection', title: 'Collection complete' },
+  { key: 'percentile', title: 'Ahead of the dojo', tint: 'blue', rest: -7 },
+  { key: 'latest', title: 'Most recent sticker', tint: 'amber', rest: 6 },
+  { key: 'collection', title: 'Collection complete', tint: 'lilac', rest: -4 },
 ];
 
-// `headline` carries a sticker's name where the others carry a number, so it
-// drops to a size a two-word title and a four-word one can both live at. The
-// card around it does not change: a shelf where one tile suddenly took a
-// different shape would read as three unrelated things.
-function RecordCard({ record, value, caption, art, headline = false }) {
+// The sticker and the base it stands on.
+//
+// ONE shape, and a tapered one. Two stacked bars was the first attempt and
+// they read as a pair of pills parked under the art, because nothing about a
+// rounded horizontal bar says base — the taper is the whole thing. Drawn in
+// the card's own ink at low alpha, so a plinth is never a colour the tint did
+// not already have.
+//
+// The sticker's bottom edge sits BELOW the top of the plinth. An object level
+// with its base is an object hovering over it; the overlap plus the shadow it
+// drops onto the taper is what makes it stand.
+function Plinth({ art, rest }) {
   return (
-    <article className={`${FLAT} flex min-h-[152px] min-w-[228px] flex-1 flex-col p-4 sm:min-w-[242px]`}>
-      <div className="flex items-start justify-between gap-2">
-        <p className={`min-w-0 font-ninja font-extrabold tracking-[-0.02em] text-ninja-navy ${headline ? 'line-clamp-2 pt-1 text-[19px] leading-[1.2]' : 'text-[38px] leading-none'}`}>
-          {value}
-        </p>
-        {art && (
+    <span className="relative block h-[96px] w-[88px] flex-shrink-0">
+      <span
+        aria-hidden="true"
+        className="absolute bottom-0 left-1/2 h-[19px] w-[84px] -translate-x-1/2"
+        style={{ background: 'var(--tint-ink)', opacity: 0.16, clipPath: 'polygon(17% 0%, 83% 0%, 100% 100%, 0% 100%)' }}
+      />
+      <span className="absolute inset-x-0 bottom-[13px] flex justify-center">
+        <Tilt amount={13} rest={rest} scale={1.08} className="inline-flex">
           <img
             src={art}
             alt=""
             aria-hidden="true"
             draggable={false}
-            className="-mr-1 -mt-1 h-[66px] w-[66px] flex-shrink-0 select-none object-contain"
+            className="h-[76px] w-[76px] select-none object-contain drop-shadow-[0_7px_7px_rgb(6_13_26/0.22)]"
           />
-        )}
+        </Tilt>
+      </span>
+    </span>
+  );
+}
+
+// `headline` carries a sticker's name where the others carry a number, so it
+// drops to a size a two-word title and a four-word one can both live at. The
+// card around it does not change: a shelf where one tile suddenly took a
+// different shape would read as three unrelated things.
+//
+// The number and the plinth are bottom-aligned, so they stand on one floor
+// instead of hanging from the top edge with a gap underneath.
+function RecordCard({ record, value, caption, art, headline = false, flat, index = 0 }) {
+  return (
+    <motion.article
+      className={`tint-${record.tint} flex min-w-[228px] flex-1 flex-col rounded-[22px] p-4 sm:min-w-[242px]`}
+      initial={flat ? false : { opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.06 * index }}
+    >
+      <div className="flex items-end justify-between gap-3">
+        <p
+          className={`min-w-0 font-ninja font-extrabold tracking-[-0.02em] ${headline ? 'line-clamp-3 text-[20px] leading-[1.15]' : 'text-[40px] leading-[0.9]'}`}
+          style={{ color: 'var(--tint-ink)' }}
+        >
+          {value}
+        </p>
+        {art && <Plinth art={art} rest={record.rest} />}
       </div>
-      <p className="mt-auto pt-3 font-ninja text-[14.5px] font-extrabold text-ninja-navy">{record.title}</p>
-      <p className="mt-1 font-ninja text-[12px] font-bold text-ninja-muted">{caption}</p>
-    </article>
+      <p className="mt-4 font-ninja text-[14.5px] font-extrabold text-ninja-navy">{record.title}</p>
+      <p className="mt-1 font-ninja text-[12px] font-bold v2" style={{ color: 'var(--tint-ink-soft)' }}>{caption}</p>
+    </motion.article>
   );
 }
 
@@ -219,8 +263,8 @@ export default function ParentStickerBook() {
             <h2 id="records-heading" className="font-ninja text-[24px] font-extrabold tracking-[-0.02em] text-ninja-navy">Personal records</h2>
 
             <div className="-mx-4 mt-4 flex gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
-              {records.map((record) => (
-                <RecordCard key={record.key} record={record} {...recordValues[record.key]} />
+              {records.map((record, i) => (
+                <RecordCard key={record.key} record={record} flat={flat} index={i} {...recordValues[record.key]} />
               ))}
             </div>
           </section>
