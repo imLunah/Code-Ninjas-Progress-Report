@@ -335,7 +335,7 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
           </div>
         </div>
         <div className="lg:hidden mt-4">
-          <LevelPills states={states} value={level} onChange={pick} onHero layoutId="level-pill-mobile" />
+          <LevelPills states={states} value={level} onChange={pick} belt={viewBelt} onHero layoutId="level-pill-mobile" />
         </div>
         {/* No clearance for the art any more: it is faded into the gradient
             now, so the road crosses it instead of stopping short of it. */}

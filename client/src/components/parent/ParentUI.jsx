@@ -388,11 +388,19 @@ export function LevelMedal({ belt, level, size = 40, ahead = false, className = 
 }
 
 // Level pills (and kit pills, via `label`). `states` is levelStates() from parentProgress: done levels
-// carry a check, the current one is solid, the ones ahead are quiet. On a
-// hero the solid pill is white; on a card it is the CREATE blue. The solid
-// fill slides between pills rather than blinking, so the eye follows the
-// choice. `layoutId` must be unique per instance on screen.
-export function LevelPills({ states, value, onChange, onHero = false, layoutId = 'level-pill', className = '' }) {
+// carry the medal that level is awarded with, the current one is solid, the
+// ones ahead are quiet. On a hero the solid pill is white; on a card it is the
+// CREATE blue. The solid fill slides between pills rather than blinking, so
+// the eye follows the choice. `layoutId` must be unique per instance on screen.
+//
+// `belt` is what turns the done marker into the real medal, the same artwork
+// the All levels list leads its rows with, so one earned level looks the same
+// in both places. Without it (kit pills, and any program outside CREATE) there
+// is no medal to draw and the check stands in, which is why the belt is a prop
+// rather than something the pills reach for themselves. The pill still writes
+// the number beside it: at 18px the one printed on the medal is decoration,
+// not a label, so the medal is hidden from screen readers.
+export function LevelPills({ states, value, onChange, belt, onHero = false, layoutId = 'level-pill', className = '' }) {
   return (
     <div className={`flex flex-wrap gap-1.5 ${className}`} role="tablist" aria-label="Levels">
       {states.map((s) => {
@@ -413,7 +421,9 @@ export function LevelPills({ states, value, onChange, onHero = false, layoutId =
                 style={onHero ? { background: '#ffffff' } : undefined} />
             )}
             <span className="relative z-10 inline-flex items-center gap-1">
-              {s.state === 'done' && <CheckIcon size={12} strokeWidth={3.2} aria-hidden />}
+              {s.state === 'done' && (hasLevelMedal(belt, s.level)
+                ? <span aria-hidden className="-ml-1 -my-1 inline-flex"><LevelMedal belt={belt} level={s.level} size={18} /></span>
+                : <CheckIcon size={12} strokeWidth={3.2} aria-hidden />)}
               {s.label ?? s.level}
             </span>
           </button>
