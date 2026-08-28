@@ -1,26 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AnimatePresence, motion, useMotionTemplate, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { CheckIcon, LockKeyholeIcon, SparklesIcon, XIcon } from 'lucide-react';
 import { CREATE_STICKERS, STICKER_BELTS, stickerRequirement, stickersForBelt } from '../../lib/createStickers';
 import { levelInfo } from '../../lib/createCurriculum';
 import { Group } from './ParentUI';
 import ModalPortal from '../ui/ModalPortal';
+import { Tilt, TiltLayer } from '../ui/Tilt';
 
 // CREATE's belt artwork as a sticker album, one tab per belt.
 //
 // The artwork is a physical thing: die-cut, white-rimmed, the kind of sticker
-// that ends up on a water bottle. So the cards behave like one. A card tilts
-// under the pointer on a real 3D perspective and the sticker itself floats
-// above the card on its own Z plane, which is what sells the depth: without
-// the translateZ the tilt reads as a flat card being skewed. A light catches
-// the surface where the pointer is, the same way it would on vinyl.
+// that ends up on a water bottle. So the cards behave like one, through the
+// shared `ui/Tilt` primitive: the card tilts under the pointer, the sticker
+// floats above it on its own Z plane, and a light catches the surface where
+// the pointer is, the same way it would on vinyl. Tilt carries the rules that
+// keep that safe next to a layout animation; read its header before changing
+// any of it.
 //
 // Clicking a sticker zooms it. The image is one element with a shared
 // `layoutId`, so framer flies the actual sticker off the card and into the
-// dialog rather than cross-fading a copy of it. Two rules keep that honest:
-// the tilt springs are jumped back to flat on pointer down (a layout
-// animation measures a rotated box wrong), and the dialog panel fades without
-// scaling (a scaling ancestor distorts the child mid-flight).
+// dialog rather than cross-fading a copy of it. The dialog panel fades without
+// scaling, because a scaling ancestor distorts the child mid-flight.
 //
 // Everything here is decoration until it isn't: with prefers-reduced-motion
 // the tilt, the float and the flight are all skipped and the dialog simply
@@ -28,7 +28,6 @@ import ModalPortal from '../ui/ModalPortal';
 
 const TILT = 13;
 const SPRING = { type: 'spring', stiffness: 320, damping: 26, mass: 0.5 };
-const CARD_SPRING = { stiffness: 260, damping: 20, mass: 0.4 };
 
 // The poster's name for each level a sticker covers ("Nested Block
 // Statements!"), so the dialog can show the syllabus behind the sentence.
@@ -39,69 +38,20 @@ function stickerTopics(item) {
 }
 
 function StickerCard({ item, isEarned, onOpen, flat }) {
-  const rotateX = useSpring(0, CARD_SPRING);
-  const rotateY = useSpring(0, CARD_SPRING);
-  const lift = useSpring(0, CARD_SPRING);
-  const glareX = useMotionValue(50);
-  const glareY = useMotionValue(50);
-  const glare = useMotionTemplate`radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.85), rgba(255,255,255,0) 62%)`;
-  // The sticker rides above the card on its own Z plane, and rides back down
-  // on press. Nothing with a `layoutId` may be sitting on a perspective scale
-  // when the zoom measures it, and translateZ is a scale.
-  const artZ = useTransform(lift, [0, 1], [0, 64]);
-  const badgeZ = useTransform(lift, [0, 1], [0, 34]);
-  const inkZ = useTransform(lift, [0, 1], [0, 18]);
-  const scale = useTransform(lift, [0, 1], [1, 1.035]);
-
-  const onPointerMove = (e) => {
-    if (flat || e.pointerType === 'touch') return;
-    const box = e.currentTarget.getBoundingClientRect();
-    const px = (e.clientX - box.left) / box.width;
-    const py = (e.clientY - box.top) / box.height;
-    rotateY.set((px - 0.5) * TILT * 2);
-    rotateX.set((0.5 - py) * TILT * 2);
-    lift.set(1);
-    glareX.set(px * 100);
-    glareY.set(py * 100);
-  };
-
-  const rest = () => {
-    rotateX.set(0);
-    rotateY.set(0);
-    lift.set(0);
-  };
-
-  // Flatten instantly, not over a spring: the click that follows measures
-  // this card for the zoom, and a box still mid-tilt measures skewed.
-  const flatten = () => {
-    rotateX.jump(0);
-    rotateY.jump(0);
-    lift.jump(0);
-  };
-
   return (
-    <motion.button
+    <Tilt
+      as={motion.button}
+      amount={TILT}
+      glare={isEarned}
+      disabled={flat}
       type="button"
       onClick={() => onOpen(item)}
-      onPointerMove={onPointerMove}
-      onPointerLeave={rest}
-      onPointerDown={flatten}
-      onBlur={rest}
       aria-label={`${item.title}, ${isEarned ? 'earned' : stickerRequirement(item)}`}
-      style={{ rotateX, rotateY, scale, transformPerspective: 800, transformStyle: 'preserve-3d', background: isEarned ? 'rgb(var(--ninja-blue) / 0.045)' : 'rgb(var(--ninja-navy) / 0.025)' }}
+      style={{ background: isEarned ? 'rgb(var(--ninja-blue) / 0.045)' : 'rgb(var(--ninja-navy) / 0.025)' }}
       className="group relative flex min-h-[184px] flex-col items-center rounded-[18px] border border-ninja-navy/[0.07] px-3 pb-3 pt-4 text-center transition-shadow duration-200 hover:shadow-[0_22px_36px_-20px_rgb(6_13_26_/_0.55)] active:brightness-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue/60"
     >
-      {/* The light on the sticker's surface. Earned only: a locked sticker is
-          greyed out and a shine on grey just looks like a smudge. */}
-      {isEarned && !flat && (
-        <motion.span
-          aria-hidden="true"
-          style={{ backgroundImage: glare, opacity: lift }}
-          className="pointer-events-none absolute inset-0 rounded-[18px] mix-blend-soft-light"
-        />
-      )}
       <div className="relative flex h-[88px] w-full items-center justify-center" style={{ transformStyle: 'preserve-3d' }}>
-        <motion.span style={flat ? undefined : { z: artZ }} className="inline-flex">
+        <TiltLayer depth={64} as={motion.span} className="inline-flex">
           <motion.img
             layoutId={flat ? undefined : `sticker-art-${item.id}`}
             src={item.src}
@@ -110,24 +60,25 @@ function StickerCard({ item, isEarned, onOpen, flat }) {
             draggable={false}
             className={`h-[82px] w-[82px] select-none object-contain ${isEarned ? 'drop-shadow-[0_8px_9px_rgb(6_13_26_/_0.16)]' : 'grayscale opacity-25'}`}
           />
-        </motion.span>
-        <motion.span
+        </TiltLayer>
+        <TiltLayer
+          depth={34}
+          as={motion.span}
           aria-hidden="true"
-          style={flat ? undefined : { z: badgeZ }}
           className={`absolute right-0 top-0 inline-flex h-7 w-7 items-center justify-center rounded-full text-white shadow-sm ${isEarned ? 'bg-emerald-500' : 'bg-ninja-navy/55'}`}
         >
           {isEarned
             ? <CheckIcon size={15} strokeWidth={3.2} />
             : <LockKeyholeIcon size={14} strokeWidth={2.6} />}
-        </motion.span>
+        </TiltLayer>
       </div>
-      <motion.p style={flat ? undefined : { z: inkZ }} className={`mt-2 font-ninja text-[13.5px] font-extrabold leading-tight ${isEarned ? 'text-ninja-navy' : 'text-ninja-navy/55'}`}>
+      <TiltLayer depth={18} as={motion.p} className={`mt-2 font-ninja text-[13.5px] font-extrabold leading-tight ${isEarned ? 'text-ninja-navy' : 'text-ninja-navy/55'}`}>
         {item.title}
-      </motion.p>
+      </TiltLayer>
       <p className={`mt-1 font-ninja text-[11px] leading-snug ${isEarned ? 'font-bold text-emerald-600' : 'text-ninja-muted'}`}>
         {isEarned ? 'Earned' : stickerRequirement(item)}
       </p>
-    </motion.button>
+    </Tilt>
   );
 }
 

@@ -336,7 +336,9 @@ function BeltJourney({ enrollment, childName, href }) {
             borrowing a neighbour's. */}
         <div className="flex items-center gap-3.5 min-w-0">
           {level != null && hasLevelMedal(belt, level) && (
-            <LevelMedal belt={belt} level={level} size={58} className="hidden lg:block drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)]" />
+            <div className="hidden lg:block">
+              <LevelMedal belt={belt} level={level} size={58} tilt className="drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)]" />
+            </div>
           )}
           <div className="min-w-0">
             <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">{eyebrow}</p>

@@ -539,7 +539,7 @@ function ChildCard({ child, wide = false }) {
                 : belt ? `${belt} belt${enrollment?.belt_sublevel ? `, level ${enrollment.belt_sublevel}` : ''}` : 'Just getting started'}
             </p>
           </div>
-          <Emblem program={heroProgram} belt={belt} size={64} />
+          <Emblem program={heroProgram} belt={belt} size={64} tilt />
         </div>
       </Hero>
 

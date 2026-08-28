@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { CheckIcon, ChevronRightIcon, StarIcon } from 'lucide-react';
 import { FLAT } from '../../lib/surfaces';
 import { BELTS, PROGRAM_LOGOS, PROGRAM_BANNERS } from '../../utils/beltConfig';
+import { Tilt } from '../ui/Tilt';
 import { beltStickers } from '../../lib/createCurriculum';
 import { PROGRAM_GRADIENTS } from '../../lib/programTheme';
 import BeltIcon from '../ui/BeltIcon';
@@ -183,13 +184,20 @@ export function BeltStickers({ belt }) {
 // The badge on the right of a hero: the belt for CREATE, the program's logo
 // for everything else. Both sit on the banner as they are, no disc and no
 // ring: the art is the emblem.
-export function Emblem({ program, belt, size = 64 }) {
-  if (program === 'CREATE' && belt) {
-    return <BeltIcon belt={belt} size={size} className="flex-shrink-0" />;
-  }
+export function Emblem({ program, belt, size = 64, tilt = false }) {
   const logo = PROGRAM_LOGOS[program];
-  if (!logo) return null;
-  return <img src={logo} alt="" className="object-contain flex-shrink-0 drop-shadow-[0_4px_10px_rgba(0,0,0,0.35)]" style={{ width: size, height: size }} />;
+  const art = (program === 'CREATE' && belt)
+    ? <BeltIcon belt={belt} size={size} className="flex-shrink-0" />
+    : logo
+      ? <img src={logo} alt="" className="object-contain flex-shrink-0 drop-shadow-[0_4px_10px_rgba(0,0,0,0.35)]" style={{ width: size, height: size }} />
+      : null;
+  if (!art) return null;
+  // Same opt-in as LevelMedal: the emblem is the course's own art sitting on
+  // the banner, so it turns under the pointer like the medals and the level
+  // shots do. It is the belt itself for CREATE, which is why the tilt wraps
+  // the emblem rather than the image inside it.
+  if (!tilt) return art;
+  return <Tilt amount={12} scale={1.06} className="inline-flex flex-shrink-0">{art}</Tilt>;
 }
 
 // The 40px program logo that leads a card header.
@@ -374,16 +382,28 @@ export function hasLevelMedal(belt, level) {
   return MEDAL_BELTS.has(belt) && Number.isFinite(Number(level));
 }
 
-export function LevelMedal({ belt, level, size = 40, ahead = false, className = '' }) {
+// `tilt` hands the medal to the shared 3D treatment: it turns under the
+// pointer and lifts, like a medal being looked at rather than a picture of
+// one. It is opt-in because the medal also appears at 18px inside a level
+// pill, where a tilt would be a wobble on a control. The wrapper is a span so
+// the medal stays valid inside a Row's own span, and it takes the caller's
+// className: put layout (display, margins) on the caller's side of it.
+export function LevelMedal({ belt, level, size = 40, ahead = false, tilt = false, className = '' }) {
   if (!hasLevelMedal(belt, level)) return null;
-  return (
+  const art = (
     <img
       src={`/levels/${belt.toLowerCase()}-${Number(level)}.png`}
       alt={`Level ${level}`}
       draggable={false}
       style={{ width: size, height: 'auto' }}
-      className={`object-contain flex-shrink-0 ${ahead ? 'opacity-25 grayscale' : ''} ${className}`}
+      className={`object-contain flex-shrink-0 ${ahead ? 'opacity-25 grayscale' : ''} ${tilt ? '' : className}`}
     />
+  );
+  if (!tilt) return art;
+  return (
+    <Tilt as={motion.span} amount={14} scale={1.07} className={`inline-flex flex-shrink-0 ${className}`}>
+      {art}
+    </Tilt>
   );
 }
 

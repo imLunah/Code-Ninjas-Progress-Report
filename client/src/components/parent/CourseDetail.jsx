@@ -7,6 +7,7 @@ import { levelProjects, levelStates, levelTitle, realSessions, trackModel, fmtDa
 import { levelInfo, beltInfo, levelShot } from '../../lib/createCurriculum';
 import { CREATE_STICKERS } from '../../lib/createStickers';
 import StickerCollection from './StickerCollection';
+import { Tilt } from '../ui/Tilt';
 import { KIT_SHORT } from '../../lib/programTheme';
 import { useCurriculum } from '../../context/CurriculumContext';
 import BeltIcon from '../ui/BeltIcon';
@@ -303,14 +304,24 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
                     {[`${done} of ${projects.length} projects`, started ? `started ${fmtDay(started)}` : null].filter(Boolean).join(' · ')}
                   </p>
                 </div>
+                {/* The 3 degree rest angle is what pins it to the card like
+                    a photo; the pointer turns it off that angle rather than
+                    from square, so it never looks straightened. */}
                 {shot && (
-                  <img
-                    src={shot}
-                    alt=""
-                    aria-hidden="true"
-                    draggable={false}
-                    className="flex-shrink-0 select-none w-[132px] sm:w-[176px] rounded-[10px] rotate-[3deg] mt-0.5 ring-1 ring-black/10 shadow-[0_12px_28px_-12px_rgb(6_13_26_/_0.5)]"
-                  />
+                  <Tilt
+                    rest={3}
+                    amount={9}
+                    glare
+                    className="relative flex-shrink-0 w-[132px] sm:w-[176px] mt-0.5 rounded-[10px] ring-1 ring-black/10 shadow-[0_12px_28px_-12px_rgb(6_13_26_/_0.5)]"
+                  >
+                    <img
+                      src={shot}
+                      alt=""
+                      aria-hidden="true"
+                      draggable={false}
+                      className="w-full select-none rounded-[10px]"
+                    />
+                  </Tilt>
                 )}
                 </div>
                 {/* What the ninja actually builds at the end of the level. It
@@ -356,7 +367,7 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
               return (
                 <Row key={s.level} first={i === 0} onClick={() => pick(s.level)} active={s.level === level} dim={s.state === 'ahead'}
                   lead={hasLevelMedal(viewBelt, s.level)
-                    ? <LevelMedal belt={viewBelt} level={s.level} ahead={s.state === 'ahead'} />
+                    ? <LevelMedal belt={viewBelt} level={s.level} ahead={s.state === 'ahead'} tilt />
                     : <Tile tint={s.state === 'done' ? 'rgb(34 197 94 / 0.14)' : s.state === 'current' ? 'rgb(var(--ninja-blue) / 0.14)' : 'rgb(var(--ninja-navy) / 0.06)'} color={s.state === 'done' ? '#15803d' : s.state === 'current' ? undefined : 'rgb(var(--ninja-muted))'}>{s.level}</Tile>}
                   title={`Level ${s.level}`}
                   subtitle={[`${s.projectCount} project${s.projectCount === 1 ? '' : 's'}`, s.state === 'current' ? 'now' : s.state === 'done' && lastDone ? `done ${fmtDay(lastDone)}` : null].filter(Boolean).join(' · ')}
@@ -416,7 +427,7 @@ function TrackDetail({ enrollment, logs, childName, backTo }) {
             <p className="font-ninja font-extrabold text-[36px] lg:text-[32px] leading-[1.02] mt-1 tracking-[-0.015em]">{p}</p>
             <p className="font-ninja text-[13px] opacity-85 mt-2 truncate">{meta}</p>
           </div>
-          <Emblem program={p} size={104} />
+          <Emblem program={p} size={104} tilt />
         </div>
         {multi && (
           <>
