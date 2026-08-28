@@ -273,13 +273,11 @@ function ActivityChart({ logs }) {
 // and a sublevel bar — a second design for the one thing the portal already
 // draws. Everything here now comes from ParentUI: the hero, its banner art and
 // the road itself.
-function BeltJourney({ enrollment, logs = [], childName, href }) {
+function BeltJourney({ enrollment, childName, href }) {
   const belt = enrollment.belt_level;
   const levels = belt ? getLevels(belt) : [];
   const level = Number(enrollment.belt_sublevel) || levels[0] || null;
   const pos = level != null ? levels.indexOf(level) + 1 : 0;
-  const beltIdx = BELTS.findIndex((b) => b.name === belt);
-  const next = beltIdx >= 0 ? BELTS[beltIdx + 1]?.name : null;
   const eyebrow = `CREATE${childName ? ` · ${childName}` : ''}`;
 
   if (!belt) {
@@ -300,7 +298,11 @@ function BeltJourney({ enrollment, logs = [], childName, href }) {
       <span
         aria-hidden
         className="hidden lg:block absolute inset-y-[-3%] right-[-3.5rem] aspect-square pointer-events-none"
-        style={{ zIndex: -1 }}
+        style={{
+          zIndex: -1,
+          maskImage: 'linear-gradient(to bottom left, #000 55%, transparent 96%)',
+          WebkitMaskImage: 'linear-gradient(to bottom left, #000 55%, transparent 96%)',
+        }}
       >
         <BeltIcon belt={belt} large style={{ width: '100%', height: '100%' }} />
       </span>
@@ -318,7 +320,11 @@ function BeltJourney({ enrollment, logs = [], childName, href }) {
         <span
           aria-hidden
           className="lg:hidden absolute -top-14 -bottom-5 right-[-3rem] aspect-square pointer-events-none"
-          style={{ zIndex: -1 }}
+          style={{
+            zIndex: -1,
+            maskImage: 'linear-gradient(to bottom left, #000 55%, transparent 96%)',
+            WebkitMaskImage: 'linear-gradient(to bottom left, #000 55%, transparent 96%)',
+          }}
         >
           <BeltIcon belt={belt} large style={{ width: '100%', height: '100%' }} />
         </span>
@@ -340,13 +346,13 @@ function BeltJourney({ enrollment, logs = [], childName, href }) {
             borrowing a neighbour's. */}
         <div className="flex items-center gap-3.5 min-w-0">
           {level != null && hasLevelMedal(belt, level) && (
-            <LevelMedal belt={belt} level={level} size={58} className="drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)]" />
+            <LevelMedal belt={belt} level={level} size={58} className="hidden lg:block drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)]" />
           )}
           <div className="min-w-0">
             <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">{eyebrow}</p>
             <Title href={href} className="text-[36px] lg:text-[32px] leading-none mt-1 tracking-[-0.015em]">{belt} belt</Title>
             <p className="font-ninja text-[13px] opacity-85 mt-2 truncate">
-              {[level != null ? `Level ${level}` : null, levels.length ? `${pos} of ${levels.length}` : null, next ? `earns ${next}` : null, logs.length ? `${logs.length} session${logs.length === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ')}
+              {[level != null ? `Level ${level}` : null, levels.length ? `${pos} of ${levels.length}` : null].filter(Boolean).join(' · ')}
             </p>
           </div>
         </div>
@@ -721,7 +727,7 @@ export default function ProgressVisuals({ programs, sessionLogs, childName, cour
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 xl:items-start">
           {create && (
             <div className="xl:col-span-2">
-              <BeltJourney enrollment={create} logs={sessionLogs.filter((l) => l.program === 'CREATE')} childName={childName} href={href('CREATE')} />
+              <BeltJourney enrollment={create} childName={childName} href={href('CREATE')} />
             </div>
           )}
           {others.map((p) => (
