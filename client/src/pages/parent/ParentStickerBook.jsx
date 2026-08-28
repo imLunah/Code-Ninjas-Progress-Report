@@ -17,11 +17,12 @@ import { fmtDay } from '../../lib/parentProgress';
 // Three numbers a parent cannot read off the rest of the page, each one led
 // by the sticker that earned it.
 //
-// No card under any of them. They went from dark gradient tiles, to flat
-// white boxes, to blocks of tint, and each of those was a container drawn
-// around three short pieces of text because a number on a page felt like it
-// needed one. It does not: the sheet they sit on is already a surface, and
-// what separates one record from the next is the space between them.
+// The card under them is the portal's ordinary one: white, a soft radius, no
+// edge and no lift. It went through a dark gradient, a block of tint and a
+// spell with no surface at all before landing there. What the last two rounds
+// settled is that the colour on these belongs in the number and the artwork,
+// not in the panel behind them, and that a hairline in a second shade of the
+// fill only draws a ring around the block.
 //
 // What is left is the sticker, the number, and two lines. The sticker is the
 // biggest thing in the row on purpose: it is the reward, the page is a
@@ -29,10 +30,9 @@ import { fmtDay } from '../../lib/parentProgress';
 // parent reading a statistic instead of looking at their kid's artwork.
 //
 // The only colour besides the artwork is the number, which takes one of the
-// four tint inks
-// from index.css rather than a value invented here, so it is a colour this
-// app already uses and it answers to dark mode. `tint-ink-only` is that
-// palette with the panel it normally comes with switched off.
+// four tint inks from index.css rather than a value invented here, so it is a
+// colour this app already uses and it answers to dark mode. `tint-ink-only`
+// is that palette with the panel it normally comes with switched off.
 //
 // `rest` is the angle the sticker is stuck on at. Hand-set and different on
 // each, for the same reason BeltStickers hand-places its cluster: three
@@ -76,7 +76,7 @@ function RecordSticker({ art, rest }) {
 function RecordCard({ record, value, caption, art, headline = false, flat, index = 0 }) {
   return (
     <motion.article
-      className={`tint-${record.tint} tint-ink-only flex min-w-[240px] flex-1 flex-col sm:min-w-[262px]`}
+      className={`tint-${record.tint} tint-ink-only flex min-w-[240px] flex-1 flex-col rounded-[22px] p-4 sm:min-w-[262px]`}
       initial={flat ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.06 * index }}
