@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BugIcon, CheckIcon, Globe2Icon, GraduationCapIcon, LockKeyholeIcon, SparklesIcon, TrophyIcon, WrenchIcon } from 'lucide-react';
+import { BugIcon, Globe2Icon, GraduationCapIcon, TrophyIcon, WrenchIcon } from 'lucide-react';
 import { Hero, Emblem, BeltRoad, BeltStickers, LevelPills, LevelMedal, hasLevelMedal, Group, Row, Tile, StatusDot, StatusText, BackChip } from './ParentUI';
 import { BELTS, getLevels } from '../../utils/beltConfig';
 import { levelProjects, levelStates, levelTitle, realSessions, trackModel, fmtDay } from '../../lib/parentProgress';
 import { levelInfo, beltInfo, levelShot } from '../../lib/createCurriculum';
-import { CREATE_STICKERS, STICKER_BELTS, stickerRequirement, stickersForBelt } from '../../lib/createStickers';
+import { CREATE_STICKERS } from '../../lib/createStickers';
+import StickerCollection from './StickerCollection';
 import { KIT_SHORT } from '../../lib/programTheme';
 import { useCurriculum } from '../../context/CurriculumContext';
 import BeltIcon from '../ui/BeltIcon';
@@ -90,91 +91,6 @@ function isLevelComplete(targetBelt, targetLevel, currentBelt, currentLevel, log
 
   const projects = levelProjects(targetBelt, targetLevel, logs);
   return projects.length > 0 && projects[projects.length - 1].status === 'done';
-}
-
-function StickerCollection({ belt, earnedIds, earnedTotal }) {
-  const firstBelt = STICKER_BELTS.includes(belt) ? belt : STICKER_BELTS[STICKER_BELTS.length - 1];
-  const [openBelt, setOpenBelt] = useState(firstBelt);
-  useEffect(() => {
-    if (STICKER_BELTS.includes(belt)) setOpenBelt(belt);
-  }, [belt]);
-  const stickers = stickersForBelt(openBelt);
-
-  return (
-    <Group className="relative">
-      <div className="flex items-start justify-between gap-4 px-4 pb-3 pt-4 sm:px-5">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-ninja-navy">
-            <SparklesIcon size={17} strokeWidth={2.5} aria-hidden />
-            <h2 className="font-ninja text-[17px] font-extrabold">Stickers</h2>
-          </div>
-          <p className="mt-1 font-ninja text-[12.5px] text-ninja-muted">
-            Complete levels to earn each sticker.
-          </p>
-        </div>
-        <div className="flex-shrink-0 whitespace-nowrap pt-0.5 font-ninja text-[12px] font-extrabold text-ninja-blue">
-          {earnedTotal} of {CREATE_STICKERS.length} earned
-        </div>
-      </div>
-
-      <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-3 pb-3 sm:px-4" aria-label="Sticker belts">
-        {STICKER_BELTS.map((name) => {
-          const active = name === openBelt;
-          return (
-            <button
-              key={name}
-              type="button"
-              onClick={() => setOpenBelt(name)}
-              aria-pressed={active}
-              className={`flex-shrink-0 rounded-full px-3 py-1.5 font-ninja text-[11.5px] font-extrabold transition-colors ${active ? 'text-white' : 'text-ninja-muted hover:text-ninja-navy'}`}
-              style={{ background: active ? 'rgb(var(--ninja-blue))' : 'rgb(var(--ninja-navy) / 0.055)' }}
-            >
-              {name}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-2 gap-2.5 px-3 pb-3 sm:grid-cols-3 sm:px-4 lg:grid-cols-5">
-        {stickers.map((item) => {
-          const isEarned = earnedIds.has(item.id);
-          return (
-            <motion.div
-              key={item.id}
-              whileHover={isEarned ? { y: -4, rotate: -1 } : { y: -2 }}
-              transition={{ type: 'spring', stiffness: 430, damping: 28 }}
-              className="relative flex min-h-[184px] flex-col items-center overflow-hidden rounded-[18px] border border-ninja-navy/[0.07] px-3 pb-3 pt-4 text-center"
-              style={{ background: isEarned ? 'rgb(var(--ninja-blue) / 0.045)' : 'rgb(var(--ninja-navy) / 0.025)' }}
-            >
-              <div className="relative flex h-[88px] w-full items-center justify-center">
-                <img
-                  src={item.src}
-                  alt=""
-                  aria-hidden="true"
-                  draggable={false}
-                  className={`h-[82px] w-[82px] select-none object-contain transition duration-300 ${isEarned ? 'drop-shadow-[0_8px_9px_rgb(6_13_26_/_0.16)]' : 'grayscale opacity-25'}`}
-                />
-                <span
-                  aria-hidden="true"
-                  className={`absolute right-0 top-0 inline-flex h-7 w-7 items-center justify-center rounded-full text-white shadow-sm ${isEarned ? 'bg-emerald-500' : 'bg-ninja-navy/55'}`}
-                >
-                  {isEarned
-                    ? <CheckIcon size={15} strokeWidth={3.2} />
-                    : <LockKeyholeIcon size={14} strokeWidth={2.6} />}
-                </span>
-              </div>
-              <p className={`mt-2 font-ninja text-[13.5px] font-extrabold leading-tight ${isEarned ? 'text-ninja-navy' : 'text-ninja-navy/55'}`}>
-                {item.title}
-              </p>
-              <p className={`mt-1 font-ninja text-[11px] leading-snug ${isEarned ? 'font-bold text-emerald-600' : 'text-ninja-muted'}`}>
-                {isEarned ? 'Earned' : stickerRequirement(item)}
-              </p>
-            </motion.div>
-          );
-        })}
-      </div>
-    </Group>
-  );
 }
 
 function CreateDetail({ enrollment, logs, childName, backTo }) {
@@ -455,6 +371,7 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
         belt={viewBelt}
         earnedIds={earnedStickerIds}
         earnedTotal={earnedStickerIds.size}
+        childName={childName}
       />
     </div>
   );
