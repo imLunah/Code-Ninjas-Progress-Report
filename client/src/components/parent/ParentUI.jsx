@@ -332,7 +332,7 @@ export function ProgramMark({ program, size = 40 }) {
 // It stays `overflow-x-auto` at every width. Below lg it is a real scroller;
 // at lg it only becomes one on a narrow desktop where 836px of road will not
 // fit, and scrolling there beats spilling out of the banner.
-export function BeltRoad({ current, selected, onSelect, onHero = false, compact = false, className = '' }) {
+export function BeltRoad({ current, selected, onSelect, onHero = false, compact = false, fit = false, className = '' }) {
   const idx = BELTS.findIndex((b) => b.name === current);
   // `current` is where the ninja actually IS — it lights the trail and decides
   // what is dimmed ahead. `selected` is only what is being LOOKED at, and it
@@ -344,8 +344,14 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
   // its neighbours and the labels ran together. Asked in JS because these
   // numbers are inline styles and a spring target, not classes.
   const desktop = useIsDesktop();
-  const icon = compact ? 22 : desktop ? 30 : 24;
-  const cur = compact ? 36 : desktop ? 58 : 40;
+  // `fit` is the phone road that has to hold all thirteen belts inside a
+  // 390px screen without scrolling: smaller belts, tighter columns, and no
+  // names under them (six characters at this pitch would collide, and the
+  // page's own title already says which belt is open). Above lg it is the
+  // desktop road unchanged, so one instance covers both.
+  const tight = fit && !desktop;
+  const icon = compact ? 22 : desktop ? 30 : tight ? 19 : 24;
+  const cur = compact ? 36 : desktop ? 58 : tight ? 32 : 40;
   const line = onHero ? 'rgb(255 255 255 / 0.35)' : 'rgb(var(--ninja-navy) / 0.15)';
   const trail = onHero ? 'rgb(255 255 255 / 0.85)' : 'rgb(var(--ninja-navy) / 0.45)';
   const scroller = useRef(null);
@@ -387,7 +393,7 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
           const size = i === sel ? cur : icon;
           return (
             <div key={b.name} className="flex items-start">
-              <Cell belt={b.name} onSelect={onSelect} isSel={i === sel} compact={compact}>
+              <Cell belt={b.name} onSelect={onSelect} isSel={i === sel} compact={compact} tight={tight}>
                 {/* The icon springs between the two sizes rather than cutting
                     to them: the row's own height is pinned to the big size, so
                     the belts either side hold still while one grows. */}
@@ -401,9 +407,11 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
                     <BeltIcon belt={b.name} style={{ width: '100%', height: '100%' }} dimmed={state === 'ahead'} />
                   </motion.span>
                 </span>
-                <span className={`font-ninja mt-1 leading-none whitespace-nowrap ${compact ? 'text-[9px]' : 'text-[10px]'} ${i === sel ? 'font-extrabold' : 'font-bold'} ${onHero ? (state === 'ahead' ? 'text-white/45' : 'text-white') : (state === 'ahead' ? 'text-ninja-muted/60' : 'text-ninja-navy')}`}>
-                  {b.name}
-                </span>
+                {!tight && (
+                  <span className={`font-ninja mt-1 leading-none whitespace-nowrap ${compact ? 'text-[9px]' : 'text-[10px]'} ${i === sel ? 'font-extrabold' : 'font-bold'} ${onHero ? (state === 'ahead' ? 'text-white/45' : 'text-white') : (state === 'ahead' ? 'text-ninja-muted/60' : 'text-ninja-navy')}`}>
+                    {b.name}
+                  </span>
+                )}
               </Cell>
               {/* At lg the CONNECTOR is what stretches, never the column:
                   give the columns the slack and each belt floats in the
@@ -413,7 +421,7 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
                   they are wider at lg because the gap either side of a belt
                   inside its column is wider there. */}
               {i < BELTS.length - 1 && (
-                <span aria-hidden className="block flex-shrink-0 -mx-[11px] lg:-mx-[19px] lg:flex-1 lg:min-w-[34px] lg:max-w-[64px]" style={{ width: compact ? 6 : 8, height: 2, background: i < idx ? trail : line, marginTop: cur / 2 - 1 }} />
+                <span aria-hidden className={`block flex-shrink-0 lg:-mx-[19px] lg:flex-1 lg:min-w-[34px] lg:max-w-[64px] ${tight ? '-mx-[9px]' : '-mx-[11px]'}`} style={{ width: compact || tight ? 6 : 8, height: 2, background: i < idx ? trail : line, marginTop: cur / 2 - 1 }} />
               )}
             </div>
           );
@@ -426,10 +434,12 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
 // One belt's column. A plain div where the road is a picture, a button where
 // it is a control — the same box either way, because a road that changed shape
 // when it became clickable would read as two components.
-function Cell({ belt, onSelect, isSel, compact, children }) {
+function Cell({ belt, onSelect, isSel, compact, tight, children }) {
   // Wider at lg so the grown belt (58px) sits inside its own cell with room
-  // to spare instead of bulging out over the two beside it.
-  const box = `flex flex-col items-center flex-shrink-0 ${compact ? 'w-10' : 'w-[50px] lg:w-[68px]'}`;
+  // to spare instead of bulging out over the two beside it. `tight` is the
+  // phone road that fits: 34px columns, which with the connectors' negative
+  // margins puts thirteen belts inside about 300px.
+  const box = `flex flex-col items-center flex-shrink-0 ${compact ? 'w-10' : tight ? 'w-[34px] lg:w-[68px]' : 'w-[50px] lg:w-[68px]'}`;
   if (!onSelect) return <div className={box}>{children}</div>;
   return (
     <button

@@ -235,12 +235,17 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
             </div>
           </div>
         </div>
-        <div className="lg:hidden mt-4">
-          <LevelPills states={states} value={level} onChange={pick} belt={viewBelt} onHero layoutId="level-pill-mobile" />
-        </div>
         {/* No clearance for the art any more: it is faded into the gradient
-            now, so the road crosses it instead of stopping short of it. */}
-        <BeltRoad current={belt} selected={viewBelt} onSelect={pickBelt} onHero className="mt-5 hidden lg:block" />
+            now, so the road crosses it instead of stopping short of it.
+            
+            One road at every width. The phone used to get a row of level
+            pills here instead, which answered a different question than the
+            banner was asking: the title says which BELT is open, and the
+            pills moved the level. Levels are still picked from the All levels
+            list below, where they have room for their names and dates, and
+            the road now says where the ninja is on the whole ladder from the
+            first screen — which is the thing a parent opens this page for. */}
+        <BeltRoad current={belt} selected={viewBelt} onSelect={pickBelt} onHero fit className="mt-5" />
       </Hero>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
