@@ -17,12 +17,18 @@ import { fmtDay } from '../../lib/parentProgress';
 // Three numbers a parent cannot read off the rest of the page, each one led
 // by the sticker that earned it.
 //
-// The card under them is the portal's ordinary one: white, a soft radius, no
-// edge and no lift. It went through a dark gradient, a block of tint and a
-// spell with no surface at all before landing there. What the last two rounds
-// settled is that the colour on these belongs in the number and the artwork,
-// not in the panel behind them, and that a hairline in a second shade of the
-// fill only draws a ring around the block.
+// No card under any of them, and nothing left-aligned. They went through a
+// dark gradient tile, a flat white box, a block of tint and back to white,
+// and every one of those was a container drawn around three short pieces of
+// text because a number on a page felt like it needed one. It does not: the
+// sheet is already a surface, and what separates one record from the next is
+// the space between them.
+//
+// Centred, because with no box to sit in the left edge was the only thing
+// holding a record together and it was holding the caption and the sticker on
+// two different axes. A stack down one centre line is its own alignment. It
+// also puts these in the same posture as the collection below, where every
+// sticker already stands over its own caption.
 //
 // What is left is the sticker, the number, and two lines. The sticker is the
 // biggest thing in the row on purpose: it is the reward, the page is a
@@ -54,7 +60,7 @@ const RECORDS = [
 // takes under the pointer.
 function RecordSticker({ art, rest }) {
   return (
-    <Tilt amount={13} rest={rest} scale={1.05} className="-ml-2 inline-flex self-start">
+    <Tilt amount={13} rest={rest} scale={1.05} className="inline-flex">
       <img
         src={art}
         alt=""
@@ -76,7 +82,7 @@ function RecordSticker({ art, rest }) {
 function RecordCard({ record, value, caption, art, headline = false, flat, index = 0 }) {
   return (
     <motion.article
-      className={`tint-${record.tint} tint-ink-only flex min-w-[240px] flex-1 flex-col rounded-[22px] p-4 sm:min-w-[262px]`}
+      className={`tint-${record.tint} tint-ink-only flex min-w-[240px] flex-1 flex-col items-center px-2 text-center sm:min-w-[262px]`}
       initial={flat ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.06 * index }}

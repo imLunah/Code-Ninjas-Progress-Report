@@ -560,16 +560,16 @@ textarea:focus-visible {
 .dark .tint-amber { --tint-ink: #fbbf24; --tint-ink-soft: rgb(251 191 36 / 0.75);  background: rgb(245 158 11 / 0.12);  border-color: rgb(245 158 11 / 0.3); }
 /* Only the INK comes from the tint. --tint-ink and --tint-ink-soft survive so
    type can belong to one of the four colours in both themes; the pale fill and
-   the coloured hairline do not, and what is drawn instead is the portal's
-   ordinary card. For a surface that wants a tint's colour in its numbers
-   without becoming a coloured panel.
+   the coloured hairline do not, and nothing is drawn in their place. For type
+   that wants a tint's colour while sitting straight on the page rather than in
+   a panel.
 
    Border transparent rather than none, so the box measures the same either way
-   and nothing shifts when a surface opts out. Both rules are two classes deep
-   on the dark side, because the dark tints are, and a single class would lose
-   to them and put the pale fill back after sunset. */
-.tint-ink-only { background: #ffffff; border-color: transparent; }
-.dark .tint-ink-only { background: #252c3e; border-color: transparent; }
+   and nothing shifts when a surface opts out. The dark rule is two classes
+   deep because the dark tints are, and a single class would lose to them and
+   put the pale fill back after sunset. */
+.tint-ink-only { background: none; border-color: transparent; }
+.dark .tint-ink-only { background: none; border-color: transparent; }
 
 /* A white inset row inside a tinted card. */
 .tint-inset { background: #ffffff; }
