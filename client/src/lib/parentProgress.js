@@ -64,7 +64,11 @@ export function levelProjects(beltName, level, logs) {
     const hit = byProject.get(name);
     return {
       name,
-      kind: flat ? 'Project' : i === names.length - 1 ? 'Adventure' : (/debug/i.test(name) ? 'Solve' : 'Build'),
+      // CREATE levels alternate Build → Solve, then close with Adventure.
+      // Use that curriculum structure rather than words in the title: a few
+      // real Solve entries (for example "Image Functions") do not say
+      // "Debugging", so name matching assigns them the wrong role.
+      kind: flat ? 'Project' : i === names.length - 1 ? 'Adventure' : (i % 2 === 0 ? 'Build' : 'Solve'),
       status: hit ? (hit.status === 'Completed' ? 'done' : 'working') : 'todo',
       date: hit?.date || null,
     };

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { BugIcon, Globe2Icon, GraduationCapIcon, TrophyIcon, WrenchIcon } from 'lucide-react';
 import { Hero, Emblem, BeltRoad, BeltStickers, LevelPills, LevelMedal, hasLevelMedal, Group, Row, Tile, StatusDot, StatusText, BackChip } from './ParentUI';
 import { BELTS, getLevels } from '../../utils/beltConfig';
 import { levelProjects, levelStates, levelTitle, realSessions, trackModel, fmtDay } from '../../lib/parentProgress';
@@ -26,6 +27,32 @@ import BeltIcon from '../ui/BeltIcon';
 
 const EASE_OUT = [0.23, 1, 0.32, 1];
 
+// The curriculum's own visual vocabulary. Only Build, Solve and
+// Adventure/Project are tracked as completable rows today; Discover and
+// Explore are included so the mapping stays whole if those stages become
+// first-class rows later.
+const PROJECT_KIND = {
+  Discover: { Icon: Globe2Icon, color: '#293f98' },
+  Build: { Icon: WrenchIcon, color: '#9138a3' },
+  Explore: { Icon: GraduationCapIcon, color: '#319bc4' },
+  Solve: { Icon: BugIcon, color: '#ef3e43' },
+  Adventure: { Icon: TrophyIcon, color: '#4fc390' },
+  Project: { Icon: TrophyIcon, color: '#4fc390' },
+};
+
+function ProjectKindIcon({ kind, status }) {
+  const { Icon, color } = PROJECT_KIND[kind] || PROJECT_KIND.Project;
+  return (
+    <span
+      aria-hidden="true"
+      className={`inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-opacity ${status === 'todo' ? 'opacity-[0.55]' : ''}`}
+      style={{ backgroundColor: color }}
+    >
+      <Icon size={17} strokeWidth={2.7} className="text-white" />
+    </span>
+  );
+}
+
 // The line under a track's name: "Module 2 of 4 · Sensors".
 function trackLine(t) {
   if (!t) return '';
@@ -46,7 +73,7 @@ function ProjectRow({ p, first }) {
     ? (p.status === 'todo' ? 'Adventure · unlocks last' : `Adventure${p.date ? ` · ${fmtDay(p.date)}` : ''}`)
     : `${p.kind}${p.date ? ` · ${p.status === 'done' ? 'done' : 'last'} ${fmtDay(p.date)}` : ''}`;
   return (
-    <Row first={first} inset lead={<StatusDot status={p.status} adventure={adventure} />} dim={p.status === 'todo'}
+    <Row first={first} inset lead={<ProjectKindIcon kind={p.kind} status={p.status} />} dim={p.status === 'todo'}
       title={p.name} subtitle={sub} trailing={p.status !== 'todo' ? <StatusText status={p.status} /> : null} />
   );
 }
