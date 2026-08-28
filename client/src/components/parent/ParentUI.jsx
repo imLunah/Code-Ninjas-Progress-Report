@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
+import { motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { CheckIcon, ChevronRightIcon, StarIcon } from 'lucide-react';
 import { FLAT } from '../../lib/surfaces';
 import { BELTS, PROGRAM_LOGOS, PROGRAM_BANNERS } from '../../utils/beltConfig';
@@ -102,41 +102,68 @@ export function Hero({ program, size = 'card', className = '', style = {}, child
 // thing on the page the first thing to leave it. Now the banner is the layer
 // UNDERNEATH: it holds its place at the top of the screen and the rest of the
 // page, carried on a `PageSheet`, slides up and covers it. Blue behind, page
-// in front, and the edge between them says which is which.
+// in front, and the lit edge between them says which is which.
 //
-// The height is measured off this outer box, which stays in the flow; only
-// the box inside it is pinned. Reading the scroll off a pinned element would
-// read the same rectangle every frame.
+// It renders as two siblings rather than a wrapper, and that is the whole
+// trick: a sticky box can only travel inside its own parent, so a wrapper
+// sized to the banner would pin it for nothing — it would be stuck to a box
+// it already fills. The pinned box has to be a child of the tall thing, the
+// page itself, which is why this goes straight inside the page's root element
+// with the sheet as its sibling and nothing in between.
 //
 // The banner does not sit perfectly still while it is being covered: it
-// drifts up at about a third of the page's speed, and dims as it goes, the
-// way a thing further away moves less and sits in more shadow. The drift is
-// always slower than the sheet's, so the sheet's edge never uncovers the
-// banner's bottom. Reduced motion gets the layering and none of the drift:
-// the pinning is a fact about the page, the parallax is decoration.
+// drifts up at about a third of the page's speed and dims as it goes, the way
+// a thing further off moves less and sits in more shadow. The drift is always
+// slower than the sheet's, so the sheet's edge never uncovers the banner's
+// bottom. Reduced motion gets the layering and none of the drift: the pinning
+// is a fact about the page, the parallax is decoration.
 //
-// The hero's own `-mt` belongs out here, on the box that is measured, rather
-// than on the banner inside the pinned box: with it on the banner the pin
-// would catch a fifth of a rem too low and crop the banner's top edge against
-// the screen. Pass `!mt-0` to the hero to hand it over.
+// The zero-height mark before it carries the hero's own negative top margin,
+// so it reads the banner's place on the page from a box that never moves —
+// asking a pinned element where it is only ever gets the answer "the top".
+// The hero it wraps should be handed `!mt-0` to give that margin up.
 export function PinnedHero({ children }) {
   const still = useReducedMotion();
+  const mark = useRef(null);
   const box = useRef(null);
-  // 0 when the banner's top reaches the top of the screen, 1 when its bottom
-  // does — the whole of it being covered, in one number.
-  const { scrollYProgress } = useScroll({ target: box, offset: ['start start', 'end start'] });
-  const y = useTransform(scrollYProgress, [0, 1], ['0%', '-32%']);
-  const filter = useTransform(scrollYProgress, [0, 1], ['brightness(1)', 'brightness(0.66)']);
+  const span = useRef({ top: 0, height: 0 });
+  const covered = useMotionValue(0);
+  const { scrollY } = useScroll();
+
+  const settle = (y) => {
+    const { top, height } = span.current;
+    covered.set(height ? Math.min(Math.max((y - top) / height, 0), 1) : 0);
+  };
+
+  useEffect(() => {
+    const el = box.current;
+    if (!el || !mark.current) return undefined;
+    const read = () => {
+      span.current = { top: mark.current.getBoundingClientRect().top + window.scrollY, height: el.offsetHeight };
+      settle(window.scrollY);
+    };
+    read();
+    // The banner's height moves with the width it is given and with the art
+    // inside it, so it is watched rather than measured once on arrival.
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    window.addEventListener('resize', read);
+    return () => { ro.disconnect(); window.removeEventListener('resize', read); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useMotionValueEvent(scrollY, 'change', settle);
+
+  const y = useTransform(covered, (p) => -p * span.current.height * 0.32);
+  const filter = useTransform(covered, (p) => `brightness(${1 - p * 0.34})`);
 
   return (
-    <div ref={box} className="relative z-0 -mt-5 lg:-mt-7">
-      {/* The pin and the movement are separate boxes on purpose: a transform
-          on the pinned box itself is the one thing Safari has historically
-          got wrong about sticky. */}
-      <div className="sticky top-0">
+    <>
+      <div ref={mark} aria-hidden className="h-0 -mt-5 lg:-mt-7" />
+      <div ref={box} className="sticky top-0 z-0">
         <motion.div style={still ? undefined : { y, filter }}>{children}</motion.div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -153,7 +180,7 @@ export function PinnedHero({ children }) {
 // then puts the content column back inside itself so nothing below it moves.
 export function PageSheet({ className = '', children }) {
   return (
-    <div className={`relative z-10 -mx-4 sm:-mx-6 lg:ml-[calc(50%-50cqw)] lg:mr-0 lg:w-[100cqw] bg-ninja-bg rounded-t-[26px] lg:rounded-t-[32px] shadow-[0_-22px_44px_-24px_rgb(6_13_26_/_0.45)] pt-4 lg:pt-5 ${className}`}>
+    <div className={`relative z-10 -mx-4 sm:-mx-6 lg:ml-[calc(50%-50cqw)] lg:mr-0 lg:w-[100cqw] bg-ninja-bg rounded-t-[26px] lg:rounded-t-[32px] shadow-[0_-22px_44px_-24px_rgba(6,13,26,0.45)] pt-4 lg:pt-5 ${className}`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6">{children}</div>
     </div>
   );

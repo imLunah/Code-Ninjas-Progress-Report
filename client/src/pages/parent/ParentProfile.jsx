@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
 import { useParentPortal } from '../../context/ParentPortalContext';
-import { PageTitle, Row, StatusText, MoreLink } from '../../components/parent/ParentUI';
+import { PageTitle, Row, StatusText, MoreLink, PinnedHero, PageSheet } from '../../components/parent/ParentUI';
 import NinjaHero from '../../components/parent/NinjaHero';
 import ProgressVisuals from '../../components/parent/ProgressVisuals';
 import { StickerBook } from '../../components/parent/StickerCollection';
@@ -205,68 +205,81 @@ export default function ParentProfile() {
 
   return (
     <ParentLayout switcher={switcher}>
-      <div className="space-y-4 lg:space-y-5">
+      <div className="relative">
         {/* The banner IS the page title. A ninja's own profile opening on a
             line of grey text said nothing their name did not; this says the
             belt, the programs and the sessions before a word is read, and
-            puts the child in it at size. */}
-        <NinjaHero
-          program={heroProgram}
-          name={child.full_name}
-          eyebrow={eyebrow}
-          belt={belt}
-          level={level}
-          programCount={programs.length}
-          sessionCount={feed.length}
-          right={<NoteButton child={child} text={detail?.special_instructions || ''} onSave={(text) => saveNote(child.id, text)} />}
-        />
-        <div className="lg:hidden"><ChildSwitcher layoutId="parent-child-mobile" /></div>
-
-        {/* Activity, then the Courses section that Courses used to be a page
-            of. Every card in it opens the course it describes. */}
-        {detail && programs.length > 0 && (
-          <ProgressVisuals programs={programs} sessionLogs={detail.session_logs || []} childName={first} courseHref={courseHref} />
-        )}
-
-        {/* The stickers this ninja has actually earned, newest first, after
-            the courses that explain where they came from. Only for a ninja in
-            CREATE: the stickers are CREATE's belt art and there is nothing to
-            show a JR or Robotics ninja here. */}
-        {detail && createEnrollment && (
-          <StickerBook
+            puts the child in it at size. It is also the layer underneath: it
+            holds the top of the screen and the page slides up over it. */}
+        <PinnedHero>
+          <NinjaHero
+            program={heroProgram}
+            name={child.full_name}
+            eyebrow={eyebrow}
             belt={belt}
             level={level}
-            logs={(detail.session_logs || []).filter((l) => l.program === 'CREATE')}
-            childName={first}
-            href={`/parent/students/${target}/stickers`}
+            programCount={programs.length}
+            sessionCount={feed.length}
+            right={<NoteButton child={child} text={detail?.special_instructions || ''} onSave={(text) => saveNote(child.id, text)} />}
+            className="!mt-0"
           />
-        )}
+        </PinnedHero>
 
-        <div className="space-y-3">
-          <PageTitle title="Sessions" eyebrow={feed.length ? `${feed.length} in all` : ''} className="pt-2" />
-          {months.length === 0 && (
-            <div className={`${FLAT} p-8 text-center`}><p className="text-ninja-muted font-ninja text-sm">Sessions show up here as soon as a sensei logs one for {first}.</p></div>
-          )}
-          {months.length > 0 && (
-            <div className={`${FLAT} overflow-hidden`}>
-              <div className="max-h-[min(58vh,520px)] overflow-y-auto overscroll-contain">
-                {months.map((m, mi) => (
-                  <div key={m.key} className={mi ? 'border-t border-ninja-navy/[0.08]' : ''}>
-                    <p className="sticky top-0 z-10 bg-white px-4 pt-3.5 pb-1.5 font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted">{m.key}</p>
-                    {m.items.map((it, i) => it._type === 'club' ? (
-                      <Row key={`c${it.session_date}${it.club_name}${i}`} first={i === 0} title={it.club_name} subtitle={`Club · ${fmtLongDay(it.session_date)}`} trailing={<StatusText status="club" />} />
-                    ) : (
-                      <Row key={`s${it.session_date}${i}`} first={i === 0}
-                        title={it.project_at || it.lesson_name || it.module_name || it.sub_program || `${it.program} session`}
-                        subtitle={[it.program, it.program === 'CREATE' && it.belt_level_at ? `${it.belt_level_at} belt${it.belt_sublevel_at ? `, level ${it.belt_sublevel_at}` : ''}` : [it.sub_program, it.module_name].filter(Boolean).join(' · ') || null, fmtLongDay(it.session_date), it.sensei_name ? `Sensei ${String(it.sensei_name).split(' ')[0]}` : null].filter(Boolean).join(' · ')}
-                        trailing={it.status_at ? <StatusText status={it.status_at} /> : null} />
+        {/* Everything below the banner rides on one sheet, which is what
+            slides up over it. The spacing inside is the page as it was; the
+            sheet's own padding stands in for the gap the banner used to have
+            under it. */}
+        <PageSheet>
+          <div className="space-y-4 lg:space-y-5">
+            <div className="lg:hidden"><ChildSwitcher layoutId="parent-child-mobile" /></div>
+
+            {/* Activity, then the Courses section that Courses used to be a page
+                of. Every card in it opens the course it describes. */}
+            {detail && programs.length > 0 && (
+              <ProgressVisuals programs={programs} sessionLogs={detail.session_logs || []} childName={first} courseHref={courseHref} />
+            )}
+
+            {/* The stickers this ninja has actually earned, newest first, after
+                the courses that explain where they came from. Only for a ninja in
+                CREATE: the stickers are CREATE's belt art and there is nothing to
+                show a JR or Robotics ninja here. */}
+            {detail && createEnrollment && (
+              <StickerBook
+                belt={belt}
+                level={level}
+                logs={(detail.session_logs || []).filter((l) => l.program === 'CREATE')}
+                childName={first}
+                href={`/parent/students/${target}/stickers`}
+              />
+            )}
+
+            <div className="space-y-3">
+              <PageTitle title="Sessions" eyebrow={feed.length ? `${feed.length} in all` : ''} className="pt-2" />
+              {months.length === 0 && (
+                <div className={`${FLAT} p-8 text-center`}><p className="text-ninja-muted font-ninja text-sm">Sessions show up here as soon as a sensei logs one for {first}.</p></div>
+              )}
+              {months.length > 0 && (
+                <div className={`${FLAT} overflow-hidden`}>
+                  <div className="max-h-[min(58vh,520px)] overflow-y-auto overscroll-contain">
+                    {months.map((m, mi) => (
+                      <div key={m.key} className={mi ? 'border-t border-ninja-navy/[0.08]' : ''}>
+                        <p className="sticky top-0 z-10 bg-white px-4 pt-3.5 pb-1.5 font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted">{m.key}</p>
+                        {m.items.map((it, i) => it._type === 'club' ? (
+                          <Row key={`c${it.session_date}${it.club_name}${i}`} first={i === 0} title={it.club_name} subtitle={`Club · ${fmtLongDay(it.session_date)}`} trailing={<StatusText status="club" />} />
+                        ) : (
+                          <Row key={`s${it.session_date}${i}`} first={i === 0}
+                            title={it.project_at || it.lesson_name || it.module_name || it.sub_program || `${it.program} session`}
+                            subtitle={[it.program, it.program === 'CREATE' && it.belt_level_at ? `${it.belt_level_at} belt${it.belt_sublevel_at ? `, level ${it.belt_sublevel_at}` : ''}` : [it.sub_program, it.module_name].filter(Boolean).join(' · ') || null, fmtLongDay(it.session_date), it.sensei_name ? `Sensei ${String(it.sensei_name).split(' ')[0]}` : null].filter(Boolean).join(' · ')}
+                            trailing={it.status_at ? <StatusText status={it.status_at} /> : null} />
+                        ))}
+                      </div>
                     ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        </PageSheet>
       </div>
     </ParentLayout>
   );

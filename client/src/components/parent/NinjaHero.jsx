@@ -67,7 +67,7 @@ function Stat({ value, label, lead, delay = 0, className = '' }) {
   );
 }
 
-export default function NinjaHero({ program, name, eyebrow, belt, level, programCount, sessionCount, right }) {
+export default function NinjaHero({ program, name, eyebrow, belt, level, programCount, sessionCount, right, className = '' }) {
   const still = useReducedMotion();
   const [cheering, setCheering] = useState(false);
   const wrap = useRef(null);
@@ -105,7 +105,7 @@ export default function NinjaHero({ program, name, eyebrow, belt, level, program
   const beltLabel = belt ? `${belt}${level ? ` · level ${level}` : ''}` : null;
 
   return (
-    <Hero program={program} size="page">
+    <Hero program={program} size="page" className={className}>
       <div ref={wrap} onPointerMove={onMove} onPointerLeave={onLeave} className="relative">
         {/* The belt's spot art used to drift here, behind the ninja. It came
             off: on a Black belt it was one IMPACT sticker alone in the sky,
