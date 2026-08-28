@@ -42,6 +42,8 @@ const TABS = [
 // Same look as MobileNav: near-transparent capsule, refracting where the browser can.
 export const GLASS = 'border border-white/30 dark:border-white/12 bg-white/[0.55] dark:bg-[#0c0f1a]/55 backdrop-blur-xl backdrop-saturate-[1.9] shadow-[0_14px_40px_rgb(26_46_74/0.18)] dark:shadow-[0_14px_40px_rgb(0_0_0/0.45)]';
 export const REFRACT = { backdropFilter: 'url(#liquidGlass) blur(22px) saturate(1.8)', WebkitBackdropFilter: 'blur(22px) saturate(1.8)' };
+// The displacement map behind #glassRim, as an image the filter can read.
+const LENS_MAP = "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2' preserveAspectRatio='none'%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgb(0,128,128)'/%3E%3Cstop offset='0.74' stop-color='rgb(0,128,128)'/%3E%3Cstop offset='1' stop-color='rgb(128,128,128)'/%3E%3C/linearGradient%3E%3Crect width='2' height='2' fill='url(%23g)'/%3E%3C/svg%3E";
 
 function isActive(pathname, to) {
   return pathname === to || pathname.startsWith(to + '/');
@@ -314,6 +316,20 @@ export default function ParentLayout({ children, switcher = null, bleed = false 
           <feTurbulence type="fractalNoise" baseFrequency="0.012 0.014" numOctaves="2" seed="17" result="noise" />
           <feGaussianBlur in="noise" stdDeviation="2.2" result="softNoise" />
           <feDisplacementMap in="SourceGraphic" in2="softNoise" scale="22" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+        {/* The lens for the page sheet's glass rim. Not turbulence: a rim is
+            a smooth bend, not a ripple. The map is a vertical gradient, held
+            at full strength down to the 74% line and easing to nothing at the
+            bottom; on the rim element that line is where the straight run of
+            the band begins (lip over lip-plus-rim, 40/54 and 34/46 both land
+            there), so the bend is strongest along the band's top edge and
+            gone by the time it has dissolved into paper. Red carries the bend
+            (0 = pull from above), blue is pinned at 128 so nothing moves
+            sideways. iOS Safari cannot run an SVG filter in a backdrop and
+            falls back to the blur and saturation alone. */}
+        <filter id="glassRim" x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
+          <feImage href={LENS_MAP} preserveAspectRatio="none" result="lens" />
+          <feDisplacementMap in="SourceGraphic" in2="lens" scale="20" xChannelSelector="B" yChannelSelector="R" />
         </filter>
       </svg>
 

@@ -205,17 +205,57 @@ export function PinnedHero({ pinned = true, children }) {
 //
 // The scoop is a radial gradient rather than a border radius because CSS
 // rounds corners off and has no way to round one in. The circle sits at the
-// corner box's INNER corner, page colour outside it and nothing inside, which
-// paints the sliver the banner's corner vacates and leaves the corner itself
-// clear.
+// corner box's top inner corner, page colour outside it and nothing inside,
+// which paints the sliver the banner's corner vacates and leaves the corner
+// itself clear.
+//
+// THE RIM. The sheet's edge is glass, the same material as the phone's nav
+// capsule and the clear cards: a band the width of `--rim` along the whole
+// silhouette, straight run and scooped corners alike, that is clear where it
+// meets the banner and dissolves into paper by its inner edge. It bends what
+// is behind it (#glassRim, a lens rather than a ripple) and lifts its
+// saturation, which is what makes glass look lit rather than grey, with a
+// one-pixel white lip along its outer edge where the light catches the bevel.
+// The sheet's own paper starts a rim's width below its top so there is
+// something behind the band to bend, and the paper of the silhouette is drawn
+// with the same band cut out of it. One element, one filter, for the whole
+// ribbon: as three pieces the filter clamped at each piece's own edge and
+// left a seam where the corner met the run.
 const SHEET = 'rgb(var(--ninja-bg))';
-const LIP = [
-  // The two scooped corners, each one corner-box square.
-  `radial-gradient(circle at 100% 0%, transparent calc(var(--lip) - 0.5px), ${SHEET} var(--lip)) left top / var(--lip) var(--lip) no-repeat`,
-  `radial-gradient(circle at 0% 0%, transparent calc(var(--lip) - 0.5px), ${SHEET} var(--lip)) right top / var(--lip) var(--lip) no-repeat`,
+const BAND_OUTER = 'var(--lip)';
+const BAND_INNER = 'calc(var(--lip) + var(--rim))';
+// Corner boxes are a lip wide and a lip plus a rim tall, so the ring can run
+// down past the sheet's top to meet the straight band at its full width.
+const CORNER_L = `left top / var(--lip) calc(var(--lip) + var(--rim)) no-repeat`;
+const CORNER_R = `right top / var(--lip) calc(var(--lip) + var(--rim)) no-repeat`;
+const RUN = `var(--lip) 100% / calc(100% - 2 * var(--lip)) var(--rim) no-repeat`;
+
+// The paper: the silhouette with the band cut out of it.
+const PAPER = [
+  `radial-gradient(circle at 100% 0%, transparent calc(${BAND_INNER} - 0.5px), ${SHEET} ${BAND_INNER}) ${CORNER_L}`,
+  `radial-gradient(circle at 0% 0%, transparent calc(${BAND_INNER} - 0.5px), ${SHEET} ${BAND_INNER}) ${CORNER_R}`,
   // A shallow strip of the sheet itself, so the straight run of the edge has
-  // something to cast from. It stays inside the sheet's top padding.
+  // something to cast from. It sits under the sheet's own top padding.
   `linear-gradient(${SHEET}, ${SHEET}) left bottom / 100% 12px no-repeat`,
+].join(', ');
+
+// The glass: a white lip on the outer edge, near-clear behind it, and solid
+// paper by the inner edge — solid, not nearly, because the paper's shadow is
+// cast from just under that edge and anything short of opaque there shows
+// its hard top as a line.
+const glassStops = (at) => `transparent calc(${at} - 0.5px), rgb(255 255 255 / 0.9) ${at}, rgb(255 255 255 / 0.9) calc(${at} + 1px), rgb(255 255 255 / 0.25) calc(${at} + 1.5px), ${SHEET} calc(${BAND_INNER} - 0.5px), transparent ${BAND_INNER}`;
+const GLASS = [
+  `radial-gradient(circle at 100% 0%, ${glassStops(BAND_OUTER)}) ${CORNER_L}`,
+  `radial-gradient(circle at 0% 0%, ${glassStops(BAND_OUTER)}) ${CORNER_R}`,
+  `linear-gradient(rgb(255 255 255 / 0.9) 0, rgb(255 255 255 / 0.9) 1px, rgb(255 255 255 / 0.25) 1.5px, ${SHEET} 100%) ${RUN}`,
+].join(', ');
+// Where the glass IS. The backdrop filter covers the element's whole box;
+// this is what keeps it to the ribbon.
+const ringMask = (at) => `transparent calc(${at} - 0.5px), #000 ${at}, #000 calc(${BAND_INNER} - 0.5px), transparent ${BAND_INNER}`;
+const GLASS_MASK = [
+  `radial-gradient(circle at 100% 0%, ${ringMask(BAND_OUTER)}) ${CORNER_L}`,
+  `radial-gradient(circle at 0% 0%, ${ringMask(BAND_OUTER)}) ${CORNER_R}`,
+  `linear-gradient(#000, #000) ${RUN}`,
 ].join(', ');
 
 // `corner` follows whatever the banner above does. The ninja's profile banner
@@ -228,37 +268,50 @@ export function PageSheet({ corner = 'rounded', className = '', children }) {
   // The shadow is the sheet's edge lifting off the banner, so it belongs to
   // the moment the sheet starts to ride and not to the page at rest, where it
   // would only smudge the banner's bottom edge with grey. It is a drop-shadow
-  // on the lip rather than a box-shadow on the sheet because a box-shadow
+  // on the paper rather than a box-shadow on the sheet because a box-shadow
   // follows the box, which is square across the top: it would cut a hard
   // corner over the blue exactly where the corner is supposed to be seamless.
   // A drop-shadow follows what is actually painted, scooped corners included.
-  //
-  // Two of them. The soft one is the shadow the sheet casts back onto the
-  // banner; the hard one, a single pixel with no blur, is the lit edge of the
-  // paper. The shadow alone is nearly invisible on the home billboard, which
-  // is dark navy under a heavy wash — dark on dark says nothing — and the
-  // highlight is what carries the separation there. Both follow the painted
-  // shape, so both go round the scooped corners.
-  const lift = useTransform(covered, (p) => {
-    const t = Math.min(p * 8, 1);
-    return `drop-shadow(0 -12px 16px rgba(6, 13, 26, ${(t * 0.4).toFixed(3)}))`
-      + ` drop-shadow(0 -1px 0 rgba(255, 255, 255, ${(t * 0.42).toFixed(3)}))`;
-  });
+  // It is cast from the paper's edge, which is the band's inner edge, so it
+  // is seen through the glass and bent with everything else behind it.
+  const lift = useTransform(covered, (p) => `drop-shadow(0 -12px 16px rgba(6, 13, 26, ${(Math.min(p * 8, 1) * 0.4).toFixed(3)}))`);
+  // The glass arrives with the shadow. At rest the band sits over the page's
+  // own colour, and a lit rim on nothing is a stripe.
+  const shine = useTransform(covered, (p) => Math.min(p * 8, 1));
 
   return (
-    <div className={`relative z-10 -mx-4 sm:-mx-6 lg:ml-[calc(50%-50cqw)] lg:mr-0 lg:w-[100cqw] bg-ninja-bg pt-4 lg:pt-5 ${className}`}>
-      {/* The lip: the sheet's top edge and its shadow, drawn as one shape.
-          Clipped on three sides so the shadow only ever falls upward, onto
-          the banner — never out past the sheet's own width and never down
-          onto the page. The radius follows the banner's, 34 then 40. */}
+    <div
+      className={`relative z-10 -mx-4 sm:-mx-6 lg:ml-[calc(50%-50cqw)] lg:mr-0 lg:w-[100cqw] pt-4 lg:pt-5 ${corner === 'square' ? '[--lip:0px]' : '[--lip:34px] lg:[--lip:40px]'} [--rim:12px] lg:[--rim:14px] ${className}`}
+      style={{ background: `linear-gradient(to bottom, transparent var(--rim), ${SHEET} var(--rim))` }}
+    >
+      {/* The edge: paper, glass and shadow, drawn as one shape. Clipped on
+          three sides so the shadow only ever falls upward, onto the banner —
+          never out past the sheet's own width and never down onto the page.
+          The radius follows the banner's, 34 then 40. */}
       <div
         aria-hidden
-        className={`pointer-events-none absolute inset-x-0 overflow-hidden ${corner === 'square' ? '[--lip:0px]' : '[--lip:34px] lg:[--lip:40px]'}`}
-        style={{ top: 'calc(-1 * (var(--lip) + 40px))', height: 'calc(var(--lip) + 52px)' }}
+        className="pointer-events-none absolute inset-x-0 overflow-hidden"
+        style={{ top: 'calc(-1 * (var(--lip) + 40px))', height: 'calc(var(--lip) + 40px + var(--rim) + 12px)' }}
       >
         <motion.div
           className="absolute inset-x-0 bottom-0"
-          style={{ height: 'calc(var(--lip) + 12px)', background: LIP, filter: lift }}
+          style={{ height: 'calc(var(--lip) + var(--rim) + 12px)', background: PAPER, filter: lift }}
+        />
+        <motion.div
+          className="absolute inset-x-0 bottom-3"
+          style={{
+            height: 'calc(var(--lip) + var(--rim))',
+            background: GLASS,
+            // The shorthand, not mask-image: the layers carry a position, a
+            // size and a repeat, and the longhand takes none of those — it
+            // rejects the whole value and the filter runs over the entire
+            // box, blurring the banner forty pixels up.
+            WebkitMask: GLASS_MASK,
+            mask: GLASS_MASK,
+            backdropFilter: 'url(#glassRim) blur(2px) saturate(1.8)',
+            WebkitBackdropFilter: 'blur(2px) saturate(1.8)',
+            opacity: shine,
+          }}
         />
       </div>
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6">{children}</div>
