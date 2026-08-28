@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { CheckIcon, ChevronRightIcon, StarIcon } from 'lucide-react';
 import { FLAT } from '../../lib/surfaces';
 import { BELTS, PROGRAM_LOGOS, PROGRAM_BANNERS } from '../../utils/beltConfig';
@@ -92,6 +92,69 @@ export function Hero({ program, size = 'card', className = '', style = {}, child
       {size === 'page'
         ? <div className="lg:relative lg:max-w-6xl lg:mx-auto lg:px-6 lg:pt-14 lg:pb-12">{children}</div>
         : children}
+    </div>
+  );
+}
+
+// A page hero that stays where it is while the page rides up over it.
+//
+// The banner used to scroll away like any other block, which made the biggest
+// thing on the page the first thing to leave it. Now the banner is the layer
+// UNDERNEATH: it holds its place at the top of the screen and the rest of the
+// page, carried on a `PageSheet`, slides up and covers it. Blue behind, page
+// in front, and the edge between them says which is which.
+//
+// The height is measured off this outer box, which stays in the flow; only
+// the box inside it is pinned. Reading the scroll off a pinned element would
+// read the same rectangle every frame.
+//
+// The banner does not sit perfectly still while it is being covered: it
+// drifts up at about a third of the page's speed, and dims as it goes, the
+// way a thing further away moves less and sits in more shadow. The drift is
+// always slower than the sheet's, so the sheet's edge never uncovers the
+// banner's bottom. Reduced motion gets the layering and none of the drift:
+// the pinning is a fact about the page, the parallax is decoration.
+//
+// The hero's own `-mt` belongs out here, on the box that is measured, rather
+// than on the banner inside the pinned box: with it on the banner the pin
+// would catch a fifth of a rem too low and crop the banner's top edge against
+// the screen. Pass `!mt-0` to the hero to hand it over.
+export function PinnedHero({ children }) {
+  const still = useReducedMotion();
+  const box = useRef(null);
+  // 0 when the banner's top reaches the top of the screen, 1 when its bottom
+  // does — the whole of it being covered, in one number.
+  const { scrollYProgress } = useScroll({ target: box, offset: ['start start', 'end start'] });
+  const y = useTransform(scrollYProgress, [0, 1], ['0%', '-32%']);
+  const filter = useTransform(scrollYProgress, [0, 1], ['brightness(1)', 'brightness(0.66)']);
+
+  return (
+    <div ref={box} className="relative z-0 -mt-5 lg:-mt-7">
+      {/* The pin and the movement are separate boxes on purpose: a transform
+          on the pinned box itself is the one thing Safari has historically
+          got wrong about sticky. */}
+      <div className="sticky top-0">
+        <motion.div style={still ? undefined : { y, filter }}>{children}</motion.div>
+      </div>
+    </div>
+  );
+}
+
+// The page, on a sheet that rides over the pinned banner.
+//
+// It is the page's own colour, so at rest it is invisible: the sheet's top
+// edge sits exactly where the banner ends and page-on-page shows nothing. It
+// only appears once it is over the blue, and then it is a lit edge with a
+// shadow under it and corners turned the other way from the banner's — a
+// sheet of paper laid on a card, which is the whole of the effect.
+//
+// It bleeds to the edges of the content region the way a page hero does, for
+// the same reason and by the same means (container units, not viewport ones),
+// then puts the content column back inside itself so nothing below it moves.
+export function PageSheet({ className = '', children }) {
+  return (
+    <div className={`relative z-10 -mx-4 sm:-mx-6 lg:ml-[calc(50%-50cqw)] lg:mr-0 lg:w-[100cqw] bg-ninja-bg rounded-t-[26px] lg:rounded-t-[32px] shadow-[0_-22px_44px_-24px_rgb(6_13_26_/_0.45)] pt-4 lg:pt-5 ${className}`}>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">{children}</div>
     </div>
   );
 }

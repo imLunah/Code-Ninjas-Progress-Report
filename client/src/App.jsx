@@ -42,6 +42,10 @@ const ParentHome = lazy(() => import('./pages/parent/ParentHome'));
 const ParentProfile = lazy(() => import('./pages/parent/ParentProfile'));
 const ParentWelcomePage = lazy(() => import('./pages/parent/ParentWelcomePage'));
 const ParentAccountPage = lazy(() => import('./pages/parent/ParentAccountPage'));
+// The whole sticker book. Lazy like every other parent route: it pulls the
+// curriculum for the level topics behind each sticker, and a parent who never
+// opens it should not pay for that.
+const ParentStickerBook = lazy(() => import('./pages/parent/ParentStickerBook'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const AccessibilityPage = lazy(() => import('./pages/AccessibilityPage'));
@@ -100,6 +104,7 @@ export default function App() {
             <Route path="/parent/dashboard"   element={<ParentRoute><ParentHome /></ParentRoute>} />
             <Route path="/parent/students/:id" element={<ParentRoute><ParentProfile /></ParentRoute>} />
             <Route path="/parent/students/:id/courses/:program" element={<ParentRoute><ParentProfile /></ParentRoute>} />
+            <Route path="/parent/students/:id/stickers" element={<ParentRoute><ParentStickerBook /></ParentRoute>} />
             <Route path="/parent/account"     element={<ParentRoute><ParentAccountPage /></ParentRoute>} />
             {/* Courses was its own section until the grid in front of it turned
                 out to be a menu of what the profile already shows. A course is

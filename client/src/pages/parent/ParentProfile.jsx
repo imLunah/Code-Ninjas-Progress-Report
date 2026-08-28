@@ -238,7 +238,7 @@ export default function ParentProfile() {
             level={level}
             logs={(detail.session_logs || []).filter((l) => l.program === 'CREATE')}
             childName={first}
-            href={courseHref('CREATE')}
+            href={`/parent/students/${target}/stickers`}
           />
         )}
 

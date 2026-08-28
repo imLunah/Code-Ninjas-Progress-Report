@@ -51,7 +51,7 @@ function stickerTopics(item) {
 // Only `x` is animated. The card's tilt owns `rotate`, `rotateX`, `rotateY`
 // and `scale` as motion values on the same element, and animating one of
 // those from here would fight the spring holding it.
-function useLockedShake() {
+export function useLockedShake() {
   const controls = useAnimationControls();
   const still = useReducedMotion();
   const shake = useCallback(() => {
@@ -64,7 +64,7 @@ function useLockedShake() {
   return { controls, shake };
 }
 
-function useStickerZoom() {
+export function useStickerZoom() {
   const [zoomed, setZoomed] = useState(null);
   const opener = useRef(null);
 
@@ -84,7 +84,7 @@ function useStickerZoom() {
   return { zoomed, open, close };
 }
 
-function StickerCard({ item, isEarned, onOpen, flat }) {
+export function StickerCard({ item, isEarned, onOpen, flat }) {
   const { controls, shake } = useLockedShake();
   return (
     <motion.div animate={controls} className="flex">
@@ -135,7 +135,7 @@ function StickerCard({ item, isEarned, onOpen, flat }) {
 // Only an earned sticker opens this now (a locked one rattles instead), but
 // the locked half stays: it is one line, and it is the honest thing to show
 // if another surface ever opens a sticker that has not been earned.
-function StickerZoom({ item, isEarned, childName, onClose, flat }) {
+export function StickerZoom({ item, isEarned, childName, onClose, flat }) {
   const closeRef = useRef(null);
   const topics = stickerTopics(item);
   const who = childName ? String(childName).split(' ')[0] : null;
@@ -374,7 +374,7 @@ export function StickerBook({ belt, level, logs, childName, href, className = ''
 // White's stickers under it). The road is the control; this follows it. A
 // Degrees belt has no sticker art at all, so the card does not render rather
 // than standing there empty.
-export default function StickerCollection({ belt, earnedIds, earnedTotal, childName }) {
+export default function StickerCollection({ belt, earnedIds, earnedTotal, childName, bookHref }) {
   const { zoomed, open, close } = useStickerZoom();
   const flat = useReducedMotion();
 
@@ -411,6 +411,16 @@ export default function StickerCollection({ belt, earnedIds, earnedTotal, childN
           />
         ))}
       </div>
+
+      {bookHref && (
+        <Link
+          to={bookHref}
+          className="flex items-center justify-center gap-1 border-t border-ninja-navy/[0.08] px-4 py-3 font-ninja text-[12.5px] font-extrabold text-ninja-blue transition-colors hover:bg-ninja-blue/[0.04]"
+        >
+          See the whole sticker book
+          <ChevronRightIcon size={15} strokeWidth={3} aria-hidden />
+        </Link>
+      )}
 
       <AnimatePresence>
         {zoomed && (
