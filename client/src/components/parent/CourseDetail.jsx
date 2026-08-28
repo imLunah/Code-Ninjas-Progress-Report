@@ -112,8 +112,7 @@ function StickerCollection({ belt, earnedIds, earnedTotal }) {
             Complete levels to earn each sticker.
           </p>
         </div>
-        <div className="flex-shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 font-ninja text-[12px] font-extrabold text-ninja-blue"
-          style={{ background: 'rgb(var(--ninja-blue) / 0.09)' }}>
+        <div className="flex-shrink-0 whitespace-nowrap pt-0.5 font-ninja text-[12px] font-extrabold text-ninja-blue">
           {earnedTotal} of {CREATE_STICKERS.length} earned
         </div>
       </div>
