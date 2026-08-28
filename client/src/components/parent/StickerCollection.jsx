@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { CheckIcon, ChevronRightIcon, LockKeyholeIcon, SparklesIcon, XIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { CREATE_STICKERS, STICKER_BELTS, stickerRequirement, stickersForBelt } from '../../lib/createStickers';
+import { CREATE_STICKERS, stickerRequirement, stickersForBelt } from '../../lib/createStickers';
 import { stickerProgress } from '../../lib/stickerProgress';
 import { levelInfo } from '../../lib/createCurriculum';
 import { Group } from './ParentUI';
@@ -329,17 +329,23 @@ export function StickerBook({ belt, level, logs, childName, href, className = ''
   );
 }
 
+// The album on a belt's own page: the stickers for the belt the page is
+// showing, and no others.
+//
+// It used to carry its own row of belt pills, which made two controls for one
+// question — the belt road at the top of the page already says which belt you
+// are looking at, and the two could disagree (open a Black belt page, find
+// White's stickers under it). The road is the control; this follows it. A
+// Degrees belt has no sticker art at all, so the card does not render rather
+// than standing there empty.
 export default function StickerCollection({ belt, earnedIds, earnedTotal, childName }) {
-  const firstBelt = STICKER_BELTS.includes(belt) ? belt : STICKER_BELTS[STICKER_BELTS.length - 1];
-  const [openBelt, setOpenBelt] = useState(firstBelt);
   const { zoomed, open, close } = useStickerZoom();
   const flat = useReducedMotion();
 
-  useEffect(() => {
-    if (STICKER_BELTS.includes(belt)) setOpenBelt(belt);
-  }, [belt]);
+  const stickers = stickersForBelt(belt);
+  if (!stickers.length) return null;
 
-  const stickers = stickersForBelt(openBelt);
+  const earnedHere = stickers.filter((item) => earnedIds.has(item.id)).length;
 
   return (
     <Group className="relative">
@@ -347,33 +353,15 @@ export default function StickerCollection({ belt, earnedIds, earnedTotal, childN
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-ninja-navy">
             <SparklesIcon size={17} strokeWidth={2.5} aria-hidden />
-            <h2 className="font-ninja text-[17px] font-extrabold">Stickers</h2>
+            <h2 className="font-ninja text-[17px] font-extrabold">{belt} belt stickers</h2>
           </div>
           <p className="mt-1 font-ninja text-[12.5px] text-ninja-muted">
-            Complete levels to earn each sticker. Tap one to see what it took.
+            {earnedTotal} of {CREATE_STICKERS.length} earned across CREATE. Tap one to see what it took.
           </p>
         </div>
         <div className="flex-shrink-0 whitespace-nowrap pt-0.5 font-ninja text-[12px] font-extrabold text-ninja-blue">
-          {earnedTotal} of {CREATE_STICKERS.length} earned
+          {earnedHere} of {stickers.length} earned
         </div>
-      </div>
-
-      <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-3 pb-3 sm:px-4" aria-label="Sticker belts">
-        {STICKER_BELTS.map((name) => {
-          const active = name === openBelt;
-          return (
-            <button
-              key={name}
-              type="button"
-              onClick={() => setOpenBelt(name)}
-              aria-pressed={active}
-              className={`flex-shrink-0 rounded-full px-3 py-1.5 font-ninja text-[11.5px] font-extrabold transition-colors ${active ? 'text-white' : 'text-ninja-muted hover:text-ninja-navy'}`}
-              style={{ background: active ? 'rgb(var(--ninja-blue))' : 'rgb(var(--ninja-navy) / 0.055)' }}
-            >
-              {name}
-            </button>
-          );
-        })}
       </div>
 
       <div className="grid grid-cols-2 gap-2.5 px-3 pb-3 sm:grid-cols-3 sm:px-4 lg:grid-cols-5">
