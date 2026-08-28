@@ -138,7 +138,7 @@ function ProgramCardBanner({ program, lastDate, sessions, href }) {
           fontFamily: 'Nunito, sans-serif', display: 'flex', alignItems: 'center', gap: '6px',
         }}>
           <span>{program}</span>
-          {href && <ChevronRightIcon size={21} strokeWidth={3} aria-hidden style={{ opacity: 0.6, flexShrink: 0 }} />}
+          {href && <ChevronRightIcon size={21} strokeWidth={3} aria-hidden className="flex-shrink-0 opacity-60 transition-all group-hover:opacity-100 group-hover:translate-x-0.5" />}
         </h2>
         {lastDate && (
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'Nunito, sans-serif' }}>
