@@ -258,7 +258,7 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
   useEffect(() => {
     const el = scroller.current;
     if (!el || sel < 0 || el.scrollWidth <= el.clientWidth) return;
-    const col = compact ? 40 : 46;
+    const col = compact ? 40 : 50;
     const centre = sel * col + col / 2;
     el.scrollLeft = Math.max(0, centre - el.clientWidth / 2);
   }, [sel, compact]);
@@ -283,7 +283,7 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
       onPointerCancel={endDrag}
       className={`overflow-x-auto no-scrollbar cursor-grab active:cursor-grabbing lg:cursor-default lg:active:cursor-default select-none -mx-1 px-1 ${className}`}
       aria-label="Belt road" role={onSelect ? 'group' : 'img'}>
-      <div className="flex items-start min-w-max">
+      <div className="flex items-start min-w-max pr-3 lg:pr-0">
         {BELTS.map((b, i) => {
           const state = idx < 0 ? 'ahead' : i < idx ? 'earned' : i === idx ? 'current' : 'ahead';
           const size = i === sel ? cur : icon;
@@ -331,7 +331,7 @@ export function BeltRoad({ current, selected, onSelect, onHero = false, compact 
 function Cell({ belt, onSelect, isSel, compact, children }) {
   // Wider at lg so the grown belt (58px) sits inside its own cell with room
   // to spare instead of bulging out over the two beside it.
-  const box = `flex flex-col items-center flex-shrink-0 ${compact ? 'w-10' : 'w-[46px] lg:w-[68px]'}`;
+  const box = `flex flex-col items-center flex-shrink-0 ${compact ? 'w-10' : 'w-[50px] lg:w-[68px]'}`;
   if (!onSelect) return <div className={box}>{children}</div>;
   return (
     <button
