@@ -117,8 +117,16 @@ export default function NinjaHero({ program, name, eyebrow, belt, level, program
         {/* Above the ninja rather than beside it: the banner's corner is the
             only spot that stays clear of the art at every width, and the
             button carries its own surface so sitting over a raised arm reads
-            as a control on top of a picture rather than a collision. */}
-        {right && <div className="absolute top-0 right-0 z-10">{right}</div>}
+            as a control on top of a picture rather than a collision.
+            
+            At lg it sits 56px OUTSIDE the content column, in the banner's own
+            margin. Anchored to the column it overlapped the ninja's box by a
+            few pixels and read as pinned to the art; out here it is clear of
+            it (the ninja's box ends at the column edge less its own 24px) and
+            still close enough to belong to the banner rather than to the far
+            corner of a wide screen. Phones keep the corner: there is no
+            margin to move into. */}
+        {right && <div className="absolute top-0 right-0 z-10 lg:right-[-56px]">{right}</div>}
 
         {/* The words reserve their own room with padding rather than sharing a
             flex row with the ninja: the cheer pose is a wider picture than the
