@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useAnimationControls, useReducedMotion } from 'framer-motion';
 import { CheckIcon, ChevronRightIcon, LockKeyholeIcon, SparklesIcon, XIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CREATE_STICKERS, stickerRequirement, stickersForBelt } from '../../lib/createStickers';
@@ -42,6 +42,28 @@ function stickerTopics(item) {
 
 // Opening a sticker is the same act in the album and in the book, down to
 // handing focus back to the sticker that was clicked, so both call this.
+// A locked sticker does not open. Clicking one shakes it the way a padlock
+// shakes when it is pulled: a short horizontal rattle, over in half a second,
+// no dialog. The card already prints what would unlock it, so there is
+// nothing behind the lock worth opening, and a dialog that says "not yours
+// yet" is a worse answer than the object refusing to move.
+//
+// Only `x` is animated. The card's tilt owns `rotate`, `rotateX`, `rotateY`
+// and `scale` as motion values on the same element, and animating one of
+// those from here would fight the spring holding it.
+function useLockedShake() {
+  const controls = useAnimationControls();
+  const still = useReducedMotion();
+  const shake = useCallback(() => {
+    if (still) return;
+    controls.start({
+      x: [0, -7, 6, -4.5, 3, -1.5, 0],
+      transition: { duration: 0.42, ease: 'easeInOut' },
+    });
+  }, [controls, still]);
+  return { controls, shake };
+}
+
 function useStickerZoom() {
   const [zoomed, setZoomed] = useState(null);
   const opener = useRef(null);
@@ -63,17 +85,19 @@ function useStickerZoom() {
 }
 
 function StickerCard({ item, isEarned, onOpen, flat }) {
+  const { controls, shake } = useLockedShake();
   return (
+    <motion.div animate={controls} className="flex">
     <Tilt
       as={motion.button}
       amount={TILT}
       glare={isEarned}
       disabled={flat}
       type="button"
-      onClick={() => onOpen(item)}
-      aria-label={`${item.title}, ${isEarned ? 'earned' : stickerRequirement(item)}`}
+      onClick={() => (isEarned ? onOpen(item) : shake())}
+      aria-label={`${item.title}, ${isEarned ? 'earned' : `locked, ${stickerRequirement(item)}`}`}
       style={{ background: isEarned ? 'rgb(var(--ninja-blue) / 0.045)' : 'rgb(var(--ninja-navy) / 0.025)' }}
-      className="group relative flex min-h-[184px] flex-col items-center rounded-[18px] border border-ninja-navy/[0.07] px-3 pb-3 pt-4 text-center transition-shadow duration-200 hover:shadow-[0_22px_36px_-20px_rgb(6_13_26_/_0.55)] active:brightness-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue/60"
+      className="group relative flex w-full min-h-[184px] flex-col items-center rounded-[18px] border border-ninja-navy/[0.07] px-3 pb-3 pt-4 text-center transition-shadow duration-200 hover:shadow-[0_22px_36px_-20px_rgb(6_13_26_/_0.55)] active:brightness-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue/60"
     >
       <div className="relative flex h-[88px] w-full items-center justify-center" style={{ transformStyle: 'preserve-3d' }}>
         <TiltLayer depth={64} as={motion.span} className="inline-flex">
@@ -104,9 +128,13 @@ function StickerCard({ item, isEarned, onOpen, flat }) {
         {isEarned ? 'Earned' : stickerRequirement(item)}
       </p>
     </Tilt>
+    </motion.div>
   );
 }
 
+// Only an earned sticker opens this now (a locked one rattles instead), but
+// the locked half stays: it is one line, and it is the honest thing to show
+// if another surface ever opens a sticker that has not been earned.
 function StickerZoom({ item, isEarned, childName, onClose, flat }) {
   const closeRef = useRef(null);
   const topics = stickerTopics(item);
@@ -231,6 +259,46 @@ function StickerZoom({ item, isEarned, childName, onClose, flat }) {
 const BOOK_ANGLES = [-6, 4, -3, 7, -5];
 const BOOK_COUNT = 5;
 
+function BookSticker({ item, angle, onOpen, flat }) {
+  const { controls, shake } = useLockedShake();
+  return (
+    <motion.div animate={controls} className="flex w-[31%] sm:w-[18.5%]">
+      <button
+        type="button"
+        onClick={() => (item.earned ? onOpen(item) : shake())}
+        aria-label={`${item.title}, ${item.earned ? 'earned' : `locked, ${stickerRequirement(item)}`}`}
+        className="group flex w-full flex-col items-center gap-1.5 rounded-[14px] px-1 pb-2 pt-1 text-center transition-colors hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue/60"
+      >
+        <Tilt
+          as={motion.span}
+          amount={14}
+          scale={1.08}
+          rest={angle}
+          disabled={flat}
+          className="inline-flex"
+        >
+          <img
+            src={item.src}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            className={`h-[68px] w-[68px] select-none object-contain ${item.earned ? 'drop-shadow-[0_8px_10px_rgb(6_13_26_/_0.18)]' : 'grayscale opacity-25'}`}
+          />
+        </Tilt>
+        <span className={`font-ninja text-[11.5px] font-extrabold leading-tight ${item.earned ? 'text-ninja-navy' : 'text-ninja-navy/55'}`}>
+          {item.title}
+        </span>
+        {/* The date only where the log actually has one. A ninja imported at
+            Green belt earned their White stickers before DojoLink ever saw
+            them. */}
+        <span className="font-ninja text-[10.5px] leading-tight text-ninja-muted">
+          {item.earned ? (item.earnedOn ? fmtDay(item.earnedOn) : `${item.belt} belt`) : stickerRequirement(item)}
+        </span>
+      </button>
+    </motion.div>
+  );
+}
+
 export function StickerBook({ belt, level, logs, childName, href, className = '' }) {
   const flat = useReducedMotion();
   const { zoomed, open, close } = useStickerZoom();
@@ -266,39 +334,7 @@ export function StickerBook({ belt, level, logs, childName, href, className = ''
             across on a phone, five on a desktop, whatever the count. */}
         <div className="flex flex-wrap justify-center gap-1">
           {shown.map((item, i) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => open(item)}
-              aria-label={`${item.title}, ${item.earned ? 'earned' : stickerRequirement(item)}`}
-              className="group flex w-[31%] flex-col items-center gap-1.5 rounded-[14px] px-1 pb-2 pt-1 text-center transition-colors hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ninja-blue/60 sm:w-[18.5%]"
-            >
-              <Tilt
-                as={motion.span}
-                amount={14}
-                scale={1.08}
-                rest={BOOK_ANGLES[i % BOOK_ANGLES.length]}
-                disabled={flat}
-                className="inline-flex"
-              >
-                <img
-                  src={item.src}
-                  alt=""
-                  aria-hidden="true"
-                  draggable={false}
-                  className={`h-[68px] w-[68px] select-none object-contain ${item.earned ? 'drop-shadow-[0_8px_10px_rgb(6_13_26_/_0.18)]' : 'grayscale opacity-25'}`}
-                />
-              </Tilt>
-              <span className={`font-ninja text-[11.5px] font-extrabold leading-tight ${item.earned ? 'text-ninja-navy' : 'text-ninja-navy/55'}`}>
-                {item.title}
-              </span>
-              {/* The date only where the log actually has one. A ninja
-                  imported at Green belt earned their White stickers before
-                  DojoLink ever saw them. */}
-              <span className="font-ninja text-[10.5px] leading-tight text-ninja-muted">
-                {item.earned ? (item.earnedOn ? fmtDay(item.earnedOn) : `${item.belt} belt`) : stickerRequirement(item)}
-              </span>
-            </button>
+            <BookSticker key={item.id} item={item} angle={BOOK_ANGLES[i % BOOK_ANGLES.length]} onOpen={open} flat={flat} />
           ))}
         </div>
       </div>
