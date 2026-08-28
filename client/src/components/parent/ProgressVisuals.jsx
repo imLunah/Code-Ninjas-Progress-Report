@@ -55,28 +55,17 @@ const nodeVariants = {
 // nav: the card that DESCRIBES a program is the card that opens it.
 //
 // The whole card is the target, because a parent should not have to hunt for a
-// small control on a card that is already about one thing. All the footer adds
-// is a chevron at the trailing edge — it said "Open the Robotics Academy
-// course" for one commit and that was the card's own title read back to it in
-// smaller type. The arrow alone is the convention, and the link carries the
-// sentence as its accessible name so nothing is lost to a screen reader.
+// small control on a card that is already about one thing. The chevron sits by
+// the title, the same place the CREATE card puts it, rather than repeating as
+// a separate footer action. The link carries the sentence as its accessible
+// name so nothing is lost to a screen reader.
 function CourseShell({ href, program, children }) {
   const shell = 'block rounded-2xl overflow-hidden border border-ninja-border shadow-sm';
-  const body = (
-    <>
-      {children}
-      {href && (
-        <div className="flex items-center justify-end bg-white px-5 py-2.5 border-t border-ninja-border">
-          <ChevronRightIcon size={18} strokeWidth={2.6} aria-hidden className="text-ninja-blue-ink flex-shrink-0" />
-        </div>
-      )}
-    </>
-  );
   return (
     <motion.div variants={cardVariants} initial="hidden" animate="show">
       {href
-        ? <Link to={href} aria-label={`Open the ${program} course`} className={`${shell} transition-shadow hover:shadow-md focus-visible:outline-none`}>{body}</Link>
-        : <div className={shell}>{body}</div>}
+        ? <Link to={href} aria-label={`Open the ${program} course`} className={`${shell} transition-shadow hover:shadow-md focus-visible:outline-none`}>{children}</Link>
+        : <div className={shell}>{children}</div>}
     </motion.div>
   );
 }
@@ -107,7 +96,7 @@ function Title({ href, className = '', children }) {
 
 // ─── Program card banner ──────────────────────────────────────────────────────
 
-function ProgramCardBanner({ program, lastDate, sessions }) {
+function ProgramCardBanner({ program, lastDate, sessions, href }) {
   const gradient = PROGRAM_GRADIENTS[program];
   const logo = PROGRAM_LOGOS[program];
   const banner = PROGRAM_BANNERS[program];
@@ -146,9 +135,10 @@ function ProgramCardBanner({ program, lastDate, sessions }) {
         <h2 style={{
           color: 'white', fontWeight: 800, fontSize: 21, lineHeight: 1.1,
           marginBottom: (lastDate || sessions !== undefined) ? 5 : 0,
-          fontFamily: 'Nunito, sans-serif',
+          fontFamily: 'Nunito, sans-serif', display: 'flex', alignItems: 'center', gap: '6px',
         }}>
-          {program}
+          <span>{program}</span>
+          {href && <ChevronRightIcon size={21} strokeWidth={3} aria-hidden style={{ opacity: 0.6, flexShrink: 0 }} />}
         </h2>
         {lastDate && (
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'Nunito, sans-serif' }}>
@@ -493,7 +483,7 @@ function ModuleProgress({ program, enrollment, logs, href }) {
 
     return (
       <CourseShell href={href} program={program}>
-        <ProgramCardBanner program="AI Academy" lastDate={lastDate} />
+        <ProgramCardBanner program="AI Academy" lastDate={lastDate} href={href} />
         <div className="bg-white p-5">
           {currentModule ? (
             <>
@@ -543,7 +533,7 @@ function ModuleProgress({ program, enrollment, logs, href }) {
 
     return (
       <CourseShell href={href} program={program}>
-        <ProgramCardBanner program="JR" lastDate={lastDate} sessions={totalSessions} />
+        <ProgramCardBanner program="JR" lastDate={lastDate} sessions={totalSessions} href={href} />
         <div className="bg-white p-5 space-y-5">
           {hasJrCoding && (
             <motion.div
@@ -635,7 +625,7 @@ function ModuleProgress({ program, enrollment, logs, href }) {
 
     return (
       <CourseShell href={href} program={program}>
-        <ProgramCardBanner program="Robotics Academy" lastDate={lastDate} />
+        <ProgramCardBanner program="Robotics Academy" lastDate={lastDate} href={href} />
         <div className="bg-white p-5">
           {currentKit ? (
             <>
@@ -691,7 +681,7 @@ function ModuleProgress({ program, enrollment, logs, href }) {
   // here, and they arrive with their own logo on their own gradient.
   return (
     <CourseShell href={href} program={program}>
-      <ProgramCardBanner program={program} lastDate={lastDate} sessions={totalSessions} />
+      <ProgramCardBanner program={program} lastDate={lastDate} sessions={totalSessions} href={href} />
       <div className="bg-white p-5">
         <ProgressBar pct={pct} color={barColor} delay={0.2} label="Progress" value={`${pct}%`} />
         <ModuleGrid modules={modules} visited={visited} accentColor={barColor} />
