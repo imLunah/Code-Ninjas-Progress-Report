@@ -14,8 +14,8 @@ import { Tilt } from '../../components/ui/Tilt';
 import { CARD, FLAT } from '../../lib/surfaces';
 import { fmtDay } from '../../lib/parentProgress';
 
-// Three numbers a parent cannot read off the rest of the page, each one
-// standing a sticker on a plinth.
+// Three numbers a parent cannot read off the rest of the page, each one led
+// by the sticker that earned it.
 //
 // No card under any of them. They went from dark gradient tiles, to flat
 // white boxes, to blocks of tint, and each of those was a container drawn
@@ -23,8 +23,13 @@ import { fmtDay } from '../../lib/parentProgress';
 // needed one. It does not: the sheet they sit on is already a surface, and
 // what separates one record from the next is the space between them.
 //
-// What is left is the number, the sticker on its base, and two lines. The
-// only colour on each is the number, which takes one of the four tint inks
+// What is left is the sticker, the number, and two lines. The sticker is the
+// biggest thing in the row on purpose: it is the reward, the page is a
+// sticker book, and every version where it was smaller than the type had the
+// parent reading a statistic instead of looking at their kid's artwork.
+//
+// The only colour besides the artwork is the number, which takes one of the
+// four tint inks
 // from index.css rather than a value invented here, so it is a colour this
 // app already uses and it answers to dark mode. `tint-ink-only` is that
 // palette with the panel it normally comes with switched off.
@@ -32,8 +37,6 @@ import { fmtDay } from '../../lib/parentProgress';
 // `rest` is the angle the sticker is stuck on at. Hand-set and different on
 // each, for the same reason BeltStickers hand-places its cluster: three
 // identical angles read as printing, and these are meant to read as vinyl.
-// Small angles only, since each one is standing on a base and a sticker
-// leaning 12 degrees off its own plinth reads as falling off it.
 
 const RECORDS = [
   { key: 'percentile', title: 'Ahead of the dojo', tint: 'blue', rest: -7 },
@@ -41,37 +44,25 @@ const RECORDS = [
   { key: 'collection', title: 'Collection complete', tint: 'lilac', rest: -4 },
 ];
 
-// The sticker and the base it stands on.
+// The sticker, at the size that makes it the thing you look at first.
 //
-// ONE shape, and a tapered one. Two stacked bars was the first attempt and
-// they read as a pair of pills parked under the art, because nothing about a
-// rounded horizontal bar says base — the taper is the whole thing. Drawn in
-// the card's own ink at low alpha, so a plinth is never a colour the tint did
-// not already have.
-//
-// The sticker's bottom edge sits BELOW the top of the plinth. An object level
-// with its base is an object hovering over it; the overlap plus the shadow it
-// drops onto the taper is what makes it stand.
-function Plinth({ art, rest }) {
+// It stood on a drawn plinth for a version, then a pair of bars before that,
+// and both were scaffolding holding up something too small to hold itself up.
+// A record's artwork does not need a base to be looked at, it needs to be
+// big. What grounds it now is what grounds a sticker anywhere else in this
+// app: the angle it is stuck on at, the shadow it drops, and the turn it
+// takes under the pointer.
+function RecordSticker({ art, rest }) {
   return (
-    <span className="relative block h-[96px] w-[88px] flex-shrink-0">
-      <span
+    <Tilt amount={13} rest={rest} scale={1.06} className="inline-flex flex-shrink-0">
+      <img
+        src={art}
+        alt=""
         aria-hidden="true"
-        className="absolute bottom-0 left-1/2 h-[19px] w-[84px] -translate-x-1/2"
-        style={{ background: 'var(--tint-ink)', opacity: 0.16, clipPath: 'polygon(17% 0%, 83% 0%, 100% 100%, 0% 100%)' }}
+        draggable={false}
+        className="h-[106px] w-[106px] select-none object-contain drop-shadow-[0_12px_12px_rgb(6_13_26/0.2)] sm:h-[120px] sm:w-[120px]"
       />
-      <span className="absolute inset-x-0 bottom-[13px] flex justify-center">
-        <Tilt amount={13} rest={rest} scale={1.08} className="inline-flex">
-          <img
-            src={art}
-            alt=""
-            aria-hidden="true"
-            draggable={false}
-            className="h-[76px] w-[76px] select-none object-contain drop-shadow-[0_7px_7px_rgb(6_13_26/0.22)]"
-          />
-        </Tilt>
-      </span>
-    </span>
+    </Tilt>
   );
 }
 
@@ -85,7 +76,7 @@ function Plinth({ art, rest }) {
 function RecordCard({ record, value, caption, art, headline = false, flat, index = 0 }) {
   return (
     <motion.article
-      className={`tint-${record.tint} tint-ink-only flex min-w-[214px] flex-1 flex-col sm:min-w-[228px]`}
+      className={`tint-${record.tint} tint-ink-only flex min-w-[244px] flex-1 flex-col sm:min-w-[266px]`}
       initial={flat ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.06 * index }}
@@ -97,7 +88,7 @@ function RecordCard({ record, value, caption, art, headline = false, flat, index
         >
           {value}
         </p>
-        {art && <Plinth art={art} rest={record.rest} />}
+        {art && <RecordSticker art={art} rest={record.rest} />}
       </div>
       <p className="mt-3.5 font-ninja text-[14.5px] font-extrabold text-ninja-navy">{record.title}</p>
       <p className="mt-1 font-ninja text-[12px] font-bold text-ninja-muted">{caption}</p>
