@@ -558,6 +558,13 @@ textarea:focus-visible {
 .dark .tint-green { --tint-ink: #4ade80; --tint-ink-soft: rgb(134 239 172 / 0.8); background: rgb(34 197 94 / 0.12);   border-color: rgb(34 197 94 / 0.28); }
 .dark .tint-lilac { --tint-ink: #c4b5fd; --tint-ink-soft: rgb(196 181 253 / 0.75); background: rgb(168 85 247 / 0.14); border-color: rgb(168 85 247 / 0.3); }
 .dark .tint-amber { --tint-ink: #fbbf24; --tint-ink-soft: rgb(251 191 36 / 0.75);  background: rgb(245 158 11 / 0.12);  border-color: rgb(245 158 11 / 0.3); }
+/* A tint with no edge on it, for cards that are a block of colour rather than
+   a panel. The hairline is there to hold a tinted GROUP together against the
+   white page behind it; on a card that is already a solid slab of the tint it
+   just draws a second, darker colour around the first one. Transparent rather
+   than none, so the box measures the same either way. */
+.tint-bare { border-color: transparent; }
+
 /* A white inset row inside a tinted card. */
 .tint-inset { background: #ffffff; }
 .dark .tint-inset { background: rgb(255 255 255 / 0.07); }

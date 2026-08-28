@@ -85,7 +85,7 @@ function Plinth({ art, rest }) {
 function RecordCard({ record, value, caption, art, headline = false, flat, index = 0 }) {
   return (
     <motion.article
-      className={`tint-${record.tint} flex min-w-[228px] flex-1 flex-col rounded-[22px] p-4 sm:min-w-[242px]`}
+      className={`tint-${record.tint} tint-bare flex min-w-[228px] flex-1 flex-col rounded-[22px] p-4 sm:min-w-[242px]`}
       initial={flat ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.06 * index }}
