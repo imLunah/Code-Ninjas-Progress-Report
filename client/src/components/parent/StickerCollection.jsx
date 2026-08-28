@@ -176,10 +176,9 @@ export function StickerCard({ item, isEarned, onOpen, flat, rarity }) {
 // Only an earned sticker opens this now (a locked one rattles instead), but
 // the locked half stays: it is one line, and it is the honest thing to show
 // if another surface ever opens a sticker that has not been earned.
-export function StickerZoom({ item, isEarned, childName, onClose, flat, rarity }) {
+export function StickerZoom({ item, isEarned, onClose, flat, rarity }) {
   const closeRef = useRef(null);
   const topics = stickerTopics(item);
-  const who = childName ? String(childName).split(' ')[0] : null;
 
   // Escape closes, and Tab stays inside: the sticker album behind this is a
   // long grid of buttons, and a dialog you can tab out of leaves a keyboard
@@ -258,26 +257,27 @@ export function StickerZoom({ item, isEarned, childName, onClose, flat, rarity }
             <RarityChip rarity={rarity} />
           </div>
 
+          {/* The blurb is written in the past tense, as the account of a thing
+              that happened, so it only belongs on a sticker that has been
+              earned. A locked one gets the requirement instead, and the level
+              topics below still say what is coming. It follows the chips
+              directly, with no heading over it: "Earned" already says whose
+              account this is, and a label between the chips and the copy was
+              a third style of small text in a stack of three. */}
+          <p className="mx-auto mt-3 max-w-[34ch] text-balance font-ninja text-[14px] leading-relaxed text-ninja-navy/85">
+            {isEarned ? item.blurb : stickerRequirement(item)}
+          </p>
+
           {/* The number behind the word, because "Legendary" on its own is a
               label someone could have picked. A share, never a headcount: how
               many ninjas are on the roster is the centers' business, not
-              something to print on a sticker. */}
+              something to print on a sticker. It is a footnote to the copy,
+              not a line above it. */}
           {rarity && (
             <p className="mt-2 font-ninja text-[12px] text-ninja-muted">
               {rarity.percent}% of ninjas have earned this sticker.
             </p>
           )}
-
-          {/* The blurb is written in the past tense, as the account of a thing
-              that happened, so it only belongs on a sticker that has been
-              earned. A locked one gets the requirement instead, and the level
-              topics below still say what is coming. */}
-          <p className="mt-1.5 font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted">
-            {isEarned ? (who ? `What ${who} did` : 'What they did') : 'How to earn it'}
-          </p>
-          <p className="mt-1.5 font-ninja text-[13.5px] leading-relaxed text-ninja-navy/85">
-            {isEarned ? item.blurb : stickerRequirement(item)}
-          </p>
 
           {topics.length > 0 && (
             <div className="mt-4 rounded-[16px] px-4 py-3 text-left" style={{ background: 'rgb(var(--ninja-blue) / 0.06)' }}>
@@ -411,7 +411,6 @@ export function StickerBook({ belt, level, logs, childName, href, className = ''
             key={zoomed.id}
             item={zoomed}
             isEarned={!!zoomed.earned}
-            childName={childName}
             onClose={close}
             flat={flat}
             rarity={rarity?.[zoomed.id]}
@@ -487,7 +486,6 @@ export default function StickerCollection({ belt, earnedIds, earnedTotal, childN
             key={zoomed.id}
             item={zoomed}
             isEarned={earnedIds.has(zoomed.id)}
-            childName={childName}
             onClose={close}
             flat={flat}
             rarity={rarity?.[zoomed.id]}
