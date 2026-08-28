@@ -118,6 +118,12 @@ export function Hero({ program, size = 'card', className = '', style = {}, child
 // bottom. Reduced motion gets the layering and none of the drift: the pinning
 // is a fact about the page, the parallax is decoration.
 //
+// `pinned` is there for a banner that can GROW — the home billboard opens up
+// to show a listing's details — because a pinned box taller than the screen
+// is a box you can never scroll to the bottom of. It lets go while the banner
+// is open, which is only ever reachable from the top of the page, where a
+// pinned banner and a loose one sit in exactly the same place.
+//
 // The zero-height mark before it carries the hero's own negative top margin,
 // so it reads the banner's place on the page from a box that never moves —
 // asking a pinned element where it is only ever gets the answer "the top".
@@ -127,7 +133,7 @@ export function Hero({ program, size = 'card', className = '', style = {}, child
 // second time.
 const Covered = createContext(null);
 
-export function PinnedHero({ children }) {
+export function PinnedHero({ pinned = true, children }) {
   const still = useReducedMotion();
   const mark = useRef(null);
   const box = useRef(null);
@@ -135,9 +141,11 @@ export function PinnedHero({ children }) {
   const covered = useMotionValue(0);
   const { scrollY } = useScroll();
 
+  // Not pinned is not covered: a banner that scrolls away like any other
+  // block never has the page over it, so the sheet's edge must not light up.
   const settle = (y) => {
     const { top, height } = span.current;
-    covered.set(height ? Math.min(Math.max((y - top) / height, 0), 1) : 0);
+    covered.set(pinned && height ? Math.min(Math.max((y - top) / height, 0), 1) : 0);
   };
 
   useEffect(() => {
@@ -158,6 +166,8 @@ export function PinnedHero({ children }) {
   }, []);
 
   useMotionValueEvent(scrollY, 'change', settle);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { settle(window.scrollY); }, [pinned]);
 
   const y = useTransform(covered, (p) => -p * span.current.height * 0.32);
   const filter = useTransform(covered, (p) => `brightness(${1 - p * 0.34})`);
@@ -165,8 +175,8 @@ export function PinnedHero({ children }) {
   return (
     <Covered.Provider value={covered}>
       <div ref={mark} aria-hidden className="h-0 -mt-5 lg:-mt-7" />
-      <div ref={box} className="sticky top-0 z-0">
-        <motion.div style={still ? undefined : { y, filter }}>{children}</motion.div>
+      <div ref={box} className={pinned ? 'sticky top-0 z-0' : 'relative z-0'}>
+        <motion.div style={still || !pinned ? undefined : { y, filter }}>{children}</motion.div>
       </div>
     </Covered.Provider>
   );
@@ -208,7 +218,11 @@ const LIP = [
   `linear-gradient(${SHEET}, ${SHEET}) left bottom / 100% 12px no-repeat`,
 ].join(', ');
 
-export function PageSheet({ className = '', children }) {
+// `corner` follows whatever the banner above does. The ninja's profile banner
+// rounds its bottom, so the sheet scoops to match; the home billboard is
+// square on all four corners on purpose — it is a poster, not a header — and
+// a scoop there would bite a curve out of artwork that has none.
+export function PageSheet({ corner = 'rounded', className = '', children }) {
   const zero = useMotionValue(0);
   const covered = useContext(Covered) || zero;
   // The shadow is the sheet's edge lifting off the banner, so it belongs to
@@ -218,9 +232,17 @@ export function PageSheet({ className = '', children }) {
   // follows the box, which is square across the top: it would cut a hard
   // corner over the blue exactly where the corner is supposed to be seamless.
   // A drop-shadow follows what is actually painted, scooped corners included.
+  //
+  // Two of them. The soft one is the shadow the sheet casts back onto the
+  // banner; the hard one, a single pixel with no blur, is the lit edge of the
+  // paper. The shadow alone is nearly invisible on the home billboard, which
+  // is dark navy under a heavy wash — dark on dark says nothing — and the
+  // highlight is what carries the separation there. Both follow the painted
+  // shape, so both go round the scooped corners.
   const lift = useTransform(covered, (p) => {
-    const a = Math.min(p * 8, 1) * 0.4;
-    return `drop-shadow(0 -12px 16px rgba(6, 13, 26, ${a.toFixed(3)}))`;
+    const t = Math.min(p * 8, 1);
+    return `drop-shadow(0 -12px 16px rgba(6, 13, 26, ${(t * 0.4).toFixed(3)}))`
+      + ` drop-shadow(0 -1px 0 rgba(255, 255, 255, ${(t * 0.42).toFixed(3)}))`;
   });
 
   return (
@@ -231,7 +253,7 @@ export function PageSheet({ className = '', children }) {
           onto the page. The radius follows the banner's, 34 then 40. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 overflow-hidden [--lip:34px] lg:[--lip:40px]"
+        className={`pointer-events-none absolute inset-x-0 overflow-hidden ${corner === 'square' ? '[--lip:0px]' : '[--lip:34px] lg:[--lip:40px]'}`}
         style={{ top: 'calc(-1 * (var(--lip) + 40px))', height: 'calc(var(--lip) + 52px)' }}
       >
         <motion.div

@@ -4,7 +4,7 @@ import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayou
 import { api } from '../../api/client';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
-import { Hero, Emblem, ProgramMark, Group, Row, StatusText, MoreLink } from '../../components/parent/ParentUI';
+import { Hero, Emblem, ProgramMark, Group, Row, StatusText, MoreLink, PinnedHero, PageSheet } from '../../components/parent/ParentUI';
 import Logo from '../../components/ui/Logo';
 import { FLAT } from '../../lib/surfaces';
 import { SkeletonCards } from '../../components/ui/Skeleton';
@@ -287,8 +287,9 @@ function EventSlideshow({ events }) {
   // gradient and says so, instead of the page opening on a hole.
   if (!events.length) {
     return (
+      <PinnedHero>
       <section
-        className="relative left-1/2 -translate-x-1/2 w-[100cqw] -mt-5 lg:-mt-7 overflow-hidden text-white"
+        className="relative left-1/2 -translate-x-1/2 w-[100cqw] overflow-hidden text-white"
         style={{ background: 'linear-gradient(135deg, #12264d 0%, #0b3d8f 100%)' }}
         aria-label="Events at the center"
       >
@@ -307,6 +308,7 @@ function EventSlideshow({ events }) {
           </div>
         </div>
       </section>
+      </PinnedHero>
     );
   }
 
@@ -319,8 +321,13 @@ function EventSlideshow({ events }) {
   const hasMore = Boolean(ev.description || ev.event_url || when);
 
   return (
+    // The billboard holds the top of the screen and the page rides up over
+    // it, the way the ninja's own banner does on their profile. It lets go
+    // of the top while a listing is open, because open it can be taller than
+    // the screen and a pinned box that tall has a bottom you cannot reach.
+    <PinnedHero pinned={!expanded}>
     <section
-      className="relative left-1/2 -translate-x-1/2 w-[100cqw] -mt-5 lg:-mt-7 overflow-hidden text-white"
+      className="relative left-1/2 -translate-x-1/2 w-[100cqw] overflow-hidden text-white"
       style={{ background: '#0e1c3a' }}
       aria-label="Events at the center"
       onPointerEnter={(e) => { if (e.pointerType === 'mouse') setPaused(true); }}
@@ -465,6 +472,7 @@ function EventSlideshow({ events }) {
         )}
       </AnimatePresence>
     </section>
+    </PinnedHero>
   );
 }
 
@@ -588,31 +596,35 @@ export default function ParentHome() {
 
   return (
     <ParentLayout switcher={<ChildSwitcher withAll layoutId="parent-child-desktop" />}>
-      <div className="space-y-4 lg:space-y-5">
+      <div className="relative">
         {/* The banner is the page's opening, where the Home title used to be:
-            first in flow, and its negative margin eats main's top padding so
-            the full-bleed navy sits flush with the top of the page. */}
+            first in flow, pinned to the top of the screen, and the rest of
+            the page rides up over it on the sheet below. */}
         <EventSlideshow events={events} />
 
-        <div className="lg:hidden"><ChildSwitcher withAll layoutId="parent-child-mobile" /></div>
+        <PageSheet corner="square">
+          <div className="space-y-4 lg:space-y-5">
+            <div className="lg:hidden"><ChildSwitcher withAll layoutId="parent-child-mobile" /></div>
 
-        {students === null ? (
-          <SkeletonCards count={2} cols="lg:grid-cols-2" height={320} label="Loading your family" />
-        ) : listError ? (
-          <div className={`${FLAT} p-8 text-center`}><p className="text-ninja-red font-ninja text-sm">{listError}</p></div>
-        ) : students.length === 0 ? (
-          <div className={`${FLAT} p-8 text-center space-y-1`}>
-            <p className="text-ninja-navy font-ninja font-bold">No ninjas are linked to this email yet.</p>
-            <p className="text-ninja-muted font-ninja text-sm">Ask the front desk to add your email to your child's record.</p>
-          </div>
-        ) : (
-          <>
-            <LiveSchedule center={parent?.centerName} />
-            <div className={`grid grid-cols-1 gap-4 ${visible.length > 1 ? 'lg:grid-cols-2' : ''}`}>
-              {visible.map((c) => <ChildCard key={c.id} child={c} wide={visible.length === 1} />)}
+          {students === null ? (
+            <SkeletonCards count={2} cols="lg:grid-cols-2" height={320} label="Loading your family" />
+          ) : listError ? (
+            <div className={`${FLAT} p-8 text-center`}><p className="text-ninja-red font-ninja text-sm">{listError}</p></div>
+          ) : students.length === 0 ? (
+            <div className={`${FLAT} p-8 text-center space-y-1`}>
+              <p className="text-ninja-navy font-ninja font-bold">No ninjas are linked to this email yet.</p>
+              <p className="text-ninja-muted font-ninja text-sm">Ask the front desk to add your email to your child's record.</p>
             </div>
-          </>
-        )}
+          ) : (
+            <>
+              <LiveSchedule center={parent?.centerName} />
+              <div className={`grid grid-cols-1 gap-4 ${visible.length > 1 ? 'lg:grid-cols-2' : ''}`}>
+                {visible.map((c) => <ChildCard key={c.id} child={c} wide={visible.length === 1} />)}
+              </div>
+            </>
+          )}
+          </div>
+        </PageSheet>
       </div>
     </ParentLayout>
   );
