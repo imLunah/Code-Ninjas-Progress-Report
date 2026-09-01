@@ -59,6 +59,76 @@ const TITLE_FIXES = {
   'Reasses the Situation': 'Reassess the Situation',
 };
 
+// ONE BADGE PER LEVEL. 43 levels, 43 stickers.
+//
+// The source has 218 named achievements, four to nine per level, and they are
+// awarded inside MakeCode for specific in-game actions that never reach us.
+// Unlocking a level's whole set together made finishing one level pay out nine
+// rewards at once, which is not what a sticker is for. So each level puts one
+// icon forward and the rest stay in the source folder.
+//
+// The pick is editorial and it is written down here rather than computed. A
+// keyword score against the level's poster topic was tried first and it is not
+// good enough: most levels scored zero and fell through to alphabetical, which
+// put "Layer Cake" on Events! and "Area Rug" on Tilemap Location. These are
+// chosen by reading the level's topic and quest and taking the achievement
+// that pictures it. Change any line and rerun; nothing else needs to move.
+//
+// Keys are `Belt Level`. Values are titles AFTER `TITLE_FIXES` is applied.
+const LEVEL_BADGES = {
+  'White 1': 'First Words',
+  'White 2': 'Story Teller',
+  'White 3': 'Taking Control',
+  'White 4': 'A Whole New Kind of Sprite',
+
+  'Yellow 1': 'Keeping Track',
+  'Yellow 2': 'I Like to Move It, Move It',
+  'Yellow 3': 'To Be or Not to Be',
+  'Yellow 4': 'Saturday Morning Cartoons',
+
+  'Orange 1': 'X and Y Marks the Spot',
+  'Orange 2': 'New Tile Who Dis',
+  'Orange 3': 'Making a List',
+  'Orange 4': 'Once More, With Feeling',
+  'Orange 5': "Don't Forget to Call",
+
+  'Green 1': 'Hop, Skip and a Jump',
+  'Green 2': 'All or Nothing',
+  'Green 3': 'Card Catalog',
+  'Green 4': 'GPS',
+  'Green 5': 'Setting the Bar',
+
+  'Blue 1': 'Opening Line',
+  'Blue 2': 'Comment, Like and Subscribe',
+  'Blue 3': 'Framing the Discussion',
+  'Blue 4': 'Nestled Brackets',
+  'Blue 5': 'Let There Be Variables',
+  'Blue 6': 'Comparatively Speaking',
+
+  'Purple 1': 'A Meeting of the Kinds',
+  'Purple 2': 'Here We Go Again',
+  'Purple 3': 'Array of Sunshine',
+  'Purple 4': 'Arrays All the Way Down',
+  'Purple 5': 'Calling All Functions',
+  'Purple 6': 'Earworm',
+
+  'Brown 1': 'Carefully Curated',
+  'Brown 2': 'A Glyph in the System',
+  'Brown 3': "Checkin' It Twice",
+  'Brown 4': 'Swatch and Learn',
+  'Brown 5': 'Work of Art',
+  'Brown 6': "The Gang's All Here!",
+  'Brown 7': 'Frame by Frame',
+  'Brown 8': 'A Whole New World',
+  'Brown 9': 'Choose Your Adventure',
+  'Brown 10': 'Birds Eye View',
+
+  'Red 1': 'Hole in One',
+  'Red 2': 'Tower Power!',
+
+  'Black 1': 'Something to be Proud Of',
+};
+
 // One Blue Level 4 icon is uploaded as `BB_4 -.png` with no name at all. It is
 // real artwork (a game screen, a donut, a cursor), but a book that prints a
 // franchise name under every sticker cannot carry one whose name we would have
@@ -106,8 +176,36 @@ function readManifest() {
   return out;
 }
 
+// The 43 the book actually ships, one per level, in curriculum order. Throws
+// rather than falling back if a `LEVEL_BADGES` title does not match the source:
+// a silent fallback is how a badge ends up on a level it was never chosen for,
+// and a typo in that table would be invisible otherwise.
+function chooseBadges(items) {
+  const wanted = new Map(Object.entries(LEVEL_BADGES));
+  const picked = [];
+
+  for (const [key, title] of wanted) {
+    const [belt, level] = [key.slice(0, key.lastIndexOf(' ')), Number(key.slice(key.lastIndexOf(' ') + 1))];
+    const hit = items.find((it) => it.belt === belt && it.level === level && it.title === title);
+    if (!hit) {
+      const options = items.filter((it) => it.belt === belt && it.level === level).map((it) => it.title);
+      throw new Error(`LEVEL_BADGES["${key}"] = "${title}" is not an achievement of that level.\n  Options: ${options.join(', ') || '(none)'}`);
+    }
+    picked.push(hit);
+  }
+
+  // Every level the curriculum has must put a badge forward, or a ninja walks
+  // past a level and collects nothing.
+  const levels = new Set(items.map((it) => `${it.belt} ${it.level}`));
+  const missing = [...levels].filter((key) => !wanted.has(key));
+  if (missing.length) throw new Error(`Levels with no badge chosen: ${missing.join(', ')}`);
+
+  picked.sort((a, b) => BELT_ORDER.indexOf(a.belt) - BELT_ORDER.indexOf(b.belt) || a.level - b.level);
+  return picked;
+}
+
 function build() {
-  const items = readManifest();
+  const items = chooseBadges(readManifest());
 
   fs.rmSync(OUT_DIR, { recursive: true, force: true });
   fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -140,40 +238,35 @@ function build() {
 function dataFile(stickers) {
   const lines = [];
   let belt = null;
-  let level = null;
   for (const s of stickers) {
     if (s.belt !== belt) {
       belt = s.belt;
-      level = null;
       lines.push(`\n  // ${belt} belt`);
-    }
-    if (s.level !== level) {
-      level = s.level;
-      lines.push(`  //   Level ${level}`);
     }
     lines.push(`  a('${s.belt}', ${s.level}, ${JSON.stringify(s.title)}),`);
   }
 
-  const levelCount = new Set(stickers.map((s) => `${s.belt}-${s.level}`)).size;
-
   return `// GENERATED by scripts/build-impact-stickers.mjs. Do not edit by hand.
 //
-// Every achievement in the Code Ninjas IMPACT curriculum, read off the
-// franchise Canva export rather than authored here: ${stickers.length} of them across the
-// ${levelCount} CREATE levels, each with the name Code Ninjas gave it and the
-// level it actually belongs to.
+// One badge per CREATE level: ${stickers.length} levels, ${stickers.length} stickers, in curriculum order.
+//
+// Each is a real Code Ninjas IMPACT achievement icon, under the name Code
+// Ninjas gave it, taken from the level it belongs to. The source has 218
+// achievements, four to nine per level; each level puts one forward and the
+// rest stay in the assets folder. Which one is an editorial choice recorded in
+// the build script's LEVEL_BADGES table, made by reading the level's poster
+// topic and quest — not computed, because a keyword score put "Layer Cake" on
+// Events! and that is how the old set went wrong.
 //
 // This file used to hold 35 hand-written milestones over belt spot art, with
 // invented titles ("First Coder") on artwork that came from a different level
-// than the one it claimed. Those are gone. If a sticker's name or level looks
-// wrong now, it is wrong in the source folder's manifest, and the fix belongs
-// there and in the build script's TITLE_FIXES table.
+// than the one it claimed. Those are gone.
 //
-// A ninja earns every achievement in a level when they finish that level.
-// DojoLink knows where a ninja is standing and which projects are logged; it
-// does not know which in-game actions they took, and the achievements are
-// awarded inside MakeCode rather than by us. Level completion is the honest
-// approximation and it is the only claim any surface makes.
+// WHAT A STICKER CLAIMS: that the level is finished. Nothing more. The
+// achievements themselves are awarded inside MakeCode for specific in-game
+// actions that never reach DojoLink, so no surface says a ninja personally
+// unlocked this one — the badge stands for the level, and every requirement
+// line says so ("Complete White Belt Level 1").
 // See lib/stickerProgress.js for the one definition of "earned".
 
 const a = (belt, level, title) => {
@@ -189,18 +282,6 @@ export const STICKER_BELTS = [...new Set(CREATE_STICKERS.map((item) => item.belt
 
 export function stickersForBelt(belt) {
   return CREATE_STICKERS.filter((item) => item.belt === belt);
-}
-
-// The levels of a belt that carry achievements, in order, each with its own.
-// Red and Black have one apiece; Blue Level 4 has nine.
-export function levelsForBelt(belt) {
-  const out = [];
-  for (const item of stickersForBelt(belt)) {
-    const last = out[out.length - 1];
-    if (last && last.level === item.level) last.stickers.push(item);
-    else out.push({ level: item.level, stickers: [item] });
-  }
-  return out;
 }
 
 export function stickerRequirement({ belt, level }) {

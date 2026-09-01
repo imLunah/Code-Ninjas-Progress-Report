@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useAnimationControls, useReducedMotion } from 'framer-motion';
 import { CheckIcon, ChevronRightIcon, LockKeyholeIcon, SparklesIcon, XIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { CREATE_STICKERS, levelsForBelt, stickerRequirement, stickersForBelt } from '../../lib/createStickers';
+import { CREATE_STICKERS, stickerRequirement, stickersForBelt } from '../../lib/createStickers';
 import { stickerProgress } from '../../lib/stickerProgress';
 import { useStickerRarity } from '../../lib/stickerRarity';
 import { levelInfo } from '../../lib/createCurriculum';
@@ -11,7 +11,7 @@ import { fmtDay } from '../../lib/parentProgress';
 import ModalPortal from '../ui/ModalPortal';
 import { Tilt, TiltLayer } from '../ui/Tilt';
 
-// The IMPACT achievements as a sticker album, one block per level.
+// The IMPACT level badges as a sticker album, one per level of the belt.
 //
 // The artwork is a physical thing: die-cut, white-rimmed, the kind of sticker
 // that ends up on a water bottle. So the cards behave like one, through the
@@ -44,11 +44,10 @@ const SPRING = { type: 'spring', stiffness: 320, damping: 26, mass: 0.5 };
 // ("Nested Block Statements!") and the open build at the end of it.
 //
 // This is what the dialog says instead of a blurb. Every sticker used to carry
-// a hand-written sentence about what the ninja did to earn it, which worked
-// for 35 invented milestones and does not survive 218 real achievements: we
-// do not know which in-game action earned any one of them, and writing 218
-// guesses is how the old set ended up describing a Level 2 sticker as a Level
-// 1 one. The level's poster copy is true of every achievement in it.
+// a hand-written sentence about what the ninja did to earn it. Those went with
+// the invented titles they were written for: the badge now stands for the
+// level, not for one in-game action nobody here can see, so the level's own
+// poster copy is the description that is actually true of it.
 function stickerLevel(item) {
   const info = levelInfo(item.belt, item.level);
   return info ? { topic: info.topic, quest: info.quest } : null;
@@ -446,7 +445,6 @@ export default function StickerCollection({ belt, earnedIds, earnedTotal, childN
   const rarity = useStickerRarity();
 
   const stickers = stickersForBelt(belt);
-  const levels = levelsForBelt(belt);
   if (!stickers.length) return null;
 
   const earnedHere = stickers.filter((item) => earnedIds.has(item.id)).length;
@@ -468,40 +466,18 @@ export default function StickerCollection({ belt, earnedIds, earnedTotal, childN
         </div>
       </div>
 
-      {/* One block per level rather than one grid per belt. A belt used to hold
-          four or five stickers and a plain grid was the whole story; Brown now
-          holds 48, and an unbroken run of them says nothing about which level
-          a parent is looking at. The level is also the unit that unlocks, so
-          the seams fall exactly where the earned state changes. */}
-      {levels.map(({ level, stickers: levelStickers }) => {
-        const info = levelInfo(belt, level);
-        const done = levelStickers.filter((item) => earnedIds.has(item.id)).length;
-        return (
-          <div key={level} className="px-3 pb-3 sm:px-4">
-            <div className="flex items-baseline justify-between gap-3 px-1 pb-2 pt-1">
-              <p className="min-w-0 font-ninja text-[12.5px] font-extrabold text-ninja-navy">
-                Level {level}
-                {info?.topic && <span className="font-bold text-ninja-muted"> · {info.topic}</span>}
-              </p>
-              <p className={`flex-shrink-0 font-ninja text-[11.5px] font-extrabold ${done === levelStickers.length ? 'text-emerald-600' : 'text-ninja-muted'}`}>
-                {done} of {levelStickers.length}
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-              {levelStickers.map((item) => (
-                <StickerCard
-                  key={item.id}
-                  item={item}
-                  isEarned={earnedIds.has(item.id)}
-                  onOpen={open}
-                  flat={flat}
-                  rarity={rarity?.[item.id]}
-                />
-              ))}
-            </div>
-          </div>
-        );
-      })}
+      <div className="grid grid-cols-2 gap-2.5 px-3 pb-3 sm:grid-cols-3 sm:px-4 lg:grid-cols-5">
+        {stickers.map((item) => (
+          <StickerCard
+            key={item.id}
+            item={item}
+            isEarned={earnedIds.has(item.id)}
+            onOpen={open}
+            flat={flat}
+            rarity={rarity?.[item.id]}
+          />
+        ))}
+      </div>
 
       {bookHref && (
         <Link
