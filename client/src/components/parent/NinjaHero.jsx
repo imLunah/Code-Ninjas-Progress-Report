@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { animate, motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
 import { Hero } from './ParentUI';
 import BeltIcon from '../ui/BeltIcon';
+import { ninjaSrc } from '../../utils/ninjas';
 
 // The top of a ninja's profile: the child, at size, standing in their own
 // banner.
@@ -16,18 +17,11 @@ import BeltIcon from '../ui/BeltIcon';
 // the pointer a little, and tapping it makes it cheer. Nothing depends on
 // either: both are decoration for a page a seven year old looks at over a
 // parent's shoulder.
+//
+// `tone` is the ninja's skin tone, set per student by staff. Unset falls back
+// to medium inside `ninjaSrc`, which is the tone the app shipped when there
+// was only one, so a ninja nobody has touched is drawn exactly as before.
 
-// The nine belts that have ninja art. A Degrees belt (Bronze through Gold) is
-// past Black on the ladder and borrows Black's; a ninja with no CREATE
-// enrolment at all gets White, which is where everyone starts.
-const NINJA_BELTS = new Set(['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black']);
-
-function ninjaBelt(belt) {
-  if (NINJA_BELTS.has(belt)) return belt;
-  return belt ? 'Black' : 'White';
-}
-
-const ninjaSrc = (belt, pose) => `/ninjas/${ninjaBelt(belt).toLowerCase()}-${pose}.png`;
 
 // A number that counts up to itself once, on arrival. Small enough to be worth
 // it: the hero's three numbers are the only thing on the page a parent came to
@@ -67,7 +61,7 @@ function Stat({ value, label, lead, delay = 0, className = '' }) {
   );
 }
 
-export default function NinjaHero({ program, name, eyebrow, belt, level, programCount, sessionCount, right, className = '' }) {
+export default function NinjaHero({ program, name, eyebrow, belt, level, tone, programCount, sessionCount, right, className = '' }) {
   const still = useReducedMotion();
   const [cheering, setCheering] = useState(false);
   const wrap = useRef(null);
@@ -188,7 +182,7 @@ export default function NinjaHero({ program, name, eyebrow, belt, level, program
               transition={cheering ? { duration: 0.55, ease: [0.34, 1.4, 0.64, 1] } : { duration: 0.2 }}
             >
               <img
-                src={ninjaSrc(belt, cheering ? 'cheer' : 'wave')}
+                src={ninjaSrc(belt, cheering ? 'cheer' : 'wave', tone)}
                 alt=""
                 draggable={false}
                 className="block h-[240px] sm:h-[320px] lg:h-[500px] w-auto select-none pointer-events-none drop-shadow-[0_18px_28px_rgba(4,10,24,0.45)]"
@@ -197,7 +191,7 @@ export default function NinjaHero({ program, name, eyebrow, belt, level, program
             {/* Both poses are fetched up front: swapping to a file the browser
                 has never seen leaves a frame of nothing in the middle of the
                 jump, which reads as the ninja vanishing. */}
-            <img src={ninjaSrc(belt, 'cheer')} alt="" aria-hidden className="absolute w-px h-px opacity-0 pointer-events-none" />
+            <img src={ninjaSrc(belt, 'cheer', tone)} alt="" aria-hidden className="absolute w-px h-px opacity-0 pointer-events-none" />
           </motion.button>
         </div>
       </div>

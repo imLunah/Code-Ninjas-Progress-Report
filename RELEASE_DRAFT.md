@@ -14,6 +14,7 @@
 - Tap a badge to open it. You get its name, how rare it is, and the level behind it: what that level teaches and the project your ninja builds at the end of it.
 - Stickers say how rare they are. Common, Uncommon, Rare and Legendary are worked out from how many CREATE ninjas across every center have really earned that sticker, so the ones from the belts most ninjas have passed stay common and the ones near the end of the book stay rare. Nobody sets these; they move as the dojo moves.
 - The sticker book opens on three personal records: where your ninja's collection stands against every CREATE ninja in the dojo, the sticker that landed most recently, and how much of the book is filled in.
+- Ninjas come in three skin tones. Every family's ninja is now light, medium or dark, picked per ninja on their profile at the center. Nobody is assigned one: a ninja nobody has set looks exactly as they did before.
 - The CREATE course shows the game each level builds. Every level now carries a screenshot of the real project, a line about what that level is actually for, and the medal it is awarded with.
 
 ## Changes

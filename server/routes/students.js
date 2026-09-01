@@ -7,6 +7,11 @@ const { memberOf, addMembership, archiveOrRemove } = require('../lib/studentScop
 
 // Code.AI (Code.org) login sticker set — must match the students.codeorg_sticker
 // DB CHECK list and CODEORG_STICKERS in client/src/utils/stickers.js.
+// Skin tones for the parent portal's ninja art. Must match the
+// students.ninja_skin_tone CHECK and NINJA_TONES in client/src/utils/ninjas.js.
+// null means "not set" and every surface falls back to medium.
+const NINJA_TONES = ['light', 'medium', 'dark'];
+
 const CODEORG_STICKERS = [
   'alien', 'bat', 'bird', 'cat', 'dinosaur', 'dog', 'dragon', 'ghost', 'knight',
   'monster', 'ninja', 'ninja2', 'octopus', 'penguin', 'pirate', 'princess',
@@ -449,6 +454,35 @@ router.patch('/:id/sticker', requireSensei, requireOwnLocation, async (req, res)
   } catch (err) {
     console.error('Error updating sticker:', err);
     res.status(500).json({ error: 'Failed to update sticker' });
+  }
+});
+
+// PATCH /api/students/:id/ninja-tone — the skin tone of the ninja a family
+// sees on the parent portal.
+//
+// Unlike the Code.AI sticker this is not gated on a program. The ninja is
+// drawn for any CREATE belt and for a ninja with no enrolment at all (they get
+// White), so gating it would leave families staring at a ninja they cannot
+// change. Sending null clears it back to the default.
+router.patch('/:id/ninja-tone', requireSensei, requireOwnLocation, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+  const { ninja_skin_tone } = req.body;
+
+  if (ninja_skin_tone != null && !NINJA_TONES.includes(ninja_skin_tone)) {
+    return res.status(400).json({ error: 'Invalid skin tone' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      'UPDATE students SET ninja_skin_tone = $1 WHERE id = $2 AND active = true AND EXISTS (SELECT 1 FROM student_locations sl_m WHERE sl_m.student_id = students.id AND sl_m.location_id = $3) RETURNING ninja_skin_tone',
+      [ninja_skin_tone || null, id, req.session.activeLocationId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Student not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Error updating ninja skin tone:', err);
+    res.status(500).json({ error: 'Failed to update skin tone' });
   }
 });
 

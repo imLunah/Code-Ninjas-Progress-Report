@@ -218,6 +218,7 @@ export default function ParentProfile() {
             eyebrow={eyebrow}
             belt={belt}
             level={level}
+            tone={child.ninja_skin_tone}
             programCount={programs.length}
             sessionCount={feed.length}
             right={<NoteButton child={child} text={detail?.special_instructions || ''} onSave={(text) => saveNote(child.id, text)} />}

@@ -469,7 +469,7 @@ router.get('/students', requireParent, async (req, res) => {
   const pool = req.app.get('db');
   try {
     const { rows } = await pool.query(`
-      SELECT s.id, s.full_name, s.birthday, s.created_at,
+      SELECT s.id, s.full_name, s.birthday, s.created_at, s.ninja_skin_tone,
         ${STUDENT_PROGRAMS_SUBQUERY},
         (SELECT MAX(pl.session_date) FROM progress_logs pl WHERE pl.student_id = s.id AND pl.notes IS DISTINCT FROM 'Marked complete from roadmap') AS last_activity,
         ${RECENT_SESSIONS_SUBQUERY},
@@ -491,7 +491,7 @@ router.get('/students/:id', requireParent, async (req, res) => {
   const { id } = req.params;
   try {
     const { rows } = await pool.query(`
-      SELECT s.id, s.full_name, s.birthday, s.created_at, s.special_instructions, s.parent_note,
+      SELECT s.id, s.full_name, s.birthday, s.created_at, s.special_instructions, s.parent_note, s.ninja_skin_tone,
         ${STUDENT_PROGRAMS_SUBQUERY}
       FROM students s
       WHERE s.id = $1 AND LOWER(s.parent_email) = LOWER($2) AND EXISTS (SELECT 1 FROM student_locations sl_m WHERE sl_m.student_id = s.id AND sl_m.location_id = $3) AND s.active = true
