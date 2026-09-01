@@ -83,6 +83,38 @@ function StudentAvatar({ student, size = 'md', canEditSticker, onEditSticker, de
   );
 }
 
+// The ninja's skin tone, as a button that previews it.
+//
+// One component for both layouts on purpose. The first cut of this was inline
+// in the desktop column only, so on a phone there was no way to reach it at
+// all — and the phone is where a sensei standing next to the ninja actually
+// opens this page.
+//
+// It shows the ninja rather than the word alone, because the thing being
+// chosen is a picture. Read-only staff get nothing: there is no state here
+// worth reporting to someone who cannot change it.
+function NinjaToneButton({ student, belt, onEdit, className = '' }) {
+  return (
+    <button
+      type="button"
+      onClick={onEdit}
+      title="Ninja skin tone"
+      className={`inline-flex items-center gap-2 rounded-full border border-ninja-border bg-ninja-bg py-1 pl-1 pr-3 transition-colors hover:border-ninja-blue/40 hover:bg-ninja-blue/[0.05] ${className}`}
+    >
+      <img
+        src={ninjaSrc(belt, 'wave', student.ninja_skin_tone)}
+        alt=""
+        aria-hidden
+        draggable={false}
+        className="h-7 w-7 object-contain"
+      />
+      <span className="font-ninja text-xs font-bold text-ninja-muted">
+        Ninja: {NINJA_TONE_LABELS[student.ninja_skin_tone || DEFAULT_TONE]}
+      </span>
+    </button>
+  );
+}
+
 // ── Mobile: Belt Journey card ─────────────────────────────────────────────────
 function MobileBeltJourney({ enrollment }) {
   const { belt_level, belt_sublevel, current_project, project_status } = enrollment;
@@ -612,6 +644,14 @@ export default function StudentProfile() {
                     `Joined ${student.created_at ? new Date(student.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—'}`,
                   ].filter(Boolean).join(' · ')}
                 </p>
+                {!isReadOnly && (
+                  <NinjaToneButton
+                    student={student}
+                    belt={ninjaBeltName}
+                    onEdit={() => setShowTonePicker(true)}
+                    className="mt-2"
+                  />
+                )}
               </div>
             </div>
           </motion.div>
@@ -806,29 +846,13 @@ export default function StudentProfile() {
                     Member since {student.created_at ? new Date(student.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—'}
                   </p>
 
-                  {/* The ninja's skin tone, set here because this is where a
-                      ninja's own settings live, and shown as the ninja rather
-                      than as a word: the thing being chosen is a picture, and
-                      the button is a preview of it. Read-only staff see the
-                      current tone without a way to change it. */}
                   {!isReadOnly && (
-                    <button
-                      type="button"
-                      onClick={() => setShowTonePicker(true)}
-                      title="Ninja skin tone"
-                      className="mt-3 inline-flex items-center gap-2 rounded-full border border-ninja-border bg-ninja-bg py-1 pl-1 pr-3 transition-colors hover:border-ninja-blue/40 hover:bg-ninja-blue/[0.05]"
-                    >
-                      <img
-                        src={ninjaSrc(ninjaBeltName, 'wave', student.ninja_skin_tone)}
-                        alt=""
-                        aria-hidden
-                        draggable={false}
-                        className="h-7 w-7 object-contain"
-                      />
-                      <span className="font-ninja text-xs font-bold text-ninja-muted">
-                        Ninja: {NINJA_TONE_LABELS[student.ninja_skin_tone || DEFAULT_TONE]}
-                      </span>
-                    </button>
+                    <NinjaToneButton
+                      student={student}
+                      belt={ninjaBeltName}
+                      onEdit={() => setShowTonePicker(true)}
+                      className="mt-3"
+                    />
                   )}
                 </div>
 
