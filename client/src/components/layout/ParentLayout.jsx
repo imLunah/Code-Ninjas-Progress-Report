@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { HomeIcon, UserRoundIcon, LogOutIcon, ChevronLeftIcon } from 'lucide-react';
@@ -294,10 +294,45 @@ function ParentTabBar() {
 
 // `bleed`: the page opens with a full-bleed hero on a phone, so the top bar
 // stays out of its way below lg and the hero's own back chip is the way out.
+// Every parent page opens at its banner.
+//
+// Nothing in this app reset the scroll on a route change, and React Router
+// does not do it for you. On the parent portal that is worse than landing
+// part way down a page, because the banner is pinned: at any offset the hero
+// stays at the top of the screen but SHIFTED UP and DIMMED, with the sheet
+// riding over its bottom edge and cutting the kit pills in half. It reads as
+// a rendering fault rather than as a scroll position, which is exactly how it
+// was reported.
+//
+// It has to key on the pathname rather than on mount. `/parent/students/:id`
+// and `/parent/students/:id/courses/:program` render the SAME component at
+// the same position in the tree, so opening a course from a profile does not
+// remount anything and there is no mount for an effect to hang on.
+//
+// `scrollRestoration = 'manual'` is part of the fix and not tidiness: on a
+// back or forward the browser restores the old offset AFTER the effect runs
+// and puts the page straight back where it was. It is set while the portal is
+// mounted and handed back on the way out, so the staff side keeps the
+// browser's own behaviour.
+function useTopOnNavigate() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const previous = window.history.scrollRestoration;
+    if (!previous) return undefined;
+    window.history.scrollRestoration = 'manual';
+    return () => { window.history.scrollRestoration = previous; };
+  }, []);
+
+  // Layout effect, so the page is never painted at the old offset first.
+  useLayoutEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+}
+
 export default function ParentLayout({ children, switcher = null, bleed = false }) {
   const { parent, logout } = useParentAuth();
   const navigate = useNavigate();
   const [bugOpen, setBugOpen] = useState(false);
+  useTopOnNavigate();
   // The parent portal is light only; there is no theme toggle here and the
   // shell holds the page light while it is up.
   useLightOnly();
