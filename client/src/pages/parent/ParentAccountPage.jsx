@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserRoundIcon, Trash2Icon } from 'lucide-react';
+import { UserRoundIcon, Trash2Icon, UsersRoundIcon } from 'lucide-react';
 import { api } from '../../api/client';
 import ParentLayout from '../../components/layout/ParentLayout';
 import FamilyPass from '../../components/shared/FamilyPass';
@@ -10,6 +10,7 @@ import { useParentPortal } from '../../context/ParentPortalContext';
 import { CARD } from '../../lib/surfaces';
 import useIsDesktop from '../../lib/useIsDesktop';
 import { calcAge } from '../../lib/parentProgress';
+import { NINJA_TONES, NINJA_TONE_LABELS, DEFAULT_TONE, ninjaSrc } from '../../utils/ninjas';
 
 // The parent's settings. The same shape as the staff settings screen: a
 // rail with the sections and Sign Out, and a pane with the section. Two
@@ -26,12 +27,94 @@ const RELATIONSHIPS = ['Mom', 'Dad', 'Guardian', 'Grandparent', 'Other'];
 const FIELD = 'w-full px-4 py-3 rounded-xl bg-ninja-bg border border-ninja-border text-ninja-navy font-ninja text-sm focus:border-ninja-blue focus:outline-none transition-colors';
 const LABEL = 'block text-ninja-muted font-ninja text-xs font-semibold uppercase tracking-wide mb-1.5';
 
+// The belt a ninja's art is drawn at: their CREATE belt if they are in CREATE,
+// otherwise any belt they hold. A ninja with none gets null, and `ninjaSrc`
+// falls back to White, which is where everyone starts.
+function beltOf(student) {
+  const programs = student?.programs || [];
+  const withBelt = programs.find((p) => p.program === 'CREATE' && p.belt_level) || programs.find((p) => p.belt_level);
+  return withBelt?.belt_level || null;
+}
+
 function ninjasOf(students) {
-  return (students || []).map((s) => {
-    const programs = s.programs || [];
-    const withBelt = programs.find((p) => p.program === 'CREATE' && p.belt_level) || programs.find((p) => p.belt_level);
-    return { name: s.full_name, age: calcAge(s.birthday), belt: withBelt?.belt_level || null };
-  });
+  return (students || []).map((s) => ({ name: s.full_name, age: calcAge(s.birthday), belt: beltOf(s) }));
+}
+
+// Choosing the family's ninjas, one child at a time.
+//
+// This lives in Settings rather than on the child's profile banner, where it
+// started. It is a setting: it is decided once, it is not part of reading how
+// a ninja is doing, and a control floating on the artwork it changes was one
+// more thing on a page whose job is progress. Settings is also where a parent
+// can see all of their ninjas at once, which is the only place the choice
+// reads as a family's rather than as one page's.
+//
+// The three are drawn as the real ninja at that child's own belt, so the only
+// thing changing between them is the thing being chosen. There is no Save
+// button: a tap is the whole decision and it saves immediately.
+// `heading` is off in the desktop pane, which prints the section's name above
+// the card already. On the phone there is no pane and the card is on its own.
+function NinjaLook({ students, onSave, heading = true }) {
+  const [saving, setSaving] = useState(null); // student id
+  const [error, setError] = useState(null);   // student id
+
+  const pick = async (student, tone) => {
+    if (tone === (student.ninja_skin_tone || DEFAULT_TONE)) return;
+    setSaving(student.id); setError(null);
+    try { await onSave(student.id, tone); }
+    catch { setError(student.id); }
+    finally { setSaving(null); }
+  };
+
+  if (!students?.length) return null;
+
+  return (
+    <div className={`${CARD} p-6 space-y-6`}>
+      <div>
+        {heading && <h3 className="font-ninja font-extrabold text-[17px] text-ninja-navy mb-0.5">Your ninjas</h3>}
+        <p className="font-ninja text-[13px] text-ninja-muted">
+          Pick the ninja each of your kids wants to be. It shows on their profile and everywhere their belt does.
+        </p>
+      </div>
+
+      {students.map((student) => {
+        const belt = beltOf(student);
+        const current = student.ninja_skin_tone || DEFAULT_TONE;
+        const firstName = student.full_name?.split(' ')[0] || student.full_name;
+        return (
+          <div key={student.id} className="space-y-2">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="font-ninja font-extrabold text-sm text-ninja-navy truncate">{firstName}</p>
+              {error === student.id && <p className="font-ninja text-xs text-ninja-red">Could not save. Try again.</p>}
+            </div>
+            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={`${firstName}'s ninja`}>
+              {NINJA_TONES.map((tone) => {
+                const selected = current === tone;
+                return (
+                  <button
+                    key={tone}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    disabled={saving === student.id}
+                    onClick={() => pick(student, tone)}
+                    className={`flex flex-col items-center rounded-xl border p-2 transition-colors disabled:opacity-60 ${
+                      selected ? 'border-ninja-blue bg-ninja-blue/10' : 'border-ninja-border bg-ninja-bg hover:border-ninja-blue/40'
+                    }`}
+                  >
+                    <img src={ninjaSrc(belt, 'wave', tone)} alt="" aria-hidden draggable={false} className="h-24 w-full object-contain" />
+                    <span className={`mt-1 font-ninja text-xs font-extrabold ${selected ? 'text-ninja-blue' : 'text-ninja-muted'}`}>
+                      {NINJA_TONE_LABELS[tone]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function ParentAccountPage() {
@@ -46,7 +129,7 @@ export default function ParentAccountPage() {
   const [relationship, setRelationship] = useState(parent?.relationship || '');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null); // { ok, text }
-  const [section, setSection] = useState('profile'); // 'profile' | 'delete'
+  const [section, setSection] = useState('profile'); // 'profile' | 'ninjas' | 'delete'
 
   // A save that changes the email re-keys the parent; follow it.
   useEffect(() => {
@@ -88,6 +171,8 @@ export default function ParentAccountPage() {
       />
     </div>
   );
+
+  const ninjaLook = (heading) => <NinjaLook students={portal?.students} onSave={portal?.saveNinjaTone} heading={heading} />;
 
   const form = (
     <form onSubmit={handleSave} className={`${CARD} p-6 space-y-5`}>
@@ -196,6 +281,7 @@ export default function ParentAccountPage() {
                   <div className="space-y-0.5">
                     {[
                       { key: 'profile', label: 'Edit profile', Icon: UserRoundIcon },
+                      { key: 'ninjas', label: 'Your ninjas', Icon: UsersRoundIcon },
                       { key: 'delete', label: 'Delete account', Icon: Trash2Icon },
                     ].map(({ key, label, Icon }) => {
                       const active = section === key;
@@ -221,8 +307,8 @@ export default function ParentAccountPage() {
             </div>
             <div className="pl-8">
               <div className="max-w-2xl space-y-6">
-                <h2 className="font-ninja font-bold text-xl text-ninja-navy">{section === 'delete' ? 'Delete account' : 'Edit profile'}</h2>
-                {section === 'delete' ? deleteCard : (
+                <h2 className="font-ninja font-bold text-xl text-ninja-navy">{{ delete: 'Delete account', ninjas: 'Your ninjas' }[section] || 'Edit profile'}</h2>
+                {section === 'delete' ? deleteCard : section === 'ninjas' ? ninjaLook(false) : (
                   <>
                     {pass}
                     {form}
@@ -242,6 +328,7 @@ export default function ParentAccountPage() {
         <h1 className="font-ninja font-black text-2xl text-ninja-navy tracking-tight">Settings</h1>
         {pass}
         {form}
+        {ninjaLook(true)}
         {signOut}
         {deleteCard}
       </div>

@@ -12,7 +12,6 @@ import LazyMarkdownEditor from '../../components/shared/LazyMarkdownEditor';
 import { FLAT } from '../../lib/surfaces';
 import { SkeletonProfile, SkeletonCards } from '../../components/ui/Skeleton';
 import Modal from '../../components/ui/Modal';
-import { NINJA_TONES, NINJA_TONE_LABELS, DEFAULT_TONE, ninjaSrc } from '../../utils/ninjas';
 import useIsDesktop from '../../lib/useIsDesktop';
 import { activityFeed, fmtLongDay } from '../../lib/parentProgress';
 
@@ -107,85 +106,6 @@ function NoteButton({ child, text, onSave }) {
   );
 }
 
-// The skin tone of this family's own ninja.
-//
-// It sits on the parent side rather than in the staff tools because it is the
-// one thing here that is about what a kid looks like rather than about what
-// they have done, and a family should not have to ask a sensei to change it.
-// The rest of the portal stays read-only; this decides a picture.
-//
-// The three are drawn as the real ninja at this ninja's own belt, so the only
-// thing changing between them is the thing being chosen. Saving is immediate
-// on tap — there is no Save button, because there is nothing to review: the
-// hero behind the dialog is already showing the answer.
-function NinjaToneButton({ child, belt, onSave }) {
-  const [open, setOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const current = child?.ninja_skin_tone || DEFAULT_TONE;
-  const first = child?.full_name?.split(' ')[0];
-
-  useEffect(() => { setOpen(false); setError(''); }, [child?.id]);
-
-  const pick = async (tone) => {
-    if (tone === current) return;
-    setSaving(true); setError('');
-    try { await onSave(tone); }
-    catch { setError('Could not save. Try again.'); }
-    finally { setSaving(false); }
-  };
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => { setError(''); setOpen(true); }}
-        title="Choose your ninja"
-        aria-label={`Change ${first}'s ninja`}
-        className="flex items-center justify-center w-10 h-10 rounded-full transition-colors bg-white border border-ninja-border hover:border-ninja-blue/40 overflow-hidden"
-      >
-        <img src={ninjaSrc(belt, 'wave', current)} alt="" aria-hidden draggable={false} className="w-7 h-7 object-contain" />
-      </button>
-
-      <Modal isOpen={open} onClose={() => setOpen(false)} title="Your ninja">
-        <div className="space-y-3">
-          <p className="font-ninja text-[13px] text-ninja-muted">
-            Pick the ninja that looks most like {first}.
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            {NINJA_TONES.map((tone) => {
-              const selected = current === tone;
-              return (
-                <button
-                  key={tone}
-                  type="button"
-                  onClick={() => pick(tone)}
-                  disabled={saving}
-                  aria-pressed={selected}
-                  className={`flex flex-col items-center rounded-xl border p-2 transition-colors disabled:opacity-60 ${
-                    selected ? 'border-ninja-blue bg-ninja-blue/10' : 'border-ninja-border bg-ninja-bg hover:border-ninja-blue/40'
-                  }`}
-                >
-                  <img
-                    src={ninjaSrc(belt, 'wave', tone)}
-                    alt={NINJA_TONE_LABELS[tone]}
-                    draggable={false}
-                    className="h-28 w-full object-contain"
-                  />
-                  <span className={`mt-1 font-ninja text-xs font-extrabold ${selected ? 'text-ninja-blue' : 'text-ninja-muted'}`}>
-                    {NINJA_TONE_LABELS[tone]}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          {error && <p className="text-ninja-red font-ninja text-xs">{error}</p>}
-        </div>
-      </Modal>
-    </>
-  );
-}
-
 const EASE_OUT = [0.23, 1, 0.32, 1];
 const enc = (p) => encodeURIComponent(p);
 
@@ -193,7 +113,7 @@ export default function ParentProfile() {
   const { id, program } = useParams();
   const navigate = useNavigate();
   const desktop = useIsDesktop();
-  const { students, setActiveId, setViewAll, detailFor, loadDetail, detailLoading, saveNote, saveNinjaTone } = useParentPortal();
+  const { students, setActiveId, setViewAll, detailFor, loadDetail, detailLoading, saveNote } = useParentPortal();
   const target = Number(id);
   const child = (students || []).find((s) => s.id === target) || null;
   const detail = detailFor(target);
@@ -301,12 +221,7 @@ export default function ParentProfile() {
             tone={child.ninja_skin_tone}
             programCount={programs.length}
             sessionCount={feed.length}
-            right={(
-              <div className="flex items-center gap-2">
-                <NinjaToneButton child={child} belt={belt} onSave={(tone) => saveNinjaTone(child.id, tone)} />
-                <NoteButton child={child} text={detail?.special_instructions || ''} onSave={(text) => saveNote(child.id, text)} />
-              </div>
-            )}
+            right={<NoteButton child={child} text={detail?.special_instructions || ''} onSave={(text) => saveNote(child.id, text)} />}
             className="!mt-0"
           />
         </PinnedHero>
