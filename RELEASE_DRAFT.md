@@ -19,6 +19,7 @@
 - The CREATE course shows the game each level builds. Every level now carries a screenshot of the real project, a line about what that level is actually for, and the medal it is awarded with.
 
 ## Changes
+- Silver, Gold Unity and Gold Godot are no longer programs you can enroll a ninja in. They repeated the top of the CREATE belt ladder, which already runs Bronze, Silver, Platinum and Gold with their own projects, and nobody was enrolled in any of them. The belts of those names are unchanged.
 - Logging a session takes you back to Today's Board. If a ninja is checked into more than one class, or has make up sessions to catch up on, the page stays where it is and moves you to the next class so you can finish them in one sitting.
 - A class you have already logged comes off the "which program are you logging" list, so only the classes still to do are on it. If everything is logged they all come back, since that visit is a correction.
 - Once a center is connected to MyStudio, every sensei at that center sees the booked list. It used to sit behind the Experimental toggle, which was a per browser setting, so connecting a center changed nothing for anyone else. The Experimental toggle now only covers the theme customizer.

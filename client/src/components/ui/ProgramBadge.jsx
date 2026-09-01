@@ -11,9 +11,6 @@ const PROGRAM_COLORS = {
   'AI Academy':       { text: 'text-blue-600 dark:text-blue-300' },
   'JR':               { text: 'text-purple-600 dark:text-purple-300' },
   'VR Coding':        { text: 'text-teal-600 dark:text-teal-300' },
-  'Silver':           { text: 'text-slate-600 dark:text-slate-300' },
-  'Gold Unity':       { text: 'text-amber-600 dark:text-amber-300' },
-  'Gold Godot':       { text: 'text-amber-600 dark:text-amber-300' },
 };
 
 const SIZE = {

@@ -472,7 +472,7 @@ CREATE TABLE public.daily_assignments (
     created_at timestamp with time zone DEFAULT now(),
     program text,
     checked_in_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT daily_assignments_program_check CHECK (((program IS NULL) OR (program = ANY (ARRAY['CREATE'::text, 'Robotics Academy'::text, 'AI Academy'::text, 'JR'::text, 'Silver'::text, 'Gold Unity'::text, 'Gold Godot'::text]))))
+    CONSTRAINT daily_assignments_program_check CHECK (((program IS NULL) OR (program = ANY (ARRAY['CREATE'::text, 'Robotics Academy'::text, 'AI Academy'::text, 'JR'::text, 'VR Coding'::text]))))
 );
 
 
@@ -620,7 +620,7 @@ CREATE TABLE public.progress_logs (
     sub_program text,
     module_name text,
     lesson_name text,
-    CONSTRAINT progress_logs_program_check CHECK (((program IS NULL) OR (program = ANY (ARRAY['CREATE'::text, 'Robotics Academy'::text, 'AI Academy'::text, 'JR'::text, 'Silver'::text, 'Gold Unity'::text, 'Gold Godot'::text]))))
+    CONSTRAINT progress_logs_program_check CHECK (((program IS NULL) OR (program = ANY (ARRAY['CREATE'::text, 'Robotics Academy'::text, 'AI Academy'::text, 'JR'::text, 'VR Coding'::text]))))
 );
 
 
@@ -711,7 +711,7 @@ CREATE TABLE public.student_programs (
     last_lesson_name text,
     last_session_date date,
     percent_complete integer DEFAULT 0,
-    CONSTRAINT student_programs_program_check CHECK ((program = ANY (ARRAY['CREATE'::text, 'Robotics Academy'::text, 'AI Academy'::text, 'JR'::text, 'Silver'::text, 'Gold Unity'::text, 'Gold Godot'::text]))),
+    CONSTRAINT student_programs_program_check CHECK ((program = ANY (ARRAY['CREATE'::text, 'Robotics Academy'::text, 'AI Academy'::text, 'JR'::text, 'VR Coding'::text]))),
     CONSTRAINT student_programs_project_status_check CHECK ((project_status = ANY (ARRAY['Started'::text, 'Working On'::text, 'Completed'::text])))
 );
 

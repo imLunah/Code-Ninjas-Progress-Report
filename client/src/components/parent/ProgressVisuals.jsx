@@ -679,8 +679,8 @@ function ModuleProgress({ program, enrollment, logs, href }) {
   // The banner is not a decoration Robotics and AI happen to get: every
   // program has its own lockup off the Canva sheet, and a card that opened
   // with a heading in navy while its neighbours opened with art read as the
-  // one program nobody had finished. Silver, VR Coding and both Golds land
-  // here, and they arrive with their own logo on their own gradient.
+  // one program nobody had finished. VR Coding lands here, and it arrives with
+  // its own logo on its own gradient.
   return (
     <CourseShell href={href} program={program}>
       <ProgramCardBanner program={program} lastDate={lastDate} sessions={totalSessions} href={href} />

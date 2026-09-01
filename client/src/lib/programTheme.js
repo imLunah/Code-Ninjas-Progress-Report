@@ -17,9 +17,6 @@ export const PROGRAM_GRADIENTS = {
   'AI Academy':       'linear-gradient(135deg, #060c1f 0%, #091840 55%, #0e2a7a 100%)',
   'JR':               'linear-gradient(135deg, #1a0533 0%, #2d1267 55%, #4c1d95 100%)',
   'VR Coding':        'linear-gradient(135deg, #04181c 0%, #073a40 55%, #0b5e63 100%)',
-  'Silver':           'linear-gradient(135deg, #1f2937 0%, #374151 55%, #4b5563 100%)',
-  'Gold Unity':       'linear-gradient(135deg, #3b2f0a 0%, #6b5210 55%, #92400e 100%)',
-  'Gold Godot':       'linear-gradient(135deg, #1e3a5f 0%, #2a5a8f 55%, #3573b1 100%)',
 };
 
 export const PROGRAM_BAR_COLORS = {
