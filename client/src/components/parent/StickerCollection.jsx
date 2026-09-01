@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useAnimationControls, useReducedMotion } from 'framer-motion';
 import { CheckIcon, ChevronRightIcon, LockKeyholeIcon, SparklesIcon, XIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { CREATE_STICKERS, stickerRequirement, stickersForBelt } from '../../lib/createStickers';
+import { CREATE_STICKERS, levelsForBelt, stickerRequirement, stickersForBelt } from '../../lib/createStickers';
 import { stickerProgress } from '../../lib/stickerProgress';
 import { useStickerRarity } from '../../lib/stickerRarity';
 import { levelInfo } from '../../lib/createCurriculum';
@@ -11,7 +11,7 @@ import { fmtDay } from '../../lib/parentProgress';
 import ModalPortal from '../ui/ModalPortal';
 import { Tilt, TiltLayer } from '../ui/Tilt';
 
-// CREATE's belt artwork as a sticker album, one tab per belt.
+// The IMPACT achievements as a sticker album, one block per level.
 //
 // The artwork is a physical thing: die-cut, white-rimmed, the kind of sticker
 // that ends up on a water bottle. So the cards behave like one, through the
@@ -40,12 +40,18 @@ import { Tilt, TiltLayer } from '../ui/Tilt';
 const TILT = 13;
 const SPRING = { type: 'spring', stiffness: 320, damping: 26, mass: 0.5 };
 
-// The poster's name for each level a sticker covers ("Nested Block
-// Statements!"), so the dialog can show the syllabus behind the sentence.
-function stickerTopics(item) {
-  return item.levels
-    .map((level) => ({ level, topic: levelInfo(item.belt, level)?.topic }))
-    .filter((entry) => entry.topic);
+// The poster's own words for the level a sticker belongs to: its name
+// ("Nested Block Statements!") and the open build at the end of it.
+//
+// This is what the dialog says instead of a blurb. Every sticker used to carry
+// a hand-written sentence about what the ninja did to earn it, which worked
+// for 35 invented milestones and does not survive 218 real achievements: we
+// do not know which in-game action earned any one of them, and writing 218
+// guesses is how the old set ended up describing a Level 2 sticker as a Level
+// 1 one. The level's poster copy is true of every achievement in it.
+function stickerLevel(item) {
+  const info = levelInfo(item.belt, item.level);
+  return info ? { topic: info.topic, quest: info.quest } : null;
 }
 
 // Opening a sticker is the same act in the album and in the book, down to
@@ -178,7 +184,7 @@ export function StickerCard({ item, isEarned, onOpen, flat, rarity }) {
 // if another surface ever opens a sticker that has not been earned.
 export function StickerZoom({ item, isEarned, onClose, flat, rarity }) {
   const closeRef = useRef(null);
-  const topics = stickerTopics(item);
+  const level = stickerLevel(item);
 
   // Escape closes, and Tab stays inside: the sticker album behind this is a
   // long grid of buttons, and a dialog you can tab out of leaves a keyboard
@@ -257,16 +263,16 @@ export function StickerZoom({ item, isEarned, onClose, flat, rarity }) {
             <RarityChip rarity={rarity} />
           </div>
 
-          {/* The blurb is written in the past tense, as the account of a thing
-              that happened, so it only belongs on a sticker that has been
-              earned. A locked one gets the requirement instead, and the level
-              topics below still say what is coming. It follows the chips
-              directly, with no heading over it: "Earned" already says whose
-              account this is, and a label between the chips and the copy was
-              a third style of small text in a stack of three. */}
-          <p className="mx-auto mt-3 max-w-[34ch] text-balance font-ninja text-[14px] leading-relaxed text-ninja-navy/85">
-            {isEarned ? item.blurb : stickerRequirement(item)}
-          </p>
+          {/* A locked sticker says what would unlock it. An earned one says
+              nothing here at all: the chips above already said "Earned", and
+              the level block below carries the only description we can stand
+              behind. A sentence in this slot would have to be invented, which
+              is the mistake this whole set replaced. */}
+          {!isEarned && (
+            <p className="mx-auto mt-3 max-w-[34ch] text-balance font-ninja text-[14px] leading-relaxed text-ninja-navy/85">
+              {stickerRequirement(item)}
+            </p>
+          )}
 
           {/* The number behind the word, because "Legendary" on its own is a
               label someone could have picked. A share, never a headcount: how
@@ -279,16 +285,19 @@ export function StickerZoom({ item, isEarned, onClose, flat, rarity }) {
             </p>
           )}
 
-          {topics.length > 0 && (
+          {level && (
             <div className="mt-4 rounded-[16px] px-4 py-3 text-left" style={{ background: 'rgb(var(--ninja-blue) / 0.06)' }}>
               <p className="font-ninja text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-ninja-blue">
-                {item.belt} belt · {topics.length === 1 ? 'Level' : 'Levels'} {topics.map((t) => t.level).join(' and ')}
+                {item.belt} belt · Level {item.level}
               </p>
-              <ul className="mt-1 space-y-0.5">
-                {topics.map((t) => (
-                  <li key={t.level} className="font-ninja text-[12.5px] font-bold text-ninja-navy/80">{t.topic}</li>
-                ))}
-              </ul>
+              <p className="mt-1 font-ninja text-[12.5px] font-bold text-ninja-navy/80">{level.topic}</p>
+              {/* The quest is the level's own open build, printed off the
+                  poster. Not every level has one (Yellow 4 and the Brown pixel
+                  art levels close on a mastery mission instead), so it is only
+                  drawn where the curriculum actually has the words. */}
+              {level.quest && (
+                <p className="mt-1.5 font-ninja text-[12px] leading-relaxed text-ninja-navy/70">{level.quest}</p>
+              )}
             </div>
           )}
         </motion.div>
@@ -303,8 +312,9 @@ export function StickerZoom({ item, isEarned, onClose, flat, rarity }) {
 // loose on the banner. That art was decoration with nothing behind it (one
 // IMPACT sticker on a Black belt, in the middle of the sky); the same
 // pictures mean something once they are the ones this ninja earned, in the
-// order they earned them. The album with all 35 stays on the CREATE course,
-// one tap away through the link at the bottom.
+// order they earned them. The belt they are on keeps its own album on the
+// CREATE course, and the whole book is one tap away through the link at the
+// bottom.
 //
 // Each sticker sits at its own small angle, the way a sticker ends up on a
 // page, and turns off that angle under the pointer rather than from square.
@@ -376,7 +386,7 @@ export function StickerBook({ belt, level, logs, childName, href, className = ''
           <p className="mt-1 font-ninja text-[12.5px] text-ninja-muted">
             {empty
               ? 'The first sticker is one level away.'
-              : `Newest first. Tap one to see what it took.`}
+              : `Newest first. Tap one to open it.`}
           </p>
         </div>
         <div className="flex-shrink-0 whitespace-nowrap pt-0.5 font-ninja text-[12px] font-extrabold text-ninja-blue">
@@ -436,6 +446,7 @@ export default function StickerCollection({ belt, earnedIds, earnedTotal, childN
   const rarity = useStickerRarity();
 
   const stickers = stickersForBelt(belt);
+  const levels = levelsForBelt(belt);
   if (!stickers.length) return null;
 
   const earnedHere = stickers.filter((item) => earnedIds.has(item.id)).length;
@@ -449,7 +460,7 @@ export default function StickerCollection({ belt, earnedIds, earnedTotal, childN
             <h2 className="font-ninja text-[17px] font-extrabold">{belt} belt stickers</h2>
           </div>
           <p className="mt-1 font-ninja text-[12.5px] text-ninja-muted">
-            {earnedTotal} of {CREATE_STICKERS.length} earned across CREATE. Tap one to see what it took.
+            {earnedTotal} of {CREATE_STICKERS.length} earned across CREATE. Tap one to open it.
           </p>
         </div>
         <div className="flex-shrink-0 whitespace-nowrap pt-0.5 font-ninja text-[12px] font-extrabold text-ninja-blue">
@@ -457,18 +468,40 @@ export default function StickerCollection({ belt, earnedIds, earnedTotal, childN
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5 px-3 pb-3 sm:grid-cols-3 sm:px-4 lg:grid-cols-5">
-        {stickers.map((item) => (
-          <StickerCard
-            key={item.id}
-            item={item}
-            isEarned={earnedIds.has(item.id)}
-            onOpen={open}
-            flat={flat}
-            rarity={rarity?.[item.id]}
-          />
-        ))}
-      </div>
+      {/* One block per level rather than one grid per belt. A belt used to hold
+          four or five stickers and a plain grid was the whole story; Brown now
+          holds 48, and an unbroken run of them says nothing about which level
+          a parent is looking at. The level is also the unit that unlocks, so
+          the seams fall exactly where the earned state changes. */}
+      {levels.map(({ level, stickers: levelStickers }) => {
+        const info = levelInfo(belt, level);
+        const done = levelStickers.filter((item) => earnedIds.has(item.id)).length;
+        return (
+          <div key={level} className="px-3 pb-3 sm:px-4">
+            <div className="flex items-baseline justify-between gap-3 px-1 pb-2 pt-1">
+              <p className="min-w-0 font-ninja text-[12.5px] font-extrabold text-ninja-navy">
+                Level {level}
+                {info?.topic && <span className="font-bold text-ninja-muted"> · {info.topic}</span>}
+              </p>
+              <p className={`flex-shrink-0 font-ninja text-[11.5px] font-extrabold ${done === levelStickers.length ? 'text-emerald-600' : 'text-ninja-muted'}`}>
+                {done} of {levelStickers.length}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+              {levelStickers.map((item) => (
+                <StickerCard
+                  key={item.id}
+                  item={item}
+                  isEarned={earnedIds.has(item.id)}
+                  onOpen={open}
+                  flat={flat}
+                  rarity={rarity?.[item.id]}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
 
       {bookHref && (
         <Link

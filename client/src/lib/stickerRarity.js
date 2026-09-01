@@ -83,8 +83,7 @@ function past(item, belt, level) {
   const target = beltIndex.get(item.belt);
   const here = beltIndex.get(belt);
   if (target == null || here == null) return false;
-  const last = item.levels[item.levels.length - 1];
-  return here > target || (here === target && Number(level) > last);
+  return here > target || (here === target && Number(level) > item.level);
 }
 
 // Ninjas past the last level a sticker covers, out of the whole histogram.

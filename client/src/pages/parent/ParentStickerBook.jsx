@@ -6,8 +6,9 @@ import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayou
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { Hero, PinnedHero, PageSheet, BackChip } from '../../components/parent/ParentUI';
 import { RarityChip, StickerZoom, useLockedShake, useStickerZoom } from '../../components/parent/StickerCollection';
-import { CREATE_STICKERS } from '../../lib/createStickers';
-import { isLevelComplete, stickerProgress } from '../../lib/stickerProgress';
+import { CREATE_STICKERS, stickerRequirement } from '../../lib/createStickers';
+import { levelInfo } from '../../lib/createCurriculum';
+import { stickerProgress } from '../../lib/stickerProgress';
 import { stickerPercentile, useStickerCohort, useStickerRarity } from '../../lib/stickerRarity';
 import { SkeletonProfile } from '../../components/ui/Skeleton';
 import { Tilt } from '../../components/ui/Tilt';
@@ -77,9 +78,18 @@ function RecordSticker({ art, rest }) {
 // card around it does not change: a shelf where one tile suddenly took a
 // different shape would read as three unrelated things.
 //
+// It takes a second step down for the long ones. The IMPACT achievements are
+// named, not numbered, and they run from "SFX" to "Objects May Be Larger Than
+// They Appear": at one size the short names look lost and the long ones get
+// clipped mid-sentence, which on the "most recent" card means a parent is
+// shown half the name of the thing their kid just earned.
+//
 // The number and the plinth are bottom-aligned, so they stand on one floor
 // instead of hanging from the top edge with a gap underneath.
+const LONG_TITLE = 22;
+
 function RecordCard({ record, value, caption, art, headline = false, flat, index = 0 }) {
+  const long = headline && String(value).length > LONG_TITLE;
   return (
     <motion.article
       className={`tint-${record.tint} tint-ink-only flex min-w-[240px] flex-1 flex-col items-center px-2 text-center sm:min-w-[262px]`}
@@ -89,7 +99,7 @@ function RecordCard({ record, value, caption, art, headline = false, flat, index
     >
       {art && <RecordSticker art={art} rest={record.rest} />}
       <p
-        className={`mt-3 font-ninja font-extrabold tracking-[-0.02em] ${headline ? 'line-clamp-2 text-[22px] leading-[1.15]' : 'text-[42px] leading-[0.9]'}`}
+        className={`mt-3 font-ninja font-extrabold tracking-[-0.02em] ${headline ? (long ? 'line-clamp-3 text-[17px] leading-[1.2]' : 'line-clamp-2 text-[22px] leading-[1.15]') : 'text-[42px] leading-[0.9]'}`}
         style={{ color: 'var(--tint-ink)' }}
       >
         {value}
@@ -100,16 +110,15 @@ function RecordCard({ record, value, caption, art, headline = false, flat, index
   );
 }
 
-function AwardSticker({ item, isEarned, completed, onOpen, flat, rarity }) {
+function AwardSticker({ item, isEarned, onOpen, flat, rarity }) {
   const { controls, shake } = useLockedShake();
-  const total = item.levels.length;
 
   return (
     <motion.div animate={controls} className="flex min-w-0">
       <button
         type="button"
         onClick={() => (isEarned ? onOpen(item) : shake())}
-        aria-label={`${item.title}${rarity ? `, ${rarity.label}` : ''}, ${isEarned ? 'earned' : `locked, ${completed} of ${total} levels complete`}`}
+        aria-label={`${item.title}${rarity ? `, ${rarity.label}` : ''}, ${isEarned ? 'earned' : `locked, ${stickerRequirement(item)}`}`}
         className="group flex w-full min-w-0 flex-col items-center rounded-[22px] px-2 pb-4 pt-3 text-center transition-[transform,background-color] duration-150 hover:bg-ninja-blue/[0.035] active:scale-[0.97]"
       >
         <span className="relative flex h-[136px] w-full items-center justify-center sm:h-[150px]">
@@ -118,12 +127,17 @@ function AwardSticker({ item, isEarned, completed, onOpen, flat, rarity }) {
             className={`absolute h-[112px] w-[112px] rounded-full transition-[transform,opacity] duration-200 group-hover:scale-[1.04] sm:h-[124px] sm:w-[124px] ${isEarned ? 'opacity-100' : 'opacity-45'}`}
             style={{ background: isEarned ? 'radial-gradient(circle, rgb(var(--ninja-blue) / 0.12), transparent 68%)' : 'radial-gradient(circle, rgb(var(--ninja-navy) / 0.06), transparent 68%)' }}
           />
+          {/* Lazy, because this page is the whole book: 218 stickers at about
+              10KB each is 2MB if they all fetch on arrival, and a parent sees
+              a dozen of them. Everything above stays eager. */}
           <motion.img
             layoutId={flat ? undefined : `sticker-art-${item.id}`}
             src={item.src}
             alt=""
             aria-hidden="true"
             draggable={false}
+            loading="lazy"
+            decoding="async"
             className={`relative h-[118px] w-[118px] select-none object-contain sm:h-[132px] sm:w-[132px] ${isEarned ? 'drop-shadow-[0_15px_13px_rgb(6_13_26/0.18)]' : 'grayscale opacity-25'}`}
           />
           <span aria-hidden="true" className={`absolute right-[12%] top-2 inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-white shadow-sm ${isEarned ? 'bg-emerald-500' : 'bg-ninja-navy/45'}`}>
@@ -131,7 +145,11 @@ function AwardSticker({ item, isEarned, completed, onOpen, flat, rarity }) {
           </span>
         </span>
         <span className={`mt-1 block max-w-full font-ninja text-[14px] font-extrabold leading-tight ${isEarned ? 'text-ninja-navy' : 'text-ninja-navy/50'}`}>{item.title}</span>
-        <span className={`mt-1 block font-ninja text-[11.5px] font-bold ${isEarned ? 'text-emerald-600' : 'text-ninja-muted'}`}>{completed} of {total}</span>
+        {/* One word, not the requirement. The level heading above the row
+            already says which level unlocks these, and repeating "Complete
+            Blue Belt Level 4" under all nine of them is the same sentence
+            nine times. */}
+        <span className={`mt-1 block font-ninja text-[11.5px] font-bold ${isEarned ? 'text-emerald-600' : 'text-ninja-muted'}`}>{isEarned ? 'Earned' : 'Locked'}</span>
         <span className="mt-2"><RarityChip rarity={rarity} size="sm" /></span>
       </button>
     </motion.div>
@@ -167,6 +185,29 @@ export default function ParentStickerBook() {
   const progress = useMemo(
     () => stickerProgress({ belt, level, logs }),
     [belt, level, logs]);
+
+  // The book's shape: belt, then level, then that level's achievements.
+  // `progress.all` is already in curriculum order, so this only has to notice
+  // where the belt and the level change rather than sort anything.
+  const sections = useMemo(() => {
+    const out = [];
+    for (const item of progress.all) {
+      let belted = out[out.length - 1];
+      if (!belted || belted.belt !== item.belt) {
+        belted = { belt: item.belt, levels: [], earned: 0, total: 0 };
+        out.push(belted);
+      }
+      let levelled = belted.levels[belted.levels.length - 1];
+      if (!levelled || levelled.level !== item.level) {
+        levelled = { level: item.level, stickers: [] };
+        belted.levels.push(levelled);
+      }
+      levelled.stickers.push(item);
+      belted.total += 1;
+      if (item.earned) belted.earned += 1;
+    }
+    return out;
+  }, [progress]);
 
   const switcher = <ChildSwitcher layoutId="parent-child-desktop" />;
 
@@ -274,27 +315,49 @@ export default function ParentStickerBook() {
               <div>
                 <p className="font-ninja text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-ninja-blue">The collection</p>
                 <h2 id="awards-heading" className="mt-1 font-ninja text-[24px] font-extrabold tracking-[-0.02em] text-ninja-navy">Sticker awards</h2>
-                <p className="mt-1 font-ninja text-[12.5px] text-ninja-muted">Each one marks a real CREATE milestone.</p>
+                <p className="mt-1 font-ninja text-[12.5px] text-ninja-muted">Every achievement in the CREATE curriculum, by belt and level.</p>
               </div>
               <p className="flex-shrink-0 font-ninja text-[13px] font-extrabold text-ninja-blue">{earned} of {total}</p>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-x-1 gap-y-3 sm:grid-cols-3 sm:gap-x-2 lg:grid-cols-4 xl:gap-x-4">
-              {progress.all.map((item) => {
-                const completed = item.levels.filter((required) => isLevelComplete(item.belt, required, belt, level, logs)).length;
-                return (
-                  <AwardSticker
-                    key={item.id}
-                    item={item}
-                    isEarned={item.earned}
-                    completed={completed}
-                    onOpen={open}
-                    flat={flat}
-                    rarity={rarity?.[item.id]}
-                  />
-                );
-              })}
-            </div>
+            {/* Belt, then level, then the stickers. A flat grid held 35; it
+                cannot hold 218 without becoming a wall a parent scrolls past
+                looking for the belt their kid is on. The headings are also the
+                only place the unlock rule is stated, which is why the stickers
+                themselves no longer repeat it. */}
+            {sections.map((section) => (
+              <section key={section.belt} aria-labelledby={`belt-${section.belt}`} className="mt-6 first:mt-5">
+                <div className="flex items-baseline justify-between gap-3 px-1 sm:px-2">
+                  <h3 id={`belt-${section.belt}`} className="font-ninja text-[17px] font-extrabold tracking-[-0.01em] text-ninja-navy">
+                    {section.belt} belt
+                  </h3>
+                  <p className={`flex-shrink-0 font-ninja text-[12px] font-extrabold ${section.earned === section.total ? 'text-emerald-600' : 'text-ninja-muted'}`}>
+                    {section.earned} of {section.total}
+                  </p>
+                </div>
+
+                {section.levels.map(({ level: lvl, stickers }) => (
+                  <div key={lvl} className="mt-3">
+                    <p className="px-1 font-ninja text-[11.5px] font-extrabold text-ninja-muted sm:px-2">
+                      Level {lvl}
+                      {levelInfo(section.belt, lvl)?.topic && <span className="font-bold"> · {levelInfo(section.belt, lvl).topic}</span>}
+                    </p>
+                    <div className="mt-1 grid grid-cols-2 gap-x-1 gap-y-3 sm:grid-cols-3 sm:gap-x-2 lg:grid-cols-4 xl:gap-x-4">
+                      {stickers.map((item) => (
+                        <AwardSticker
+                          key={item.id}
+                          item={item}
+                          isEarned={item.earned}
+                          onOpen={open}
+                          flat={flat}
+                          rarity={rarity?.[item.id]}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            ))}
           </section>
         </PageSheet>
       </div>

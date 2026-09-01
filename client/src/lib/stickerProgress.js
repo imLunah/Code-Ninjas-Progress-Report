@@ -30,9 +30,13 @@ export function isLevelComplete(targetBelt, targetLevel, currentBelt, currentLev
 // Green belt through a roster import has no logs behind White through Yellow,
 // so their early stickers are earned with no date at all — which is why
 // nothing here sorts by this. It is a label, not an index.
+//
+// Every achievement in a level shares one date, because they share one event:
+// the level being finished. That is the honest thing to print. DojoLink never
+// sees the individual in-game achievements (they are awarded inside MakeCode),
+// so a per-sticker date would be a number we made up.
 export function stickerEarnedOn(item, logs) {
-  const last = item.levels[item.levels.length - 1];
-  const dates = levelProjects(item.belt, last, logs)
+  const dates = levelProjects(item.belt, item.level, logs)
     .filter((p) => p.status === 'done' && p.date)
     .map((p) => String(p.date).split('T')[0])
     .sort();
@@ -41,14 +45,19 @@ export function stickerEarnedOn(item, logs) {
 
 // Every sticker, in curriculum order, with its earned state and date.
 //
-// `CREATE_STICKERS` is declared White through Black, and a ninja walks that
-// ladder in one direction, so its order IS the order the stickers were
-// earned in. That is what "most recent" means below: the tail of the earned
-// list, not a date sort, so a ninja whose early belts predate the log still
-// gets their newest sticker in the right place.
+// `CREATE_STICKERS` is declared White through Black and level by level, and a
+// ninja walks that ladder in one direction, so its order IS the order the
+// stickers were earned in. That is what "most recent" means below: the tail of
+// the earned list, not a date sort, so a ninja whose early belts predate the
+// log still gets their newest sticker in the right place.
+//
+// Finishing a level lands that level's whole set at once, so "most recent" is
+// a slice out of one level rather than a run of separate occasions. That is
+// what actually happened, and the surfaces that show a handful say "newest
+// first" rather than claiming each one was its own day.
 export function stickerProgress({ belt, level, logs = [] }) {
   const all = CREATE_STICKERS.map((item) => {
-    const earned = item.levels.every((required) => isLevelComplete(item.belt, required, belt, level, logs));
+    const earned = isLevelComplete(item.belt, item.level, belt, level, logs);
     return { ...item, earned, earnedOn: earned ? stickerEarnedOn(item, logs) : null };
   });
   const earned = all.filter((item) => item.earned);

@@ -10,6 +10,11 @@
 - Event listings. Center Directors get an Events page for promoting what's happening at the center: a title, a hook line, a banner image, a date and time, a sign up link, and a description with real formatting, written in the same editor senseis log with. Save a draft to keep working on it, publish when it's ready.
 - Families see your events. Published listings show as a banner at the top of the Parent Portal home, rotating like a slideshow when there's more than one. Learn more grows the banner open right there with the full details and a Sign up button, and a dated event takes itself down once the day passes.
 - Hovering Dashboard in the nav opens a quick menu with Events, Tasks, Reports, Curriculum and What's New, so the director tools are one hover away without making the sidebar longer.
+- Every CREATE ninja gets a sticker book, and it holds the whole IMPACT achievement set: 218 die-cut stickers under the names Code Ninjas gave them, across all 43 levels from White belt to Black. Finishing a level earns that level's stickers together. The book lives on its own page off your ninja's profile, the earned ones in full colour and the rest locked until they are.
+- Tap a sticker to open it. You get its name, how rare it is, and the level it comes from, with that level's topic and the project your ninja builds at the end of it.
+- Stickers say how rare they are. Common, Uncommon, Rare and Legendary are worked out from how many CREATE ninjas across every center have really earned that sticker, so the ones from the belts most ninjas have passed stay common and the ones near the end of the book stay rare. Nobody sets these; they move as the dojo moves.
+- The sticker book opens on three personal records: where your ninja's collection stands against every CREATE ninja in the dojo, the sticker that landed most recently, and how much of the book is filled in.
+- The CREATE course shows the game each level builds. Every level now carries a screenshot of the real project, a line about what that level is actually for, and the medal it is awarded with.
 
 ## Changes
 - Logging a session takes you back to Today's Board. If a ninja is checked into more than one class, or has make up sessions to catch up on, the page stays where it is and moves you to the next class so you can finish them in one sitting.
@@ -20,7 +25,8 @@
 - The back of the staff badge now says Username where it used to say Staff ID.
 - A family with one ninja gets a full width card on the Parent Portal home instead of half the page sitting empty.
 - On desktop, the Parent Portal course list stays one screen tall and scrolls on its own, so a ninja in many programs no longer stretches the page.
-- The belt road marks the current belt by size and a lit trail behind it instead of a white ring, and you can drag it sideways with the mouse.
+- The belt road marks the current belt by size and a lit trail behind it instead of a white ring, and you can drag it sideways with the mouse. It now sizes itself to a phone rather than running off the side of one.
+- The banner at the top of a page stays where it is while the page scrolls up over it, on home, on a ninja's profile, in a course and in the sticker book. The art stays visible for as long as there is room for it instead of leaving with the first scroll.
 
 ## Bug Fixes
 - Typing a link like code.org into session notes made it clickable while you were still writing, so clicking near it to move your cursor opened the website and left the half written log behind. Links in the editor are just text now. In saved logs and comments they are real links, underlined and changing color on hover so you can tell before you click.
@@ -30,3 +36,4 @@
 - The belt card on the parent home could overlap itself, and the current belt's glow was clipped by the belt ladder. Both have room now.
 - For admin accounts, the floating view switcher pill could sit on top of open dialogs and cover what they were saying. Dialogs stack above it now.
 - Clicking the empty space around a staff member's ID card now closes it. An invisible box was catching the click and keeping the card open.
+- The busy chart on the Parent Portal home was filing each check in under the one hour it happened closest to, so ninjas who arrived at 3:40 and were still in class at 4:20 had stopped being counted. A bar is now everyone whose hour touches it, and the live bar is who is in the room this minute. The bars no longer add up to the number of ninjas who came that day, which is correct for the question the chart asks.

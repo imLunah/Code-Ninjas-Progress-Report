@@ -5,7 +5,6 @@ import { Hero, PinnedHero, PageSheet, Emblem, BeltRoad, BeltStickers, LevelPills
 import { BELTS, getLevels } from '../../utils/beltConfig';
 import { levelProjects, levelStates, levelTitle, realSessions, trackModel, fmtDay } from '../../lib/parentProgress';
 import { levelInfo, beltInfo, levelShot } from '../../lib/createCurriculum';
-import { CREATE_STICKERS } from '../../lib/createStickers';
 import { stickerProgress } from '../../lib/stickerProgress';
 import StickerCollection from './StickerCollection';
 import { Tilt } from '../ui/Tilt';
