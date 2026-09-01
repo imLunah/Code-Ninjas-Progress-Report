@@ -9,6 +9,7 @@ import { stickerProgress } from '../../lib/stickerProgress';
 import StickerCollection from './StickerCollection';
 import { Tilt } from '../ui/Tilt';
 import { KIT_SHORT } from '../../lib/programTheme';
+import { trackArt, completeMedal, trackComplete } from '../../lib/programArt';
 import { useCurriculum } from '../../context/CurriculumContext';
 import BeltIcon from '../ui/BeltIcon';
 
@@ -396,6 +397,21 @@ function ModuleRow({ m, first }) {
   );
 }
 
+// A track's own picture. It is decoration in the strict sense — the track's
+// name is right next to it and says everything — so it is hidden from screen
+// readers rather than given an alt text invented for it. `ahead` dims a track
+// the ninja has not reached, the same 25% and grayscale LevelMedal and the
+// belt road use, so one rule covers every ladder in the portal.
+function TrackIcon({ name, size = 34, ahead = false }) {
+  const src = trackArt(name);
+  if (!src) return null;
+  return (
+    <img src={src} alt="" aria-hidden draggable={false} loading="lazy" decoding="async"
+      style={{ width: size, height: size }}
+      className={`object-contain flex-shrink-0 ${ahead ? 'opacity-25 grayscale' : ''}`} />
+  );
+}
+
 function TrackDetail({ enrollment, logs, childName, backTo }) {
   const p = enrollment.program;
   const model = useTrackModel(enrollment, logs);
@@ -443,14 +459,22 @@ function TrackDetail({ enrollment, logs, childName, backTo }) {
                   initial={{ opacity: 0, x: 10 * dir }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 * dir }}
                   transition={{ duration: 0.18, ease: EASE_OUT }}>
                   <Group tint={open.state === 'current' ? 'blue' : open.state === 'done' ? 'green' : undefined}>
-                    <div className="px-4 pt-3.5 pb-3">
-                      <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em]" style={open.state !== 'ahead' ? { color: 'var(--tint-ink)' } : { color: 'rgb(var(--ninja-muted))' }}>
-                        {multi ? `${unit} ${open.index}` : 'Modules'}{open.state === 'current' ? (started ? ' · now' : ' · next') : open.state === 'done' ? ' · done' : ''}
-                      </p>
-                      {multi && <p className="font-ninja font-extrabold text-[20px] text-ninja-navy leading-tight mt-0.5">{open.name}</p>}
-                      <p className="font-ninja text-[12.5px] v2 text-ninja-muted mt-0.5">
-                        {[trackLine(open), open.first ? `started ${fmtDay(open.first)}` : null].filter(Boolean).join(' · ')}
-                      </p>
+                    <div className="flex items-start gap-3 px-4 pt-3.5 pb-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em]" style={open.state !== 'ahead' ? { color: 'var(--tint-ink)' } : { color: 'rgb(var(--ninja-muted))' }}>
+                          {multi ? `${unit} ${open.index}` : 'Modules'}{open.state === 'current' ? (started ? ' · now' : ' · next') : open.state === 'done' ? ' · done' : ''}
+                        </p>
+                        {multi && <p className="font-ninja font-extrabold text-[20px] text-ninja-navy leading-tight mt-0.5">{open.name}</p>}
+                        <p className="font-ninja text-[12.5px] v2 text-ninja-muted mt-0.5">
+                          {[trackLine(open), open.first ? `started ${fmtDay(open.first)}` : null].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                      {/* A finished track is shown by its medal instead of its
+                          icon: the identity picture has been earned out of, and
+                          the torii is the one thing on the page that says so. */}
+                      {trackComplete(open)
+                        ? <img src={completeMedal(p)} alt="" aria-hidden draggable={false} className="w-11 h-11 object-contain flex-shrink-0 -mt-0.5" />
+                        : <TrackIcon name={multi ? open.name : p} size={44} ahead={open.state === 'ahead'} />}
                     </div>
                     <div className="mx-3 mb-3 rounded-[14px] overflow-hidden border border-ninja-navy/[0.06]">
                       {open.modules.map((m, i) => <ModuleRow key={m.name} m={m} first={i === 0} />)}
@@ -464,9 +488,16 @@ function TrackDetail({ enrollment, logs, childName, backTo }) {
                 <Group title={`All ${unit.toLowerCase()}s`}>
                   {tracks.map((t, i) => (
                     <Row key={t.name} first={i === 0} onClick={() => pick(t.index)} active={t.index === openIdx} dim={t.state === 'ahead'}
-                      lead={<Tile tint={t.state === 'done' ? 'rgb(34 197 94 / 0.14)' : t.state === 'current' ? 'rgb(var(--ninja-blue) / 0.14)' : 'rgb(var(--ninja-navy) / 0.06)'} color={t.state === 'done' ? '#15803d' : t.state === 'current' ? undefined : 'rgb(var(--ninja-muted))'}>{t.index}</Tile>}
+                      // The kit's own picture, not its number. The number was
+                      // the whole difference between one row and the next, and
+                      // it is already on the pill row above and in the heading.
+                      // A kit with no art falls back to the numbered tile.
+                      lead={trackArt(t.name)
+                        ? <TrackIcon name={t.name} ahead={t.state === 'ahead'} />
+                        : <Tile tint={t.state === 'done' ? 'rgb(34 197 94 / 0.14)' : t.state === 'current' ? 'rgb(var(--ninja-blue) / 0.14)' : 'rgb(var(--ninja-navy) / 0.06)'} color={t.state === 'done' ? '#15803d' : t.state === 'current' ? undefined : 'rgb(var(--ninja-muted))'}>{t.index}</Tile>}
                       title={t.name}
                       subtitle={[`${t.modules.length} module${t.modules.length === 1 ? '' : 's'}`, t.state === 'current' ? (started ? 'now' : 'next') : t.state === 'done' && t.last ? `done ${fmtDay(t.last)}` : null].filter(Boolean).join(' · ')}
+                      trailing={trackComplete(t) ? <img src={completeMedal(p)} alt="Every module done" draggable={false} className="w-7 h-7 object-contain flex-shrink-0" /> : null}
                     />
                   ))}
                 </Group>

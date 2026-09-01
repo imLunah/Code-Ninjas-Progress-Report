@@ -15,6 +15,7 @@
 - Stickers say how rare they are. Common, Uncommon, Rare and Legendary are worked out from how many CREATE ninjas across every center have really earned that sticker, so the ones from the belts most ninjas have passed stay common and the ones near the end of the book stay rare. Nobody sets these; they move as the dojo moves.
 - The sticker book opens on three personal records: where your ninja's collection stands against every CREATE ninja in the dojo, the sticker that landed most recently, and how much of the book is filled in.
 - Pick your ninja. The ninja at the top of your child's profile now comes in three skin tones, and you choose which one on that page, next to the note button. Nobody is assigned one: until you pick, your ninja looks exactly as they always have.
+- Robotics, JR, VR and AI Academy courses have their own art. Every kit and track now leads with its own picture instead of a grey number: a hard hat and wrench for LEGO Spike Essentials, gears for Spike Prime, a wheel for VEX GO, a colour wheel for Ozobot Evo, lightbulbs for Snap Circuits. Finish every module in a kit and it is marked with a medal.
 - The CREATE course shows the game each level builds. Every level now carries a screenshot of the real project, a line about what that level is actually for, and the medal it is awarded with.
 
 ## Changes
