@@ -140,7 +140,7 @@ function NinjaToneButton({ child, belt, onSave }) {
       <button
         type="button"
         onClick={() => { setError(''); setOpen(true); }}
-        title="Ninja skin tone"
+        title="Choose your ninja"
         aria-label={`Change ${first}'s ninja`}
         className="flex items-center justify-center w-10 h-10 rounded-full transition-colors bg-white border border-ninja-border hover:border-ninja-blue/40 overflow-hidden"
       >
@@ -168,7 +168,7 @@ function NinjaToneButton({ child, belt, onSave }) {
                 >
                   <img
                     src={ninjaSrc(belt, 'wave', tone)}
-                    alt={`${NINJA_TONE_LABELS[tone]} skin tone`}
+                    alt={NINJA_TONE_LABELS[tone]}
                     draggable={false}
                     className="h-28 w-full object-contain"
                   />

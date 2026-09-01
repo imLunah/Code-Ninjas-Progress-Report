@@ -11,10 +11,16 @@ export const NINJA_TONES = ['light', 'medium', 'dark'];
 // there was only one, so an untouched roster looks exactly as it did.
 export const DEFAULT_TONE = 'medium';
 
+// What a family reads under each ninja. The keys name a skin tone because the
+// files and the database column have to; the labels do not, and they should
+// not. Printing "Light / Medium / Dark" under three pictures of a child's
+// ninja asks a seven year old to pick a word for their own skin, when the only
+// question being asked is which ninja they want to be. They are numbered in
+// the order they are shown.
 export const NINJA_TONE_LABELS = {
-  light: 'Light',
-  medium: 'Medium',
-  dark: 'Dark',
+  light: 'Ninja 1',
+  medium: 'Ninja 2',
+  dark: 'Ninja 3',
 };
 
 // Only the nine CREATE belts were ever drawn. A ninja past Black (the four
