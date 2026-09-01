@@ -1,6 +1,10 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
+
+// Skin tones for the ninja art. Must match the students.ninja_skin_tone CHECK
+// and NINJA_TONES in client/src/utils/ninjas.js.
+const NINJA_TONES = ['light', 'medium', 'dark'];
 const { requireParent } = require('../middleware/auth');
 const { DELETION_REASONS, cleanDetails } = require('../lib/deleteStaffUser');
 
@@ -562,6 +566,42 @@ router.patch('/students/:id/instructions', requireParent, async (req, res) => {
   } catch (err) {
     console.error('Special instructions error:', err);
     res.status(500).json({ error: 'Failed to save instructions' });
+  }
+});
+
+// PATCH /api/parent/students/:id/ninja-tone — a family chooses the skin tone
+// of their own ninja.
+//
+// This is the one thing in the portal a family changes about their child
+// rather than about themselves, and it belongs to them: it is what their kid
+// looks like, and a parent should not have to ask a sensei to change it. It is
+// still narrow — three values, on their own child, and it decides a picture
+// and nothing else. No staff-facing text, no progress, no enrolment.
+//
+// Same ownership check as the note above: the row must be this parent's child,
+// at this parent's location, and active. A miss is 403 rather than 404, so the
+// route cannot be used to find out which student ids exist.
+router.patch('/students/:id/ninja-tone', requireParent, async (req, res) => {
+  const pool = req.app.get('db');
+  const { id } = req.params;
+  const { ninja_skin_tone } = req.body;
+
+  if (ninja_skin_tone != null && !NINJA_TONES.includes(ninja_skin_tone)) {
+    return res.status(400).json({ error: 'Invalid skin tone' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `UPDATE students SET ninja_skin_tone = $1
+        WHERE id = $2 AND LOWER(parent_email) = LOWER($3) AND EXISTS (SELECT 1 FROM student_locations sl_m WHERE sl_m.student_id = students.id AND sl_m.location_id = $4) AND active = true
+        RETURNING ninja_skin_tone`,
+      [ninja_skin_tone || null, id, req.session.parentEmail, req.session.parentLocationId]
+    );
+    if (!rows[0]) return res.status(403).json({ error: 'Forbidden' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Ninja skin tone error:', err);
+    res.status(500).json({ error: 'Failed to save skin tone' });
   }
 });
 

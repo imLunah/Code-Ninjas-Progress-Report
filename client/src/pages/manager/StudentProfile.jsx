@@ -12,9 +12,7 @@ import ProgressHistory from '../../components/shared/ProgressHistory';
 import PinnedNote from '../../components/shared/PinnedNote';
 import EditStudentModal from '../../components/manager/EditStudentModal';
 import StickerPickerModal from '../../components/shared/StickerPickerModal';
-import NinjaTonePickerModal from '../../components/shared/NinjaTonePickerModal';
 import { stickerUrl, stickerLabel } from '../../utils/stickers';
-import { ninjaSrc, NINJA_TONE_LABELS, DEFAULT_TONE } from '../../utils/ninjas';
 import { api } from '../../api/client';
 import { BELTS, getMaxLevel, getLevels, getBelt, PROGRAM_LOGOS } from '../../utils/beltConfig';
 import { SkeletonProfile } from '../../components/ui/Skeleton';
@@ -79,38 +77,6 @@ function StudentAvatar({ student, size = 'md', canEditSticker, onEditSticker, de
           +
         </span>
       )}
-    </button>
-  );
-}
-
-// The ninja's skin tone, as a button that previews it.
-//
-// One component for both layouts on purpose. The first cut of this was inline
-// in the desktop column only, so on a phone there was no way to reach it at
-// all — and the phone is where a sensei standing next to the ninja actually
-// opens this page.
-//
-// It shows the ninja rather than the word alone, because the thing being
-// chosen is a picture. Read-only staff get nothing: there is no state here
-// worth reporting to someone who cannot change it.
-function NinjaToneButton({ student, belt, onEdit, className = '' }) {
-  return (
-    <button
-      type="button"
-      onClick={onEdit}
-      title="Ninja skin tone"
-      className={`inline-flex items-center gap-2 rounded-full border border-ninja-border bg-ninja-bg py-1 pl-1 pr-3 transition-colors hover:border-ninja-blue/40 hover:bg-ninja-blue/[0.05] ${className}`}
-    >
-      <img
-        src={ninjaSrc(belt, 'wave', student.ninja_skin_tone)}
-        alt=""
-        aria-hidden
-        draggable={false}
-        className="h-7 w-7 object-contain"
-      />
-      <span className="font-ninja text-xs font-bold text-ninja-muted">
-        Ninja: {NINJA_TONE_LABELS[student.ninja_skin_tone || DEFAULT_TONE]}
-      </span>
     </button>
   );
 }
@@ -502,7 +468,6 @@ export default function StudentProfile() {
   const [hardDeleting, setHardDeleting] = useState(false);
   const [roadmapEnrollment, setRoadmapEnrollment] = useState(null);
   const [showStickerPicker, setShowStickerPicker] = useState(false);
-  const [showTonePicker, setShowTonePicker] = useState(false);
 
   const isSenseiView = user?.role === 'admin' && viewAs === 'sensei';
   const isManager = ['manager', 'admin'].includes(user?.role) && !isSenseiView;
@@ -570,10 +535,6 @@ export default function StudentProfile() {
   const nonCreatePrograms = programs.filter((p) => p.program !== 'CREATE');
   // Code.AI stickers only apply to JR ninjas (JR curriculum runs on Code.AI)
   const canEditSticker = !isReadOnly && programs.some((p) => p.program === 'JR');
-  // The ninja is drawn for every family, including one with no CREATE
-  // enrolment (they get the White ninja), so the tone is not gated on a
-  // program the way the sticker is.
-  const ninjaBeltName = createEnrollment?.belt_level || null;
   const logs = student.progress_logs || [];
   const clubSessions = student.club_sessions || [];
   // Roadmap bulk-completions are stored as progress_logs for curriculum tracking, but they are
@@ -644,14 +605,6 @@ export default function StudentProfile() {
                     `Joined ${student.created_at ? new Date(student.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—'}`,
                   ].filter(Boolean).join(' · ')}
                 </p>
-                {!isReadOnly && (
-                  <NinjaToneButton
-                    student={student}
-                    belt={ninjaBeltName}
-                    onEdit={() => setShowTonePicker(true)}
-                    className="mt-2"
-                  />
-                )}
               </div>
             </div>
           </motion.div>
@@ -845,15 +798,6 @@ export default function StudentProfile() {
                       : ''}
                     Member since {student.created_at ? new Date(student.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—'}
                   </p>
-
-                  {!isReadOnly && (
-                    <NinjaToneButton
-                      student={student}
-                      belt={ninjaBeltName}
-                      onEdit={() => setShowTonePicker(true)}
-                      className="mt-3"
-                    />
-                  )}
                 </div>
 
                 {/* Stats 2×2 */}
@@ -963,13 +907,6 @@ export default function StudentProfile() {
         onClose={() => setShowStickerPicker(false)}
         student={student}
         onSaved={(sticker) => setStudent((prev) => ({ ...prev, codeorg_sticker: sticker }))}
-      />
-      <NinjaTonePickerModal
-        isOpen={showTonePicker}
-        onClose={() => setShowTonePicker(false)}
-        student={student}
-        belt={ninjaBeltName}
-        onSaved={(tone) => setStudent((prev) => ({ ...prev, ninja_skin_tone: tone }))}
       />
       <RoadmapModal
         open={!!roadmapEnrollment}

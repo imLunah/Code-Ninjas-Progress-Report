@@ -77,6 +77,15 @@ export function ParentPortalProvider({ children }) {
     return result;
   }, []);
 
+  // The tone lives on the students LIST rather than on the detail payload, so
+  // this updates `students` where saveNote updates `details`. Getting that
+  // wrong shows a saved tone that snaps back on the next render.
+  const saveNinjaTone = useCallback(async (id, tone) => {
+    const result = await api.patch(`/parent/students/${id}/ninja-tone`, { ninja_skin_tone: tone });
+    setStudents((prev) => (prev || []).map((s) => (s.id === id ? { ...s, ninja_skin_tone: result.ninja_skin_tone } : s)));
+    return result;
+  }, []);
+
   const value = useMemo(() => {
     const active = (students || []).find((s) => s.id === activeId) || null;
     return {
@@ -94,8 +103,9 @@ export function ParentPortalProvider({ children }) {
       detailError,
       refresh: () => load(activeId, { force: true }),
       saveNote,
+      saveNinjaTone,
     };
-  }, [students, listError, activeId, setActiveId, viewAll, details, detailLoading, detailError, load, saveNote]);
+  }, [students, listError, activeId, setActiveId, viewAll, details, detailLoading, detailError, load, saveNote, saveNinjaTone]);
 
   return <ParentPortalContext.Provider value={value}>{children}</ParentPortalContext.Provider>;
 }
