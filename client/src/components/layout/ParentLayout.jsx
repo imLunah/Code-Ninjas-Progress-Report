@@ -6,7 +6,6 @@ import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { useLightOnly } from '../../context/ThemeContext';
 import Logo from '../ui/Logo';
-import Segmented from '../ui/Segmented';
 import BugReportButton from '../ui/BugReportButton';
 import { RocketIcon } from '../ui/icons';
 
@@ -14,7 +13,7 @@ import { RocketIcon } from '../ui/icons';
 //
 // A flat page. On desktop a white side nav runs down the left edge with a
 // hairline beside it: the logo on top, the sections under it, the child
-// switcher, and the account at the bottom. It collapses to an icon rail the
+// and the account at the bottom. It collapses to an icon rail the
 // same way the staff sidebar does, remembered per browser. On a phone the bar across the top
 // is just the logo and the account, the pages carry their own large titles,
 // and the sections live in a floating capsule at the bottom, the same
@@ -55,25 +54,6 @@ function initialsOf(name) {
   return parts.filter((_, i) => i === 0 || i === parts.length - 1).map((w) => w[0]).join('').toUpperCase() || 'P';
 }
 
-// Which child the pages are about. Home also offers "All"; everywhere else it
-// is one child. Hidden when there is only one child, because a choice with
-// one option is not a choice.
-export function ChildSwitcher({ withAll = false, size = 'sm', layoutId = 'parent-child' }) {
-  const portal = useParentPortal();
-  if (!portal?.students || portal.students.length < 2) return null;
-  const options = [
-    ...(withAll ? [{ value: 'all', label: 'All' }] : []),
-    ...portal.students.map((s) => ({ value: s.id, label: s.full_name.split(' ')[0] })),
-  ];
-  const value = withAll && portal.viewAll ? 'all' : portal.activeId;
-  const onChange = (v) => {
-    if (v === 'all') { portal.setViewAll(true); return; }
-    portal.setActiveId(v);
-    portal.setViewAll(false);
-  };
-  return <Segmented options={options} value={value} onChange={onChange} label="Which ninja" layoutId={layoutId} size={size} />;
-}
-
 // Home and the active child's profile — the same two sections as the phone
 // capsule, built the same way.
 function useParentTabs() {
@@ -81,7 +61,7 @@ function useParentTabs() {
   return [...TABS, { to: activeId ? `/parent/students/${activeId}` : '/parent/dashboard', match: '/parent/students', label: 'Profile', Glyph: UserRoundIcon }];
 }
 
-function ParentSideNav({ switcher, parentName, centerName, onLogout, onReport }) {
+function ParentSideNav({ parentName, centerName, onLogout, onReport }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const tabs = useParentTabs();
@@ -164,11 +144,6 @@ function ParentSideNav({ switcher, parentName, centerName, onLogout, onReport })
           );
         })}
       </nav>
-
-      {/* empty:hidden — ChildSwitcher renders nothing for a one-child family,
-          and this block should take its border and padding with it. The rail
-          is too narrow for a segmented control, so it goes with the labels. */}
-      {!collapsed && <div className="px-4 py-3 border-t border-ninja-border empty:hidden">{switcher}</div>}
 
       <div className="mt-auto">
         {/* The account row, same shape as the staff sidebar's: the parent's
@@ -328,7 +303,7 @@ function useTopOnNavigate() {
   useLayoutEffect(() => { window.scrollTo(0, 0); }, [pathname]);
 }
 
-export default function ParentLayout({ children, switcher = null, bleed = false }) {
+export default function ParentLayout({ children, bleed = false }) {
   const { parent, logout } = useParentAuth();
   const navigate = useNavigate();
   const [bugOpen, setBugOpen] = useState(false);
@@ -369,7 +344,6 @@ export default function ParentLayout({ children, switcher = null, bleed = false 
       </svg>
 
       <ParentSideNav
-        switcher={switcher}
         parentName={parent?.parentName}
         centerName={parent?.centerName}
         onLogout={handleLogout}

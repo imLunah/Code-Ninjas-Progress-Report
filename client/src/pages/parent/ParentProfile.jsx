@@ -1,7 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
+import ParentLayout from '../../components/layout/ParentLayout';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { PageTitle, Row, StatusText, MoreLink, PinnedHero, PageSheet } from '../../components/parent/ParentUI';
 import NinjaHero from '../../components/parent/NinjaHero';
@@ -113,7 +113,7 @@ export default function ParentProfile() {
   const { id, program } = useParams();
   const navigate = useNavigate();
   const desktop = useIsDesktop();
-  const { students, setActiveId, setViewAll, detailFor, loadDetail, detailLoading, saveNote } = useParentPortal();
+  const { students, setActiveId, detailFor, loadDetail, detailLoading, saveNote } = useParentPortal();
   const target = Number(id);
   const child = (students || []).find((s) => s.id === target) || null;
   const detail = detailFor(target);
@@ -121,7 +121,7 @@ export default function ParentProfile() {
 
   // Landing here IS choosing this child, so the switchers agree with the page.
   useEffect(() => {
-    if (child) { setActiveId(child.id); setViewAll(false); }
+    if (child) setActiveId(child.id);
   }, [child?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (child) loadDetail(child.id); }, [child?.id, loadDetail]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -148,14 +148,13 @@ export default function ParentProfile() {
     return out;
   }, [feed]);
 
-  const switcher = <ChildSwitcher layoutId="parent-child-desktop" />;
 
   if (students === null || (child && !detail && detailLoading)) {
-    return <ParentLayout switcher={switcher}><SkeletonProfile label="Loading profile" /></ParentLayout>;
+    return <ParentLayout><SkeletonProfile label="Loading profile" /></ParentLayout>;
   }
   if (!child) {
     return (
-      <ParentLayout switcher={switcher}>
+      <ParentLayout>
         <div className={`${FLAT} p-8 text-center space-y-2`}>
           <p className="text-ninja-navy font-ninja font-bold">That ninja is not on this account.</p>
           <MoreLink to="/parent/dashboard">Back to Home</MoreLink>
@@ -188,7 +187,7 @@ export default function ParentProfile() {
   // had as its own section, with Back returning to the child it belongs to.
   if (openCourse) {
     return (
-      <ParentLayout switcher={switcher} bleed={!desktop}>
+      <ParentLayout bleed={!desktop}>
         <Suspense fallback={<SkeletonCards count={1} height={260} label={`Loading ${openCourse.program}`} />}>
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, ease: EASE_OUT }}>
             <CourseDetail
@@ -204,7 +203,7 @@ export default function ParentProfile() {
   }
 
   return (
-    <ParentLayout switcher={switcher}>
+    <ParentLayout>
       <div className="relative">
         {/* The banner IS the page title. A ninja's own profile opening on a
             line of grey text said nothing their name did not; this says the
@@ -232,7 +231,6 @@ export default function ParentProfile() {
             under it. */}
         <PageSheet>
           <div className="space-y-4 lg:space-y-5">
-            <div className="lg:hidden"><ChildSwitcher layoutId="parent-child-mobile" /></div>
 
             {/* Activity, then the Courses section that Courses used to be a page
                 of. Every card in it opens the course it describes. */}

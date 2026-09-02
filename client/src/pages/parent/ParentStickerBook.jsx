@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { CheckIcon, LockKeyholeIcon } from 'lucide-react';
-import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
+import ParentLayout from '../../components/layout/ParentLayout';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { Hero, PinnedHero, PageSheet, BackChip } from '../../components/parent/ParentUI';
 import { RarityChip, StickerZoom, useLockedShake, useStickerZoom } from '../../components/parent/StickerCollection';
@@ -158,7 +158,7 @@ function AwardSticker({ item, isEarned, onOpen, flat, rarity }) {
 
 export default function ParentStickerBook() {
   const { id } = useParams();
-  const { students, setActiveId, setViewAll, detailFor, loadDetail, detailLoading } = useParentPortal();
+  const { students, setActiveId, detailFor, loadDetail, detailLoading } = useParentPortal();
   const flat = useReducedMotion();
   const rarity = useStickerRarity();
   const cohort = useStickerCohort();
@@ -169,7 +169,7 @@ export default function ParentStickerBook() {
   const detail = detailFor(target);
 
   useEffect(() => {
-    if (child) { setActiveId(child.id); setViewAll(false); }
+    if (child) setActiveId(child.id);
   }, [child?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (child) loadDetail(child.id); }, [child?.id, loadDetail]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -204,14 +204,13 @@ export default function ParentStickerBook() {
     return out;
   }, [progress]);
 
-  const switcher = <ChildSwitcher layoutId="parent-child-desktop" />;
 
   if (students === null || (child && !detail && detailLoading)) {
-    return <ParentLayout switcher={switcher}><SkeletonProfile label="Loading the sticker book" /></ParentLayout>;
+    return <ParentLayout><SkeletonProfile label="Loading the sticker book" /></ParentLayout>;
   }
   if (!child) {
     return (
-      <ParentLayout switcher={switcher}>
+      <ParentLayout>
         <div className={`${FLAT} p-8 text-center`}>
           <p className="font-ninja font-bold text-ninja-navy">That ninja is not on this account.</p>
         </div>
@@ -262,7 +261,7 @@ export default function ParentStickerBook() {
   const records = RECORDS.filter((record) => recordValues[record.key]);
 
   return (
-    <ParentLayout switcher={switcher}>
+    <ParentLayout>
       <div className="relative">
         <PinnedHero>
           <Hero program="CREATE" size="page" className="!mt-0">

@@ -2,12 +2,11 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useMotionTemplate, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ChevronRightIcon } from 'lucide-react';
-import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
+import ParentLayout from '../../components/layout/ParentLayout';
 import { api } from '../../api/client';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { Hero, Emblem, Group, Row, StatusText, MoreLink, PinnedHero, PageSheet } from '../../components/parent/ParentUI';
-import BeltIcon from '../../components/ui/BeltIcon';
 import Logo from '../../components/ui/Logo';
 import { FLAT } from '../../lib/surfaces';
 import { SkeletonCards } from '../../components/ui/Skeleton';
@@ -485,21 +484,6 @@ function sessionTitle(s) {
   return s.project_at || s.lesson_name || s.module_name || s.sub_program || `${s.program} session`;
 }
 
-// One stat on the card's banner: a number or a belt name with its label under
-// it. Smaller than the profile banner's, which is the same shape at 26-30px,
-// because this one is a card on a list of cards rather than the top of a page.
-function CardStat({ value, label, lead }) {
-  return (
-    <div className="min-w-0">
-      <div className="flex items-center gap-1.5">
-        {lead}
-        <span className="font-ninja font-extrabold text-[22px] leading-none tracking-[-0.02em] truncate">{value}</span>
-      </div>
-      <p className="font-ninja text-[11px] font-bold uppercase tracking-[0.08em] opacity-75 mt-1.5 truncate">{label}</p>
-    </div>
-  );
-}
-
 // `wide` is the one-ninja layout: the card is the whole row, so instead of a
 // stack it becomes two columns at lg — the banner on the left, recent sessions
 // on the right. With siblings the stacked card in a half column stays.
@@ -511,15 +495,17 @@ function CardStat({ value, label, lead }) {
 // beside it — and since the banner took sessions[0] while the list started at
 // sessions[1], the two read as the same thing said twice whenever a ninja
 // works on one project across visits. It is the profile's banner now: who the
-// ninja is, and their belt. The sessions are the list's job and they are only
-// in one place.
+// ninja is, and nothing else. The sessions are the list's job and they are
+// only in one place.
 //
-// WHAT IS DELIBERATELY NOT ON IT. "Ninja since" and the program count were
-// both here and both came off on the user's call. The count in particular was
-// a number with nothing behind it — a parent knows how many classes their own
-// child is in, and it was the stat that existed to keep the belt company. A
-// ninja in no CREATE class now has an empty stat row, which is correct: there
-// is nothing true to put there, and a White belt nobody awarded is worse.
+// WHAT IS DELIBERATELY NOT ON IT, all three removed on the user's call across
+// three passes: "Ninja since", the program count, and finally the belt. The
+// count was a number with nothing behind it (a parent knows how many classes
+// their own child is in) and it only existed to keep the belt company; with
+// the belt gone too, the banner is the ninja and their name and nothing else.
+// The belt has not been lost — it is the first thing on the profile the banner
+// opens, at four times this size, and it was the one thing here that a
+// JR-only ninja could never have.
 //
 // THE COLUMNS DO NOT STRETCH EACH OTHER — except they do now, and on purpose.
 // The grid used to stretch the banner to whatever the list beside it needed,
@@ -552,7 +538,6 @@ function ChildCard({ child, wide = false }) {
   const createEnrollment = programs.find((p) => p.program === 'CREATE');
   const heroProgram = createEnrollment ? 'CREATE' : (programs[0]?.program || 'CREATE');
   const belt = createEnrollment?.belt_level || null;
-  const level = createEnrollment?.belt_sublevel || null;
   const age = calcAge(child.birthday);
 
   // Pointer tracking, in motion values rather than state: this runs on every
@@ -672,17 +657,12 @@ function ChildCard({ child, wide = false }) {
             {!wide && <Emblem program={heroProgram} belt={belt} size={64} tilt />}
           </div>
 
-          {/* The belt, and the link that the corner could not hold: the corner
-              is where the ninja's raised arm is and the words landed across it.
-              Down here it is inside the same padding that already keeps the
-              text clear of the art. The row wraps below lg because a belt and
-              a link are about 330px of content in a 326px card at 390 wide,
-              and "Platinum" is wider than "Black". */}
-          <div className={`relative flex flex-wrap items-end gap-x-6 gap-y-2 mt-3 ${wide ? 'lg:mt-0 lg:flex-nowrap lg:pr-[196px]' : ''}`}>
-            {belt && (
-              <CardStat value={belt} label={level ? `Level ${level}` : 'Belt'} lead={<BeltIcon belt={belt} size={24} className="flex-shrink-0 -ml-0.5" />} />
-            )}
-            <span className="ml-auto pb-1 inline-flex items-center gap-0.5 font-ninja text-[13px] font-extrabold text-white">
+          {/* The link, at the foot of the banner rather than in its top corner,
+              which is where the ninja's raised arm is and where the words
+              landed across it. Down here it is inside the same padding that
+              already keeps the text clear of the art. */}
+          <div className={`relative flex items-end mt-3 ${wide ? 'lg:mt-0 lg:pr-[196px]' : ''}`}>
+            <span className="ml-auto inline-flex items-center gap-0.5 font-ninja text-[13px] font-extrabold text-white">
               Full profile
               <ChevronRightIcon size={15} strokeWidth={2.6} aria-hidden className="transition-transform duration-200 group-hover:translate-x-0.5" />
             </span>
@@ -714,7 +694,7 @@ function ChildCard({ child, wide = false }) {
 
 export default function ParentHome() {
   const { parent } = useParentAuth();
-  const { students, listError, activeId, viewAll } = useParentPortal();
+  const { students, listError } = useParentPortal();
   // The center's published event listings for the slideshow. `today` is the
   // browser's local date so an event stays "today" through its own evening —
   // the server clock is UTC and would drop it at 5pm California time.
@@ -727,14 +707,13 @@ export default function ParentHome() {
     return () => { alive = false; };
   }, []);
 
-  const visible = useMemo(() => {
-    if (!students) return [];
-    if (viewAll || students.length < 2) return students;
-    return students.filter((s) => s.id === activeId);
-  }, [students, activeId, viewAll]);
+  // Every ninja on the family, always. The switcher that used to filter this
+  // to one of them is gone: Home draws a card per ninja, so it was a control
+  // for hiding something already on the screen.
+  const visible = students || [];
 
   return (
-    <ParentLayout switcher={<ChildSwitcher withAll layoutId="parent-child-desktop" />}>
+    <ParentLayout>
       <div className="relative">
         {/* The banner is the page's opening, where the Home title used to be:
             first in flow, pinned to the top of the screen, and the rest of
@@ -743,7 +722,6 @@ export default function ParentHome() {
 
         <PageSheet corner="square">
           <div className="space-y-4 lg:space-y-5">
-            <div className="lg:hidden"><ChildSwitcher withAll layoutId="parent-child-mobile" /></div>
 
           {students === null ? (
             <SkeletonCards count={2} cols="lg:grid-cols-2" height={320} label="Loading your family" />
