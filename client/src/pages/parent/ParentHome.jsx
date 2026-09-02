@@ -654,7 +654,15 @@ function ChildCard({ child, wide = false }) {
                 {child.full_name}
               </h2>
             </div>
-            {!wide && <Emblem program={heroProgram} belt={belt} size={64} tilt />}
+            {/* The PROGRAM's mark, not the belt roundel. `Emblem` draws the
+                belt when it is handed one for CREATE, which is right on a
+                course banner — that page is about the belt. This card is about
+                the ninja, and since the belt stat came off it the roundel was
+                the only belt left on it, saying a thing the card no longer
+                says anywhere else. Withholding `belt` is what picks the
+                program logo; the wide card still needs `belt` for the ninja's
+                own art. */}
+            {!wide && <Emblem program={heroProgram} size={64} tilt />}
           </div>
 
           {/* The link, at the foot of the banner rather than in its top corner,
