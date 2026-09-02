@@ -44,15 +44,15 @@ const ReactMarkdown = lazy(() => import('react-markdown'));
 // this surface (the same rule as the note maps, session 32).
 const NAVY = '#1a2e4a';
 const LISTING_MD = {
-  p: (props) => <p className="font-ninja text-[14px] leading-relaxed mb-2.5 last:mb-0" {...props} />,
+  p: (props) => <p className="font-ninja text-[15px] leading-[1.75] mb-3.5 last:mb-0" {...props} />,
   strong: (props) => <strong className="font-extrabold" style={{ color: NAVY }} {...props} />,
   a: (props) => <a target="_blank" rel="noopener noreferrer" className="underline font-bold" style={{ color: '#0c2f6b' }} {...props} />,
-  ul: (props) => <ul className="list-disc pl-5 mb-2.5 space-y-1" {...props} />,
-  ol: (props) => <ol className="list-decimal pl-5 mb-2.5 space-y-1" {...props} />,
-  li: (props) => <li className="font-ninja text-[14px] leading-relaxed" {...props} />,
-  h1: (props) => <p className="font-ninja font-extrabold text-[16px] mb-2 mt-4 first:mt-0" style={{ color: NAVY }} {...props} />,
-  h2: (props) => <p className="font-ninja font-extrabold text-[15px] mb-2 mt-4 first:mt-0" style={{ color: NAVY }} {...props} />,
-  h3: (props) => <p className="font-ninja font-extrabold text-[14px] mb-1.5 mt-3 first:mt-0" style={{ color: NAVY }} {...props} />,
+  ul: (props) => <ul className="list-disc pl-5 mb-3.5 space-y-1.5" {...props} />,
+  ol: (props) => <ol className="list-decimal pl-5 mb-3.5 space-y-1.5" {...props} />,
+  li: (props) => <li className="font-ninja text-[15px] leading-[1.75]" {...props} />,
+  h1: (props) => <p className="font-ninja font-extrabold text-[17px] mb-2 mt-5 first:mt-0" style={{ color: NAVY }} {...props} />,
+  h2: (props) => <p className="font-ninja font-extrabold text-[16px] mb-2 mt-5 first:mt-0" style={{ color: NAVY }} {...props} />,
+  h3: (props) => <p className="font-ninja font-extrabold text-[15px] mb-1.5 mt-4 first:mt-0" style={{ color: NAVY }} {...props} />,
   code: (props) => <code className="font-mono text-[13px] px-1 rounded" style={{ background: 'rgb(26 46 74 / 0.08)' }} {...props} />,
   blockquote: (props) => <blockquote className="pl-3 mb-2.5" style={{ borderLeft: '2px solid rgb(26 46 74 / 0.3)' }} {...props} />,
   img: () => null,
@@ -124,6 +124,11 @@ export default function ParentEventPage() {
   }
 
   const when = fullWhen(ev.event_date);
+  // An undated listing that still carries a time used to read "Any time"
+  // with "4 - 5" under it, which is the page contradicting itself in two
+  // consecutive lines. With no date the time IS the answer, so it moves up
+  // and the placeholder only appears when there is genuinely nothing to say.
+  const whenValue = when || ev.event_time || 'Anytime';
   const near = nearWhen(ev.event_date);
   const days = daysUntil(ev.event_date);
   const past = days !== null && days < 0;
@@ -173,22 +178,52 @@ export default function ParentEventPage() {
         </PinnedHero>
 
         <PageSheet corner="square">
-          <div className="space-y-4 lg:space-y-5">
+          {/* TWO COLUMNS, AND THE REASON IS THE LINE LENGTH.
+              A listing's description is the only long-form prose in this
+              app, and the portal's content column is 1152px wide. Run body
+              text across all of that and a line is 180 characters; the eye
+              loses the start of the next one on every return sweep, which is
+              exactly what made this page look wrong. The prose gets a column
+              of its own sized to a readable measure, and the facts move into
+              a rail beside it, which is where an event page has kept them
+              since event pages existed.
 
-            {/* The facts and the prose on ONE card, split by a hairline. Two
-                cards put a gap between the date and the paragraph explaining
-                it, which is the one place on this page where nothing should
-                come between them. */}
-            <article className={`${FLAT} overflow-hidden`}>
-              <div className="p-5 sm:p-6 space-y-5">
-                <div className="grid gap-5 sm:grid-cols-2">
+              The pair does NOT fill the width. 34rem of prose and 20rem of
+              rail leaves page showing on the right, and that is the point:
+              the alternative is a card as wide as the screen with a 500px
+              hole down one side of every paragraph. 34rem is not a round
+              number picked by eye -- it is the width that measured out to
+              72 characters a line at this size and padding, inside the
+              45-to-75 a line is meant to be. 38rem measured 81.
+
+              The rail is written FIRST so that on a phone, where this is one
+              stacked column, the date and the sign-up button come before the
+              wall of text. `col-start` / `row-start` puts it back on the
+              right at lg without a second copy of it in the markup.
+
+              With no description there is nothing to sit beside, so the grid
+              stays single-column and the rail runs the full width rather
+              than hugging one edge with a void next to it. */}
+          <div className={`grid gap-4 lg:items-start lg:gap-5 ${ev.description ? 'lg:grid-cols-[minmax(0,34rem)_20rem]' : ''}`}>
+
+            {/* The cap matters only in the no-description case, where this
+                is the whole page and would otherwise run the full 1152 with
+                a sign-up button as wide as the screen. Inside the grid track
+                it is already narrower than the cap, so it costs nothing. */}
+            <aside className={`grid gap-4 lg:max-w-[34rem] ${ev.description ? 'lg:col-start-2 lg:row-start-1' : ''}`}>
+              <div className={`${FLAT} p-5 sm:p-6 space-y-5`}>
+                {/* Stacked, not side by side. In the rail there is no room
+                    for two columns, and full width they were a label at the
+                    far left and another at the halfway mark with nothing
+                    between them. */}
+                <div className="space-y-4">
                   <Fact Glyph={CalendarDaysIcon} label="When">
-                    {when || 'Any time'}
+                    {whenValue}
                     {/* No clock glyph. The label above already carries a
                         mark, and the time sits directly under the date it
                         belongs to, so a second icon inside one fact is
                         decoration on something nobody could misread. */}
-                    {ev.event_time && (
+                    {when && ev.event_time && (
                       <span className="block font-ninja text-[13px] font-bold text-ninja-muted mt-0.5">{ev.event_time}</span>
                     )}
                     {/* The countdown only starts once the banner has run out
@@ -219,7 +254,7 @@ export default function ParentEventPage() {
                       href={ev.event_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex w-full sm:w-auto items-center justify-center gap-1 font-ninja text-[14px] font-extrabold rounded-full px-6 py-2.5 transition-opacity hover:opacity-90"
+                      className="inline-flex w-full items-center justify-center gap-1 font-ninja text-[14px] font-extrabold rounded-full px-6 py-2.5 transition-opacity hover:opacity-90"
                       style={{ background: NAVY, color: '#ffffff' }}
                     >
                       Sign up ›
@@ -228,32 +263,35 @@ export default function ParentEventPage() {
                 )}
               </div>
 
-              {ev.description && (
-                <div className="border-t border-ninja-navy/[0.08] p-5 sm:p-6" style={{ color: 'rgb(26 46 74 / 0.9)' }}>
-                  <Suspense fallback={<p className="font-ninja text-[14px] leading-relaxed whitespace-pre-line">{ev.description}</p>}>
-                    <ReactMarkdown
-                      components={LISTING_MD}
-                      urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
-                    >
-                      {ev.description}
-                    </ReactMarkdown>
-                  </Suspense>
-                </div>
+              {rest.length > 0 && (
+                <Group title="Also coming up" action={<MoreLink to="/parent/events">All events</MoreLink>}>
+                  {rest.map((o, i) => (
+                    <Row
+                      key={o.id}
+                      first={i === 0}
+                      to={`/parent/events/${o.id}`}
+                      title={o.title}
+                      subtitle={rowWhen(o) || listingHook(o) || 'Anytime'}
+                    />
+                  ))}
+                </Group>
               )}
-            </article>
+            </aside>
 
-            {rest.length > 0 && (
-              <Group title="Also coming up" action={<MoreLink to="/parent/events">All events</MoreLink>}>
-                {rest.map((o, i) => (
-                  <Row
-                    key={o.id}
-                    first={i === 0}
-                    to={`/parent/events/${o.id}`}
-                    title={o.title}
-                    subtitle={rowWhen(o) || listingHook(o) || 'Anytime'}
-                  />
-                ))}
-              </Group>
+            {ev.description && (
+              <article
+                className={`${FLAT} lg:col-start-1 lg:row-start-1 p-5 sm:p-6 lg:p-7`}
+                style={{ color: 'rgb(26 46 74 / 0.9)' }}
+              >
+                <Suspense fallback={<p className="font-ninja text-[15px] leading-[1.75] whitespace-pre-line">{ev.description}</p>}>
+                  <ReactMarkdown
+                    components={LISTING_MD}
+                    urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
+                  >
+                    {ev.description}
+                  </ReactMarkdown>
+                </Suspense>
+              </article>
             )}
           </div>
         </PageSheet>
