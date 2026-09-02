@@ -236,6 +236,21 @@ export function quantize({ width, height, px }, maxColors = 256) {
       acc += box[i].n;
       if (acc * 2 >= total) { cut = i + 1; break; }
     }
+    // A SPLIT THAT PEELS ONE COLOUR OFF AN END IS NOT A SPLIT, and left alone
+    // it is self-sustaining: the remainder keeps the same skew, so it happens
+    // again on the next pass and the one after. Six of the fifty-four ninja
+    // files came out of this loop with 254 of their 255 splits shaped that
+    // way — 254 palette entries spent on single outlier pixels and the whole
+    // subject averaged into the one entry left, which renders as a flat
+    // silhouette. They were shipped like that.
+    //
+    // It happens when one entry holds most of a box's pixels, which is the
+    // normal shape of this art: a ninja is a large field of near-black on a
+    // transparent ground. Falling back to the middle of the colour run keeps
+    // variety on both sides, and it only fires when the population median has
+    // already failed, so a legitimately skewed box still splits where its
+    // pixels are.
+    if (cut === 1 || cut === box.length - 1) cut = box.length >> 1;
     boxes.splice(pick, 1, box.slice(0, cut), box.slice(cut));
   }
 

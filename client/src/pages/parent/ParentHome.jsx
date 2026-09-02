@@ -1,5 +1,7 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion, useMotionTemplate, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { ChevronRightIcon } from 'lucide-react';
 import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayout';
 import { api } from '../../api/client';
 import { useParentAuth } from '../../context/ParentAuthContext';
@@ -483,10 +485,9 @@ function sessionTitle(s) {
   return s.project_at || s.lesson_name || s.module_name || s.sub_program || `${s.program} session`;
 }
 
-// One stat on the card's banner: a number or a belt name with its label
-// under it. Smaller than the profile banner's, which is the same shape at
-// 26-30px, because this one is a card on a list of cards rather than the top
-// of a page.
+// One stat on the card's banner: a number or a belt name with its label under
+// it. Smaller than the profile banner's, which is the same shape at 26-30px,
+// because this one is a card on a list of cards rather than the top of a page.
 function CardStat({ value, label, lead }) {
   return (
     <div className="min-w-0">
@@ -507,27 +508,28 @@ function CardStat({ value, label, lead }) {
 // project from the most recent session ("Last class · Wed, Aug 19 / Capstone
 // Project / CREATE · Black belt · with Sensei John"), which put a session in
 // the biggest type on the card and then listed more sessions immediately
-// beside it — and since the banner takes sessions[0] and the list starts at
+// beside it — and since the banner took sessions[0] while the list started at
 // sessions[1], the two read as the same thing said twice whenever a ninja
-// works on one project across visits. It is the profile's banner now, cut
-// down: who the ninja is, since when, their belt and how many programs they
-// are in. The sessions are the list's job and they are only in one place.
+// works on one project across visits. It is the profile's banner now: who the
+// ninja is, and their belt. The sessions are the list's job and they are only
+// in one place.
 //
-// The card header went with it. It was carrying the name, the programs and
-// the "since", which is every word the banner now says, and the only thing on
-// it that was not duplicated was the link, which moved onto the banner.
+// WHAT IS DELIBERATELY NOT ON IT. "Ninja since" and the program count were
+// both here and both came off on the user's call. The count in particular was
+// a number with nothing behind it — a parent knows how many classes their own
+// child is in, and it was the stat that existed to keep the belt company. A
+// ninja in no CREATE class now has an empty stat row, which is correct: there
+// is nothing true to put there, and a White belt nobody awarded is worse.
 //
-// THE COLUMNS DO NOT STRETCH EACH OTHER. The grid used to stretch the banner
-// to whatever the list beside it needed, so a few short lines were centred in
-// a 250px slab of flat blue. Letting it stretch and filling it only moves the
-// hole: a ninja with one session has one row in the list, and then it is the
-// LIST that is short. So the banner is a fixed height and the grid is
-// `items-start`. 248 is a shade more than three rows plus their eyebrow, so
-// the common case sits level; under three rows it drops to 200. Neither
-// number chases the list exactly — a one-row list is 86px and nothing with a
-// ninja in it goes there — they keep the shorter column's leftover to
-// something a reader does not notice, and what is left over is white beside
-// white.
+// THE COLUMNS DO NOT STRETCH EACH OTHER — except they do now, and on purpose.
+// The grid used to stretch the banner to whatever the list beside it needed,
+// so a few short lines sat centred in a 250px slab of flat blue. Filling it is
+// not enough on its own: a ninja with one session has a one-row list, and then
+// the hole moves to the other column. The banner is a fixed MINIMUM height
+// with `items-stretch`, so it reaches the bottom of the card (or the blue
+// stops short of the corner) while never dropping below a size the art can
+// stand in. 248 is a shade more than three rows plus their eyebrow; under
+// three rows it drops to 200.
 //
 // The stacked card keeps the emblem instead of the ninja: at half a column the
 // banner is only as tall as its own lines, and a ninja cropped to the
@@ -536,6 +538,9 @@ function ChildCard({ child, wide = false }) {
   const programs = child.programs || [];
   const sessions = child.recent_sessions || [];
   const clubs = child.recent_clubs || [];
+  const still = useReducedMotion();
+  const banner = useRef(null);
+  const [lit, setLit] = useState(false);
 
   // The same rule the profile banner uses, and it has to be the same or the
   // two pages give one ninja two identities: CREATE is the spine of the
@@ -549,7 +554,32 @@ function ChildCard({ child, wide = false }) {
   const belt = createEnrollment?.belt_level || null;
   const level = createEnrollment?.belt_sublevel || null;
   const age = calcAge(child.birthday);
-  const since = child.created_at ? new Date(child.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : null;
+
+  // Pointer tracking, in motion values rather than state: this runs on every
+  // pointer move and a setState here would re-render the card, its list and
+  // its art on every frame. Same springs the profile banner uses, so the
+  // ninja drifts at the same weight in both places.
+  const px = useMotionValue(0);
+  const py = useMotionValue(0);
+  const sx = useSpring(px, { stiffness: 90, damping: 18, mass: 0.4 });
+  const sy = useSpring(py, { stiffness: 90, damping: 18, mass: 0.4 });
+  const ninjaX = useTransform(sx, (v) => v * 18);
+  const ninjaY = useTransform(sy, (v) => v * 9);
+  // The light follows the pointer across the banner and travels further than
+  // it, so the highlight leads the cursor rather than sitting under it.
+  const lightX = useTransform(sx, (v) => `${50 + v * 70}%`);
+  const lightY = useTransform(sy, (v) => `${50 + v * 70}%`);
+  const light = useMotionTemplate`radial-gradient(circle at ${lightX} ${lightY}, rgb(255 255 255 / 0.16), transparent 62%)`;
+
+  const onMove = (e) => {
+    if (still || e.pointerType === 'touch') return;
+    const r = banner.current?.getBoundingClientRect();
+    if (!r) return;
+    px.set((e.clientX - r.left) / r.width - 0.5);
+    py.set((e.clientY - r.top) / r.height - 0.5);
+  };
+  const onEnter = (e) => { if (!still && e.pointerType !== 'touch') setLit(true); };
+  const onLeave = () => { px.set(0); py.set(0); setLit(false); };
 
   // Every session, not sessions[1..]: the banner no longer spends the first
   // one on a headline, so holding it back would drop the most recent class off
@@ -563,79 +593,102 @@ function ChildCard({ child, wide = false }) {
 
   return (
     <article className={`${FLAT} overflow-hidden flex flex-col ${wide ? 'lg:grid lg:grid-cols-2 lg:items-stretch' : ''}`}>
-      {/* The banner has no card padding around it: it runs to the card's own
-          edges and the card's radius clips it, so the blue IS the whole of the
-          ninja's half rather than a blue rectangle floating on white with a
-          20px moat. On the stacked card that is the full width across the top,
-          which is the shape the profile page has (banner, then the page under
-          it).
+      {/* THE WHOLE BANNER IS THE LINK. It was a card with a "Full profile" link
+          in the corner of it, which is a small target for the one thing this
+          card is for, and it left the ninja — the most obviously tappable
+          object on the page — inert. Everything inside is therefore markup and
+          not an anchor: "Full profile" below is a SPAN styled like the link it
+          used to be, because an anchor inside an anchor is invalid and browsers
+          resolve it by dropping one.
           
-          The height is a MINIMUM now rather than a fixed number, because the
-          cell has to reach the bottom of the card or the blue stops short of
-          the corner. `items-stretch` does that; the minimum is what stops a
-          ninja with one session logged getting a 126px banner with their head
-          cropped off. The words keep their own room rather than sharing a flex
-          row with the ninja, the same rule the profile banner is built on: the
-          art is absolutely positioned and the text reserves its width with
-          padding, so nothing on the left moves when the picture changes. */}
-      <Hero program={heroProgram} className={`!rounded-none flex flex-col justify-between !p-5 ${wide ? `lg:!p-6 ${recent.length >= 3 ? 'lg:min-h-[248px]' : 'lg:min-h-[200px]'}` : ''}`}>
-        {/* A DIRECT child of the hero, and a box rather than a bare image.
-            Both matter. Inside the text it would be positioned against text
-            that moves, so it floated instead of standing on anything. And the
-            banner's height is not always the same: a fixed-height picture is
-            either cropped to the chest or swimming. The box is `inset-y-0` so
-            it is exactly as tall as the banner, hung 16px past the bottom edge
-            so the feet crop rather than land on it, and `object-contain
-            object-bottom` keeps the art standing on the floor at whatever size
-            fits. */}
-        {wide && (
-          <span aria-hidden className="hidden lg:block absolute right-5 top-0 bottom-[-16px] w-[186px] pointer-events-none">
-            <img
-              src={ninjaSrc(belt, 'wave', child.ninja_skin_tone)}
-              alt=""
-              draggable={false}
-              className="h-full w-full object-contain object-bottom select-none drop-shadow-[0_14px_22px_rgba(4,10,24,0.4)]"
-            />
-          </span>
-        )}
-
-        <div className={`relative flex items-start justify-between gap-4 ${wide ? 'lg:block lg:pr-[196px]' : ''}`}>
-          <div className="min-w-0">
-            <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">
-              {[age != null && age >= 3 ? `Age ${age}` : null, since ? `Ninja since ${since}` : null].filter(Boolean).join(' · ') || 'Ninja'}
-            </p>
-            <h2 className={`font-ninja font-extrabold leading-tight mt-1 truncate text-[22px] ${wide ? 'lg:text-[34px] lg:tracking-[-0.03em]' : ''}`}>
-              {child.full_name}
-            </h2>
-          </div>
-          {!wide && <Emblem program={heroProgram} belt={belt} size={64} tilt />}
-        </div>
-
-        {/* Belt first, because it is the thing a parent came to check, and it
-            is the one stat that is a picture as well as a word. A ninja in no
-            CREATE class has no belt, and the row is then just the programs
-            rather than a White belt nobody awarded.
-            
-            The link rides at the end of this row rather than in the banner's
-            top corner, which is where it went first: the corner is where the
-            ninja's raised arm is, and the words landed across it. Down here it
-            is inside the same padding that already keeps the text clear of the
-            art, and it reads as the card's action rather than as a caption
-            stuck on the picture.
-            
-            The row wraps below lg because it does not fit a phone: a belt
-            stat, a programs stat and the link are about 330px of content in a
-            326px card at 390 wide, and "Platinum" is wider than "Black". When
-            it wraps the link keeps its `ml-auto` and lands right-aligned on
-            its own line. The wide banner has the room and stays on one line. */}
-        <div className={`relative flex flex-wrap items-end gap-x-6 gap-y-2 mt-3 ${wide ? 'lg:mt-0 lg:flex-nowrap lg:pr-[196px]' : ''}`}>
-          {belt && (
-            <CardStat value={belt} label={level ? `Level ${level}` : 'Belt'} lead={<BeltIcon belt={belt} size={24} className="flex-shrink-0 -ml-0.5" />} />
+          It also means the ninja cannot be tapped to cheer the way it is on
+          the profile page: a tap here navigates. It cheers on hover instead,
+          which touch never sees and which is exactly the pointer this effect
+          is for.
+          
+          The banner has no card padding around it: it runs to the card's own
+          edges and the card's radius clips it, so the blue IS the whole of the
+          ninja's half rather than a rectangle floating on white in a 20px
+          moat. On the stacked card that is the full width across the top,
+          which is the shape the profile page has. */}
+      <Link
+        ref={banner}
+        to={profile}
+        aria-label={`Open ${child.full_name}'s profile`}
+        onPointerMove={onMove}
+        onPointerEnter={onEnter}
+        onPointerLeave={onLeave}
+        className={`group relative block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70 ${wide ? (recent.length >= 3 ? 'lg:min-h-[248px]' : 'lg:min-h-[200px]') : ''}`}
+      >
+        <Hero program={heroProgram} className="!rounded-none flex h-full flex-col justify-between !p-5 lg:!p-6">
+          {/* The light. Under everything (it is the first child and the hero
+              isolates its own stacking context), over the gradient, and gone
+              entirely under reduced motion rather than parked in the middle
+              where it would read as a permanent bright spot. */}
+          {!still && (
+            <motion.span aria-hidden className="pointer-events-none absolute inset-0 transition-opacity duration-300"
+              style={{ backgroundImage: light, opacity: lit ? 1 : 0 }} />
           )}
-          <CardStat value={programs.length} label={programs.length === 1 ? 'Program' : 'Programs'} />
-          <MoreLink to={profile} onHero className="ml-auto pb-1">Full profile</MoreLink>
-        </div>
-      </Hero>
+
+          {/* A DIRECT child of the hero, and a box rather than a bare image.
+              Both matter. Inside the text it would be positioned against text
+              that moves, so it floated instead of standing on anything. And
+              the banner's height is not always the same: a fixed-height
+              picture is either cropped to the chest or swimming. The box is
+              `inset-y-0` so it is exactly as tall as the banner, hung 16px
+              past the bottom edge so the feet crop rather than land on it, and
+              `object-contain object-bottom` keeps the art standing on the
+              floor at whatever size fits. */}
+          {wide && (
+            <motion.span
+              aria-hidden
+              style={still ? undefined : { x: ninjaX, y: ninjaY }}
+              className="hidden lg:block absolute right-5 top-0 bottom-[-16px] w-[186px] pointer-events-none"
+            >
+              <motion.img
+                src={ninjaSrc(belt, lit ? 'cheer' : 'wave', child.ninja_skin_tone)}
+                alt=""
+                draggable={false}
+                animate={still ? undefined : { y: lit ? -10 : 0 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 16 }}
+                className="h-full w-full object-contain object-bottom select-none drop-shadow-[0_14px_22px_rgba(4,10,24,0.4)]"
+              />
+              {/* Both poses are fetched up front: swapping to a file the
+                  browser has never seen leaves a frame of nothing in the
+                  middle of the hop, which reads as the ninja vanishing. */}
+              <img src={ninjaSrc(belt, 'cheer', child.ninja_skin_tone)} alt="" aria-hidden className="absolute w-px h-px opacity-0" />
+            </motion.span>
+          )}
+
+          <div className={`relative flex items-start justify-between gap-4 ${wide ? 'lg:block lg:pr-[196px]' : ''}`}>
+            <div className="min-w-0">
+              {age != null && age >= 3 && (
+                <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">Age {age}</p>
+              )}
+              <h2 className={`font-ninja font-extrabold leading-tight mt-1 truncate text-[22px] ${wide ? 'lg:text-[34px] lg:tracking-[-0.03em]' : ''}`}>
+                {child.full_name}
+              </h2>
+            </div>
+            {!wide && <Emblem program={heroProgram} belt={belt} size={64} tilt />}
+          </div>
+
+          {/* The belt, and the link that the corner could not hold: the corner
+              is where the ninja's raised arm is and the words landed across it.
+              Down here it is inside the same padding that already keeps the
+              text clear of the art. The row wraps below lg because a belt and
+              a link are about 330px of content in a 326px card at 390 wide,
+              and "Platinum" is wider than "Black". */}
+          <div className={`relative flex flex-wrap items-end gap-x-6 gap-y-2 mt-3 ${wide ? 'lg:mt-0 lg:flex-nowrap lg:pr-[196px]' : ''}`}>
+            {belt && (
+              <CardStat value={belt} label={level ? `Level ${level}` : 'Belt'} lead={<BeltIcon belt={belt} size={24} className="flex-shrink-0 -ml-0.5" />} />
+            )}
+            <span className="ml-auto pb-1 inline-flex items-center gap-0.5 font-ninja text-[13px] font-extrabold text-white">
+              Full profile
+              <ChevronRightIcon size={15} strokeWidth={2.6} aria-hidden className="transition-transform duration-200 group-hover:translate-x-0.5" />
+            </span>
+          </div>
+        </Hero>
+      </Link>
 
       {/* The sessions carry the padding the card used to, since the banner
           gave it up. */}
