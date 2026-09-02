@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronRightIcon } from 'lucide-react';
 import ParentLayout from '../../components/layout/ParentLayout';
 import { api } from '../../api/client';
 import { useParentAuth } from '../../context/ParentAuthContext';
@@ -8,7 +6,8 @@ import { PinnedHero, PageSheet, MoreLink } from '../../components/parent/ParentU
 import Logo from '../../components/ui/Logo';
 import { SkeletonCards } from '../../components/ui/Skeleton';
 import { FLAT } from '../../lib/surfaces';
-import { ymd, byMonth, listingHook, rowWhen, daysUntil, HOUSE, ANYTIME } from '../../lib/eventListing';
+import EventCard from '../../components/parent/EventCard';
+import { ymd, byMonth, HOUSE } from '../../lib/eventListing';
 
 // Everything the center has coming up, on one page.
 //
@@ -41,67 +40,6 @@ import { ymd, byMonth, listingHook, rowWhen, daysUntil, HOUSE, ANYTIME } from '.
 // No sticky month headings. They earn their keep on a calendar with a year in
 // it; a center runs a handful of events at a time, and a heading that detaches
 // and floats over a two-item group is machinery for nothing.
-
-// One listing, as big as the page can afford to make it.
-function EventCard({ ev }) {
-  const days = daysUntil(ev.event_date);
-  const when = rowWhen(ev);
-  const hook = listingHook(ev);
-  // Only the two dates a parent has to act on today get called out. Every
-  // other listing is far enough away that the date itself is the whole
-  // answer, and a flag on all of them is a flag on none of them.
-  //
-  // Plain blue words, not a badge. The house rule (AGENTS.md, from the
-  // sticker count) is that a value like this stays unboxed: no rounded
-  // background, no capsule, no status chip. The eyebrow is already small
-  // uppercase grey, so colour alone is enough to lift one word out of it.
-  const soon = days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : null;
-
-  return (
-    <Link
-      to={`/parent/events/${ev.id}`}
-      className={`${FLAT} group block overflow-hidden transition-colors hover:border-ninja-blue/40`}
-    >
-      <div className="sm:flex sm:items-stretch sm:min-h-[172px]">
-        {/* The art column. `absolute inset-0` inside a stretched flex item is
-            what lets one picture be a 9:16-ish strip on a phone and a full
-            height column on a desktop without cropping to a fixed box. */}
-        <div className="relative h-40 sm:h-auto sm:w-[38%] sm:max-w-[280px] shrink-0 overflow-hidden">
-          {ev.image_url ? (
-            <img
-              src={ev.image_url}
-              alt=""
-              aria-hidden="true"
-              draggable={false}
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.045]"
-            />
-          ) : (
-            <span aria-hidden className="absolute inset-0 flex items-center justify-center" style={{ background: HOUSE }}>
-              {/* Opacity on the element, not the colour: the mark's paths
-                  overlap, and a translucent colour doubles up where they do. */}
-              <span style={{ color: '#ffffff', opacity: 0.28 }}><Logo variant="mark" className="h-14" /></span>
-            </span>
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1 flex flex-col justify-center gap-1.5 p-4 sm:p-5 lg:p-6">
-          <p className="flex items-center gap-2 font-ninja text-[11.5px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted">
-            <span className="truncate">{when || ANYTIME}</span>
-            {soon && <span className="flex-shrink-0 text-ninja-blue-ink">{soon}</span>}
-          </p>
-          <h3 className="font-ninja font-extrabold text-[19px] sm:text-[21px] leading-[1.15] tracking-[-0.02em] text-ninja-navy">
-            {ev.title}
-          </h3>
-          {hook && <p className="font-ninja text-[13.5px] leading-relaxed text-ninja-muted line-clamp-2">{hook}</p>}
-          <span className="mt-1.5 inline-flex items-center gap-0.5 font-ninja text-[13px] font-extrabold text-ninja-blue-ink">
-            Details
-            <ChevronRightIcon size={15} strokeWidth={2.6} aria-hidden className="transition-transform duration-200 group-hover:translate-x-0.5" />
-          </span>
-        </div>
-      </div>
-    </Link>
-  );
-}
 
 export default function ParentEventsPage() {
   const { parent } = useParentAuth();
