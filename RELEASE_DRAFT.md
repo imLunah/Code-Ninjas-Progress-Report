@@ -32,6 +32,7 @@
 - The banner at the top of a page stays where it is while the page scrolls up over it, on home, on a ninja's profile, in a course and in the sticker book. The art stays visible for as long as there is room for it instead of leaving with the first scroll.
 
 ## Bug Fixes
+- Your ninja stands on the Parent Portal home. The card for a single ninja opened with three lines of text floating in a large empty banner; your ninja is in it now, at their own belt and in the ninja you picked, and the recent sessions beside it are a plain list instead of a box drawn inside a box.
 - Opening a ninja's profile or one of their courses could land you part way down the page, with the banner already dimmed and its row of kit buttons cut in half by the page sliding over it. Nothing was resetting the scroll when you moved between pages. Every page in the Parent Portal now opens at its banner.
 - Typing a link like code.org into session notes made it clickable while you were still writing, so clicking near it to move your cursor opened the website and left the half written log behind. Links in the editor are just text now. In saved logs and comments they are real links, underlined and changing color on hover so you can tell before you click.
 - Session notes were written once per class, but printed under every project. Logging two projects in one sitting showed the note twice, which read as two sessions that happened to say the same thing. It prints once now.

@@ -697,11 +697,16 @@ export function LevelPills({ states, value, onChange, belt, onHero = false, layo
 // A grouped list. Optional eyebrow title and an action on the right. `tint`
 // makes it a tinted card ('green', 'blue', 'lilac', 'amber') whose rows sit
 // on a white inset.
-export function Group({ title, action, tint, children, className = '' }) {
+// `bare` drops the card chrome and keeps the eyebrow and the rows. It is for a
+// Group that is ALREADY inside a card: a white bordered box on a white
+// bordered card is the pane-inside-a-pane the surfaces file warns about, and
+// on screen it is two hairlines a few pixels apart around the same colour. The
+// rows keep their own dividers, which is what actually says "list".
+export function Group({ title, action, tint, bare = false, children, className = '' }) {
   return (
-    <section className={`${tint ? `tint-${tint} rounded-[22px]` : FLAT} overflow-hidden ${className}`}>
+    <section className={`${bare ? '' : tint ? `tint-${tint} rounded-[22px]` : FLAT} overflow-hidden ${className}`}>
       {(title || action) && (
-        <div className="flex items-baseline justify-between px-4 pt-3.5 pb-1">
+        <div className={`flex items-baseline justify-between px-4 pb-1 ${bare ? 'pt-0' : 'pt-3.5'}`}>
           {title && <p className={`font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] ${tint ? '' : 'text-ninja-muted'}`} style={tint ? { color: 'var(--tint-ink)' } : undefined}>{title}</p>}
           {action}
         </div>

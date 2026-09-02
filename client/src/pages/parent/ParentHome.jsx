@@ -9,6 +9,7 @@ import Logo from '../../components/ui/Logo';
 import { FLAT } from '../../lib/surfaces';
 import { SkeletonCards } from '../../components/ui/Skeleton';
 import { fmtDay, fmtLongDay, calcAge } from '../../lib/parentProgress';
+import { ninjaSrc } from '../../utils/ninjas';
 import { hoursFor, slotsFor, fmtHour } from '../../lib/centerHours';
 
 // Home: the family at a glance.
@@ -503,9 +504,37 @@ function firstName(name) {
 }
 
 // `wide` is the one-ninja layout: the card is the whole row, so instead of a
-// stack it becomes two columns at lg — hero on the left grown to the height
-// of the list beside it, recent sessions on the right — under a full-width
-// header. With siblings the stacked card in a half column stays.
+// stack it becomes two columns at lg — the banner on the left, grown to the
+// height of the list beside it, recent sessions on the right — under a
+// full-width header. With siblings the stacked card in a half column stays.
+//
+// THE COLUMNS DO NOT STRETCH EACH OTHER, and that is the fix rather than a
+// detail. The grid used to stretch the banner to whatever the list beside it
+// needed, so three short lines were centred in a 250px slab of flat blue with
+// a 64px logo floating at one side. Letting the banner stretch and filling it
+// only moves the hole: a ninja with one session has one row in the list, and
+// then it is the LIST that is short and a column of white sits where the
+// sessions would be. So the banner is `lg:h-[248px]` and the grid is
+// `items-start`. 248 is a shade more than three rows plus their eyebrow, so
+// the common case sits level, and the case that does not is white under a
+// list, which is nothing at all.
+//
+// The two heights are the two cases: a full list is three rows and their
+// eyebrow, about 210px, and 248 clears it. A ninja with one session logged has
+// one row, and a banner still 248 tall beside it leaves a column of white
+// where the sessions would be, so it drops to 200. Neither number chases the
+// list exactly — a list of one row is 86px and nothing with a ninja in it goes
+// there — they just keep the shorter column's leftover to something a reader
+// does not notice, and what is left over is white beside white.
+//
+// The ninja is the portal's own way of filling a banner (it is what the
+// profile page opens on) and it stands in the height rather than the height
+// standing empty. It also retires the emblem here, which was saying "CREATE"
+// under a line that already reads "CREATE · Black belt · with Sensei John".
+//
+// The stacked card keeps the emblem: at half a column the banner is only as
+// tall as its own three lines, and a ninja cropped to the shoulders is worse
+// than no ninja.
 function ChildCard({ child, wide = false }) {
   const programs = child.programs || [];
   const sessions = child.recent_sessions || [];
@@ -514,6 +543,12 @@ function ChildCard({ child, wide = false }) {
   const heroProgram = last?.program || programs[0]?.program || 'CREATE';
   const enrollment = programs.find((p) => p.program === heroProgram) || programs[0] || null;
   const belt = heroProgram === 'CREATE' ? (enrollment?.belt_level || last?.belt_level_at || null) : null;
+  // The belt the NINJA is drawn at, which is not the same question as which
+  // emblem the banner carries. `belt` is null the moment the last class was
+  // Robotics, and drawing a Black belt's ninja in a white sash because of what
+  // they did on Tuesday is wrong. The ninja follows the CREATE enrollment
+  // wherever it is, and `ninjaSrc` falls back to White for a ninja with none.
+  const ninjaBelt = programs.find((p) => p.program === 'CREATE')?.belt_level || null;
   const age = calcAge(child.birthday);
   const since = child.created_at ? new Date(child.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : null;
 
@@ -525,7 +560,7 @@ function ChildCard({ child, wide = false }) {
   const profile = `/parent/students/${child.id}`;
 
   return (
-    <article className={`${FLAT} p-4 sm:p-5 flex flex-col gap-4 ${wide ? 'lg:grid lg:grid-cols-2 lg:gap-x-6' : ''}`}>
+    <article className={`${FLAT} p-4 sm:p-5 flex flex-col gap-4 ${wide ? 'lg:grid lg:grid-cols-2 lg:gap-x-6 lg:items-start' : ''}`}>
       <header className={`flex items-center gap-3 ${wide ? 'lg:col-span-2' : ''}`}>
         <ProgramMark program={programs[0]?.program} />
         <div className="min-w-0 flex-1">
@@ -537,15 +572,37 @@ function ChildCard({ child, wide = false }) {
         <MoreLink to={profile}>Full profile</MoreLink>
       </header>
 
-      {/* In the wide card the grid stretches the hero to the list's height,
-          so it becomes a flex that centres its content in the taller banner. */}
-      <Hero program={heroProgram} className={wide ? 'lg:flex lg:items-center lg:p-6' : ''}>
-        <div className={`flex items-center justify-between gap-4 ${wide ? 'lg:flex-1' : ''}`}>
+      {/* The words keep their own room rather than sharing a flex row with the
+          ninja, the same rule the profile banner is built on: the art is
+          absolutely positioned and the text reserves its width with padding,
+          so nothing on the left moves when the picture changes size. */}
+      <Hero program={heroProgram} className={wide ? `lg:flex lg:flex-col lg:justify-center lg:p-6 ${recent.length >= 3 ? 'lg:h-[248px]' : 'lg:h-[200px]'}` : ''}>
+        {/* A DIRECT child of the hero, and a box rather than a bare image.
+            Both matter. Inside the text row it would be positioned against the
+            text, which is centred, so it floated instead of standing on
+            anything. And the hero's height is set by the list in the column
+            beside it, which is one, two or three rows deep depending on how
+            much this ninja has done: a fixed-height picture is either cropped
+            to the chest or swimming. The box is `inset-y-0` so it is exactly
+            as tall as the banner, hung 16px past the bottom edge so the feet
+            crop rather than land on it, and `object-contain object-bottom`
+            keeps the art standing on the floor at whatever size fits. */}
+        {wide && (
+          <span aria-hidden className="hidden lg:block absolute right-5 top-0 bottom-[-16px] w-[186px] pointer-events-none">
+            <img
+              src={ninjaSrc(ninjaBelt, 'wave', child.ninja_skin_tone)}
+              alt=""
+              draggable={false}
+              className="h-full w-full object-contain object-bottom select-none drop-shadow-[0_14px_22px_rgba(4,10,24,0.4)]"
+            />
+          </span>
+        )}
+        <div className={`relative flex items-center justify-between gap-4 ${wide ? 'lg:block lg:pr-[196px]' : ''}`}>
           <div className="min-w-0">
             <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">
               {last ? `Last class · ${fmtLongDay(last.session_date)}` : 'No classes logged yet'}
             </p>
-            <p className="font-ninja font-extrabold text-[22px] leading-tight mt-1 truncate">
+            <p className={`font-ninja font-extrabold leading-tight mt-1 truncate text-[22px] ${wide ? 'lg:text-[28px] lg:tracking-[-0.02em]' : ''}`}>
               {last ? sessionTitle(last) : heroProgram}
             </p>
             <p className="font-ninja text-[13px] opacity-85 mt-1 truncate">
@@ -554,12 +611,15 @@ function ChildCard({ child, wide = false }) {
                 : belt ? `${belt} belt${enrollment?.belt_sublevel ? `, level ${enrollment.belt_sublevel}` : ''}` : 'Just getting started'}
             </p>
           </div>
-          <Emblem program={heroProgram} belt={belt} size={64} tilt />
+          {!wide && <Emblem program={heroProgram} belt={belt} size={64} tilt />}
         </div>
       </Hero>
 
       {recent.length > 0 ? (
-        <Group title="Recent" action={<MoreLink to={profile}>All sessions</MoreLink>} className="!rounded-[16px]">
+        /* Bare: the rows are already inside a card, and a second white box
+           around them was a hairline drawn a few pixels inside another
+           hairline around the same colour. */
+        <Group bare title="Recent" action={<MoreLink to={profile}>All sessions</MoreLink>}>
           {recent.map((r, i) => (
             <Row key={r.key} first={i === 0} title={r.title} subtitle={r.sub} trailing={<StatusText status={r.status} />} />
           ))}
