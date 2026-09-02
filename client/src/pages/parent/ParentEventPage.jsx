@@ -1,10 +1,10 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { CalendarDaysIcon, ClockIcon, MapPinIcon } from 'lucide-react';
+import { CalendarDaysIcon, MapPinIcon } from 'lucide-react';
 import ParentLayout from '../../components/layout/ParentLayout';
 import { api } from '../../api/client';
 import { useParentAuth } from '../../context/ParentAuthContext';
-import { PinnedHero, PageSheet, BackChip, Group, Row, Tile, MoreLink } from '../../components/parent/ParentUI';
+import { PinnedHero, PageSheet, BackChip, Group, Row, MoreLink } from '../../components/parent/ParentUI';
 import Logo from '../../components/ui/Logo';
 import { SkeletonProfile } from '../../components/ui/Skeleton';
 import { FLAT } from '../../lib/surfaces';
@@ -59,16 +59,22 @@ const LISTING_MD = {
 };
 
 // One fact, with its glyph: When, Where.
+//
+// The glyph rides WITH the label rather than on a tinted tile beside it. A
+// tile is the app's lead for a row you can act on, where the square is the
+// tap target and the thing it holds is a number or an initial standing in for
+// a name. Nothing here is a row and nothing here is tappable: When and Where
+// are two facts on a card, and putting each one behind its own coloured
+// square made the card look like a menu of two options. Inline, the glyph is
+// what it actually is, a mark on a caption.
 function Fact({ Glyph, label, children }) {
   return (
-    <div className="flex items-start gap-3">
-      <Tile size={34} tint="rgb(var(--ninja-blue) / 0.10)">
-        <Glyph size={17} strokeWidth={2.2} aria-hidden />
-      </Tile>
-      <div className="min-w-0">
-        <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted">{label}</p>
-        <div className="font-ninja text-[14.5px] font-extrabold text-ninja-navy leading-snug mt-0.5">{children}</div>
-      </div>
+    <div className="min-w-0">
+      <p className="flex items-center gap-1.5 font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted">
+        <Glyph size={13} strokeWidth={2.6} aria-hidden className="flex-shrink-0" />
+        {label}
+      </p>
+      <div className="font-ninja text-[14.5px] font-extrabold text-ninja-navy leading-snug mt-1">{children}</div>
     </div>
   );
 }
@@ -178,11 +184,12 @@ export default function ParentEventPage() {
                 <div className="grid gap-5 sm:grid-cols-2">
                   <Fact Glyph={CalendarDaysIcon} label="When">
                     {when || 'Any time'}
+                    {/* No clock glyph. The label above already carries a
+                        mark, and the time sits directly under the date it
+                        belongs to, so a second icon inside one fact is
+                        decoration on something nobody could misread. */}
                     {ev.event_time && (
-                      <span className="block font-ninja text-[13px] font-bold text-ninja-muted mt-0.5">
-                        <ClockIcon size={12} strokeWidth={2.4} aria-hidden className="inline-block mr-1 -mt-0.5" />
-                        {ev.event_time}
-                      </span>
+                      <span className="block font-ninja text-[13px] font-bold text-ninja-muted mt-0.5">{ev.event_time}</span>
                     )}
                     {/* The countdown only starts once the banner has run out
                         of words for it. Inside a week the banner already says

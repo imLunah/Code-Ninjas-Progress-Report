@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useAnimationControls, useReducedMotion } from 'framer-motion';
 import { HomeIcon, CalendarDaysIcon, LogOutIcon, ChevronLeftIcon } from 'lucide-react';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useLightOnly } from '../../context/ThemeContext';
@@ -52,6 +52,10 @@ export const GLASS = 'border border-white/30 dark:border-white/12 bg-white/[0.55
 export const REFRACT = { backdropFilter: 'url(#liquidGlass) blur(22px) saturate(1.8)', WebkitBackdropFilter: 'blur(22px) saturate(1.8)' };
 // The displacement map behind #glassRim, as an image the filter can read.
 const LENS_MAP = "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2' preserveAspectRatio='none'%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgb(0,128,128)'/%3E%3Cstop offset='0.74' stop-color='rgb(0,128,128)'/%3E%3Cstop offset='1' stop-color='rgb(128,128,128)'/%3E%3C/linearGradient%3E%3Crect width='2' height='2' fill='url(%23g)'/%3E%3C/svg%3E";
+
+// One spring for both navs, so the rail's pill and the phone bar's pill are
+// recognisably the same movement at two sizes.
+const PILL_SPRING = { type: 'spring', stiffness: 480, damping: 36 };
 
 function isActive(pathname, to) {
   return pathname === to || pathname.startsWith(to + '/');
@@ -129,15 +133,34 @@ function ParentSideNav({ parentName, centerName, onLogout, onReport }) {
               aria-current={active ? 'page' : undefined}
               title={collapsed ? t.label : undefined}
               aria-label={collapsed ? t.label : undefined}
-              className={`w-full flex items-center gap-3 py-2.5 rounded-xl font-ninja font-bold text-sm transition-colors whitespace-nowrap overflow-hidden ${
+              className={`relative w-full flex items-center gap-3 py-2.5 rounded-xl font-ninja font-bold text-sm transition-colors whitespace-nowrap overflow-hidden ${
                 collapsed ? 'px-0 justify-center' : 'px-3'
               } ${
-                active ? 'bg-ninja-blue/10 text-ninja-blue-ink' : 'text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg'
+                active ? 'text-ninja-blue-ink' : 'text-ninja-muted hover:text-ninja-navy hover:bg-ninja-bg'
               }`}
             >
-              <t.Glyph strokeWidth={2.1} aria-hidden className="w-5 h-5 flex-shrink-0" />
+              {/* THE SAME TINT, ON A PILL THAT TRAVELS. It was a class that
+                  appeared on one row and vanished from another, so moving
+                  between sections was a cut. One `layoutId` makes the two
+                  states the same object: framer measures where it was and
+                  where it now is and springs it between them, so the blue
+                  slides from Home to Events and the section you chose is
+                  somewhere it came FROM rather than somewhere that blinked
+                  on. The phone bar has worked this way since it was built;
+                  this is the rail catching up.
+
+                  Still a background tint and an ink colour, which is the
+                  house rule for an active nav row. No left-edge bar. */}
+              {active && (
+                <motion.span
+                  layoutId="parent-rail-pill"
+                  transition={PILL_SPRING}
+                  className="absolute inset-0 rounded-xl bg-ninja-blue/10"
+                />
+              )}
+              <t.Glyph strokeWidth={2.1} aria-hidden className="relative z-10 w-5 h-5 flex-shrink-0" />
               {!collapsed && (
-                <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15, delay: 0.08 }}>
+                <motion.span className="relative z-10" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15, delay: 0.08 }}>
                   {t.label}
                 </motion.span>
               )}
@@ -229,7 +252,7 @@ function ParentTabBar() {
             {active && (
               <motion.span
                 layoutId="parent-tab-pill"
-                transition={{ type: 'spring', stiffness: 480, damping: 36 }}
+                transition={PILL_SPRING}
                 className="absolute inset-0 rounded-full bg-white/90 dark:bg-white/[0.14] shadow-[0_2px_8px_rgb(26_46_74/0.12),inset_0_1px_0_#fff] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]"
               />
             )}
@@ -252,7 +275,7 @@ function ParentTabBar() {
         {accountActive && (
           <motion.span
             layoutId="parent-tab-pill"
-            transition={{ type: 'spring', stiffness: 480, damping: 36 }}
+            transition={PILL_SPRING}
             className="absolute inset-0 rounded-full bg-white/90 dark:bg-white/[0.14] shadow-[0_2px_8px_rgb(26_46_74/0.12),inset_0_1px_0_#fff] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]"
           />
         )}
@@ -289,8 +312,16 @@ function ParentTabBar() {
 // and puts the page straight back where it was. It is set while the portal is
 // mounted and handed back on the way out, so the staff side keeps the
 // browser's own behaviour.
+//
+// It returns the animation controls for the page, because the reset and the
+// entrance are the same moment and have to happen in the same layout effect:
+// the page has to be BOTH at the top and at zero opacity before the browser
+// paints it, or the transition plays over a frame of the new page already
+// sitting there at full strength.
 function useTopOnNavigate() {
   const { pathname } = useLocation();
+  const page = useAnimationControls();
+  const still = useReducedMotion();
 
   useEffect(() => {
     const previous = window.history.scrollRestoration;
@@ -300,14 +331,38 @@ function useTopOnNavigate() {
   }, []);
 
   // Layout effect, so the page is never painted at the old offset first.
-  useLayoutEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  //
+  // THE ENTRANCE. Moving between sections used to be a cut: one page was
+  // gone and the next was there, with no frame in between saying they were
+  // different pages rather than one page redrawing. It rises a few pixels
+  // into place instead, which is short enough to be over before it is a wait
+  // and long enough to read as an arrival.
+  //
+  // Only the incoming page animates. There is no exit, on purpose: an exit
+  // means both pages are mounted at once, which doubles the document height
+  // for the length of the animation and moves the scrollbar under the hand
+  // of somebody who is already scrolling.
+  //
+  // The `y` has to land back at exactly zero. A lingering transform on this
+  // wrapper would be a containing block around the pinned banners, and a
+  // banner that cannot pin is the bug this same hook was written to fix.
+  // framer writes `transform: none` once every value is at its default, so
+  // it does, and there is a test for it below.
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+    if (still) return;
+    page.set({ opacity: 0, y: 10 });
+    page.start({ opacity: 1, y: 0, transition: { duration: 0.34, ease: [0.23, 1, 0.32, 1] } });
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return page;
 }
 
 export default function ParentLayout({ children, bleed = false }) {
   const { parent, logout } = useParentAuth();
   const navigate = useNavigate();
   const [bugOpen, setBugOpen] = useState(false);
-  useTopOnNavigate();
+  const page = useTopOnNavigate();
   // The parent portal is light only; there is no theme toggle here and the
   // shell holds the page light while it is up.
   useLightOnly();
@@ -361,9 +416,9 @@ export default function ParentLayout({ children, bleed = false }) {
       </header>
 
       <main className="flex-1 min-w-0 pt-5 lg:pt-7 pb-32 lg:pb-12 [container-type:inline-size]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <motion.div className="max-w-6xl mx-auto px-4 sm:px-6" animate={page}>
           {children}
-        </div>
+        </motion.div>
       </main>
 
       <ParentTabBar />

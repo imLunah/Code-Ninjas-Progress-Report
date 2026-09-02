@@ -47,10 +47,15 @@ function EventCard({ ev }) {
   const days = daysUntil(ev.event_date);
   const when = rowWhen(ev);
   const hook = listingHook(ev);
-  // Only the two dates a parent has to act on today get a chip. Every other
-  // listing is far enough away that the date itself is the whole answer, and
-  // a chip on all of them is a chip on none of them.
-  const chip = days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : null;
+  // Only the two dates a parent has to act on today get called out. Every
+  // other listing is far enough away that the date itself is the whole
+  // answer, and a flag on all of them is a flag on none of them.
+  //
+  // Plain blue words, not a badge. The house rule (AGENTS.md, from the
+  // sticker count) is that a value like this stays unboxed: no rounded
+  // background, no capsule, no status chip. The eyebrow is already small
+  // uppercase grey, so colour alone is enough to lift one word out of it.
+  const soon = days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : null;
 
   return (
     <Link
@@ -82,11 +87,7 @@ function EventCard({ ev }) {
         <div className="min-w-0 flex-1 flex flex-col justify-center gap-1.5 p-4 sm:p-5 lg:p-6">
           <p className="flex items-center gap-2 font-ninja text-[11.5px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted">
             <span className="truncate">{when || ANYTIME}</span>
-            {chip && (
-              <span className="flex-shrink-0 rounded-full bg-ninja-blue/10 px-2 py-[3px] text-[10.5px] tracking-[0.06em] text-ninja-blue-ink">
-                {chip}
-              </span>
-            )}
+            {soon && <span className="flex-shrink-0 text-ninja-blue-ink">{soon}</span>}
           </p>
           <h3 className="font-ninja font-extrabold text-[19px] sm:text-[21px] leading-[1.15] tracking-[-0.02em] text-ninja-navy">
             {ev.title}
