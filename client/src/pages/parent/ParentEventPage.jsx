@@ -41,6 +41,25 @@ const ReactMarkdown = lazy(() => import('react-markdown'));
 // `.dark .text-ninja-navy` would turn the words slate on a sheet that stays
 // white. `img: () => null` stays — markdown never gets to draw an image on
 // this surface (the same rule as the note maps, session 32).
+// THE PAGE'S COLUMN, and the one measure everything on this page sits in.
+//
+// 55rem is not a taste: it is exactly what the body grid adds up to — 34rem
+// of prose (the width that puts a line at 71 characters) plus a 3rem gutter
+// plus an 18rem margin. So the two-column body FILLS this column rather than
+// sitting at one end of a wider one, which is what made the page hug the left
+// edge with a few hundred pixels of nothing to its right.
+//
+// The facts band's content takes the same measure, so the "When" label starts
+// on the same vertical as the prose under it. That is the part that has to be
+// shared: centring the body on its own would have left the band's words at
+// the far left and the reading 130px in from them.
+//
+// Inside the column everything stays LEFT aligned. Centring the block is what
+// was asked for and is right; centring the lines of a paragraph inside it
+// would not be — ragged left edges are what makes long prose hard to read,
+// which is the whole reason this column is 34rem in the first place.
+const COLUMN = 'max-w-[55rem] mx-auto';
+
 const NAVY = '#1a2e4a';
 const LISTING_MD = {
   p: (props) => <p className="font-ninja text-[15px] leading-[1.75] mb-3.5 last:mb-0" {...props} />,
@@ -231,7 +250,13 @@ export default function ParentEventPage() {
               own max-w-6xl back inside, so the words still line up with the
               body underneath. */}
           <div className="relative left-1/2 -translate-x-1/2 w-[100cqw] bg-white border-b border-ninja-border">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-16">
+            {/* The gutter sits OUTSIDE the column, not on it. With the
+                padding on the column itself the band's 55rem would be a
+                border box and its words would start a gutter's width in from
+                where the body's 55rem starts, which is a 24px misalignment
+                between the label and the paragraph under it. */}
+            <div className="px-4 sm:px-6">
+            <div className={`${COLUMN} py-5 sm:py-6 flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-16`}>
               <Fact label="When" value={whenValue} detail={whenDetail} />
 
               {/* The center's name and nothing else, because that is all
@@ -257,6 +282,7 @@ export default function ParentEventPage() {
                 </a>
               )}
             </div>
+            </div>
           </div>
 
           {/* An event that has already happened still opens, because a link a
@@ -265,7 +291,7 @@ export default function ParentEventPage() {
               boxed notice on a page with no other boxes on it is the loudest
               thing on the screen for the quietest reason. */}
           {past && (
-            <p className="font-ninja text-[13.5px] font-bold text-ninja-muted pt-6">
+            <p className={`${COLUMN} font-ninja text-[13.5px] font-bold text-ninja-muted pt-6`}>
               This event has already happened.
             </p>
           )}
@@ -279,10 +305,10 @@ export default function ParentEventPage() {
               The column widths are the measured ones from before. 34rem is
               what puts a line of this prose at 71 characters, inside the
               45-to-75 a line is meant to be; the full width measured 81. */}
-          <div className={`pt-7 lg:pt-9 grid gap-8 lg:gap-12 lg:items-start ${ev.description && rest.length > 0 ? 'lg:grid-cols-[minmax(0,34rem)_18rem]' : ''}`}>
+          <div className={`${COLUMN} pt-7 lg:pt-9 grid gap-8 lg:gap-12 lg:items-start ${ev.description && rest.length > 0 ? 'lg:grid-cols-[minmax(0,34rem)_18rem]' : ''}`}>
             {ev.description && (
               <div
-                className="lg:col-start-1 lg:row-start-1 lg:max-w-[34rem]"
+                className="lg:col-start-1 lg:row-start-1 lg:max-w-[34rem] lg:mx-auto"
                 style={{ color: 'rgb(26 46 74 / 0.9)' }}
               >
                 <h2 className="font-ninja font-extrabold text-[22px] tracking-[-0.02em] mb-4" style={{ color: NAVY }}>
@@ -299,8 +325,14 @@ export default function ParentEventPage() {
               </div>
             )}
 
+            {/* With a sidebar, these two fill the column between them.
+                Without one, whichever survives is a 34rem block in an 880px
+                column, so it centres — which puts it on the same axis as the
+                band above, whose own content is justified out to both edges
+                of that column. Left-aligning it instead would sit it a third
+                of the way across a page that is otherwise centred. */}
             {rest.length > 0 && (
-              <aside className={ev.description ? 'lg:col-start-2 lg:row-start-1' : 'lg:max-w-[34rem]'}>
+              <aside className={ev.description ? 'lg:col-start-2 lg:row-start-1' : 'lg:max-w-[34rem] lg:mx-auto'}>
                 {/* `bare`: the rows keep their own hairline dividers, which
                     is what actually says "list", and drop the card around
                     them, which is what the rest of this page has dropped. */}
