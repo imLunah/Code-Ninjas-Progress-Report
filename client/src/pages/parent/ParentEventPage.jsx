@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { CalendarDaysIcon, MapPinIcon } from 'lucide-react';
+import { CalendarDaysIcon, ClockIcon } from 'lucide-react';
 import ParentLayout from '../../components/layout/ParentLayout';
 import { api } from '../../api/client';
 import { useParentAuth } from '../../context/ParentAuthContext';
@@ -58,24 +58,19 @@ const LISTING_MD = {
   img: () => null,
 };
 
-// One fact, with its glyph: When, Where.
+// One line of the facts band: a glyph and the value, on one line.
 //
-// The glyph rides WITH the label rather than on a tinted tile beside it. A
-// tile is the app's lead for a row you can act on, where the square is the
-// tap target and the thing it holds is a number or an initial standing in for
-// a name. Nothing here is a row and nothing here is tappable: When and Where
-// are two facts on a card, and putting each one behind its own coloured
-// square made the card look like a menu of two options. Inline, the glyph is
-// what it actually is, a mark on a caption.
-function Fact({ Glyph, label, children }) {
+// No uppercase label above it. A calendar next to a date and a clock next to
+// a time are not ambiguous, and "WHEN" over "Saturday, September 19" is a
+// caption explaining a thing that explains itself. The label survives only
+// where the value alone would not say what it is — the center's name reads
+// as a place, not as a location FOR this, so Where keeps its word.
+function FactLine({ Glyph, children }) {
   return (
-    <div className="min-w-0">
-      <p className="flex items-center gap-1.5 font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted">
-        <Glyph size={13} strokeWidth={2.6} aria-hidden className="flex-shrink-0" />
-        {label}
-      </p>
-      <div className="font-ninja text-[14.5px] font-extrabold text-ninja-navy leading-snug mt-1">{children}</div>
-    </div>
+    <p className="flex items-center gap-2.5 font-ninja text-[15px] font-extrabold text-ninja-navy">
+      <Glyph size={17} strokeWidth={2.3} aria-hidden className="flex-shrink-0 text-ninja-blue" />
+      {children}
+    </p>
   );
 }
 
@@ -197,120 +192,130 @@ export default function ParentEventPage() {
         </PinnedHero>
 
         <PageSheet corner="square">
-          <div className="space-y-4 lg:space-y-5">
+          {/* THE FACTS BAND. A white strip running the whole content region,
+              square, with a hairline under it — not a rounded card floating
+              in the page. That is what an event page does under its picture,
+              and it is what the card version was pretending to be: a bordered
+              capsule with two words in it and an ocean of white to its right
+              reads as a component that failed to fill, where a band reads as
+              a rule ruled across the page.
 
-            {/* THE FACTS BAR, straight under the banner and running the full
-                width. This is the shape an event page has settled on: the
-                picture sells it, then one strip answers when, where and how
-                to get in, then the reading starts. It is one row rather than
-                a column in the margin because these are the three things
-                somebody came for, and a person who has decided in the first
-                two seconds should not have to hunt down a rail for the
-                button.
-
-                `ml-auto` pushes the sign-up to the far end of the strip on a
-                desktop; on a phone the strip stacks and the button is the
-                full width of it, which is where a thumb expects it. */}
-            <div className={`${FLAT} p-5 sm:px-6 sm:py-5 flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-8`}>
-              {/* The two facts align to each OTHER at the top, so When and
-                  Where start on the same line however many lines When runs
-                  to. Centring them individually against the strip put Where's
-                  label a row below When's, which reads as two things that
-                  were never meant to line up. The button still centres, on
-                  the strip rather than on the text. */}
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-10">
-              <Fact Glyph={CalendarDaysIcon} label="When">
-                {whenValue}
-                {/* No clock glyph. The label above already carries a mark,
-                    and the time sits directly under the date it belongs to,
-                    so a second icon inside one fact is decoration on
-                    something nobody could misread. */}
+              It breaks out of the sheet's column the same way the banner
+              breaks out of main's — `left-1/2` against a centred column plus
+              `w-[100cqw]` lands exactly on the region's edges — and puts its
+              own max-w-6xl back inside, so the words still line up with the
+              body underneath. */}
+          <div className="relative left-1/2 -translate-x-1/2 w-[100cqw] bg-white border-b border-ninja-border">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-14">
+              <div className="space-y-2">
+                <FactLine Glyph={CalendarDaysIcon}>{whenValue}</FactLine>
+                {/* The clock is back, and it is doing real work now: with the
+                    labels gone it is the only thing saying this line is a
+                    time rather than a second date. It was decoration when a
+                    "WHEN" caption sat over both of them. */}
                 {when && ev.event_time && (
-                  <span className="block font-ninja text-[13px] font-bold text-ninja-muted mt-0.5">{ev.event_time}</span>
+                  <FactLine Glyph={ClockIcon}>{ev.event_time}</FactLine>
                 )}
                 {/* The countdown only starts once the banner has run out of
                     words for it. Inside a week the banner already says
                     "Tomorrow" or "This Saturday", and "In 3 days" under it is
                     the third printing of one fact on one screen. */}
                 {days !== null && days >= 7 && days <= 60 && (
-                  <span className="block font-ninja text-[13px] font-bold text-ninja-muted mt-0.5">In {days} days</span>
+                  <p className="font-ninja text-[13px] font-bold text-ninja-muted pl-[27px]">In {days} days</p>
                 )}
-              </Fact>
+              </div>
 
               {/* The center's name and nothing else, because that is all
                   there is. `locations` carries a name and a slug and no
                   address, so there is no street to print and no map to link,
-                  and a Location block that says "View map" over a guess is
-                  worse than one that says where honestly. */}
-              {parent?.centerName && (
-                <Fact Glyph={MapPinIcon} label="Where">{parent.centerName}</Fact>
-              )}
-              </div>
+                  and a Location block with "View map" over a guess is worse
+                  than one that says where honestly.
 
+                  This one keeps a label: a place name on its own does not
+                  say it is the place THIS is happening. */}
+              {parent?.centerName && (
+                <div className="min-w-0">
+                  <p className="font-ninja text-[12px] font-bold text-ninja-muted">Where</p>
+                  <p className="font-ninja text-[15px] font-extrabold text-ninja-navy mt-0.5 truncate">{parent.centerName}</p>
+                </div>
+              )}
+
+              {/* A rectangle, not a capsule, and the app's own primary blue.
+                  The pill was the shape this app uses for a quiet link on a
+                  banner; the one action on the page is not that. `rounded-lg`
+                  and `bg-ninja-blue` are what every other primary button in
+                  the portal already is. */}
               {ev.event_url && !past && (
                 <a
                   href={ev.event_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="sm:ml-auto inline-flex w-full sm:w-auto items-center justify-center gap-1 font-ninja text-[14px] font-extrabold rounded-full px-8 py-3 transition-opacity hover:opacity-90"
-                  style={{ background: NAVY, color: '#ffffff' }}
+                  className="sm:ml-auto sm:self-center inline-flex w-full sm:w-auto items-center justify-center gap-1 font-ninja text-[14.5px] font-extrabold rounded-lg px-10 py-3 bg-ninja-blue text-white transition-colors hover:bg-ninja-blue/90"
                 >
-                  Sign up ›
+                  Sign up
                 </a>
               )}
             </div>
+          </div>
 
-            {/* An event that has already happened still opens, because a link
-                a family was sent last week should land somewhere honest
-                rather than on a 404. This is the honest part. It sits under
-                the bar rather than inside it so it does not squeeze the
-                facts into a corner of their own strip. */}
-            {past && (
-              <p className={`${FLAT} font-ninja text-[13.5px] font-bold px-5 py-3.5`} style={{ color: 'rgb(26 46 74 / 0.75)' }}>
-                This event has already happened.
-              </p>
+          {/* An event that has already happened still opens, because a link a
+              family was sent last week should land somewhere honest rather
+              than on a 404. This is the honest part. A plain line, because a
+              boxed notice on a page with no other boxes on it is the loudest
+              thing on the screen for the quietest reason. */}
+          {past && (
+            <p className="font-ninja text-[13.5px] font-bold text-ninja-muted pt-6">
+              This event has already happened.
+            </p>
+          )}
+
+          {/* The body, and no cards on it either. The reference has the
+              reading sitting straight on the page under a heading, with the
+              rest in a margin beside it, and it is right: a card is a way of
+              saying "this is one item among several", and there is one thing
+              on this page.
+
+              The column widths are the measured ones from before. 34rem is
+              what puts a line of this prose at 71 characters, inside the
+              45-to-75 a line is meant to be; the full width measured 81. */}
+          <div className={`pt-7 lg:pt-9 grid gap-8 lg:gap-12 lg:items-start ${ev.description && rest.length > 0 ? 'lg:grid-cols-[minmax(0,34rem)_18rem]' : ''}`}>
+            {ev.description && (
+              <div
+                className="lg:col-start-1 lg:row-start-1 lg:max-w-[34rem]"
+                style={{ color: 'rgb(26 46 74 / 0.9)' }}
+              >
+                <h2 className="font-ninja font-extrabold text-[22px] tracking-[-0.02em] mb-4" style={{ color: NAVY }}>
+                  About this event
+                </h2>
+                <Suspense fallback={<p className="font-ninja text-[15px] leading-[1.75] whitespace-pre-line">{ev.description}</p>}>
+                  <ReactMarkdown
+                    components={LISTING_MD}
+                    urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
+                  >
+                    {ev.description}
+                  </ReactMarkdown>
+                </Suspense>
+              </div>
             )}
 
-            {/* The reading, and what is on after it. Same two-column split as
-                before and for the same measured reason: 34rem is the width
-                that puts a line at 71 characters here, inside the 45-to-75 a
-                line is meant to be. Full width it measured 81. */}
-            <div className={`grid gap-4 lg:gap-5 lg:items-start ${ev.description && rest.length > 0 ? 'lg:grid-cols-[minmax(0,34rem)_20rem]' : ''}`}>
-              {ev.description && (
-                <article
-                  className={`${FLAT} lg:col-start-1 lg:row-start-1 lg:max-w-[34rem] p-5 sm:p-6 lg:p-7`}
-                  style={{ color: 'rgb(26 46 74 / 0.9)' }}
-                >
-                  <h2 className="font-ninja font-extrabold text-[20px] tracking-[-0.02em] mb-3.5" style={{ color: NAVY }}>
-                    About this event
-                  </h2>
-                  <Suspense fallback={<p className="font-ninja text-[15px] leading-[1.75] whitespace-pre-line">{ev.description}</p>}>
-                    <ReactMarkdown
-                      components={LISTING_MD}
-                      urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
-                    >
-                      {ev.description}
-                    </ReactMarkdown>
-                  </Suspense>
-                </article>
-              )}
-
-              {rest.length > 0 && (
-                <aside className={ev.description ? 'lg:col-start-2 lg:row-start-1' : 'lg:max-w-[34rem]'}>
-                  <Group title="Also coming up" action={<MoreLink to="/parent/events">All events</MoreLink>}>
-                    {rest.map((o, i) => (
-                      <Row
-                        key={o.id}
-                        first={i === 0}
-                        to={`/parent/events/${o.id}`}
-                        title={o.title}
-                        subtitle={rowWhen(o) || listingHook(o) || 'Anytime'}
-                      />
-                    ))}
-                  </Group>
-                </aside>
-              )}
-            </div>
+            {rest.length > 0 && (
+              <aside className={ev.description ? 'lg:col-start-2 lg:row-start-1' : 'lg:max-w-[34rem]'}>
+                {/* `bare`: the rows keep their own hairline dividers, which
+                    is what actually says "list", and drop the card around
+                    them, which is what the rest of this page has dropped. */}
+                <Group bare title="Also coming up" action={<MoreLink to="/parent/events">All events</MoreLink>}>
+                  {rest.map((o, i) => (
+                    <Row
+                      key={o.id}
+                      first={i === 0}
+                      to={`/parent/events/${o.id}`}
+                      title={o.title}
+                      subtitle={rowWhen(o) || listingHook(o) || 'Anytime'}
+                    />
+                  ))}
+                </Group>
+              </aside>
+            )}
           </div>
         </PageSheet>
       </div>
