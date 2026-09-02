@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { CalendarDaysIcon, ClockIcon } from 'lucide-react';
 import ParentLayout from '../../components/layout/ParentLayout';
 import { api } from '../../api/client';
 import { useParentAuth } from '../../context/ParentAuthContext';
@@ -58,19 +57,35 @@ const LISTING_MD = {
   img: () => null,
 };
 
-// One line of the facts band: a glyph and the value, on one line.
+// One cell of the facts band.
 //
-// No uppercase label above it. A calendar next to a date and a clock next to
-// a time are not ambiguous, and "WHEN" over "Saturday, September 19" is a
-// caption explaining a thing that explains itself. The label survives only
-// where the value alone would not say what it is — the center's name reads
-// as a place, not as a location FOR this, so Where keeps its word.
-function FactLine({ Glyph, children }) {
+// EVERY CELL IS THIS COMPONENT, and that is the whole point of it. The band
+// was awkward because the two cells had different shapes: When was a glyph
+// beside a value on one line, Where was a small label above a value. Two
+// different structures side by side have no shared grid, so nothing could
+// line up — the date sat level with the word "Where" and the center's name
+// hung underneath with nothing beside it. Aligning them by hand only moves
+// which pair looks wrong.
+//
+// So they are one shape, in three tiers, and the tiers do the aligning:
+//
+//   label   quiet, small, the same size in every cell
+//   value   the answer, and the line the eye reads across
+//   detail  optional, and it hangs BELOW the grid rather than inside it, so
+//           a cell with one is still aligned with a cell without one
+//
+// The glyphs went with the change. A calendar beside a date under a label
+// reading "When" is the same fact said three ways, and Apple's own spec rows
+// (the App Store's Age / Chart / Developer strip, a Calendar event's detail)
+// carry a label and a value and no icon at all. The label is what makes the
+// two cells the same shape, so the label is what stays.
+function Fact({ label, value, detail }) {
   return (
-    <p className="flex items-center gap-2.5 font-ninja text-[15px] font-extrabold text-ninja-navy">
-      <Glyph size={17} strokeWidth={2.3} aria-hidden className="flex-shrink-0 text-ninja-blue" />
-      {children}
-    </p>
+    <div className="min-w-0">
+      <p className="font-ninja text-[13px] font-bold text-ninja-muted leading-tight">{label}</p>
+      <p className="font-ninja text-[16px] font-extrabold text-ninja-navy leading-snug mt-1">{value}</p>
+      {detail && <p className="font-ninja text-[13px] font-bold text-ninja-muted leading-snug mt-1">{detail}</p>}
+    </div>
   );
 }
 
@@ -127,6 +142,16 @@ export default function ParentEventPage() {
   const near = nearWhen(ev.event_date);
   const days = daysUntil(ev.event_date);
   const past = days !== null && days < 0;
+  // The cell's third tier, and everything that is not the headline answer
+  // goes on it as ONE line. The time and the countdown used to be two more
+  // stacked lines, which made the When cell three tiers taller than Where and
+  // put the band back out of balance the moment a listing had both.
+  const whenDetail = [
+    when && ev.event_time ? ev.event_time : null,
+    // The countdown only starts once the banner has run out of words for it.
+    // Inside a week the banner already says "Tomorrow" or "This Saturday".
+    days !== null && days >= 7 && days <= 60 ? `In ${days} days` : null,
+  ].filter(Boolean).join(' · ') || null;
   const hook = listingHook(ev);
   const rest = others.filter((o) => String(o.id) !== String(ev.id)).slice(0, 3);
 
@@ -206,51 +231,27 @@ export default function ParentEventPage() {
               own max-w-6xl back inside, so the words still line up with the
               body underneath. */}
           <div className="relative left-1/2 -translate-x-1/2 w-[100cqw] bg-white border-b border-ninja-border">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-14">
-              <div className="space-y-2">
-                <FactLine Glyph={CalendarDaysIcon}>{whenValue}</FactLine>
-                {/* The clock is back, and it is doing real work now: with the
-                    labels gone it is the only thing saying this line is a
-                    time rather than a second date. It was decoration when a
-                    "WHEN" caption sat over both of them. */}
-                {when && ev.event_time && (
-                  <FactLine Glyph={ClockIcon}>{ev.event_time}</FactLine>
-                )}
-                {/* The countdown only starts once the banner has run out of
-                    words for it. Inside a week the banner already says
-                    "Tomorrow" or "This Saturday", and "In 3 days" under it is
-                    the third printing of one fact on one screen. */}
-                {days !== null && days >= 7 && days <= 60 && (
-                  <p className="font-ninja text-[13px] font-bold text-ninja-muted pl-[27px]">In {days} days</p>
-                )}
-              </div>
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-16">
+              <Fact label="When" value={whenValue} detail={whenDetail} />
 
               {/* The center's name and nothing else, because that is all
                   there is. `locations` carries a name and a slug and no
                   address, so there is no street to print and no map to link,
                   and a Location block with "View map" over a guess is worse
-                  than one that says where honestly.
+                  than one that says where honestly. */}
+              {parent?.centerName && <Fact label="Where" value={parent.centerName} />}
 
-                  This one keeps a label: a place name on its own does not
-                  say it is the place THIS is happening. */}
-              {parent?.centerName && (
-                <div className="min-w-0">
-                  <p className="font-ninja text-[12px] font-bold text-ninja-muted">Where</p>
-                  <p className="font-ninja text-[15px] font-extrabold text-ninja-navy mt-0.5 truncate">{parent.centerName}</p>
-                </div>
-              )}
-
-              {/* A rectangle, not a capsule, and the app's own primary blue.
-                  The pill was the shape this app uses for a quiet link on a
-                  banner; the one action on the page is not that. `rounded-lg`
-                  and `bg-ninja-blue` are what every other primary button in
-                  the portal already is. */}
+              {/* Filled, prominent, and centred on the row rather than on a
+                  line of text — Apple centres a trailing control against the
+                  whole block, not against one of its baselines. `rounded-xl`
+                  is 12px, which is the radius a control this tall wants;
+                  8px on a 46px button reads as a cut-off rectangle. */}
               {ev.event_url && !past && (
                 <a
                   href={ev.event_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="sm:ml-auto sm:self-center inline-flex w-full sm:w-auto items-center justify-center gap-1 font-ninja text-[14.5px] font-extrabold rounded-lg px-10 py-3 bg-ninja-blue text-white transition-colors hover:bg-ninja-blue/90"
+                  className="sm:ml-auto sm:self-center inline-flex w-full sm:w-auto items-center justify-center font-ninja text-[15px] font-extrabold rounded-xl px-10 py-3 bg-ninja-blue text-white transition-colors hover:bg-ninja-blue/90"
                 >
                   Sign up
                 </a>
