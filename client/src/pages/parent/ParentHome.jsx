@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useMotionTemplate, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ChevronRightIcon } from 'lucide-react';
@@ -13,6 +13,7 @@ import { SkeletonCards } from '../../components/ui/Skeleton';
 import { fmtDay, fmtLongDay, calcAge } from '../../lib/parentProgress';
 import { ninjaSrc } from '../../utils/ninjas';
 import { hoursFor, slotsFor, fmtHour } from '../../lib/centerHours';
+import { ymd, listingHook, HOUSE, WASH, PLATE } from '../../lib/eventListing';
 
 // Home: the family at a glance.
 //
@@ -21,13 +22,6 @@ import { hoursFor, slotsFor, fmtHour } from '../../lib/centerHours';
 // schedule: how busy the center is, hour by hour, with today's current hour
 // lit. Nothing here needs a child opened; the cards come off the family list.
 
-
-function ymd(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
 
 // Monday to Sunday of the current week, as local dates.
 function thisWeek() {
@@ -219,48 +213,23 @@ function LiveSchedule({ center }) {
   );
 }
 
-// Markdown only loads when someone actually opens a banner's details —
-// react-markdown is too heavy to ride along on every home visit.
-const ReactMarkdown = lazy(() => import('react-markdown'));
-
-// Listing descriptions are CD-authored markdown shown on the banner's detail
-// sheet, so every ink is inline navy (the sheet is white paper in both
-// themes). `img: () => null` stays: markdown never gets to draw an image on
-// this surface (same rule as the note maps, session 32).
-const NAVY = '#1a2e4a';
-const BANNER_MD = {
-  p: (props) => <p className="font-ninja text-[13.5px] leading-relaxed mb-2 last:mb-0" {...props} />,
-  strong: (props) => <strong className="font-extrabold" style={{ color: NAVY }} {...props} />,
-  a: (props) => <a target="_blank" rel="noopener noreferrer" className="underline font-bold" style={{ color: '#0c2f6b' }} {...props} />,
-  ul: (props) => <ul className="list-disc pl-5 mb-2 space-y-0.5" {...props} />,
-  ol: (props) => <ol className="list-decimal pl-5 mb-2 space-y-0.5" {...props} />,
-  li: (props) => <li className="font-ninja text-[13.5px] leading-relaxed" {...props} />,
-  h1: (props) => <p className="font-ninja font-extrabold text-[15px] mb-1.5" style={{ color: NAVY }} {...props} />,
-  h2: (props) => <p className="font-ninja font-extrabold text-[14px] mb-1.5" style={{ color: NAVY }} {...props} />,
-  h3: (props) => <p className="font-ninja font-extrabold text-[13.5px] mb-1.5" style={{ color: NAVY }} {...props} />,
-  code: (props) => <code className="font-mono text-[12.5px] px-1 rounded" style={{ background: 'rgb(26 46 74 / 0.08)' }} {...props} />,
-  blockquote: (props) => <blockquote className="pl-3 mb-2" style={{ borderLeft: '2px solid rgb(26 46 74 / 0.3)' }} {...props} />,
-  img: () => null,
-};
-
-// Markdown syntax has no place in the banner's one-line hook.
-function stripMd(text = '') {
-  return text
-    .replace(/[*_`#>]/g, '')
-    .replace(/^\s*[-+]\s+/gm, '')
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-    .trim();
-}
-
 // The center's event listings, at the top of the home. One listing is a
 // banner; more than one rotates like a slideshow, sliding to the next every
 // few seconds, with dots to jump. A mouse resting on it holds it still, and
-// Learn more grows the banner downward in place — description, event info
-// and the sign-up link — instead of leaving the page; the slideshow waits
-// while it is open. No date tile: the eyebrow already says the date, and the
-// tile sat on top of the artwork. Everything is inline color: the image gets
-// a dark wash for the white ink, the imageless fallback is a deep navy, and
-// neither can be fought by the .dark overrides.
+// Learn more opens the listing's own page. No date tile: the eyebrow already
+// says the date, and the tile sat on top of the artwork. Everything is inline
+// color: the image gets a dark wash for the white ink, the imageless fallback
+// is a deep navy, and neither can be fought by the .dark overrides.
+//
+// Learn more USED TO grow the banner downward in place, and the reason it no
+// longer does is worth keeping: a listing's description is the longest prose
+// in the portal and the banner is the tallest thing on the page, so opened
+// together they were taller than a phone. The banner had to give up the top
+// of the screen while it was open, and getting back to your own ninja meant
+// scrolling up, finding the button and closing it. A listing also had no
+// address of its own, so a CD could not send a family a link to the thing
+// they were promoting. It is a page now, at /parent/events/:id, and this is
+// a poster again: something to look at, with one way in.
 //
 // The banner runs edge to edge across the content region: it escapes main's
 // max-w-6xl column with the left-1/2 trick sized in container units — main is
@@ -277,15 +246,14 @@ function stripMd(text = '') {
 function EventSlideshow({ events }) {
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [expanded, setExpanded] = useState(false);
   useEffect(() => { if (idx >= events.length && events.length) setIdx(0); }, [events.length, idx]);
   // Only a mouse pauses: a touch has no "leave", so a pointer pause on a
   // phone would stick and the slideshow would never move again.
   useEffect(() => {
-    if (events.length < 2 || paused || expanded) return;
+    if (events.length < 2 || paused) return;
     const t = setInterval(() => setIdx((n) => (n + 1) % events.length), 6000);
     return () => clearInterval(t);
-  }, [events.length, paused, expanded]);
+  }, [events.length, paused]);
   // No listings is still a banner: the hero holds its place with the house
   // gradient and says so, instead of the page opening on a hole.
   if (!events.length) {
@@ -293,10 +261,10 @@ function EventSlideshow({ events }) {
       <PinnedHero>
       <section
         className="relative left-1/2 -translate-x-1/2 w-[100cqw] overflow-hidden text-white"
-        style={{ background: 'linear-gradient(135deg, #12264d 0%, #0b3d8f 100%)' }}
+        style={{ background: HOUSE }}
         aria-label="Events at the center"
       >
-        <span aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgb(6 11 24 / 0.82) 0%, rgb(6 11 24 / 0.55) 55%, rgb(6 11 24 / 0.2) 100%)' }} />
+        <span aria-hidden className="absolute inset-0" style={{ background: WASH }} />
         <div className="relative h-64 sm:h-80 lg:h-[24rem]">
           <div className="relative h-full max-w-6xl mx-auto flex items-center px-4 sm:px-6">
             {/* Opacity on the element, not the color: the mark's paths
@@ -320,25 +288,25 @@ function EventSlideshow({ events }) {
   const when = ev.event_date
     ? `${isToday ? 'Today' : fmtLongDay(ev.event_date)}${ev.event_time ? ` · ${ev.event_time}` : ''}`
     : null;
-  const hook = ev.subtitle || (ev.description ? stripMd(ev.description.split('\n')[0]) : null);
+  const hook = listingHook(ev);
+  // A listing with nothing but a title has a page, but that page would be the
+  // banner again and nothing else, so the button stays off it. The gate is
+  // the same one it always was.
   const hasMore = Boolean(ev.description || ev.event_url || when);
 
   return (
     // The billboard holds the top of the screen and the page rides up over
-    // it, the way the ninja's own banner does on their profile. It lets go
-    // of the top while a listing is open, because open it can be taller than
-    // the screen and a pinned box that tall has a bottom you cannot reach.
-    <PinnedHero pinned={!expanded}>
+    // it, the way the ninja's own banner does on their profile.
+    <PinnedHero>
     <section
       className="relative left-1/2 -translate-x-1/2 w-[100cqw] overflow-hidden text-white"
-      style={{ background: '#0e1c3a' }}
+      style={{ background: PLATE }}
       aria-label="Events at the center"
       onPointerEnter={(e) => { if (e.pointerType === 'mouse') setPaused(true); }}
       onPointerLeave={(e) => { if (e.pointerType === 'mouse') setPaused(false); }}
     >
-      {/* The artwork backs the whole section, detail sheet included, so the
-          glass the sheet is made of has something to bend. It crossfades
-          between listings; the words slide. */}
+      {/* The artwork backs the whole section. It crossfades between listings;
+          the words slide. */}
       <AnimatePresence initial={false}>
         <motion.span
           key={ev.id}
@@ -350,11 +318,11 @@ function EventSlideshow({ events }) {
           transition={{ duration: 0.45 }}
           style={ev.image_url
             ? { background: `url("${ev.image_url}") center / cover no-repeat` }
-            : { background: 'linear-gradient(135deg, #12264d 0%, #0b3d8f 100%)' }}
+            : { background: HOUSE }}
         />
       </AnimatePresence>
       {/* The wash that keeps white ink readable on any artwork. */}
-      <span aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgb(6 11 24 / 0.82) 0%, rgb(6 11 24 / 0.55) 55%, rgb(6 11 24 / 0.2) 100%)' }} />
+      <span aria-hidden className="absolute inset-0" style={{ background: WASH }} />
 
       <div className="relative h-64 sm:h-80 lg:h-[24rem]">
         <AnimatePresence initial={false}>
@@ -381,15 +349,13 @@ function EventSlideshow({ events }) {
                 <p className="font-ninja font-extrabold text-[32px] sm:text-[40px] lg:text-[52px] leading-[1.05] mt-1.5 truncate">{ev.title}</p>
                 {hook && <p className="font-ninja text-[14px] sm:text-[16px] font-bold opacity-90 mt-1.5 line-clamp-2 sm:line-clamp-1">{hook}</p>}
                 {hasMore && (
-                  <button
-                    type="button"
-                    onClick={() => setExpanded((x) => !x)}
-                    aria-expanded={expanded}
-                    className="mt-3.5 inline-flex items-center gap-1 font-ninja text-[13px] sm:text-[14px] font-extrabold rounded-full px-4 py-1.5 transition-colors"
+                  <Link
+                    to={`/parent/events/${ev.id}`}
+                    className="mt-3.5 inline-flex items-center gap-1 font-ninja text-[13px] sm:text-[14px] font-extrabold rounded-full px-4 py-1.5 transition-colors hover:bg-white/25"
                     style={{ background: 'rgb(255 255 255 / 0.18)', border: '1px solid rgb(255 255 255 / 0.3)' }}
                   >
-                    {expanded ? 'Show less' : 'Learn more ›'}
-                  </button>
+                    Learn more ›
+                  </Link>
                 )}
               </div>
             </div>
@@ -411,69 +377,6 @@ function EventSlideshow({ events }) {
           </span>
         )}
       </div>
-
-      {/* The detail sheet the banner grows into. It was a pane of the same
-          liquid glass as the phone nav, and it read beautifully and scanned
-          badly: a listing's description is the longest prose in the portal,
-          and navy paragraphs over moving artwork is the one place this app
-          asks somebody to read properly. So the sheet is solid paper — which
-          is also the standing rule, that glass is for what stays and anything
-          that OPENS is opaque. The banner still gets taller; the sheet is
-          what it grows to show.
-
-          The white is an inline hex, never `bg-white`: the ink here is fixed
-          navy, and `.dark .bg-white` would turn the paper slate and leave the
-          words unreadable on it. */}
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            key="detail"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
-            className="relative overflow-hidden"
-          >
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-5">
-            <div
-              className="rounded-[22px] p-5 space-y-3"
-              style={{ background: '#ffffff', color: NAVY, boxShadow: '0 18px 40px -22px rgb(6 13 26 / 0.55)' }}
-            >
-              {when && (
-                <p className="font-ninja text-[13px] font-extrabold">
-                  {isToday ? 'Today' : fmtLongDay(ev.event_date)}{ev.event_time ? ` · ${ev.event_time}` : ''}
-                </p>
-              )}
-              {ev.description && (
-                <div style={{ color: 'rgb(26 46 74 / 0.9)' }}>
-                  <Suspense fallback={<p className="font-ninja text-[13.5px] leading-relaxed whitespace-pre-line">{stripMd(ev.description)}</p>}>
-                    <ReactMarkdown
-                      components={BANNER_MD}
-                      urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
-                    >
-                      {ev.description}
-                    </ReactMarkdown>
-                  </Suspense>
-                </div>
-              )}
-              {ev.event_url && (
-                <p>
-                  <a
-                    href={ev.event_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 font-ninja text-[13px] font-extrabold rounded-full px-4 py-1.5"
-                    style={{ background: NAVY, color: '#ffffff' }}
-                  >
-                    Sign up ›
-                  </a>
-                </p>
-              )}
-            </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </section>
     </PinnedHero>
   );

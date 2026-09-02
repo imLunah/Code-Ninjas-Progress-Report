@@ -245,7 +245,7 @@ export default function ParentAccountPage() {
   // the center.
   const deleteCard = (
     <DeleteAccountCard
-      intro={`This removes your name, email and phone from your ninjas' records at Code Ninjas ${parent?.centerName || ''} and deletes your parent account. Your ninjas' belts, classes and progress stay with the center. Type your center code and email to confirm; this can't be undone.`}
+      intro={`This removes your name, email and phone from your ninjas' records at Code Ninjas ${parent?.centerName || ''} and deletes your parent account. Type your center code and email to confirm; this can't be undone.`}
       fields={[
         { id: 'centerCode', label: 'Center code', autoComplete: 'off', transform: (v) => v.toUpperCase() },
         { id: 'email', label: 'Email', type: 'email', autoComplete: 'email' },

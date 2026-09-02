@@ -42,6 +42,10 @@ const ParentHome = lazy(() => import('./pages/parent/ParentHome'));
 const ParentProfile = lazy(() => import('./pages/parent/ParentProfile'));
 const ParentWelcomePage = lazy(() => import('./pages/parent/ParentWelcomePage'));
 const ParentAccountPage = lazy(() => import('./pages/parent/ParentAccountPage'));
+// The center's own listings: everything it has coming up, and one listing's
+// page. Lazy like every other parent route.
+const ParentEventsPage = lazy(() => import('./pages/parent/ParentEventsPage'));
+const ParentEventPage = lazy(() => import('./pages/parent/ParentEventPage'));
 // The whole sticker book. Lazy like every other parent route: it pulls the
 // curriculum for the level topics behind each sticker, and a parent who never
 // opens it should not pay for that.
@@ -106,6 +110,8 @@ export default function App() {
             <Route path="/parent/students/:id/courses/:program" element={<ParentRoute><ParentProfile /></ParentRoute>} />
             <Route path="/parent/students/:id/stickers" element={<ParentRoute><ParentStickerBook /></ParentRoute>} />
             <Route path="/parent/account"     element={<ParentRoute><ParentAccountPage /></ParentRoute>} />
+            <Route path="/parent/events"      element={<ParentRoute><ParentEventsPage /></ParentRoute>} />
+            <Route path="/parent/events/:id"  element={<ParentRoute><ParentEventPage /></ParentRoute>} />
             {/* Courses was its own section until the grid in front of it turned
                 out to be a menu of what the profile already shows. A course is
                 opened from the child it belongs to now; the old links land on

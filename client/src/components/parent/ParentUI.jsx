@@ -118,12 +118,6 @@ export function Hero({ program, size = 'card', className = '', style = {}, child
 // bottom. Reduced motion gets the layering and none of the drift: the pinning
 // is a fact about the page, the parallax is decoration.
 //
-// `pinned` is there for a banner that can GROW — the home billboard opens up
-// to show a listing's details — because a pinned box taller than the screen
-// is a box you can never scroll to the bottom of. It lets go while the banner
-// is open, which is only ever reachable from the top of the page, where a
-// pinned banner and a loose one sit in exactly the same place.
-//
 // The zero-height mark before it carries the hero's own negative top margin,
 // so it reads the banner's place on the page from a box that never moves —
 // asking a pinned element where it is only ever gets the answer "the top".
@@ -133,7 +127,7 @@ export function Hero({ program, size = 'card', className = '', style = {}, child
 // second time.
 const Covered = createContext(null);
 
-export function PinnedHero({ pinned = true, children }) {
+export function PinnedHero({ children }) {
   const still = useReducedMotion();
   const mark = useRef(null);
   const box = useRef(null);
@@ -141,11 +135,9 @@ export function PinnedHero({ pinned = true, children }) {
   const covered = useMotionValue(0);
   const { scrollY } = useScroll();
 
-  // Not pinned is not covered: a banner that scrolls away like any other
-  // block never has the page over it, so the sheet's edge must not light up.
   const settle = (y) => {
     const { top, height } = span.current;
-    covered.set(pinned && height ? Math.min(Math.max((y - top) / height, 0), 1) : 0);
+    covered.set(height ? Math.min(Math.max((y - top) / height, 0), 1) : 0);
   };
 
   useEffect(() => {
@@ -166,8 +158,6 @@ export function PinnedHero({ pinned = true, children }) {
   }, []);
 
   useMotionValueEvent(scrollY, 'change', settle);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { settle(window.scrollY); }, [pinned]);
 
   const y = useTransform(covered, (p) => -p * span.current.height * 0.32);
   const filter = useTransform(covered, (p) => `brightness(${1 - p * 0.34})`);
@@ -175,8 +165,8 @@ export function PinnedHero({ pinned = true, children }) {
   return (
     <Covered.Provider value={covered}>
       <div ref={mark} aria-hidden className="h-0 -mt-5 lg:-mt-7" />
-      <div ref={box} className={pinned ? 'sticky top-0 z-0' : 'relative z-0'}>
-        <motion.div style={still || !pinned ? undefined : { y, filter }}>{children}</motion.div>
+      <div ref={box} className="sticky top-0 z-0">
+        <motion.div style={still ? undefined : { y, filter }}>{children}</motion.div>
       </div>
     </Covered.Provider>
   );

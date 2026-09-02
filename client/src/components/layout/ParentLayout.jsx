@@ -1,9 +1,8 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { HomeIcon, UserRoundIcon, LogOutIcon, ChevronLeftIcon } from 'lucide-react';
+import { HomeIcon, CalendarDaysIcon, LogOutIcon, ChevronLeftIcon } from 'lucide-react';
 import { useParentAuth } from '../../context/ParentAuthContext';
-import { useParentPortal } from '../../context/ParentPortalContext';
 import { useLightOnly } from '../../context/ThemeContext';
 import Logo from '../ui/Logo';
 import BugReportButton from '../ui/BugReportButton';
@@ -31,11 +30,21 @@ import { RocketIcon } from '../ui/icons';
 const EXPANDED_W = 240; // matches w-60
 const COLLAPSED_W = 76;
 
-// Home and the active child's profile. Courses was a third section and it is
-// gone: its grid was a menu of the programs the profile already lists, and a
-// course now opens from the card that describes it.
+// Home, and what the center has coming up. Courses was a section once and it
+// is gone: its grid was a menu of the programs the profile already lists, and
+// a course now opens from the card that describes it.
+//
+// Profile was a section too, and it is gone for a related reason. It was not
+// one place — it was whichever child the switcher happened to be pointing at,
+// which is why it needed the portal context to work out where it went. Home
+// draws a card per ninja with the way into each one on it, so the nav was
+// offering a second, ambiguous door to a room the page in front of you
+// already opens. Events took the slot: it IS one place, the same for every
+// family at the center, and until now the only way to see what was on was to
+// wait for the home billboard to rotate around to it.
 const TABS = [
   { to: '/parent/dashboard', label: 'Home', Glyph: HomeIcon },
+  { to: '/parent/events', label: 'Events', Glyph: CalendarDaysIcon },
 ];
 
 // Same look as MobileNav: near-transparent capsule, refracting where the browser can.
@@ -54,17 +63,9 @@ function initialsOf(name) {
   return parts.filter((_, i) => i === 0 || i === parts.length - 1).map((w) => w[0]).join('').toUpperCase() || 'P';
 }
 
-// Home and the active child's profile — the same two sections as the phone
-// capsule, built the same way.
-function useParentTabs() {
-  const { activeId } = useParentPortal();
-  return [...TABS, { to: activeId ? `/parent/students/${activeId}` : '/parent/dashboard', match: '/parent/students', label: 'Profile', Glyph: UserRoundIcon }];
-}
-
 function ParentSideNav({ parentName, centerName, onLogout, onReport }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const tabs = useParentTabs();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('parent-nav-collapsed') === '1');
   const toggleCollapsed = () => {
     setCollapsed((c) => {
@@ -118,7 +119,7 @@ function ParentSideNav({ parentName, centerName, onLogout, onReport }) {
       </div>
 
       <nav aria-label="Parent portal" className="p-3 mt-1 space-y-0.5">
-        {tabs.map((t) => {
+        {TABS.map((t) => {
           const active = isActive(pathname, t.match || t.to);
           return (
             <button
@@ -206,7 +207,6 @@ function ParentSideNav({ parentName, centerName, onLogout, onReport }) {
 function ParentTabBar() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const tabs = useParentTabs();
   const { parent } = useParentAuth();
   const accountActive = isActive(pathname, '/parent/account');
   return (
@@ -215,7 +215,7 @@ function ParentTabBar() {
       className={`lg:hidden fixed left-1/2 -translate-x-1/2 bottom-[max(1.1rem,env(safe-area-inset-bottom))] z-40 flex items-center gap-0.5 p-1.5 rounded-full ${GLASS}`}
       style={REFRACT}
     >
-      {tabs.map((t) => {
+      {TABS.map((t) => {
         const active = isActive(pathname, t.match || t.to);
         return (
           <button

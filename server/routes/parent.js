@@ -354,32 +354,78 @@ router.post('/logout', (req, res) => {
   req.session.destroy(() => res.json({ ok: true }));
 });
 
-// GET /api/parent/events?today=YYYY-MM-DD — the center's published event
-// listings for the home slideshow: authored for families on the manager
-// Events page, unlike calendar events, which are staff-facing. Dated
-// listings come soonest first and drop off once their day passes; undated
-// ones are evergreen and follow by recency. `today` is the parent's local
-// date: the server clock is UTC, which is already tomorrow every California
-// evening, and an event must stay visible for the whole of its own evening.
-// A bad or missing value falls back to the server's date — the parent can
-// only widen or narrow which PUBLISHED listings they see, nothing else.
+// The fields a family is allowed to see of a listing. No `published`, no
+// `created_by`, no timestamps: a parent gets the poster, not the record.
+//
+// to_char keeps event_date a plain YYYY-MM-DD — a raw pg DATE serializes as a
+// UTC-midnight ISO string, which reads back a day early in western timezones.
+const LISTING_FIELDS = `
+  l.id, l.title, l.subtitle, l.description, l.event_url, l.image_url, l.event_time,
+  to_char(l.event_date, 'YYYY-MM-DD') AS event_date
+`;
+
+// GET /api/parent/events?today=YYYY-MM-DD&limit=N — the center's published
+// event listings: authored for families on the manager Events page, unlike
+// calendar events, which are staff-facing. Dated listings come soonest first
+// and drop off once their day passes; undated ones are evergreen and follow
+// by recency. `today` is the parent's local date: the server clock is UTC,
+// which is already tomorrow every California evening, and an event must stay
+// visible for the whole of its own evening. A bad or missing value falls back
+// to the server's date — the parent can only widen or narrow which PUBLISHED
+// listings they see, nothing else.
+//
+// `limit` is for the two callers, not for the caller's convenience: the home
+// billboard rotates through a handful and takes the default 6, the Events
+// page is the complete list and asks for more. Clamped rather than trusted,
+// because it is a page-size knob on a query with no cursor.
+const MAX_LISTINGS = 50;
 router.get('/events', requireParent, async (req, res) => {
   const pool = req.app.get('db');
   const today = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.today || '')) ? req.query.today : null;
+  const asked = Number.parseInt(req.query.limit, 10);
+  const limit = Number.isFinite(asked) ? Math.min(Math.max(asked, 1), MAX_LISTINGS) : 6;
   try {
     const { rows } = await pool.query(`
-      SELECT l.id, l.title, l.subtitle, l.description, l.event_url, l.image_url, l.event_time,
-             to_char(l.event_date, 'YYYY-MM-DD') AS event_date
+      SELECT ${LISTING_FIELDS}
       FROM event_listings l
       WHERE l.location_id = $1 AND l.published = true
         AND (l.event_date IS NULL OR l.event_date >= COALESCE($2::date, CURRENT_DATE))
       ORDER BY l.event_date ASC NULLS LAST, l.created_at DESC
-      LIMIT 6
-    `, [req.session.parentLocationId, today]);
+      LIMIT $3
+    `, [req.session.parentLocationId, today, limit]);
     res.json(rows);
   } catch (err) {
     console.error('Parent events error:', err);
     res.status(500).json({ error: 'Failed to load events' });
+  }
+});
+
+// GET /api/parent/events/:id — one listing, for its own page.
+//
+// Scoped to the parent's own center and to published rows, the same two
+// conditions as the list: an id is guessable, and without them this would
+// hand any signed-in parent every center's drafts.
+//
+// It deliberately does NOT filter on the date. The list drops a listing the
+// day after it happens, but a link to one that has passed should still open
+// and say so rather than 404 — a parent following a link from a message sent
+// last week is not a lost page, and the page prints "This event has passed"
+// off the date it gets back.
+router.get('/events/:id', requireParent, async (req, res) => {
+  const pool = req.app.get('db');
+  const id = Number.parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.status(404).json({ error: 'Event not found' });
+  try {
+    const { rows } = await pool.query(`
+      SELECT ${LISTING_FIELDS}
+      FROM event_listings l
+      WHERE l.id = $1 AND l.location_id = $2 AND l.published = true
+    `, [id, req.session.parentLocationId]);
+    if (!rows.length) return res.status(404).json({ error: 'Event not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Parent event error:', err);
+    res.status(500).json({ error: 'Failed to load the event' });
   }
 });
 
