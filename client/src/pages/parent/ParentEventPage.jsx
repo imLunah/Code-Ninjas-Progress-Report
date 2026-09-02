@@ -43,31 +43,34 @@ const ReactMarkdown = lazy(() => import('react-markdown'));
 // this surface (the same rule as the note maps, session 32).
 // THE PAGE'S COLUMN, and the one measure everything on this page sits in.
 //
-// 55rem is not a taste: it is exactly what the body grid adds up to — 34rem
-// of prose (the width that puts a line at 71 characters) plus a 3rem gutter
-// plus an 18rem margin. So the two-column body FILLS this column rather than
-// sitting at one end of a wider one, which is what made the page hug the left
-// edge with a few hundred pixels of nothing to its right.
+// 63rem is not a taste: it is what the body grid adds up to — 42rem of prose
+// plus a 3rem gutter plus an 18rem margin. So the two-column body FILLS this
+// column rather than sitting at one end of a wider one, which is what made
+// the page hug the left edge with a few hundred pixels of nothing beside it.
 //
-// The facts band's content takes the same measure, so the "When" label starts
-// on the same vertical as the prose under it. That is the part that has to be
-// shared: centring the body on its own would have left the band's words at
-// the far left and the reading 130px in from them.
+// The prose was 34rem, which read as a thin ribbon down the middle of a wide
+// screen. 42rem measures a 93-character line, which is past the 45-to-75 a
+// line is classically given; the type went up a point (15 to 16) to buy some
+// of that back, and the leading stayed loose at 1.75, because what actually
+// costs you on a long line is finding the start of the next one.
 //
-// Inside the column everything stays LEFT aligned. Centring the block is what
-// was asked for and is right; centring the lines of a paragraph inside it
-// would not be — ragged left edges are what makes long prose hard to read,
-// which is the whole reason this column is 34rem in the first place.
-const COLUMN = 'max-w-[55rem] mx-auto';
+// The facts band takes the same measure, so the "When" label starts on the
+// same vertical as the prose under it. That is the part that has to be
+// shared: centring the body on its own would leave the band's words at the
+// far left and the reading a hundred pixels in from them.
+//
+// Inside the column everything stays LEFT aligned. Centring the block is
+// right; centring the lines of a paragraph would not be.
+const COLUMN = 'max-w-[63rem] mx-auto';
 
 const NAVY = '#1a2e4a';
 const LISTING_MD = {
-  p: (props) => <p className="font-ninja text-[15px] leading-[1.75] mb-3.5 last:mb-0" {...props} />,
+  p: (props) => <p className="font-ninja text-[16px] leading-[1.75] mb-4 last:mb-0" {...props} />,
   strong: (props) => <strong className="font-extrabold" style={{ color: NAVY }} {...props} />,
   a: (props) => <a target="_blank" rel="noopener noreferrer" className="underline font-bold" style={{ color: '#0c2f6b' }} {...props} />,
   ul: (props) => <ul className="list-disc pl-5 mb-3.5 space-y-1.5" {...props} />,
   ol: (props) => <ol className="list-decimal pl-5 mb-3.5 space-y-1.5" {...props} />,
-  li: (props) => <li className="font-ninja text-[15px] leading-[1.75]" {...props} />,
+  li: (props) => <li className="font-ninja text-[16px] leading-[1.75]" {...props} />,
   h1: (props) => <p className="font-ninja font-extrabold text-[17px] mb-2 mt-5 first:mt-0" style={{ color: NAVY }} {...props} />,
   h2: (props) => <p className="font-ninja font-extrabold text-[16px] mb-2 mt-5 first:mt-0" style={{ color: NAVY }} {...props} />,
   h3: (props) => <p className="font-ninja font-extrabold text-[15px] mb-1.5 mt-4 first:mt-0" style={{ color: NAVY }} {...props} />,
@@ -305,16 +308,16 @@ export default function ParentEventPage() {
               The column widths are the measured ones from before. 34rem is
               what puts a line of this prose at 71 characters, inside the
               45-to-75 a line is meant to be; the full width measured 81. */}
-          <div className={`${COLUMN} pt-7 lg:pt-9 grid gap-8 lg:gap-12 lg:items-start ${ev.description && rest.length > 0 ? 'lg:grid-cols-[minmax(0,34rem)_18rem]' : ''}`}>
+          <div className={`${COLUMN} pt-7 lg:pt-9 grid gap-8 lg:gap-12 lg:items-start ${ev.description && rest.length > 0 ? 'lg:grid-cols-[minmax(0,42rem)_18rem]' : ''}`}>
             {ev.description && (
               <div
-                className="lg:col-start-1 lg:row-start-1 lg:max-w-[34rem] lg:mx-auto"
+                className="lg:col-start-1 lg:row-start-1 lg:max-w-[42rem] lg:mx-auto"
                 style={{ color: 'rgb(26 46 74 / 0.9)' }}
               >
                 <h2 className="font-ninja font-extrabold text-[22px] tracking-[-0.02em] mb-4" style={{ color: NAVY }}>
                   About this event
                 </h2>
-                <Suspense fallback={<p className="font-ninja text-[15px] leading-[1.75] whitespace-pre-line">{ev.description}</p>}>
+                <Suspense fallback={<p className="font-ninja text-[16px] leading-[1.75] whitespace-pre-line">{ev.description}</p>}>
                   <ReactMarkdown
                     components={LISTING_MD}
                     urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
@@ -332,7 +335,7 @@ export default function ParentEventPage() {
                 of that column. Left-aligning it instead would sit it a third
                 of the way across a page that is otherwise centred. */}
             {rest.length > 0 && (
-              <aside className={ev.description ? 'lg:col-start-2 lg:row-start-1' : 'lg:max-w-[34rem] lg:mx-auto'}>
+              <aside className={ev.description ? 'lg:col-start-2 lg:row-start-1' : 'lg:max-w-[42rem] lg:mx-auto'}>
                 {/* `bare`: the rows keep their own hairline dividers, which
                     is what actually says "list", and drop the card around
                     them, which is what the rest of this page has dropped. */}
