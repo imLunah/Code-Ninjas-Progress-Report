@@ -562,12 +562,23 @@ function ChildCard({ child, wide = false }) {
   const profile = `/parent/students/${child.id}`;
 
   return (
-    <article className={`${FLAT} p-4 sm:p-5 flex flex-col gap-4 ${wide ? 'lg:grid lg:grid-cols-2 lg:gap-x-6 lg:items-start' : ''}`}>
-      {/* The words keep their own room rather than sharing a flex row with the
-          ninja, the same rule the profile banner is built on: the art is
-          absolutely positioned and the text reserves its width with padding,
-          so nothing on the left moves when the picture changes size. */}
-      <Hero program={heroProgram} className={wide ? `lg:flex lg:flex-col lg:justify-between lg:p-6 ${recent.length >= 3 ? 'lg:h-[248px]' : 'lg:h-[200px]'}` : ''}>
+    <article className={`${FLAT} overflow-hidden flex flex-col ${wide ? 'lg:grid lg:grid-cols-2 lg:items-stretch' : ''}`}>
+      {/* The banner has no card padding around it: it runs to the card's own
+          edges and the card's radius clips it, so the blue IS the whole of the
+          ninja's half rather than a blue rectangle floating on white with a
+          20px moat. On the stacked card that is the full width across the top,
+          which is the shape the profile page has (banner, then the page under
+          it).
+          
+          The height is a MINIMUM now rather than a fixed number, because the
+          cell has to reach the bottom of the card or the blue stops short of
+          the corner. `items-stretch` does that; the minimum is what stops a
+          ninja with one session logged getting a 126px banner with their head
+          cropped off. The words keep their own room rather than sharing a flex
+          row with the ninja, the same rule the profile banner is built on: the
+          art is absolutely positioned and the text reserves its width with
+          padding, so nothing on the left moves when the picture changes. */}
+      <Hero program={heroProgram} className={`!rounded-none flex flex-col justify-between !p-5 ${wide ? `lg:!p-6 ${recent.length >= 3 ? 'lg:min-h-[248px]' : 'lg:min-h-[200px]'}` : ''}`}>
         {/* A DIRECT child of the hero, and a box rather than a bare image.
             Both matter. Inside the text it would be positioned against text
             that moves, so it floated instead of standing on anything. And the
@@ -626,6 +637,9 @@ function ChildCard({ child, wide = false }) {
         </div>
       </Hero>
 
+      {/* The sessions carry the padding the card used to, since the banner
+          gave it up. */}
+      <div className="p-4 sm:p-5">
       {recent.length > 0 ? (
         /* Bare: the rows are already inside a card, and a second white box
            around them was a hairline drawn a few pixels inside another
@@ -636,10 +650,11 @@ function ChildCard({ child, wide = false }) {
           ))}
         </Group>
       ) : (
-        <p className={`font-ninja text-[13px] v2 text-ninja-muted px-1 ${wide ? 'lg:self-center' : ''}`}>
-          {last ? 'The rest of the history is on the profile.' : 'Sessions show up here as soon as a sensei logs one.'}
+        <p className="font-ninja text-[13px] v2 text-ninja-muted px-1">
+          Sessions show up here as soon as a sensei logs one.
         </p>
       )}
+      </div>
     </article>
   );
 }
