@@ -4,7 +4,8 @@ import ParentLayout, { ChildSwitcher } from '../../components/layout/ParentLayou
 import { api } from '../../api/client';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
-import { Hero, Emblem, ProgramMark, Group, Row, StatusText, MoreLink, PinnedHero, PageSheet } from '../../components/parent/ParentUI';
+import { Hero, Emblem, Group, Row, StatusText, MoreLink, PinnedHero, PageSheet } from '../../components/parent/ParentUI';
+import BeltIcon from '../../components/ui/BeltIcon';
 import Logo from '../../components/ui/Logo';
 import { FLAT } from '../../lib/surfaces';
 import { SkeletonCards } from '../../components/ui/Skeleton';
@@ -478,82 +479,83 @@ function EventSlideshow({ events }) {
 }
 
 // What to say about a session in one line under its title.
-function sessionLine(s) {
-  const bits = [s.program];
-  if (s.program === 'CREATE' && s.belt_level_at) {
-    bits.push(`${s.belt_level_at} belt${s.belt_sublevel_at ? `, level ${s.belt_sublevel_at}` : ''}`);
-  } else if (s.sub_program || s.module_name) {
-    bits.push([s.sub_program, s.module_name].filter(Boolean).join(' · '));
-  }
-  return bits.filter(Boolean).join(' · ');
-}
-
 function sessionTitle(s) {
   return s.project_at || s.lesson_name || s.module_name || s.sub_program || `${s.program} session`;
 }
 
-// "CREATE, Robotics Academy" or "CREATE, Robotics Academy +2".
-function programList(programs) {
-  const names = programs.map((p) => p.program);
-  if (!names.length) return 'Not enrolled yet';
-  return names.length <= 2 ? names.join(', ') : `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
-}
-
-function firstName(name) {
-  return String(name || '').trim().split(' ')[0];
+// One stat on the card's banner: a number or a belt name with its label
+// under it. Smaller than the profile banner's, which is the same shape at
+// 26-30px, because this one is a card on a list of cards rather than the top
+// of a page.
+function CardStat({ value, label, lead }) {
+  return (
+    <div className="min-w-0">
+      <div className="flex items-center gap-1.5">
+        {lead}
+        <span className="font-ninja font-extrabold text-[22px] leading-none tracking-[-0.02em] truncate">{value}</span>
+      </div>
+      <p className="font-ninja text-[11px] font-bold uppercase tracking-[0.08em] opacity-75 mt-1.5 truncate">{label}</p>
+    </div>
+  );
 }
 
 // `wide` is the one-ninja layout: the card is the whole row, so instead of a
-// stack it becomes two columns at lg — the banner on the left, grown to the
-// height of the list beside it, recent sessions on the right — under a
-// full-width header. With siblings the stacked card in a half column stays.
+// stack it becomes two columns at lg — the banner on the left, recent sessions
+// on the right. With siblings the stacked card in a half column stays.
 //
-// THE COLUMNS DO NOT STRETCH EACH OTHER, and that is the fix rather than a
-// detail. The grid used to stretch the banner to whatever the list beside it
-// needed, so three short lines were centred in a 250px slab of flat blue with
-// a 64px logo floating at one side. Letting the banner stretch and filling it
-// only moves the hole: a ninja with one session has one row in the list, and
-// then it is the LIST that is short and a column of white sits where the
-// sessions would be. So the banner is `lg:h-[248px]` and the grid is
+// THE BANNER IS THE NINJA, NOT THEIR LAST CLASS. It used to lead with the
+// project from the most recent session ("Last class · Wed, Aug 19 / Capstone
+// Project / CREATE · Black belt · with Sensei John"), which put a session in
+// the biggest type on the card and then listed more sessions immediately
+// beside it — and since the banner takes sessions[0] and the list starts at
+// sessions[1], the two read as the same thing said twice whenever a ninja
+// works on one project across visits. It is the profile's banner now, cut
+// down: who the ninja is, since when, their belt and how many programs they
+// are in. The sessions are the list's job and they are only in one place.
+//
+// The card header went with it. It was carrying the name, the programs and
+// the "since", which is every word the banner now says, and the only thing on
+// it that was not duplicated was the link, which moved onto the banner.
+//
+// THE COLUMNS DO NOT STRETCH EACH OTHER. The grid used to stretch the banner
+// to whatever the list beside it needed, so a few short lines were centred in
+// a 250px slab of flat blue. Letting it stretch and filling it only moves the
+// hole: a ninja with one session has one row in the list, and then it is the
+// LIST that is short. So the banner is a fixed height and the grid is
 // `items-start`. 248 is a shade more than three rows plus their eyebrow, so
-// the common case sits level, and the case that does not is white under a
-// list, which is nothing at all.
+// the common case sits level; under three rows it drops to 200. Neither
+// number chases the list exactly — a one-row list is 86px and nothing with a
+// ninja in it goes there — they keep the shorter column's leftover to
+// something a reader does not notice, and what is left over is white beside
+// white.
 //
-// The two heights are the two cases: a full list is three rows and their
-// eyebrow, about 210px, and 248 clears it. A ninja with one session logged has
-// one row, and a banner still 248 tall beside it leaves a column of white
-// where the sessions would be, so it drops to 200. Neither number chases the
-// list exactly — a list of one row is 86px and nothing with a ninja in it goes
-// there — they just keep the shorter column's leftover to something a reader
-// does not notice, and what is left over is white beside white.
-//
-// The ninja is the portal's own way of filling a banner (it is what the
-// profile page opens on) and it stands in the height rather than the height
-// standing empty. It also retires the emblem here, which was saying "CREATE"
-// under a line that already reads "CREATE · Black belt · with Sensei John".
-//
-// The stacked card keeps the emblem: at half a column the banner is only as
-// tall as its own three lines, and a ninja cropped to the shoulders is worse
-// than no ninja.
+// The stacked card keeps the emblem instead of the ninja: at half a column the
+// banner is only as tall as its own lines, and a ninja cropped to the
+// shoulders is worse than no ninja.
 function ChildCard({ child, wide = false }) {
   const programs = child.programs || [];
   const sessions = child.recent_sessions || [];
   const clubs = child.recent_clubs || [];
-  const last = sessions[0] || null;
-  const heroProgram = last?.program || programs[0]?.program || 'CREATE';
-  const enrollment = programs.find((p) => p.program === heroProgram) || programs[0] || null;
-  const belt = heroProgram === 'CREATE' ? (enrollment?.belt_level || last?.belt_level_at || null) : null;
-  // The belt the NINJA is drawn at, which is not the same question as which
-  // emblem the banner carries. `belt` is null the moment the last class was
-  // Robotics, and drawing a Black belt's ninja in a white sash because of what
-  // they did on Tuesday is wrong. The ninja follows the CREATE enrollment
-  // wherever it is, and `ninjaSrc` falls back to White for a ninja with none.
-  const ninjaBelt = programs.find((p) => p.program === 'CREATE')?.belt_level || null;
+
+  // The same rule the profile banner uses, and it has to be the same or the
+  // two pages give one ninja two identities: CREATE is the spine of the
+  // centre, so its belt is the ninja's belt where they are in it; otherwise
+  // the banner takes the colour of whatever they ARE in and shows no belt at
+  // all rather than inventing a White one for a JR-only ninja. It is
+  // deliberately NOT the last class's program, which would recolour a child's
+  // card because of what they did on Tuesday.
+  const createEnrollment = programs.find((p) => p.program === 'CREATE');
+  const heroProgram = createEnrollment ? 'CREATE' : (programs[0]?.program || 'CREATE');
+  const belt = createEnrollment?.belt_level || null;
+  const level = createEnrollment?.belt_sublevel || null;
   const age = calcAge(child.birthday);
   const since = child.created_at ? new Date(child.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : null;
 
+  // Every session, not sessions[1..]: the banner no longer spends the first
+  // one on a headline, so holding it back would drop the most recent class off
+  // the card entirely.
   const recent = [
-    ...sessions.slice(1).map((s) => ({ key: `s${s.session_date}${s.created_at}`, date: s.session_date, title: sessionTitle(s), sub: `${s.program} · ${fmtDay(s.session_date)}`, status: s.status_at })),
+    ...sessions.map((s) => ({ key: `s${s.session_date}${s.created_at}`, date: s.session_date, title: sessionTitle(s), sub: `${s.program} · ${fmtDay(s.session_date)}`, status: s.status_at })),
     ...clubs.map((c) => ({ key: `c${c.session_date}${c.club_name}`, date: c.session_date, title: c.club_name, sub: `Club · ${fmtDay(c.session_date)}`, status: 'club' })),
   ].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 3);
 
@@ -561,57 +563,66 @@ function ChildCard({ child, wide = false }) {
 
   return (
     <article className={`${FLAT} p-4 sm:p-5 flex flex-col gap-4 ${wide ? 'lg:grid lg:grid-cols-2 lg:gap-x-6 lg:items-start' : ''}`}>
-      <header className={`flex items-center gap-3 ${wide ? 'lg:col-span-2' : ''}`}>
-        <ProgramMark program={programs[0]?.program} />
-        <div className="min-w-0 flex-1">
-          <h2 className="font-ninja font-extrabold text-[17px] text-ninja-navy leading-tight truncate">{child.full_name}</h2>
-          <p className="font-ninja text-[12.5px] v2 text-ninja-muted truncate">
-            {[age != null && age >= 3 ? `Age ${age}` : null, programList(programs), since ? `since ${since}` : null].filter(Boolean).join(' · ')}
-          </p>
-        </div>
-        <MoreLink to={profile}>Full profile</MoreLink>
-      </header>
-
       {/* The words keep their own room rather than sharing a flex row with the
           ninja, the same rule the profile banner is built on: the art is
           absolutely positioned and the text reserves its width with padding,
           so nothing on the left moves when the picture changes size. */}
-      <Hero program={heroProgram} className={wide ? `lg:flex lg:flex-col lg:justify-center lg:p-6 ${recent.length >= 3 ? 'lg:h-[248px]' : 'lg:h-[200px]'}` : ''}>
+      <Hero program={heroProgram} className={wide ? `lg:flex lg:flex-col lg:justify-between lg:p-6 ${recent.length >= 3 ? 'lg:h-[248px]' : 'lg:h-[200px]'}` : ''}>
         {/* A DIRECT child of the hero, and a box rather than a bare image.
-            Both matter. Inside the text row it would be positioned against the
-            text, which is centred, so it floated instead of standing on
-            anything. And the hero's height is set by the list in the column
-            beside it, which is one, two or three rows deep depending on how
-            much this ninja has done: a fixed-height picture is either cropped
-            to the chest or swimming. The box is `inset-y-0` so it is exactly
-            as tall as the banner, hung 16px past the bottom edge so the feet
-            crop rather than land on it, and `object-contain object-bottom`
-            keeps the art standing on the floor at whatever size fits. */}
+            Both matter. Inside the text it would be positioned against text
+            that moves, so it floated instead of standing on anything. And the
+            banner's height is not always the same: a fixed-height picture is
+            either cropped to the chest or swimming. The box is `inset-y-0` so
+            it is exactly as tall as the banner, hung 16px past the bottom edge
+            so the feet crop rather than land on it, and `object-contain
+            object-bottom` keeps the art standing on the floor at whatever size
+            fits. */}
         {wide && (
           <span aria-hidden className="hidden lg:block absolute right-5 top-0 bottom-[-16px] w-[186px] pointer-events-none">
             <img
-              src={ninjaSrc(ninjaBelt, 'wave', child.ninja_skin_tone)}
+              src={ninjaSrc(belt, 'wave', child.ninja_skin_tone)}
               alt=""
               draggable={false}
               className="h-full w-full object-contain object-bottom select-none drop-shadow-[0_14px_22px_rgba(4,10,24,0.4)]"
             />
           </span>
         )}
-        <div className={`relative flex items-center justify-between gap-4 ${wide ? 'lg:block lg:pr-[196px]' : ''}`}>
+
+        <div className={`relative flex items-start justify-between gap-4 ${wide ? 'lg:block lg:pr-[196px]' : ''}`}>
           <div className="min-w-0">
             <p className="font-ninja text-[12px] font-extrabold opacity-85 truncate">
-              {last ? `Last class · ${fmtLongDay(last.session_date)}` : 'No classes logged yet'}
+              {[age != null && age >= 3 ? `Age ${age}` : null, since ? `Ninja since ${since}` : null].filter(Boolean).join(' · ') || 'Ninja'}
             </p>
-            <p className={`font-ninja font-extrabold leading-tight mt-1 truncate text-[22px] ${wide ? 'lg:text-[28px] lg:tracking-[-0.02em]' : ''}`}>
-              {last ? sessionTitle(last) : heroProgram}
-            </p>
-            <p className="font-ninja text-[13px] opacity-85 mt-1 truncate">
-              {last
-                ? [sessionLine(last), last.sensei_name ? `with Sensei ${firstName(last.sensei_name)}` : null].filter(Boolean).join(' · ')
-                : belt ? `${belt} belt${enrollment?.belt_sublevel ? `, level ${enrollment.belt_sublevel}` : ''}` : 'Just getting started'}
-            </p>
+            <h2 className={`font-ninja font-extrabold leading-tight mt-1 truncate text-[22px] ${wide ? 'lg:text-[34px] lg:tracking-[-0.03em]' : ''}`}>
+              {child.full_name}
+            </h2>
           </div>
           {!wide && <Emblem program={heroProgram} belt={belt} size={64} tilt />}
+        </div>
+
+        {/* Belt first, because it is the thing a parent came to check, and it
+            is the one stat that is a picture as well as a word. A ninja in no
+            CREATE class has no belt, and the row is then just the programs
+            rather than a White belt nobody awarded.
+            
+            The link rides at the end of this row rather than in the banner's
+            top corner, which is where it went first: the corner is where the
+            ninja's raised arm is, and the words landed across it. Down here it
+            is inside the same padding that already keeps the text clear of the
+            art, and it reads as the card's action rather than as a caption
+            stuck on the picture.
+            
+            The row wraps below lg because it does not fit a phone: a belt
+            stat, a programs stat and the link are about 330px of content in a
+            326px card at 390 wide, and "Platinum" is wider than "Black". When
+            it wraps the link keeps its `ml-auto` and lands right-aligned on
+            its own line. The wide banner has the room and stays on one line. */}
+        <div className={`relative flex flex-wrap items-end gap-x-6 gap-y-2 mt-3 ${wide ? 'lg:mt-0 lg:flex-nowrap lg:pr-[196px]' : ''}`}>
+          {belt && (
+            <CardStat value={belt} label={level ? `Level ${level}` : 'Belt'} lead={<BeltIcon belt={belt} size={24} className="flex-shrink-0 -ml-0.5" />} />
+          )}
+          <CardStat value={programs.length} label={programs.length === 1 ? 'Program' : 'Programs'} />
+          <MoreLink to={profile} onHero className="ml-auto pb-1">Full profile</MoreLink>
         </div>
       </Hero>
 

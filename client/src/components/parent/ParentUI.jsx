@@ -776,9 +776,13 @@ export function StatusText({ status }) {
 }
 
 // A quiet link with a chevron: "Full profile ›", "All 24 sessions ›".
-export function MoreLink({ to, children, className = '' }) {
+//
+// `onHero` is the same link sitting on a banner. Everything on a hero is
+// white (the art is dark by construction), and the blue ink it carries on
+// paper disappears into the gradient.
+export function MoreLink({ to, children, onHero = false, className = '' }) {
   return (
-    <Link to={to} className={`inline-flex items-center gap-0.5 font-ninja text-[13px] font-extrabold text-ninja-blue-ink hover:underline ${className}`}>
+    <Link to={to} className={`inline-flex items-center gap-0.5 font-ninja text-[13px] font-extrabold hover:underline ${onHero ? 'text-white' : 'text-ninja-blue-ink'} ${className}`}>
       {children}
       <ChevronRightIcon size={15} strokeWidth={2.6} aria-hidden />
     </Link>
