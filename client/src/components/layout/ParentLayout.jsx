@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, useAnimationControls, useReducedMotion } from 'framer-motion';
 import { HomeIcon, CalendarDaysIcon, LogOutIcon, ChevronLeftIcon } from 'lucide-react';
@@ -7,6 +7,7 @@ import { useLightOnly } from '../../context/ThemeContext';
 import Logo from '../ui/Logo';
 import BugReportButton from '../ui/BugReportButton';
 import { RocketIcon } from '../ui/icons';
+import useIsDesktop from '../../lib/useIsDesktop';
 
 // The parent portal's shell.
 //
@@ -46,6 +47,32 @@ const TABS = [
   { to: '/parent/dashboard', label: 'Home', Glyph: HomeIcon },
   { to: '/parent/events', label: 'Events', Glyph: CalendarDaysIcon },
 ];
+
+// The order the phone moves through: the sections on the bar, left to right,
+// with the account on the end. It is the swipe order as well as the tab order,
+// because a sideways throw can only mean "the next one along" and the bar is
+// the only thing on screen that says what along means.
+//
+// A page that is NOT one of these — a ninja's profile, a listing — has no
+// neighbour either side. Those do not swipe and they do not slide sideways:
+// opening a child from the home is a step inward, not a step across, and
+// sliding it in from the right would claim otherwise.
+const SECTIONS = ['/parent/dashboard', '/parent/events', '/parent/account'];
+
+function sectionIndex(pathname) {
+  return SECTIONS.findIndex((to) => isActive(pathname, to));
+}
+
+// Where the shell last was, and where the phone bar's pill last sat, both kept
+// at module scope ON PURPOSE. Every section is its own route, so moving from
+// one to the next unmounts one ParentLayout and mounts the next: a ref inside
+// the component would be born empty on arrival and could never say which way
+// the move went. Only one parent shell is ever mounted, so one seat each is
+// enough. The pill's is in SCREEN coordinates, because the capsule changes
+// width when the labels swap and the same offset inside it is a different
+// place on the glass.
+let cameFrom = null;
+let pillSeat = null;
 
 // Same look as MobileNav: near-transparent capsule, refracting where the browser can.
 export const GLASS = 'border border-white/30 dark:border-white/12 bg-white/[0.55] dark:bg-[#0c0f1a]/55 backdrop-blur-xl backdrop-saturate-[1.9] shadow-[0_14px_40px_rgb(26_46_74/0.18)] dark:shadow-[0_14px_40px_rgb(0_0_0/0.45)]';
@@ -227,65 +254,160 @@ function ParentSideNav({ parentName, centerName, onLogout, onReport }) {
   );
 }
 
+// Where a tab sits on the glass, in screen coordinates, with the capsule's
+// own left edge alongside so it can be turned back into an offset inside it.
+function seatOf(bar, el) {
+  const box = el.getBoundingClientRect();
+  return { left: box.left, width: box.width, origin: bar.getBoundingClientRect().left + bar.clientLeft };
+}
+
 function ParentTabBar() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { parent } = useParentAuth();
-  const accountActive = isActive(pathname, '/parent/account');
+  const still = useReducedMotion();
+
+  // The bar in one list, account included, so the pill has one set of seats
+  // to travel between instead of two copies of itself in two branches.
+  const items = useMemo(() => ([
+    ...TABS.map((t) => ({
+      to: t.to,
+      label: t.label,
+      glyph: (on) => (
+        <t.Glyph
+          strokeWidth={2.2}
+          aria-hidden
+          className={`w-[22px] h-[22px] transition-opacity duration-300 ${on ? 'text-ninja-blue-ink' : 'text-ninja-navy opacity-55'}`}
+        />
+      ),
+    })),
+    {
+      to: '/parent/account',
+      label: 'Account',
+      glyph: (on) => (
+        <span
+          className={`w-7 h-7 rounded-full bg-ninja-blue flex items-center justify-center text-white font-ninja font-bold text-[10px] transition-opacity duration-300 ${on ? '' : 'opacity-80'}`}
+          aria-hidden
+        >
+          {initialsOf(parent?.parentName)}
+        </span>
+      ),
+    },
+  ]), [parent?.parentName]);
+
+  const active = items.findIndex((t) => isActive(pathname, t.to));
+  const barRef = useRef(null);
+  const btns = useRef([]);
+  const pill = useAnimationControls();
+
+  // THE PILL IS LIQUID: it does not slide from one tab to the next, it
+  // STRETCHES across the gap and pulls itself in on the far side, the way a
+  // drop of water leaves one surface for another. Two keyframes do it — the
+  // span covering both tabs, then the destination — and the eye reads the
+  // middle one as the pill being pulled rather than as a rectangle resizing.
+  //
+  // Measured rather than handed to `layoutId`, which is what used to move it.
+  // A shared layout pill can only interpolate between two rectangles, and the
+  // bridge is a third one that exists nowhere in the markup.
+  //
+  // Screen coordinates in, offsets out. The capsule is centred and its width
+  // changes when the labels swap, so the same offset inside it before and
+  // after a tab change is not the same place on screen; only the seat the
+  // pill was actually painted at will start the movement without a jump.
+  useLayoutEffect(() => {
+    const bar = barRef.current;
+    const el = btns.current[active];
+    if (!bar) return;
+    // No tab owns the page: a ninja's profile, a listing. The pill has
+    // nothing to sit on, so it leaves rather than parking on the last tab.
+    if (!el) { pillSeat = null; pill.start({ opacity: 0, transition: { duration: 0.16 } }); return; }
+
+    const seat = seatOf(bar, el);
+    const to = { left: seat.left - seat.origin, width: seat.width };
+    const from = pillSeat ? { left: pillSeat.left - seat.origin, width: pillSeat.width } : null;
+    pillSeat = seat;
+
+    if (!from || still) { pill.set({ ...to, opacity: 1 }); return; }
+
+    const lo = Math.min(from.left, to.left);
+    const hi = Math.max(from.left + from.width, to.left + to.width);
+    pill.set({ opacity: 1 });
+    pill.start({
+      left: [from.left, lo, to.left],
+      width: [from.width, hi - lo, to.width],
+      // Out fast, in slow. A drop lets go quickly and settles slowly, and
+      // equal halves read as a rectangle being scrubbed between two sizes.
+      transition: { duration: 0.44, times: [0, 0.42, 1], ease: ['easeOut', [0.22, 1, 0.3, 1]] },
+    });
+  }, [active, pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A rotation moves every seat. Re-seat without the stretch: nothing has
+  // been chosen, so there is no movement to describe.
+  useEffect(() => {
+    const reseat = () => {
+      const bar = barRef.current;
+      const el = btns.current[active];
+      if (!bar || !el) return;
+      const seat = seatOf(bar, el);
+      pillSeat = seat;
+      pill.set({ left: seat.left - seat.origin, width: seat.width });
+    };
+    window.addEventListener('resize', reseat);
+    return () => window.removeEventListener('resize', reseat);
+  }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <nav
+      ref={barRef}
       aria-label="Parent portal"
       className={`lg:hidden fixed left-1/2 -translate-x-1/2 bottom-[max(1.1rem,env(safe-area-inset-bottom))] z-40 flex items-center gap-0.5 p-1.5 rounded-full ${GLASS}`}
       style={REFRACT}
     >
-      {TABS.map((t) => {
-        const active = isActive(pathname, t.match || t.to);
+      {/* Left and width rather than a transform: the pill is a capsule, and a
+          scaled capsule has elliptical ends and a smeared shadow. It is
+          absolutely positioned, so nothing else on the bar reflows with it. */}
+      <motion.span
+        aria-hidden
+        initial={{ opacity: 0, left: 0, width: 0 }}
+        animate={pill}
+        className="absolute top-0 h-[46px] rounded-full bg-white/90 dark:bg-white/[0.14] shadow-[0_2px_8px_rgb(26_46_74/0.12),inset_0_1px_0_#fff] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]"
+      />
+
+      {items.map((t, i) => {
+        const on = i === active;
         return (
           <button
-            key={t.label}
+            key={t.to}
+            ref={(el) => { btns.current[i] = el; }}
             type="button"
             onClick={() => navigate(t.to)}
-            aria-current={active ? 'page' : undefined}
+            aria-current={on ? 'page' : undefined}
             aria-label={t.label}
-            className="relative h-[46px] rounded-full flex items-center gap-1.5 px-3.5"
+            className={`relative h-[46px] rounded-full flex items-center gap-1.5 ${t.label === 'Account' ? 'px-2.5' : 'px-3.5'}`}
           >
-            {active && (
-              <motion.span
-                layoutId="parent-tab-pill"
-                transition={PILL_SPRING}
-                className="absolute inset-0 rounded-full bg-white/90 dark:bg-white/[0.14] shadow-[0_2px_8px_rgb(26_46_74/0.12),inset_0_1px_0_#fff] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]"
-              />
-            )}
-            <span className="relative z-10 flex items-center gap-1.5">
-              <t.Glyph strokeWidth={2.2} aria-hidden className={`w-[22px] h-[22px] ${active ? 'text-ninja-blue-ink' : 'text-ninja-navy opacity-55'}`} />
-              {active && <span className="font-ninja font-extrabold text-[13px] text-ninja-blue-ink pr-1">{t.label}</span>}
-            </span>
+            {/* The chosen tab's contents come up to size as the pill arrives,
+                so the label is something the pill delivered rather than
+                something that appeared on top of it. */}
+            <motion.span
+              className="relative z-10 flex items-center gap-1.5"
+              animate={still ? { scale: 1 } : (on ? { scale: [0.88, 1] } : { scale: 1 })}
+              transition={{ type: 'spring', stiffness: 520, damping: 26 }}
+            >
+              {t.glyph(on)}
+              {on && (
+                <motion.span
+                  initial={still ? false : { opacity: 0, x: -5 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.24, delay: 0.12, ease: 'easeOut' }}
+                  className="font-ninja font-extrabold text-[13px] text-ninja-blue-ink pr-1"
+                >
+                  {t.label}
+                </motion.span>
+              )}
+            </motion.span>
           </button>
         );
       })}
-      {/* The account rides the bar as the initials bubble, same pill as the
-          tabs; Settings is where sign out and the rest live. */}
-      <button
-        type="button"
-        onClick={() => navigate('/parent/account')}
-        aria-current={accountActive ? 'page' : undefined}
-        aria-label="Settings"
-        className="relative h-[46px] rounded-full flex items-center gap-1.5 px-2.5"
-      >
-        {accountActive && (
-          <motion.span
-            layoutId="parent-tab-pill"
-            transition={PILL_SPRING}
-            className="absolute inset-0 rounded-full bg-white/90 dark:bg-white/[0.14] shadow-[0_2px_8px_rgb(26_46_74/0.12),inset_0_1px_0_#fff] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]"
-          />
-        )}
-        <span className="relative z-10 flex items-center gap-1.5">
-          <span className={`w-7 h-7 rounded-full bg-ninja-blue flex items-center justify-center text-white font-ninja font-bold text-[10px] ${accountActive ? '' : 'opacity-80'}`} aria-hidden>
-            {initialsOf(parent?.parentName)}
-          </span>
-          {accountActive && <span className="font-ninja font-extrabold text-[13px] text-ninja-blue-ink pr-1">Account</span>}
-        </span>
-      </button>
     </nav>
   );
 }
@@ -318,7 +440,7 @@ function ParentTabBar() {
 // the page has to be BOTH at the top and at zero opacity before the browser
 // paints it, or the transition plays over a frame of the new page already
 // sitting there at full strength.
-function useTopOnNavigate() {
+function useTopOnNavigate(lateral) {
   const { pathname } = useLocation();
   const page = useAnimationControls();
   const still = useReducedMotion();
@@ -329,6 +451,20 @@ function useTopOnNavigate() {
     window.history.scrollRestoration = 'manual';
     return () => { window.history.scrollRestoration = previous; };
   }, []);
+
+  // WHICH WAY THE MOVE WENT, worked out from the nav's own order rather than
+  // handed in by whatever triggered it. A tap on the bar, a throw of the
+  // thumb and the browser's back button are the same movement as far as the
+  // page is concerned, and only one of the three could have told us.
+  //
+  // Zero for anything that is not a step along the bar. Opening a ninja from
+  // the home is a step INWARD, and sliding it in from the side would claim
+  // the home and the child sit next to each other.
+  //
+  // Zero on a desktop too, whatever the sections are. The side rail is a
+  // COLUMN: moving from Home to Events moves the pill down it, and a page
+  // arriving from the right would be describing a journey nothing on screen
+  // just made. The phone's bar runs left to right, so there it agrees.
 
   // Layout effect, so the page is never painted at the old offset first.
   //
@@ -349,10 +485,30 @@ function useTopOnNavigate() {
   // framer writes `transform: none` once every value is at its default, so
   // it does, and there is a test for it below.
   useLayoutEffect(() => {
+    const now = sectionIndex(pathname);
+    const from = cameFrom;
+    cameFrom = now >= 0 ? now : null;
+    const dir = lateral && now >= 0 && from != null && now !== from ? Math.sign(now - from) : 0;
+
     window.scrollTo(0, 0);
-    if (still) return;
-    page.set({ opacity: 0, y: 10 });
-    page.start({ opacity: 1, y: 0, transition: { duration: 0.34, ease: [0.23, 1, 0.32, 1] } });
+    // Reduced motion still has to put the page back where it belongs: a
+    // thrown page is left sitting off to one side otherwise.
+    if (still) { page.set({ opacity: 1, x: 0, y: 0 }); return; }
+    if (dir) {
+      // ACROSS, not up. The section came from the side the thumb threw the
+      // last one, so the two halves of the movement read as one sweep and
+      // the bar's pill is travelling the same way at the same time.
+      page.set({ opacity: 0, x: dir * 56, y: 0 });
+      // `velocity: 0` is load-bearing. A spring reads the value's recent
+      // history for its starting speed, and the jump `set` just made from 0
+      // to 56 in a single frame looks like an enormous throw: without this
+      // the page carried on out to 77px before turning round, which is a
+      // wider gap at the edge than the 56 the code appears to ask for.
+      page.start({ opacity: 1, x: 0, y: 0, transition: { type: 'spring', stiffness: 420, damping: 38, mass: 0.9, velocity: 0 } });
+    } else {
+      page.set({ opacity: 0, x: 0, y: 10 });
+      page.start({ opacity: 1, x: 0, y: 0, transition: { duration: 0.34, ease: [0.23, 1, 0.32, 1] } });
+    }
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return page;
@@ -361,8 +517,11 @@ function useTopOnNavigate() {
 export default function ParentLayout({ children, bleed = false }) {
   const { parent, logout } = useParentAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [bugOpen, setBugOpen] = useState(false);
-  const page = useTopOnNavigate();
+  const desktop = useIsDesktop();
+  const page = useTopOnNavigate(!desktop);
+  const still = useReducedMotion();
   // The parent portal is light only; there is no theme toggle here and the
   // shell holds the page light while it is up.
   useLightOnly();
@@ -370,6 +529,51 @@ export default function ParentLayout({ children, bleed = false }) {
   const handleLogout = async () => {
     await logout();
     navigate('/login?tab=parent');
+  };
+
+  // SWIPING BETWEEN SECTIONS, on a phone, the way a photo app does it. The
+  // bar is three sections wide and a thumb reaching the bottom of a tall
+  // screen is the least comfortable thing on it, so the sideways throw the
+  // hand wants to make is the one that ought to work.
+  //
+  // The page follows the finger while the throw is happening, which is the
+  // whole point: a gesture that does nothing until you let go is a button
+  // with extra steps, and there is no way to change your mind halfway. It
+  // rubber-bands at each end because there is nothing past Home on the left
+  // or the account on the right, and a page that refuses to move at all
+  // reads as a dropped touch rather than as an edge.
+  //
+  // Only on the three sections. A ninja's profile and a listing have no
+  // neighbour, and both of them carry horizontal scrollers of their own —
+  // the belt road, the sticker shelf — which a page-level swipe would fight
+  // for the same finger.
+  const here = sectionIndex(pathname);
+  const swipeable = !desktop && here >= 0;
+  const room = typeof window === 'undefined' ? 390 : window.innerWidth;
+
+  const onThrow = (_event, info) => {
+    const dir = info.offset.x < 0 ? 1 : -1;
+    const to = here + dir;
+    // Distance OR speed, because a slow deliberate drag past a quarter of the
+    // screen and a quick flick are both a person saying next, and asking for
+    // distance alone makes the flick feel broken.
+    //
+    // The flick still has to cover ground. On speed alone a 40px twitch at
+    // the tail of some other gesture changed section, which is the kind of
+    // thing that happens with a thumb on a moving bus.
+    const far = Math.abs(info.offset.x);
+    const meant = far > room * 0.24 || (Math.abs(info.velocity.x) > 500 && far > room * 0.12);
+    if (!meant || to < 0 || to >= SECTIONS.length) {
+      page.start({ x: 0, transition: { type: 'spring', stiffness: 560, damping: 44 } });
+      return;
+    }
+    if (still) { page.set({ x: 0 }); navigate(SECTIONS[to]); return; }
+    // Let the throw land before the section changes. The page carries on the
+    // way it was going and fades as it leaves, so the arriving one is
+    // continuing a movement rather than interrupting it.
+    page
+      .start({ x: info.offset.x - dir * 44, opacity: 0, transition: { duration: 0.13, ease: 'easeOut' } })
+      .then(() => navigate(SECTIONS[to]));
   };
 
   return (
@@ -415,8 +619,21 @@ export default function ParentLayout({ children, bleed = false }) {
         </div>
       </header>
 
-      <main className="flex-1 min-w-0 pt-5 lg:pt-7 pb-32 lg:pb-12 [container-type:inline-size]">
-        <motion.div className="max-w-6xl mx-auto px-4 sm:px-6" animate={page}>
+      {/* `overflow-x-clip`, not hidden: `clip` is not a scroll container, so
+          the banners inside can still pin themselves to the viewport. Hidden
+          would make main the scrollport and every sticky thing in the portal
+          would stick to a box that never scrolls. */}
+      <main className="flex-1 min-w-0 overflow-x-clip pt-5 lg:pt-7 pb-32 lg:pb-12 [container-type:inline-size]">
+        <motion.div
+          className="max-w-6xl mx-auto px-4 sm:px-6"
+          animate={page}
+          drag={swipeable ? 'x' : false}
+          dragDirectionLock
+          dragMomentum={false}
+          dragElastic={0.14}
+          dragConstraints={{ left: here < SECTIONS.length - 1 ? -room : 0, right: here > 0 ? room : 0 }}
+          onDragEnd={onThrow}
+        >
           {children}
         </motion.div>
       </main>
