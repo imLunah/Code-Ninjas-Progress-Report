@@ -201,14 +201,25 @@ export default function ParentEventPage() {
 
   return (
     <ParentLayout>
-      <div className={`${COLUMN} pb-2`}>
+      <div className="relative pb-2">
 
-        {/* THE POSTER. Inset and rounded rather than run to the screen's
-            edges: this is a picture a center made, so it is framed like one.
-            Nothing floats on it any more, so it keeps no hole on the right
-            and the title gets the whole width. */}
+        {/* THE POSTER, edge to edge across the content region.
+            It escapes the page's column the way the portal's other banners
+            escape main's: `left-1/2` against a centred column plus `100cqw`
+            lands exactly on the region's edges, and cqw rather than vw because
+            `main` is the size container — vw would run under the side nav and
+            past the scrollbar. The negative top margin cancels main's own top
+            padding so the picture starts at the top of the page.
+            
+            Square, now that it reaches the edges. A rounded corner is what
+            frames a picture sitting IN a page; against the edge of the screen
+            it reads as a mistake.
+            
+            The WORDS do not go edge to edge with it. They sit in the same
+            column as the body, so the title starts on the same vertical as
+            the description under it. */}
         <section
-          className="relative overflow-hidden rounded-[26px] text-white"
+          className="relative left-1/2 -translate-x-1/2 w-[100cqw] -mt-5 lg:-mt-7 overflow-hidden text-white"
           style={{ background: PLATE }}
         >
           <span
@@ -220,20 +231,29 @@ export default function ParentEventPage() {
           />
           <span aria-hidden className="absolute inset-0" style={{ background: WASH }} />
 
-          <div className="relative flex min-h-[17rem] sm:min-h-[20rem] lg:min-h-[23rem] flex-col justify-between p-6 sm:p-8">
+          <div className="relative flex min-h-[17rem] sm:min-h-[20rem] lg:min-h-[23rem] flex-col justify-between py-7 sm:py-9 px-4 sm:px-6">
             {/* A worded back link, not a round chip. The chip is what the
                 portal's pinned banners use because they have no room for
                 anything wider; there is room here, and a word is clearer
                 than a glyph. */}
-            <Link
-              to="/parent/events"
-              className="inline-flex items-center gap-2 self-start font-ninja text-[14px] font-extrabold text-white/90 hover:text-white transition-colors"
-            >
-              <ArrowLeftIcon size={18} strokeWidth={2.4} aria-hidden />
-              Back
-            </Link>
+            {/* `w-full` is load-bearing. These are items of a column flex,
+                and per the flex spec an auto margin on the cross axis turns
+                OFF align-self: stretch — so `mx-auto` alone left each one
+                shrink-to-fit and then centred it, which put the back link at
+                the middle of the banner and the title 400px right of the
+                paragraph below it. With a width to cap, `max-w` and the auto
+                margins do what they read like they do. */}
+            <div className={`${COLUMN} w-full`}>
+              <Link
+                to="/parent/events"
+                className="inline-flex items-center gap-2 font-ninja text-[14px] font-extrabold text-white/90 hover:text-white transition-colors"
+              >
+                <ArrowLeftIcon size={18} strokeWidth={2.4} aria-hidden />
+                Back
+              </Link>
+            </div>
 
-            <div className="min-w-0 mt-8">
+            <div className={`${COLUMN} w-full min-w-0 mt-8`}>
               <p className="font-ninja text-[12px] sm:text-[13px] font-extrabold uppercase tracking-[0.1em] opacity-90">
                 {near}
               </p>
@@ -247,7 +267,7 @@ export default function ParentEventPage() {
             </div>
 
             {!ev.image_url && (
-              <span aria-hidden className="absolute right-6 bottom-6 hidden sm:block" style={{ color: '#ffffff', opacity: 0.18 }}>
+              <span aria-hidden className="absolute right-8 bottom-8 hidden sm:block" style={{ color: '#ffffff', opacity: 0.18 }}>
                 <Logo variant="mark" className="h-20" />
               </span>
             )}
@@ -273,7 +293,7 @@ export default function ParentEventPage() {
             stacked column, the date and the sign-up come before the wall of
             text. `col-start` / `row-start` puts it back on the right at lg
             without a second copy of it. */}
-        <div className={`pt-8 lg:pt-12 grid gap-8 lg:gap-12 lg:items-start ${ev.description ? 'lg:grid-cols-[minmax(0,42rem)_18rem]' : ''}`}>
+        <div className={`${COLUMN} pt-8 lg:pt-12 grid gap-8 lg:gap-12 lg:items-start ${ev.description ? 'lg:grid-cols-[minmax(0,42rem)_18rem]' : ''}`}>
           <aside className={ev.description ? 'lg:col-start-2 lg:row-start-1' : 'lg:max-w-[22rem]'}>
             <DetailCard
               whenValue={whenValue}
@@ -313,7 +333,7 @@ export default function ParentEventPage() {
             it turns up. A page about one event should end with a way to
             another one rather than with the last line of a paragraph. */}
         {rest.length > 0 && (
-          <section className="pt-12 lg:pt-16">
+          <section className={`${COLUMN} pt-12 lg:pt-16`}>
             <div className="flex items-baseline justify-between gap-4 mb-4">
               <h2 className="font-ninja font-extrabold text-[20px] tracking-[-0.02em] text-ninja-navy">
                 More at {parent?.centerName || 'the center'}
