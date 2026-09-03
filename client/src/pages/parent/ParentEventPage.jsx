@@ -91,18 +91,17 @@ function Fact({ label, value, detail }) {
   );
 }
 
-// The card that floats on the poster: when, where, and the way in.
+// The details, beside the reading: when, where, and the way in.
 //
-// Rendered TWICE — once absolutely on the poster at lg, once in flow under it
-// below that — rather than one copy moved by CSS. A single node cannot be
-// both inside the poster's overflow-hidden box (so it can be floated on the
-// art) and outside it (so it can hang past the bottom corner on a phone).
-// Two call sites of one component is the honest version of that; a `position`
-// switch would need the poster to stop clipping, and the poster clips because
-// its corners are the frame.
+// FLAT, with no shadow. It had one while it floated on the poster, which was
+// right — a card lifted off a photograph casts something. On the page it is a
+// card on paper, and the parent portal's cards are flat by decision: the
+// softness in these pages lives inside the cards, in the coloured heroes and
+// tinted lists, and a lift under those reads as a second material competing
+// with the first.
 function DetailCard({ whenValue, whenDetail, centerName, url, past }) {
   return (
-    <div className={`${FLAT} p-5 shadow-[0_18px_48px_-24px_rgb(6_13_26/0.45)] space-y-4`}>
+    <div className={`${FLAT} p-5 space-y-4`}>
       <div className="space-y-4">
         <Fact label="Date and time" value={whenValue} detail={whenDetail} />
         {/* The center's name and nothing else, because that is all there is:
@@ -206,8 +205,8 @@ export default function ParentEventPage() {
 
         {/* THE POSTER. Inset and rounded rather than run to the screen's
             edges: this is a picture a center made, so it is framed like one.
-            The right padding at lg is the hole the floating card sits in —
-            without it a long title runs under the card. */}
+            Nothing floats on it any more, so it keeps no hole on the right
+            and the title gets the whole width. */}
         <section
           className="relative overflow-hidden rounded-[26px] text-white"
           style={{ background: PLATE }}
@@ -221,7 +220,7 @@ export default function ParentEventPage() {
           />
           <span aria-hidden className="absolute inset-0" style={{ background: WASH }} />
 
-          <div className="relative flex min-h-[19rem] sm:min-h-[22rem] lg:min-h-[25rem] flex-col justify-between p-6 sm:p-8 lg:pr-[23rem]">
+          <div className="relative flex min-h-[17rem] sm:min-h-[20rem] lg:min-h-[23rem] flex-col justify-between p-6 sm:p-8">
             {/* A worded back link, not a round chip. The chip is what the
                 portal's pinned banners use because they have no room for
                 anything wider; there is room here, and a word is clearer
@@ -244,21 +243,38 @@ export default function ParentEventPage() {
               <h1 className="font-ninja font-extrabold text-[28px] sm:text-[36px] lg:text-[42px] leading-[1.1] mt-2 tracking-[-0.02em]">
                 {ev.title}
               </h1>
-              {hook && <p className="font-ninja text-[14px] sm:text-[15.5px] font-bold opacity-90 mt-3 max-w-xl line-clamp-3">{hook}</p>}
+              {hook && <p className="font-ninja text-[14px] sm:text-[15.5px] font-bold opacity-90 mt-3 max-w-2xl line-clamp-3">{hook}</p>}
             </div>
 
             {!ev.image_url && (
-              <span aria-hidden className="absolute right-6 bottom-6 hidden sm:block lg:hidden" style={{ color: '#ffffff', opacity: 0.18 }}>
+              <span aria-hidden className="absolute right-6 bottom-6 hidden sm:block" style={{ color: '#ffffff', opacity: 0.18 }}>
                 <Logo variant="mark" className="h-20" />
               </span>
             )}
           </div>
 
-          {/* THE FLOATING CARD, on the poster at lg and under it below that.
-              Absolute inside the poster means it can never be taller than the
-              art it is floating on, which is why the poster carries a
-              min-height rather than the card being pinned to its edges. */}
-          <div className="hidden lg:block absolute right-8 top-1/2 -translate-y-1/2 w-[20rem]">
+        </section>
+
+        {/* THE BODY: the reading with the details beside it.
+            The card came off the poster. On the artwork it was a nice object
+            but a bad neighbour — it forced the poster to keep a 23rem hole on
+            its right at every width, and it had to exist TWICE in the markup
+            because one node cannot be both inside the poster's clipping box
+            and hanging past its corner on a phone. Beside the reading it is
+            one node, and it is next to the prose it belongs with.
+
+            The pair fills the page column exactly: 42rem of prose, a 3rem
+            gutter, 18rem of card. So the reading now starts on the same
+            vertical as the poster above it and the section below it, which
+            it did not when it was a lone centred block between two full
+            width ones.
+
+            The card is written FIRST so that on a phone, where this is one
+            stacked column, the date and the sign-up come before the wall of
+            text. `col-start` / `row-start` puts it back on the right at lg
+            without a second copy of it. */}
+        <div className={`pt-8 lg:pt-12 grid gap-8 lg:gap-12 lg:items-start ${ev.description ? 'lg:grid-cols-[minmax(0,42rem)_18rem]' : ''}`}>
+          <aside className={ev.description ? 'lg:col-start-2 lg:row-start-1' : 'lg:max-w-[22rem]'}>
             <DetailCard
               whenValue={whenValue}
               whenDetail={whenDetail}
@@ -266,45 +282,30 @@ export default function ParentEventPage() {
               url={ev.event_url}
               past={past}
             />
-          </div>
-        </section>
+          </aside>
 
-        {/* The phone and tablet copy of the same card. It overlaps the
-            poster's bottom corner by a hair, which is what says the two
-            belong together once they are no longer on top of each other. */}
-        <div className="lg:hidden -mt-6 px-3 relative z-10">
-          <DetailCard
-            whenValue={whenValue}
-            whenDetail={whenDetail}
-            centerName={parent?.centerName}
-            url={ev.event_url}
-            past={past}
-          />
+          {/* 93 characters at 16px on 28px, which is a long line, so the
+              leading is loose — finding the start of the next one is what a
+              long measure actually costs you. */}
+          {ev.description && (
+            <div
+              className="lg:col-start-1 lg:row-start-1"
+              style={{ color: 'rgb(26 46 74 / 0.9)' }}
+            >
+              <h2 className="font-ninja font-extrabold text-[22px] tracking-[-0.02em] mb-4" style={{ color: NAVY }}>
+                About this event
+              </h2>
+              <Suspense fallback={<p className="font-ninja text-[16px] leading-[1.75] whitespace-pre-line">{ev.description}</p>}>
+                <ReactMarkdown
+                  components={LISTING_MD}
+                  urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
+                >
+                  {ev.description}
+                </ReactMarkdown>
+              </Suspense>
+            </div>
+          )}
         </div>
-
-        {/* THE READING. Capped at 42rem and centred in the column: a line of
-            body copy has a width it wants, and the poster above it does not.
-            93 characters at 16px on 28px, which is long, so the leading is
-            loose — finding the start of the next line is what a long measure
-            actually costs you. */}
-        {ev.description && (
-          <div
-            className="max-w-[42rem] mx-auto pt-10 lg:pt-14"
-            style={{ color: 'rgb(26 46 74 / 0.9)' }}
-          >
-            <h2 className="font-ninja font-extrabold text-[22px] tracking-[-0.02em] mb-4" style={{ color: NAVY }}>
-              About this event
-            </h2>
-            <Suspense fallback={<p className="font-ninja text-[16px] leading-[1.75] whitespace-pre-line">{ev.description}</p>}>
-              <ReactMarkdown
-                components={LISTING_MD}
-                urlTransform={(url) => (/^(https?:|mailto:)/i.test(url) ? url : '')}
-              >
-                {ev.description}
-              </ReactMarkdown>
-            </Suspense>
-          </div>
-        )}
 
         {/* WHAT ELSE IS ON, as cards rather than the thin list of rows this
             used to be in a margin. They are the same card the Events index
