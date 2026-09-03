@@ -439,7 +439,13 @@ export function StickerBook({ belt, level, logs, childName, href, className = ''
 // White's stickers under it). The road is the control; this follows it. A
 // Degrees belt has no sticker art at all, so the card does not render rather
 // than standing there empty.
-export default function StickerCollection({ belt, earnedIds, earnedTotal, childName, bookHref }) {
+// The course page's full grid of a belt's stickers.
+//
+// No link out to the sticker book from here. The book is one tap away on the
+// profile, from the card that summarises it, and this page is already showing
+// the stickers — a row at the bottom of a grid of stickers offering to go and
+// see the stickers is a door back into the room you are standing in.
+export default function StickerCollection({ belt, earnedIds, earnedTotal, childName }) {
   const { zoomed, open, close } = useStickerZoom();
   const flat = useReducedMotion();
   const rarity = useStickerRarity();
@@ -478,16 +484,6 @@ export default function StickerCollection({ belt, earnedIds, earnedTotal, childN
           />
         ))}
       </div>
-
-      {bookHref && (
-        <Link
-          to={bookHref}
-          className="flex items-center justify-center gap-1 border-t border-ninja-navy/[0.08] px-4 py-3 font-ninja text-[12.5px] font-extrabold text-ninja-blue transition-colors hover:bg-ninja-blue/[0.04]"
-        >
-          See the whole sticker book
-          <ChevronRightIcon size={15} strokeWidth={3} aria-hidden />
-        </Link>
-      )}
 
       <AnimatePresence>
         {zoomed && (

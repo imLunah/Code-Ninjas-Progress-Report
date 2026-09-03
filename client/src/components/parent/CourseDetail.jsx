@@ -376,7 +376,6 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
             earnedIds={earnedStickerIds}
             earnedTotal={earnedStickerIds.size}
             childName={childName}
-            bookHref={backTo ? `${backTo}/stickers` : null}
           />
         </div>
       </PageSheet>
