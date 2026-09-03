@@ -41,7 +41,7 @@ function inTrack(stickers, track, program) {
   return scoped.length ? scoped : stickers;
 }
 
-export default function ModuleStickerBook({ program, track, logs, curriculum, childName }) {
+export default function ModuleStickerBook({ program, track, logs, curriculum }) {
   const flat = useReducedMotion();
   const { zoomed, open, close } = useStickerZoom();
 
@@ -64,22 +64,18 @@ export default function ModuleStickerBook({ program, track, logs, curriculum, ch
   if (!stickers.length) return null;
 
   const earnedHere = stickers.filter((s) => earned.has(s.id)).length;
-  const first = childName ? childName.split(' ')[0] : null;
 
+  // Heading and count, and nothing else. The line that used to sit under it
+  // explained what a sticker book is to somebody already looking at one, and
+  // repeated a number the count on the right was already giving.
   return (
     <Group className="relative">
-      <div className="flex items-start justify-between gap-4 px-4 pb-3 pt-4 sm:px-5">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-ninja-navy">
-            <SparklesIcon size={17} strokeWidth={2.5} aria-hidden />
-            <h2 className="font-ninja text-[17px] font-extrabold">{track || program} stickers</h2>
-          </div>
-          <p className="mt-1 font-ninja text-[12.5px] text-ninja-muted">
-            {earned.size} of {all.length} earned across {program}. One for every module
-            {first ? ` ${first} finishes` : ' finished'}.
-          </p>
+      <div className="flex items-center justify-between gap-4 px-4 pb-3 pt-4 sm:px-5">
+        <div className="flex min-w-0 items-center gap-2 text-ninja-navy">
+          <SparklesIcon size={17} strokeWidth={2.5} aria-hidden className="flex-shrink-0" />
+          <h2 className="truncate font-ninja text-[17px] font-extrabold">{track || program} stickers</h2>
         </div>
-        <div className="flex-shrink-0 whitespace-nowrap pt-0.5 font-ninja text-[12px] font-extrabold text-ninja-blue">
+        <div className="flex-shrink-0 whitespace-nowrap font-ninja text-[12px] font-extrabold text-ninja-blue">
           {earnedHere} of {stickers.length} earned
         </div>
       </div>
