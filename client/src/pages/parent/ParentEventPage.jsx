@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import ParentLayout from '../../components/layout/ParentLayout';
 import { api } from '../../api/client';
 import { useParentAuth } from '../../context/ParentAuthContext';
-import { ArrowLeftIcon } from 'lucide-react';
+import { ArrowLeftIcon, MapPinIcon } from 'lucide-react';
 import { MoreLink } from '../../components/parent/ParentUI';
 import EventCard from '../../components/parent/EventCard';
 import Logo from '../../components/ui/Logo';
@@ -99,16 +99,48 @@ function Fact({ label, value, detail }) {
 // softness in these pages lives inside the cards, in the coloured heroes and
 // tinted lists, and a lift under those reads as a second material competing
 // with the first.
-function DetailCard({ whenValue, whenDetail, centerName, url, past }) {
+// Where the maps link points.
+//
+// The address when a director has filled one in, else the center's name with
+// "Code Ninjas" in front of it, which is what the place is actually called on
+// a map. The fallback is why the button can ship before anybody has typed an
+// address: an unfilled center gets a search that usually lands right rather
+// than a missing button.
+//
+// `/maps/search/?api=1&query=` is Google's documented universal URL, and the
+// reason it is a LINK and not an embedded map: on a phone this hands off to
+// whichever maps app the parent actually uses, which is the thing they want
+// (turn by turn from where they are standing), and it loads nothing
+// third-party inside a portal that is otherwise all about children.
+function directionsUrl(address, centerName) {
+  const q = address || (centerName ? `Code Ninjas ${centerName}` : null);
+  return q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : null;
+}
+
+function DetailCard({ whenValue, whenDetail, centerName, centerAddress, url, past }) {
+  const maps = directionsUrl(centerAddress, centerName);
   return (
     <div className={`${FLAT} p-5 space-y-4`}>
       <div className="space-y-4">
         <Fact label="Date and time" value={whenValue} detail={whenDetail} />
-        {/* The center's name and nothing else, because that is all there is:
-            `locations` carries a name and a slug and no address, so there is
-            no street to print and no map to link. A location block with "View
-            map" over a guessed address is worse than one that is honest. */}
-        {centerName && <Fact label="Where" value={centerName} />}
+        {centerName && (
+          <Fact
+            label="Where"
+            value={centerName}
+            detail={centerAddress || null}
+          />
+        )}
+        {maps && (
+          <a
+            href={maps}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 font-ninja text-[13.5px] font-extrabold text-ninja-blue-ink hover:underline"
+          >
+            <MapPinIcon size={15} strokeWidth={2.4} aria-hidden />
+            Get directions
+          </a>
+        )}
       </div>
 
       {/* An event that has already happened still opens, because a link a
@@ -299,6 +331,7 @@ export default function ParentEventPage() {
               whenValue={whenValue}
               whenDetail={whenDetail}
               centerName={parent?.centerName}
+              centerAddress={parent?.centerAddress}
               url={ev.event_url}
               past={past}
             />

@@ -75,7 +75,7 @@ router.get('/locations', requireManager, async (req, res) => {
   const allowed = allowedLocationIds(req);
   try {
     const { rows } = await pool.query(`
-      SELECT l.id, l.name, l.slug, l.active, l.created_at, l.center_code,
+      SELECT l.id, l.name, l.slug, l.active, l.created_at, l.center_code, l.address,
              COUNT(DISTINCT s.id) FILTER (WHERE s.active = true)::int AS student_count,
              COUNT(DISTINCT u.id) FILTER (WHERE u.active = true AND u.role IN ('manager','sensei'))::int AS staff_count
       FROM locations l
@@ -281,7 +281,7 @@ router.post('/locations', requireAdmin, async (req, res) => {
 router.patch('/locations/:id', requireManager, async (req, res) => {
   const pool = req.app.get('db');
   const { id } = req.params;
-  const { name, active, center_code } = req.body;
+  const { name, active, center_code, address } = req.body;
 
   if (!mayTouchLocation(req, id)) {
     return res.status(403).json({ error: 'You can only change your own center.' });
@@ -324,14 +324,25 @@ router.patch('/locations/:id', requireManager, async (req, res) => {
       }
     }
 
+    // The address a maps app is handed. Bounded and whitespace-collapsed like
+    // any other free text here; emptying it is allowed and means "we do not
+    // have one", which puts the directions link back to searching the center
+    // by name. That is why it is a three-way check rather than COALESCE:
+    // undefined leaves it alone, a blank string clears it.
+    let addr;
+    if (address !== undefined) {
+      addr = String(address ?? '').trim().replace(/\s+/g, ' ').slice(0, 200);
+    }
+
     const { rows } = await pool.query(
       `UPDATE locations SET
          name        = COALESCE($1, name),
          active      = COALESCE($2, active),
-         center_code = COALESCE($3, center_code)
+         center_code = COALESCE($3, center_code),
+         address     = CASE WHEN $5::boolean THEN NULLIF($6, '') ELSE address END
        WHERE id = $4
-       RETURNING id, name, slug, active, created_at, center_code`,
-      [name?.trim() ?? null, active ?? null, code ?? null, id]
+       RETURNING id, name, slug, active, created_at, center_code, address`,
+      [name?.trim() ?? null, active ?? null, code ?? null, id, address !== undefined, addr ?? null]
     );
     res.json(rows[0]);
   } catch (err) {

@@ -213,6 +213,7 @@ function AddLocationModal({ onClose, onAdded }) {
 function EditLocationModal({ loc, onClose, onSaved }) {
   const [name, setName] = useState(loc.name);
   const [code, setCode] = useState(loc.center_code || '');
+  const [address, setAddress] = useState(loc.address || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -220,9 +221,10 @@ function EditLocationModal({ loc, onClose, onSaved }) {
     e.preventDefault();
     const nextName = name.trim();
     const nextCode = code.trim().toUpperCase();
+    const nextAddress = address.trim();
     if (!nextName) return setError('Name cannot be empty.');
     if (!nextCode) return setError('A center code is required.');
-    if (nextName === loc.name && nextCode === (loc.center_code || '')) return onClose();
+    if (nextName === loc.name && nextCode === (loc.center_code || '') && nextAddress === (loc.address || '')) return onClose();
 
     setSaving(true);
     setError('');
@@ -230,6 +232,9 @@ function EditLocationModal({ loc, onClose, onSaved }) {
       const result = await api.patch(`/admin/locations/${loc.id}`, {
         name: nextName,
         center_code: nextCode,
+        // Always sent, so clearing the box clears the column. The route reads
+        // "key present" as "change it" and a blank string as "remove it".
+        address: nextAddress,
       });
       onSaved(result);
     } catch (err) {
@@ -273,6 +278,25 @@ function EditLocationModal({ loc, onClose, onSaved }) {
             <p className="text-ninja-muted font-ninja text-xs mt-1.5">
               Parents type this with their email to sign in. Up to 10 letters or
               digits.
+            </p>
+          </div>
+          <div>
+            <label className="block text-ninja-muted text-xs font-ninja font-semibold uppercase tracking-wide mb-1">
+              Address
+            </label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              maxLength={200}
+              placeholder="123 Main St, Yorba Linda, CA 92886"
+              autoComplete="street-address"
+              className="w-full bg-ninja-bg border border-ninja-border text-ninja-navy rounded-lg px-3 py-2 font-ninja text-sm focus:outline-none focus:border-ninja-blue"
+            />
+            <p className="text-ninja-muted font-ninja text-xs mt-1.5">
+              One line, the way you would write it on a flyer. Parents get a
+              Get directions button on an event; without this it searches the
+              center by name instead.
             </p>
           </div>
           {error && <p className="text-ninja-red text-xs font-ninja">{error}</p>}

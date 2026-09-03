@@ -41,8 +41,17 @@ async function parentPayload(pool, session) {
   const email = session.parentEmail;
   // The center code is the other half of how a parent signs in; it prints on
   // the back of their family pass so it is somewhere they can find it again.
-  const { rows: [loc] } = await pool.query('SELECT center_code FROM locations WHERE id = $1', [session.parentLocationId]);
-  const base = { email, role: 'parent', centerName: session.parentLocationName || null, centerCode: loc?.center_code || null };
+  const { rows: [loc] } = await pool.query('SELECT center_code, address FROM locations WHERE id = $1', [session.parentLocationId]);
+  const base = {
+    email,
+    role: 'parent',
+    centerName: session.parentLocationName || null,
+    centerCode: loc?.center_code || null,
+    // Null until a director fills it in. Every reader falls back to the
+    // center's name, so an empty one is a slightly worse map pin and not a
+    // missing feature.
+    centerAddress: loc?.address || null,
+  };
   const { rows: [profile] } = await pool.query(
     'SELECT first_name, last_name, phone, relationship, terms_accepted_at, terms_version FROM parent_profiles WHERE email = $1',
     [email]
