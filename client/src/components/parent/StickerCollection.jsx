@@ -112,7 +112,13 @@ export function useStickerZoom() {
   return { zoomed, open, close };
 }
 
-export function StickerCard({ item, isEarned, onOpen, flat, rarity }) {
+// `requirement` is the line a LOCKED card shows, and it is a prop so this card
+// can serve a set that is not CREATE. The module stickers say "6 of 10
+// lessons", which is a better answer than any static sentence and is only
+// knowable by the caller; CREATE's own "Complete White Belt Level 1" stays the
+// default so nothing at that call site had to change.
+export function StickerCard({ item, isEarned, onOpen, flat, rarity, requirement, earnedLabel }) {
+  const locked = requirement || stickerRequirement(item);
   const { controls, shake } = useLockedShake();
   return (
     <motion.div animate={controls} className="flex">
@@ -123,7 +129,7 @@ export function StickerCard({ item, isEarned, onOpen, flat, rarity }) {
       disabled={flat}
       type="button"
       onClick={() => (isEarned ? onOpen(item) : shake())}
-      aria-label={`${item.title}${rarity ? `, ${rarity.label}` : ''}, ${isEarned ? 'earned' : `locked, ${stickerRequirement(item)}`}`}
+      aria-label={`${item.title}${rarity ? `, ${rarity.label}` : ''}, ${isEarned ? 'earned' : `locked, ${locked}`}`}
       style={{ background: isEarned ? 'rgb(var(--ninja-blue) / 0.045)' : 'rgb(var(--ninja-navy) / 0.025)' }}
       // A rarity chip is one more line, and the card reserves the height for
       // it only once it has one: rarity can fail to load, and a card holding
@@ -171,7 +177,7 @@ export function StickerCard({ item, isEarned, onOpen, flat, rarity }) {
         {item.title}
       </TiltLayer>
       <p className={`mt-1 font-ninja text-[11px] leading-snug ${isEarned ? 'font-bold text-emerald-600' : 'text-ninja-muted'}`}>
-        {isEarned ? 'Earned' : stickerRequirement(item)}
+        {isEarned ? (earnedLabel || 'Earned') : locked}
       </p>
     </Tilt>
     </motion.div>
@@ -181,9 +187,12 @@ export function StickerCard({ item, isEarned, onOpen, flat, rarity }) {
 // Only an earned sticker opens this now (a locked one rattles instead), but
 // the locked half stays: it is one line, and it is the honest thing to show
 // if another surface ever opens a sticker that has not been earned.
-export function StickerZoom({ item, isEarned, onClose, flat, rarity }) {
+export function StickerZoom({ item, isEarned, onClose, flat, rarity, requirement, detail }) {
   const closeRef = useRef(null);
-  const level = stickerLevel(item);
+  const locked = requirement || stickerRequirement(item);
+  // CREATE stickers describe themselves out of the belt curriculum. A module
+  // sticker has no level behind it, so its caller hands the block in instead.
+  const level = detail !== undefined ? detail : stickerLevel(item);
 
   // Escape closes, and Tab stays inside: the sticker album behind this is a
   // long grid of buttons, and a dialog you can tab out of leaves a keyboard
@@ -269,7 +278,7 @@ export function StickerZoom({ item, isEarned, onClose, flat, rarity }) {
               is the mistake this whole set replaced. */}
           {!isEarned && (
             <p className="mx-auto mt-3 max-w-[34ch] text-balance font-ninja text-[14px] leading-relaxed text-ninja-navy/85">
-              {stickerRequirement(item)}
+              {locked}
             </p>
           )}
 
@@ -287,7 +296,10 @@ export function StickerZoom({ item, isEarned, onClose, flat, rarity }) {
           {level && (
             <div className="mt-4 rounded-[16px] px-4 py-3 text-left" style={{ background: 'rgb(var(--ninja-blue) / 0.06)' }}>
               <p className="font-ninja text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-ninja-blue">
-                {item.belt} belt · Level {item.level}
+                {/* CREATE names the belt and level; a set with neither hands
+                    its own label in. Without this the module stickers printed
+                    "undefined belt · Level undefined". */}
+                {level.label || `${item.belt} belt · Level ${item.level}`}
               </p>
               <p className="mt-1 font-ninja text-[12.5px] font-bold text-ninja-navy/80">{level.topic}</p>
               {/* The quest is the level's own open build, printed off the

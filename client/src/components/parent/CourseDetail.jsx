@@ -7,6 +7,7 @@ import { levelProjects, levelStates, levelTitle, realSessions, trackModel, fmtDa
 import { levelInfo, beltInfo, levelShot } from '../../lib/createCurriculum';
 import { stickerProgress } from '../../lib/stickerProgress';
 import StickerCollection from './StickerCollection';
+import ModuleStickerBook from './ModuleStickers';
 import { Tilt } from '../ui/Tilt';
 import { KIT_SHORT } from '../../lib/programTheme';
 import { trackArt, completeMedal, trackComplete } from '../../lib/programArt';
@@ -413,6 +414,7 @@ function TrackIcon({ name, size = 34, ahead = false }) {
 
 function TrackDetail({ enrollment, logs, childName, backTo }) {
   const p = enrollment.program;
+  const { curriculum } = useCurriculum();
   const model = useTrackModel(enrollment, logs);
   const { tracks, current, multi, unit } = model;
   const [openIdx, setOpenIdx] = useState(current ? current.index : 1);
@@ -503,6 +505,12 @@ function TrackDetail({ enrollment, logs, childName, backTo }) {
               )}
             </div>
           )}
+
+          {/* The book, under the kits it is built from. One sticker per
+              module, earned when every lesson in that module is logged
+              Completed — not when the ninja has merely moved past it, which
+              is all `trackModel`'s own module state can tell you. */}
+          <ModuleStickerBook program={p} logs={logs} curriculum={curriculum} childName={childName} />
         </div>
       </PageSheet>
     </div>
