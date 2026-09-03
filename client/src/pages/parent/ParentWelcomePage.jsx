@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParentAuth } from '../../context/ParentAuthContext';
 import { useParentPortal } from '../../context/ParentPortalContext';
@@ -56,6 +56,9 @@ export default function ParentWelcomePage() {
 
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  // Starts false, and there is no path that starts it true. A pre-ticked box
+  // is not an agreement, it is a default somebody failed to notice.
+  const [agreed, setAgreed] = useState(false);
 
   const fullName = `${first.trim()} ${last.trim()}`.trim();
   const firstName = first.trim() || 'there';
@@ -89,10 +92,19 @@ export default function ParentWelcomePage() {
   };
 
   const finish = async () => {
+    if (!agreed) { setError('Please agree to the Terms and Privacy Policy to continue.'); return; }
     setError('');
     setSaving(true);
     try {
-      await saveProfile({ first_name: first.trim(), last_name: last.trim(), relationship: relationship || null });
+      // The server decides WHAT was agreed to and stamps the date; this only
+      // reports that the box was ticked. It refuses a first save without it,
+      // so the disabled button is a courtesy rather than the control.
+      await saveProfile({
+        first_name: first.trim(),
+        last_name: last.trim(),
+        relationship: relationship || null,
+        accepted_terms: true,
+      });
       navigate('/parent/dashboard', { replace: true });
     } catch (err) {
       setError(err?.message || 'Something went wrong. Please try again.');
@@ -125,7 +137,7 @@ export default function ParentWelcomePage() {
             </div>
           )}
 
-          <div className={`relative overflow-hidden lg:h-[460px] ${step === 3 ? 'h-[min(300px,40dvh)]' : 'h-[min(440px,60dvh)]'}`}>
+          <div className={`relative overflow-hidden lg:h-[460px] ${step === 3 ? 'h-[min(400px,52dvh)]' : 'h-[min(440px,60dvh)]'}`}>
             <AnimatePresence mode="popLayout" custom={dir} initial={false}>
               {step === 0 && (
                 <motion.div
@@ -233,6 +245,33 @@ export default function ParentWelcomePage() {
                     <dt className="text-ninja-muted">Name</dt><dd className="text-ninja-navy font-bold">{fullName}</dd>
                     <dt className="text-ninja-muted">Relationship</dt><dd className="text-ninja-navy font-bold">{relationship || <span className="text-ninja-muted font-normal">Not given</span>}</dd>
                   </dl>
+
+                  {/* THE AGREEMENT, on the last step and directly above the
+                      button that acts on it. Not its own step: a step you
+                      cannot leave without ticking a box is a dialog wearing a
+                      step's clothes, and it would put the one legal moment in
+                      the flow somewhere a parent has already stopped reading.
+                      Here it is the last thing under the summary of what they
+                      just filled in, next to the button that commits it.
+
+                      The links open in a new tab on purpose. A parent who
+                      wants to read the Terms should not lose the name they
+                      just typed to do it — this form holds its state in
+                      component state, and navigating away drops it. */}
+                  <label className="flex items-start gap-3 mt-4 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={agreed}
+                      onChange={(e) => { setAgreed(e.target.checked); setError(''); }}
+                      className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 rounded border-ninja-border text-ninja-blue focus:ring-ninja-blue cursor-pointer"
+                    />
+                    <span className="font-ninja text-[13px] leading-relaxed text-ninja-muted">
+                      I agree to the{' '}
+                      <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-ninja-blue font-bold hover:underline">Terms and Conditions</Link>
+                      {' '}and the{' '}
+                      <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-ninja-blue font-bold hover:underline">Privacy Policy</Link>.
+                    </span>
+                  </label>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -263,7 +302,7 @@ export default function ParentWelcomePage() {
             {step === 1 && <motion.button whileTap={{ scale: 0.97 }} onClick={confirmName} className={PRIMARY}>Continue</motion.button>}
             {step === 2 && <motion.button whileTap={{ scale: 0.97 }} onClick={() => go(1)} className={PRIMARY}>{relationship ? 'Continue' : 'Skip for now'}</motion.button>}
             {step === 3 && (
-              <motion.button whileTap={{ scale: 0.97 }} onClick={finish} disabled={saving} className={PRIMARY}>
+              <motion.button whileTap={{ scale: 0.97 }} onClick={finish} disabled={saving || !agreed} className={PRIMARY}>
                 {saving ? 'Saving…' : 'Go to my portal'}
               </motion.button>
             )}
