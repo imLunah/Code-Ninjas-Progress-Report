@@ -18,8 +18,14 @@
 // "VG 2"), because it is the key: `progress_logs` stores it as text and the
 // database is deliberately not renamed. `title` is what a parent reads.
 
-const m = (program, subProgram, moduleName, title) => ({
-  id: `${program}-${subProgram}-${moduleName}`.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
+// `id` IS THE FILE NAME, written out rather than rebuilt from the parts. It
+// used to be derived here, from the same three fields the build script slugs,
+// and the two expressions did not agree about a program with no kit: the
+// build wrote ai-academy-module-1.png and this asked for
+// ai-academy-null-module-1.png. Nine broken stickers, and nothing that could
+// have caught it, because both sides looked right on their own.
+const m = (id, program, subProgram, moduleName, title) => ({
+  id,
   program,
   subProgram,
   moduleName,
@@ -30,56 +36,56 @@ const m = (program, subProgram, moduleName, title) => ({
 export const MODULE_STICKERS = [
 
   // AI Academy
-  m("AI Academy", null, "Module 1", "Behind the Curtain"),
-  m("AI Academy", null, "Module 2", "Painting by Numbers"),
-  m("AI Academy", null, "Module 3", "Ghostwriter"),
-  m("AI Academy", null, "Module 4", "Out in the Wild"),
-  m("AI Academy", null, "Module 5", "Vibe Check"),
-  m("AI Academy", null, "Module 6", "Player Two"),
-  m("AI Academy", null, "Module 7", "Brains on Board"),
-  m("AI Academy", null, "Module 8", "Trust, but Verify"),
-  m("AI Academy", null, "Module 9", "Back to the Drawing Board"),
+  m("ai-academy-module-1", "AI Academy", null, "Module 1", "Behind the Curtain"),
+  m("ai-academy-module-2", "AI Academy", null, "Module 2", "Painting by Numbers"),
+  m("ai-academy-module-3", "AI Academy", null, "Module 3", "Ghostwriter"),
+  m("ai-academy-module-4", "AI Academy", null, "Module 4", "Out in the Wild"),
+  m("ai-academy-module-5", "AI Academy", null, "Module 5", "Vibe Check"),
+  m("ai-academy-module-6", "AI Academy", null, "Module 6", "Player Two"),
+  m("ai-academy-module-7", "AI Academy", null, "Module 7", "Brains on Board"),
+  m("ai-academy-module-8", "AI Academy", null, "Module 8", "Trust, but Verify"),
+  m("ai-academy-module-9", "AI Academy", null, "Module 9", "Back to the Drawing Board"),
 
   // JR · JR Coding
-  m("JR", "JR Coding", "Module 1", "One Step at a Time"),
-  m("JR", "JR Coding", "Module 2", "Bug Hunt"),
-  m("JR", "JR Coding", "Module 3", "Round and Round"),
-  m("JR", "JR Coding", "Module 4", "Break It Down"),
-  m("JR", "JR Coding", "Module 5", "Step by Step by Step"),
-  m("JR", "JR Coding", "Module 6", "On Your Signal"),
-  m("JR", "JR Coding", "Module 7", "If You Say So"),
-  m("JR", "JR Coding", "Module 8", "First In, First Out"),
-  m("JR", "JR Coding", "Module 9", "Two Heads, One Keyboard"),
-  m("JR", "JR Coding", "Module 10", "Now You Make One"),
+  m("jr-jr-coding-module-1", "JR", "JR Coding", "Module 1", "One Step at a Time"),
+  m("jr-jr-coding-module-2", "JR", "JR Coding", "Module 2", "Bug Hunt"),
+  m("jr-jr-coding-module-3", "JR", "JR Coding", "Module 3", "Round and Round"),
+  m("jr-jr-coding-module-4", "JR", "JR Coding", "Module 4", "Break It Down"),
+  m("jr-jr-coding-module-5", "JR", "JR Coding", "Module 5", "Step by Step by Step"),
+  m("jr-jr-coding-module-6", "JR", "JR Coding", "Module 6", "On Your Signal"),
+  m("jr-jr-coding-module-7", "JR", "JR Coding", "Module 7", "If You Say So"),
+  m("jr-jr-coding-module-8", "JR", "JR Coding", "Module 8", "First In, First Out"),
+  m("jr-jr-coding-module-9", "JR", "JR Coding", "Module 9", "Two Heads, One Keyboard"),
+  m("jr-jr-coding-module-10", "JR", "JR Coding", "Module 10", "Now You Make One"),
 
   // JR · Snap Circuits
-  m("JR", "Snap Circuits", "Elenco", "Complete the Circuit"),
+  m("jr-snap-circuits-elenco", "JR", "Snap Circuits", "Elenco", "Complete the Circuit"),
 
   // Robotics Academy · LEGO Spike Essentials
-  m("Robotics Academy", "LEGO Spike Essentials", "E 1", "Planes, Trains and Swamp Boats"),
-  m("Robotics Academy", "LEGO Spike Essentials", "E 2", "A Machine for That"),
-  m("Robotics Academy", "LEGO Spike Essentials", "E 3", "Step Right Up"),
-  m("Robotics Academy", "LEGO Spike Essentials", "1. Great Adventure", "Great Adventure"),
-  m("Robotics Academy", "LEGO Spike Essentials", "2. Amazing Amusement Park", "Amazing Amusement Park"),
-  m("Robotics Academy", "LEGO Spike Essentials", "3. Reimagine the World", "Reimagine the World"),
-  m("Robotics Academy", "LEGO Spike Essentials", "4. Useful Inventions", "Useful Inventions"),
-  m("Robotics Academy", "LEGO Spike Essentials", "5. Animal Friends", "Animal Friends"),
+  m("robotics-academy-lego-spike-essentials-e-1", "Robotics Academy", "LEGO Spike Essentials", "E 1", "Planes, Trains and Swamp Boats"),
+  m("robotics-academy-lego-spike-essentials-e-2", "Robotics Academy", "LEGO Spike Essentials", "E 2", "A Machine for That"),
+  m("robotics-academy-lego-spike-essentials-e-3", "Robotics Academy", "LEGO Spike Essentials", "E 3", "Step Right Up"),
+  m("robotics-academy-lego-spike-essentials-1-great-adventure", "Robotics Academy", "LEGO Spike Essentials", "1. Great Adventure", "Great Adventure"),
+  m("robotics-academy-lego-spike-essentials-2-amazing-amusement-park", "Robotics Academy", "LEGO Spike Essentials", "2. Amazing Amusement Park", "Amazing Amusement Park"),
+  m("robotics-academy-lego-spike-essentials-3-reimagine-the-world", "Robotics Academy", "LEGO Spike Essentials", "3. Reimagine the World", "Reimagine the World"),
+  m("robotics-academy-lego-spike-essentials-4-useful-inventions", "Robotics Academy", "LEGO Spike Essentials", "4. Useful Inventions", "Useful Inventions"),
+  m("robotics-academy-lego-spike-essentials-5-animal-friends", "Robotics Academy", "LEGO Spike Essentials", "5. Animal Friends", "Animal Friends"),
 
   // Robotics Academy · LEGO Spike Prime
-  m("Robotics Academy", "LEGO Spike Prime", "P 1", "Ready, Set, Build"),
-  m("Robotics Academy", "LEGO Spike Prime", "P 2", "Reading the Room"),
-  m("Robotics Academy", "LEGO Spike Prime", "P 3", "Signed, Sealed, Delivered"),
-  m("Robotics Academy", "LEGO Spike Prime", "P 4", "Boot Camp"),
+  m("robotics-academy-lego-spike-prime-p-1", "Robotics Academy", "LEGO Spike Prime", "P 1", "Ready, Set, Build"),
+  m("robotics-academy-lego-spike-prime-p-2", "Robotics Academy", "LEGO Spike Prime", "P 2", "Reading the Room"),
+  m("robotics-academy-lego-spike-prime-p-3", "Robotics Academy", "LEGO Spike Prime", "P 3", "Signed, Sealed, Delivered"),
+  m("robotics-academy-lego-spike-prime-p-4", "Robotics Academy", "LEGO Spike Prime", "P 4", "Boot Camp"),
 
   // Robotics Academy · Ozobot Evo
-  m("Robotics Academy", "Ozobot Evo", "O 1", "Color Me Coded"),
-  m("Robotics Academy", "Ozobot Evo", "O 2", "Reading Between the Lines"),
+  m("robotics-academy-ozobot-evo-o-1", "Robotics Academy", "Ozobot Evo", "O 1", "Color Me Coded"),
+  m("robotics-academy-ozobot-evo-o-2", "Robotics Academy", "Ozobot Evo", "O 2", "Reading Between the Lines"),
 
   // Robotics Academy · VEX GO
-  m("Robotics Academy", "VEX GO", "VG 1", "The Simple Life"),
-  m("Robotics Academy", "VEX GO", "VG 2", "Life on Mars"),
-  m("Robotics Academy", "VEX GO", "VG 3", "Look, No Hands"),
-  m("Robotics Academy", "VEX GO", "VG 4", "Somebody's Got to Do It"),
+  m("robotics-academy-vex-go-vg-1", "Robotics Academy", "VEX GO", "VG 1", "The Simple Life"),
+  m("robotics-academy-vex-go-vg-2", "Robotics Academy", "VEX GO", "VG 2", "Life on Mars"),
+  m("robotics-academy-vex-go-vg-3", "Robotics Academy", "VEX GO", "VG 3", "Look, No Hands"),
+  m("robotics-academy-vex-go-vg-4", "Robotics Academy", "VEX GO", "VG 4", "Somebody's Got to Do It"),
 ];
 
 // Every sticker a program has, in curriculum order.
