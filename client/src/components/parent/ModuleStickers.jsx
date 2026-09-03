@@ -29,38 +29,41 @@ function requirementFor({ done, total }) {
   return `${done} of ${total} lesson${total === 1 ? '' : 's'}`;
 }
 
-// Robotics and JR run several kits; AI Academy is one straight line. Grouping
-// by track only when there IS one keeps a single heading off a page that has
-// nothing to distinguish under it.
-function byTrack(stickers) {
-  const groups = [];
-  const at = new Map();
-  for (const s of stickers) {
-    const key = s.subProgram || '';
-    if (!at.has(key)) { at.set(key, groups.length); groups.push({ track: s.subProgram, items: [] }); }
-    groups[at.get(key)].items.push(s);
-  }
-  return groups;
+// Which stickers belong to the kit the page is currently open on.
+//
+// AI Academy has no kits, so trackModel names its single track after the
+// program itself and these stickers carry a null subProgram — hence the
+// second arm. Anything unrecognised shows the lot rather than nothing,
+// because an empty book is a worse answer than a long one.
+function inTrack(stickers, track, program) {
+  if (!track) return stickers;
+  const scoped = stickers.filter((s) => (s.subProgram ? s.subProgram === track : track === program));
+  return scoped.length ? scoped : stickers;
 }
 
-export default function ModuleStickerBook({ program, logs, curriculum, childName }) {
+export default function ModuleStickerBook({ program, track, logs, curriculum, childName }) {
   const flat = useReducedMotion();
   const { zoomed, open, close } = useStickerZoom();
 
-  const stickers = useMemo(() => stickersForProgram(program), [program]);
+  const all = useMemo(() => stickersForProgram(program), [program]);
   const earned = useMemo(
     () => earnedModuleStickers({ program, logs, curriculum }),
     [program, logs, curriculum],
   );
   const progress = useMemo(() => {
     const out = {};
-    for (const s of stickers) out[s.id] = moduleProgress({ sticker: s, logs, curriculum });
+    for (const s of all) out[s.id] = moduleProgress({ sticker: s, logs, curriculum });
     return out;
-  }, [stickers, logs, curriculum]);
+  }, [all, logs, curriculum]);
 
+  // ONE KIT AT A TIME, the way the CREATE book shows one belt at a time.
+  // Robotics has 18 modules across four kits, and all of them at once is a
+  // wall of grey padlocks that says nothing about where the ninja is. The
+  // page already has a kit open above this; the book follows it.
+  const stickers = inTrack(all, track, program);
   if (!stickers.length) return null;
 
-  const groups = byTrack(stickers);
+  const earnedHere = stickers.filter((s) => earned.has(s.id)).length;
   const first = childName ? childName.split(' ')[0] : null;
 
   return (
@@ -69,38 +72,30 @@ export default function ModuleStickerBook({ program, logs, curriculum, childName
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-ninja-navy">
             <SparklesIcon size={17} strokeWidth={2.5} aria-hidden />
-            <h2 className="font-ninja text-[17px] font-extrabold">{program} stickers</h2>
+            <h2 className="font-ninja text-[17px] font-extrabold">{track || program} stickers</h2>
           </div>
           <p className="mt-1 font-ninja text-[12.5px] text-ninja-muted">
-            One for every module{first ? ` ${first} finishes` : ' finished'}. Tap one to open it.
+            {earned.size} of {all.length} earned across {program}. One for every module
+            {first ? ` ${first} finishes` : ' finished'}.
           </p>
         </div>
         <div className="flex-shrink-0 whitespace-nowrap pt-0.5 font-ninja text-[12px] font-extrabold text-ninja-blue">
-          {earned.size} of {stickers.length} earned
+          {earnedHere} of {stickers.length} earned
         </div>
       </div>
 
-      {groups.map((g) => (
-        <div key={g.track || program}>
-          {g.track && (
-            <p className="px-4 pb-2 pt-1 font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em] text-ninja-muted sm:px-5">
-              {g.track}
-            </p>
-          )}
-          <div className="grid grid-cols-2 gap-2.5 px-3 pb-3 sm:grid-cols-3 sm:px-4 lg:grid-cols-5">
-            {g.items.map((item) => (
-              <StickerCard
-                key={item.id}
-                item={item}
-                isEarned={earned.has(item.id)}
-                onOpen={open}
-                flat={flat}
-                requirement={requirementFor(progress[item.id] || {})}
-              />
-            ))}
-          </div>
-        </div>
-      ))}
+      <div className="grid grid-cols-2 gap-2.5 px-3 pb-3 sm:grid-cols-3 sm:px-4 lg:grid-cols-5">
+        {stickers.map((item) => (
+          <StickerCard
+            key={item.id}
+            item={item}
+            isEarned={earned.has(item.id)}
+            onOpen={open}
+            flat={flat}
+            requirement={requirementFor(progress[item.id] || {})}
+          />
+        ))}
+      </div>
 
       <AnimatePresence>
         {zoomed && (

@@ -506,11 +506,12 @@ function TrackDetail({ enrollment, logs, childName, backTo }) {
             </div>
           )}
 
-          {/* The book, under the kits it is built from. One sticker per
-              module, earned when every lesson in that module is logged
-              Completed — not when the ninja has merely moved past it, which
+          {/* The book, scoped to the kit the page is open on — the same
+              kit the pills and the module list above are showing. One
+              sticker per module, earned when every lesson in it is logged
+              Completed, not when the ninja has merely moved past it, which
               is all `trackModel`'s own module state can tell you. */}
-          <ModuleStickerBook program={p} logs={logs} curriculum={curriculum} childName={childName} />
+          <ModuleStickerBook program={p} track={open?.name} logs={logs} curriculum={curriculum} childName={childName} />
         </div>
       </PageSheet>
     </div>
