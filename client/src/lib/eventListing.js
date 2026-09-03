@@ -98,12 +98,20 @@ export function nearWhen(dateStr, now = new Date()) {
   return 'Coming up';
 }
 
-// The short version for a row that already sits under a month heading:
-// "Sat 6", plus the time if there is one. The month is not repeated, because
-// the heading above the row is already carrying it.
+// The short version for a row: "Sat 9/6", plus the time if there is one.
+//
+// THE MONTH COMES ALONG even though the row sits under a month heading. It
+// used to be left out as a repetition, and the day on its own was a riddle:
+// "THU 3" beside a time reads as an hour, or a count, or the third of some
+// month you have to scroll up to find. A slashed date is unmistakably a date
+// at a glance, and it costs two characters. Numeric rather than "Sep 6"
+// because the eyebrow is already an uppercase weekday and two abbreviated
+// words in a row is the noisier read.
 export function rowWhen(ev) {
   const d = listingDate(ev?.event_date);
-  const day = d ? `${d.toLocaleDateString('en-US', { weekday: 'short' })} ${d.getDate()}` : null;
+  const day = d
+    ? `${d.toLocaleDateString('en-US', { weekday: 'short' })} ${d.getMonth() + 1}/${d.getDate()}`
+    : null;
   return [day, ev?.event_time].filter(Boolean).join(' · ') || null;
 }
 
