@@ -1,3 +1,4 @@
+import { ClockIcon } from 'lucide-react';
 import ModalPortal from './ModalPortal';
 
 // What a signed-out session looks like from inside the app.
@@ -22,7 +23,10 @@ export default function SessionTimeoutModal({ onDismiss }) {
         className="fixed inset-0 z-[9999] flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/50 backdrop-blur-sm"
       >
         <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center">
-          <div className="text-4xl mb-3" aria-hidden>⏱️</div>
+          {/* A drawn icon, not an emoji: an emoji is rendered by the operating
+              system, so it arrives flat and grey on one platform and glossy on
+              another, and it never matches the icons the rest of the app uses. */}
+          <ClockIcon size={30} strokeWidth={2} aria-hidden className="mx-auto mb-3 text-ninja-muted" />
           <h2 id="session-timeout-title" className="text-lg font-bold font-ninja text-ninja-navy mb-2">Session Timed Out</h2>
           <p className="text-ninja-muted font-ninja text-sm leading-relaxed mb-5">
             Your session has expired. Please sign in again to continue.
