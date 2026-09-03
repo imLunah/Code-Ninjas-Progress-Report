@@ -22,15 +22,6 @@ const MAX_INSTRUCTIONS = 2000;
 
 const RELATIONSHIPS = ['Mom', 'Dad', 'Guardian', 'Grandparent', 'Other'];
 
-// The version a parent is agreeing to, recorded with their acceptance.
-//
-// It is the "Last Updated" line on /terms and /privacy, and it lives on the
-// SERVER on purpose: the client says "I agree", the server decides what it is
-// they agreed to. A version posted by the browser would be a consent record
-// the consenting party wrote. Bump this when those pages change, and the old
-// value is what tells you who has not seen the new one.
-const TERMS_VERSION = '2026-05-21';
-
 // What the client knows about the signed-in parent. A parent_profiles row is
 // what onboarding writes, and having one is what "onboarded" means; without
 // one the payload carries what the desk has on file as a starting point for
@@ -44,7 +35,7 @@ async function parentPayload(pool, session) {
   const { rows: [loc] } = await pool.query('SELECT center_code FROM locations WHERE id = $1', [session.parentLocationId]);
   const base = { email, role: 'parent', centerName: session.parentLocationName || null, centerCode: loc?.center_code || null };
   const { rows: [profile] } = await pool.query(
-    'SELECT first_name, last_name, phone, relationship, terms_accepted_at, terms_version FROM parent_profiles WHERE email = $1',
+    'SELECT first_name, last_name, phone, relationship FROM parent_profiles WHERE email = $1',
     [email]
   );
   // The phone is the desk's, off the ninja's record: onboarding does not ask
@@ -67,10 +58,6 @@ async function parentPayload(pool, session) {
       lastName: profile.last_name,
       phone,
       relationship: profile.relationship,
-      // Null for anyone who onboarded before acceptance was recorded. The
-      // portal does not gate on this today; it is here so it can.
-      termsAcceptedAt: profile.terms_accepted_at,
-      termsVersion: profile.terms_version,
     };
   }
   return {
@@ -255,21 +242,6 @@ router.post('/profile', requireParent, async (req, res) => {
   const emailChanging = newEmail !== oldEmail;
   if (emailChanging && !EMAIL_RE.test(newEmail)) return res.status(400).json({ error: 'That email address does not look right.' });
 
-  // Agreeing to the Terms is part of CREATING the account, not of editing it.
-  // Onboarding is the only path that reaches this route without a profile row,
-  // so "no row yet" is the same question as "is this the first sign-in", and
-  // it is asked of the database rather than of a flag the client sends. The
-  // settings page saves through this same route and must keep working without
-  // re-asking, which is why the check is on the row and not on the body.
-  const { rows: existing } = await pool.query(
-    'SELECT terms_accepted_at FROM parent_profiles WHERE email = $1',
-    [oldEmail]
-  );
-  const firstSave = existing.length === 0;
-  if (firstSave && body.accepted_terms !== true) {
-    return res.status(400).json({ error: 'Please agree to the Terms and Privacy Policy to finish setting up your account.' });
-  }
-
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -288,25 +260,13 @@ router.post('/profile', requireParent, async (req, res) => {
       await client.query('UPDATE students SET parent_email = $1 WHERE LOWER(parent_email) = $2', [newEmail, oldEmail]);
       await client.query('UPDATE parent_profiles SET email = $1, updated_at = now() WHERE email = $2', [newEmail, oldEmail]);
     }
-    // COALESCE on both consent columns, and it is the whole safety of this
-    // write: an acceptance is stamped once and never moved. A parent editing
-    // their name in settings sends no `accepted_terms`, and without COALESCE
-    // the upsert would blank the date they actually agreed on; re-stamping it
-    // with now() would be just as wrong, since it would record a consent that
-    // never happened. Keep what is there, fill it only when it is empty.
     await client.query(
-      `INSERT INTO parent_profiles (email, first_name, last_name, relationship, terms_accepted_at, terms_version)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO parent_profiles (email, first_name, last_name, relationship)
+       VALUES ($1, $2, $3, $4)
        ON CONFLICT (email) DO UPDATE
          SET first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name,
-             relationship = EXCLUDED.relationship, updated_at = now(),
-             terms_accepted_at = COALESCE(parent_profiles.terms_accepted_at, EXCLUDED.terms_accepted_at),
-             terms_version = COALESCE(parent_profiles.terms_version, EXCLUDED.terms_version)`,
-      [
-        newEmail, firstName, lastName, relationship,
-        body.accepted_terms === true ? new Date() : null,
-        body.accepted_terms === true ? TERMS_VERSION : null,
-      ]
+             relationship = EXCLUDED.relationship, updated_at = now()`,
+      [newEmail, firstName, lastName, relationship]
     );
     await client.query('COMMIT');
   } catch (err) {
