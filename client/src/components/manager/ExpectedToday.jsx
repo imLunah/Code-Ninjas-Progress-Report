@@ -118,7 +118,7 @@ export default function ExpectedToday({
 
   if (data.status === 'expired') {
     return (
-      <div className={`${CARD} p-4`}>
+      <div className="py-2">
         <div className="flex items-start gap-2.5">
           <span aria-hidden className="mt-0.5 text-amber-600 dark:text-amber-400 flex-shrink-0">
             <TriangleAlertIcon size={17} />
