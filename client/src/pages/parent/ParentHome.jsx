@@ -130,18 +130,29 @@ function LiveSchedule({ center }) {
   const openNow = todayHours && nowHour >= todayHours.open && nowHour < todayHours.close;
   const nowSlot = openNow ? Math.floor(nowHour) : null;
 
-  // THE LIVE HOUR COUNTS LIKE EVERY OTHER HOUR. It used to count only who was
-  // in the room that exact minute, and the two rules disagreeing was visible
-  // on the chart: six ninjas came in over the three o'clock hour, and at 4:20
-  // the four o'clock bar showed three, because the earliest arrivals' hour had
-  // run out. Their session ran into four regardless, so the bar next to a full
-  // one looked like the center had emptied. Worse, it healed itself an hour
-  // later, when five became the live hour and four went back to reading six.
+  // THE LIVE BAR IS A COUNT OF THE ROOM, NOT A SUMMARY OF THE HOUR, and it is
+  // the only bar that can be. Every other bar on the chart stands for an hour
+  // that is over, and the honest reading of a finished hour is how busy it
+  // got: everyone whose stay touched it. Applying that to the hour in progress
+  // makes the number monotonic — it can only ever go up until the hour turns
+  // over — so a center that emptied at ten past still read seven at half past,
+  // and the bar contradicted the room.
   //
-  // A bar answers one question everywhere: how busy was this hour, counting
-  // everyone whose hour touched it. The live bar's own count now only grows as
-  // the hour fills, which is the shape a parent deciding whether to come now
-  // is actually reading.
+  // So the live bar counts the ninjas whose hour has not run out yet. That is
+  // the rule as it was asked for: a check-in puts a ninja on the chart for an
+  // hour, carries them into the next slot if their hour reaches it, and takes
+  // them off when the hour is up. It rises as ninjas arrive and falls as their
+  // hours expire, and at any moment it is the number of ninjas in the
+  // building, which is the one thing a parent deciding whether to come now is
+  // reading it for.
+  //
+  // The two readings are labelled apart rather than blurred: the live bar says
+  // "here now", a finished hour says how many ninjas it saw. Do NOT put the
+  // hour-summary count back on the live bar to make the arithmetic uniform.
+  // Uniform arithmetic is what made it lie.
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const hereNow = (byDay.get(today) || []).reduce(
+    (sum, a) => (a.minute <= nowMin && a.minute + STAY_MIN > nowMin ? sum + a.count : sum), 0);
 
   let status;
   if (openNow) {
@@ -182,14 +193,16 @@ function LiveSchedule({ center }) {
             <span className="flex-1 border-t border-dashed border-ninja-border" aria-hidden />
             <span className="font-ninja text-[10px] text-ninja-muted">peak</span>
           </div>
-          <div className="flex items-end gap-1.5 sm:gap-2 h-24 border-b border-ninja-border" role="img" aria-label={`How busy the center is today: ${hourSlots.map((h) => `${fmtHour(h)} ${counts.get(`${today}|${h}`) || 0}`).join(', ')}`}>
+          <div className="flex items-end gap-1.5 sm:gap-2 h-24 border-b border-ninja-border" role="img" aria-label={`How busy the center is today: ${hourSlots.map((h) => `${fmtHour(h)} ${nowSlot === h ? hereNow : (counts.get(`${today}|${h}`) || 0)}`).join(', ')}`}>
             {hourSlots.map((h, i) => {
               const live = nowSlot === h;
-              const n = counts.get(`${today}|${h}`) || 0;
+              const n = live ? hereNow : (counts.get(`${today}|${h}`) || 0);
               const future = nowSlot == null ? nowHour < h : h > nowSlot;
               const pct = Math.min(100, Math.round((n / weekMax) * 100));
               const showing = hover === h;
-              const count = `${n} ninja${n === 1 ? '' : 's'}${live ? ' this hour' : ''}`;
+              const count = live
+                ? (n === 0 ? 'Nobody here right now' : `${n} here now`)
+                : `${n} ninja${n === 1 ? '' : 's'}`;
               const lift = `calc(${n > 0 ? Math.max(pct, 6) : 2}% + 6px)`;
               return (
                 <div
