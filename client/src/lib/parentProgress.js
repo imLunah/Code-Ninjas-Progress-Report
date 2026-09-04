@@ -6,6 +6,7 @@
 // is stored twice. Where a fact is not recorded, the helper says so with a
 // null rather than inventing one.
 
+import { lessonTitles } from './lessonStickers';
 import { BELTS, BELT_LEVEL_PROJECTS, UPPER_BELTS, getLevels } from '../utils/beltConfig';
 
 export const beltIndex = (name) => BELTS.findIndex((b) => b.name === name);
@@ -140,14 +141,54 @@ export function calcAge(birthday) {
 // session, else the first. Tracks before the current one that have sessions
 // are done; the rest are ahead. Nothing here is stored; it is all read off
 // what the portal already has.
+// WHICH LESSONS A NINJA HAS FINISHED, as a Map from a lesson's full identity
+// to the day it was finished.
+//
+// It lives here, next to `realSessions`, because two very different callers
+// need the same answer and neither may be allowed to invent its own: the
+// module list on the course page ticks lessons off with it, and the lesson
+// stickers in the book are earned by it. A sticker congratulating a ninja for
+// a lesson the course page still shows as unticked is exactly the drift this
+// prevents.
+//
+// A log identifies a lesson by four things and all four have to match. The
+// same lesson name appears in more than one kit ("1. Introduction"), and a
+// module name is only unique inside its own program.
+//
+// THE EARLIEST COMPLETION WINS. A lesson revisited weeks later is still the
+// one they finished the first time.
+export function lessonKey(program, subProgram, moduleName, lessonName) {
+  return [program, subProgram || '', moduleName, lessonName].join('\u0000');
+}
+
+export function completedLessonDays(logs) {
+  const days = new Map();
+  for (const l of realSessions(logs)) {
+    if (l.status_at !== 'Completed' || !l.lesson_name || !l.module_name) continue;
+    const key = lessonKey(l.program, l.sub_program, l.module_name, l.lesson_name);
+    const day = l.session_date ? String(l.session_date).split('T')[0] : null;
+    const seen = days.get(key);
+    if (seen === undefined || (day && (seen === null || day < seen))) days.set(key, day);
+  }
+  return days;
+}
+
 export function trackModel({ program, enrollment, logs, curriculum, subPrograms, shortNames = {} }) {
   const sessions = realSessions(logs);
   const names = (subPrograms && subPrograms[program]) || [];
   const multi = names.length > 0;
   const keys = multi ? names : [program];
 
+  const done = completedLessonDays(logs);
+
   const tracks = keys.map((name, i) => {
-    const moduleNames = ((curriculum && curriculum[name]) || []).map((m) => m.module);
+    const track = (curriculum && curriculum[name]) || [];
+    const moduleNames = track.map((m) => m.module);
+    // The lessons of each module, so a module row can open and show what is
+    // inside it. A module the curriculum has never heard of — the log carries
+    // a name no longer in it — gets an empty list and simply does not open.
+    const lessonsOf = new Map(track.map((m) => [m.module, m.lessons || []]));
+    const sub = multi ? name : null;
     const tlogs = multi ? sessions.filter((l) => l.sub_program === name) : sessions;
     const byModule = new Map();
     for (const l of tlogs) {
@@ -166,7 +207,24 @@ export function trackModel({ program, enrollment, logs, curriculum, subPrograms,
     const all = [...moduleNames, ...[...byModule.keys()].filter((m) => !moduleNames.includes(m))];
     const modules = all.map((m, j) => {
       const hit = byModule.get(m);
-      return { name: m, index: j + 1, status: hit ? (m === furthest ? 'working' : 'done') : 'todo', date: hit ? hit.last : null };
+      const names = lessonsOf.get(m) || [];
+      const titles = lessonTitles(names);
+      const lessons = names.map((lesson) => {
+        const day = done.get(lessonKey(program, sub, m, lesson));
+        return { name: lesson, title: titles.get(lesson), done: done.has(lessonKey(program, sub, m, lesson)), date: day || null };
+      });
+      return {
+        name: m,
+        index: j + 1,
+        // The module's own status is unchanged: `working` is where the ninja
+        // IS, which is not the same as what they have finished. The lesson
+        // ticks below it are what they finished, and the two disagreeing on a
+        // module skipped past is the honest reading of a skipped module.
+        status: hit ? (m === furthest ? 'working' : 'done') : 'todo',
+        date: hit ? hit.last : null,
+        lessons,
+        lessonsDone: lessons.filter((l) => l.done).length,
+      };
     });
     const dates = tlogs.map((l) => String(l.session_date).split('T')[0]).sort();
     return {

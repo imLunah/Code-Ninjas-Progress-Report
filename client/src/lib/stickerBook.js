@@ -2,6 +2,8 @@ import { CREATE_STICKERS, stickerRequirement } from './createStickers';
 import { stickerProgress } from './stickerProgress';
 import { MODULE_STICKERS } from './moduleStickers';
 import { earnedModuleStickers, moduleProgress, moduleEarnedOn } from './moduleStickerProgress';
+import { allLessonStickers } from './lessonStickers';
+import { earnedLessonStickers } from './lessonStickerProgress';
 
 // EVERY sticker DojoLink has, for every program, as one book.
 //
@@ -31,7 +33,22 @@ import { earnedModuleStickers, moduleProgress, moduleEarnedOn } from './moduleSt
 // not share. The shelves are programs, and a sticker carries its title, its
 // art, whether it is earned and the day it landed.
 
-export const BOOK_TOTAL = CREATE_STICKERS.length + MODULE_STICKERS.length;
+// The book has THREE KINDS OF STICKER in it, and they are earned by three
+// different rules that this file asks rather than reimplements:
+//
+//   CREATE badge   43, fixed     the belt ladder             stickerProgress
+//   module badge   38, fixed     every lesson in it done     moduleStickerProgress
+//   lesson badge  330, from      that lesson logged done     lessonStickerProgress
+//                  the curriculum
+//
+// THE TOTAL IS NO LONGER A CONSTANT. It used to be, because both halves were
+// committed files whose lengths were known at build time. Lesson stickers are
+// derived from the curriculum the browser loaded, so the size of the book is
+// whatever the curriculum currently says — a kit added in the admin editor
+// makes the book bigger with no code change. `wholeBook` returns `total`;
+// there is nothing to import instead.
+//
+// The 81 that surfaces used to print is now 411 with the seeded curriculum.
 
 // The order the shelves stand in: CREATE first because it is the longest and
 // the one most ninjas are in, then the rest as a center introduces them.
@@ -61,23 +78,25 @@ function oldestFirst(items) {
     .map(({ item }) => item);
 }
 
-export function wholeBook({ belt, level, logs = [], curriculum }) {
-  // CREATE reads the belt ladder, and only CREATE's own sessions count
-  // towards it — a Robotics log has no belt in it to be measured against.
-  const create = stickerProgress({ belt, level, logs: logs.filter((l) => l.program === 'CREATE') });
-  const fromCreate = create.all.map((item) => ({
-    // `belt` and `level` ride along unused by anything that draws a shelf.
-    // They are here because the zoomed sticker still describes a CREATE badge
-    // out of the curriculum it came from, and that is the one place where the
-    // belt is the sticker's identity rather than a label on top of it.
-    ...item,
-    program: 'CREATE',
-    requirement: stickerRequirement(item),
-    detail: undefined,
-  }));
+// One program's shelf: its module capstones and every lesson under them, in
+// the order they are shown.
+//
+// Lifted out of `wholeBook` because the course page shows exactly this — one
+// program, filtered to the kit it has open — and building it a second time
+// there is how a badge ends up locked in the book and earned on the page. The
+// book asks for all three programs and puts CREATE in front; the course page
+// asks for one.
+//
+// ORDERED MODULE FIRST, THEN ITS LESSONS, rather than every capstone followed
+// by every lesson. The capstone is the heading of the set it caps; separated
+// from them it is a badge with nothing under it and a wall of lessons with
+// nothing over them.
+export function programStickers({ programs, logs = [], curriculum, subPrograms }) {
+  const wanted = programs ? new Set([].concat(programs)) : null;
+  const inScope = (program) => !wanted || wanted.has(program);
 
   const earnedModules = earnedModuleStickers({ logs, curriculum });
-  const fromModules = MODULE_STICKERS.map((sticker) => {
+  const fromModules = MODULE_STICKERS.filter((sticker) => inScope(sticker.program)).map((sticker) => {
     const earned = earnedModules.has(sticker.id);
     const counted = moduleProgress({ sticker, logs, curriculum });
     return {
@@ -85,6 +104,10 @@ export function wholeBook({ belt, level, logs = [], curriculum }) {
       title: sticker.title,
       src: sticker.src,
       program: sticker.program,
+      kind: 'module',
+      // Carried so the shelf can gather this module's lesson stickers under it.
+      subProgram: sticker.subProgram || null,
+      moduleName: sticker.moduleName,
       earned,
       earnedOn: earned ? moduleEarnedOn({ sticker, logs }) : null,
       requirement: lessonsLabel(counted),
@@ -99,7 +122,71 @@ export function wholeBook({ belt, level, logs = [], curriculum }) {
     };
   });
 
-  const all = [...fromCreate, ...fromModules];
+  const lessonSet = allLessonStickers({ curriculum, subPrograms }).filter((sticker) => inScope(sticker.program));
+  const lessonDays = earnedLessonStickers({ stickers: lessonSet, logs });
+  const fromLessons = lessonSet.map((sticker) => ({
+    id: sticker.id,
+    title: sticker.title,
+    src: sticker.src,
+    program: sticker.program,
+    kind: 'lesson',
+    earned: lessonDays.has(sticker.id),
+    earnedOn: lessonDays.get(sticker.id) || null,
+    // A locked lesson says which module it is waiting inside, which is the
+    // one fact that places it: 330 lesson titles are meaningless on their own
+    // and "0 of 1 lessons" would be a joke.
+    requirement: `In ${sticker.moduleName}`,
+    detail: {
+      label: sticker.subProgram || sticker.program,
+      topic: sticker.moduleName,
+      quest: null,
+    },
+    // Kept so a shelf can file a lesson under the module it belongs to.
+    subProgram: sticker.subProgram,
+    moduleName: sticker.moduleName,
+  }));
+
+
+  // Gather each module's lessons under it.
+  const key = (item) => [item.program, item.subProgram || '', item.moduleName].join('|');
+  const byModule = new Map();
+  for (const lesson of fromLessons) {
+    const k = key(lesson);
+    if (!byModule.has(k)) byModule.set(k, []);
+    byModule.get(k).push(lesson);
+  }
+  const out = [];
+  for (const cap of fromModules) {
+    out.push(cap);
+    const k = key(cap);
+    if (byModule.has(k)) { out.push(...byModule.get(k)); byModule.delete(k); }
+  }
+  // Lessons in a module with no capstone. The module book covers all 38 today,
+  // so this is only reached by a kit added since it was generated, which should
+  // still show its lessons rather than silently drop them.
+  for (const rest of byModule.values()) out.push(...rest);
+  return out;
+}
+
+
+export function wholeBook({ belt, level, logs = [], curriculum, subPrograms }) {
+  // CREATE reads the belt ladder, and only CREATE's own sessions count
+  // towards it — a Robotics log has no belt in it to be measured against.
+  const create = stickerProgress({ belt, level, logs: logs.filter((l) => l.program === 'CREATE') });
+  const fromCreate = create.all.map((item) => ({
+    // `belt` and `level` ride along unused by anything that draws a shelf.
+    // They are here because the zoomed sticker still describes a CREATE badge
+    // out of the curriculum it came from, and that is the one place where the
+    // belt is the sticker's identity rather than a label on top of it.
+    ...item,
+    program: 'CREATE',
+    kind: 'create',
+    requirement: stickerRequirement(item),
+    detail: undefined,
+  }));
+
+  const rest = programStickers({ logs, curriculum, subPrograms });
+  const all = [...fromCreate, ...rest];
   const earned = all.filter((item) => item.earned);
 
   const shelves = SHELVES
@@ -118,6 +205,7 @@ export function wholeBook({ belt, level, logs = [], curriculum }) {
     all,
     shelves,
     earned,
+    total: all.length,
     earnedIds: new Set(earned.map((item) => item.id)),
     // The CREATE count on its own, kept because the one cohort DojoLink can
     // measure a ninja against is a cohort of CREATE belts. A percentile drawn

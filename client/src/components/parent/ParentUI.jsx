@@ -720,7 +720,12 @@ export function Group({ title, action, tint, bare = false, children, className =
 
 // One row of a Group. `lead` is a small square or dot on the left; `to` or
 // `onClick` makes the row a link with a chevron.
-export function Row({ lead, title, subtitle, trailing, to, onClick, dim = false, first = false, inset = false, active = false }) {
+// `chevron` says what the row does with the tap, because the arrow is the only
+// thing on it that can: 'right' goes somewhere (the default, and what a link
+// has always drawn), 'down' opens the row in place and turns to point at what
+// it opened, and null is a row that happens to be clickable without either
+// being true.
+export function Row({ lead, title, subtitle, trailing, to, onClick, dim = false, first = false, inset = false, active = false, chevron = 'right', expanded = false }) {
   const inner = (
     <>
       {lead && <span className="flex-shrink-0">{lead}</span>}
@@ -729,7 +734,13 @@ export function Row({ lead, title, subtitle, trailing, to, onClick, dim = false,
         {subtitle && <span className="block font-ninja text-[12.5px] text-ninja-muted v2 truncate">{subtitle}</span>}
       </span>
       {trailing}
-      {(to || onClick) && <ChevronRightIcon size={16} className="text-ninja-muted/60 flex-shrink-0" aria-hidden />}
+      {(to || onClick) && chevron && (
+        <ChevronRightIcon
+          size={16}
+          aria-hidden
+          className={`text-ninja-muted/60 flex-shrink-0 transition-transform duration-200 ${chevron === 'down' ? (expanded ? 'rotate-[-90deg]' : 'rotate-90') : ''}`}
+        />
+      )}
     </>
   );
   const cls = `flex items-center gap-3 px-4 py-3 ${first ? '' : 'border-t border-ninja-navy/[0.08]'} ${inset ? 'tint-inset' : ''} ${active ? 'bg-ninja-blue/[0.06]' : ''} ${to || onClick ? 'hover:bg-ninja-navy/[0.03] active:bg-ninja-navy/[0.06] transition-colors' : ''}`;
