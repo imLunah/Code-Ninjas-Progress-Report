@@ -365,12 +365,20 @@ function ParentTabBar() {
     >
       {/* Left and width rather than a transform: the pill is a capsule, and a
           scaled capsule has elliptical ends and a smeared shadow. It is
-          absolutely positioned, so nothing else on the bar reflows with it. */}
+          absolutely positioned, so nothing else on the bar reflows with it.
+          
+          `inset-y-1.5` rather than a top of nothing and a height of 46. An
+          absolute child is positioned against the capsule's PADDING box, and
+          the tabs sit inside its content box, so a top of zero hung the pill
+          the bar's own padding above them: it broke the top edge of the glass
+          and left a gap along the bottom. Insetting by that same padding on
+          both sides lands it on the tabs and takes its height from the bar,
+          so it cannot drift again if the padding changes. */}
       <motion.span
         aria-hidden
         initial={{ opacity: 0, left: 0, width: 0 }}
         animate={pill}
-        className="absolute top-0 h-[46px] rounded-full bg-white/90 dark:bg-white/[0.14] shadow-[0_2px_8px_rgb(26_46_74/0.12),inset_0_1px_0_#fff] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]"
+        className="absolute inset-y-1.5 rounded-full bg-white/90 dark:bg-white/[0.14] shadow-[0_2px_8px_rgb(26_46_74/0.12),inset_0_1px_0_#fff] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]"
       />
 
       {items.map((t, i) => {
