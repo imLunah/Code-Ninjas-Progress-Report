@@ -4,11 +4,11 @@ import { SparklesIcon } from 'lucide-react';
 import { useReducedMotion } from 'framer-motion';
 import { StickerCard, StickerZoom, useStickerZoom } from './StickerCollection';
 import { Group } from './ParentUI';
-import { stickersForProgram } from '../../lib/moduleStickers';
-import { earnedModuleStickers, moduleProgress, moduleEarnedOn } from '../../lib/moduleStickerProgress';
+import { programStickers } from '../../lib/stickerBook';
 import { fmtDay } from '../../lib/parentProgress';
 
-// The sticker book for JR, Robotics Academy and AI Academy: one per module.
+// The sticker book for JR, Robotics Academy and AI Academy: one badge per
+// MODULE, and one per LESSON underneath it.
 //
 // It reuses CREATE's card and zoom rather than copying them, which is why
 // those two grew a `requirement` prop. What it does NOT reuse is rarity: that
@@ -17,17 +17,15 @@ import { fmtDay } from '../../lib/parentProgress';
 // simply absent rather than filled with a number nobody measured.
 //
 // STICKERS, NOT ACHIEVEMENTS, in the words on screen as well as in the data.
-// CREATE's badges are real Code Ninjas achievements awarded in MakeCode;
-// these are DojoLink's own, one per module, and calling them achievements
-// would claim a thing the franchise never awarded.
-
-// A locked card says how far in they are, which is knowable here and more use
-// than a static sentence. "0 of 10 lessons" on a module nobody has started is
-// still the truth, and it reads as a start line rather than a failure.
-function requirementFor({ done, total }) {
-  if (!total) return 'Not in the curriculum yet';
-  return `${done} of ${total} lesson${total === 1 ? '' : 's'}`;
-}
+// CREATE's badges are real Code Ninjas achievements awarded in MakeCode; these
+// are DojoLink's own and calling them achievements would claim a thing the
+// franchise never awarded.
+//
+// THE LIST COMES FROM lib/stickerBook.js, not from here. It is the same
+// assembly the whole sticker book uses, sliced to one program, so a badge
+// cannot read earned on this page and locked in the book. Everything a card
+// needs — earned, the day, the locked line, the zoom's detail block — is
+// already on the item by the time it arrives.
 
 // Which stickers belong to the kit the page is currently open on.
 //
@@ -41,20 +39,14 @@ function inTrack(stickers, track, program) {
   return scoped.length ? scoped : stickers;
 }
 
-export default function ModuleStickerBook({ program, track, logs, curriculum }) {
+export default function ModuleStickerBook({ program, track, logs, curriculum, subPrograms }) {
   const flat = useReducedMotion();
   const { zoomed, open, close } = useStickerZoom();
 
-  const all = useMemo(() => stickersForProgram(program), [program]);
-  const earned = useMemo(
-    () => earnedModuleStickers({ program, logs, curriculum }),
-    [program, logs, curriculum],
+  const all = useMemo(
+    () => programStickers({ programs: program, logs, curriculum, subPrograms }),
+    [program, logs, curriculum, subPrograms],
   );
-  const progress = useMemo(() => {
-    const out = {};
-    for (const s of all) out[s.id] = moduleProgress({ sticker: s, logs, curriculum });
-    return out;
-  }, [all, logs, curriculum]);
 
   // ONE KIT AT A TIME, the way the CREATE book shows one belt at a time.
   // Robotics has 18 modules across four kits, and all of them at once is a
@@ -63,7 +55,7 @@ export default function ModuleStickerBook({ program, track, logs, curriculum }) 
   const stickers = inTrack(all, track, program);
   if (!stickers.length) return null;
 
-  const earnedHere = stickers.filter((s) => earned.has(s.id)).length;
+  const earnedHere = stickers.filter((s) => s.earned).length;
 
   // Heading and count, and nothing else. The line that used to sit under it
   // explained what a sticker book is to somebody already looking at one, and
@@ -85,10 +77,11 @@ export default function ModuleStickerBook({ program, track, logs, curriculum }) 
           <StickerCard
             key={item.id}
             item={item}
-            isEarned={earned.has(item.id)}
+            isEarned={item.earned}
             onOpen={open}
             flat={flat}
-            requirement={requirementFor(progress[item.id] || {})}
+            requirement={item.requirement}
+            earnedLabel={item.earnedOn ? fmtDay(item.earnedOn) : undefined}
           />
         ))}
       </div>
@@ -98,24 +91,16 @@ export default function ModuleStickerBook({ program, track, logs, curriculum }) 
           <StickerZoom
             key={zoomed.id}
             item={zoomed}
-            isEarned={earned.has(zoomed.id)}
+            isEarned={zoomed.earned}
             onClose={close}
             flat={flat}
-            requirement={requirementFor(progress[zoomed.id] || {})}
-            // The block CREATE fills with the level's topic and quest. A
-            // module has neither, so it gets what a module does have: the kit
-            // it belongs to, how many lessons are in it, and the day it was
-            // finished. That last one is readable here, unlike in the CREATE
-            // book, because a module is finished by a session DojoLink saw.
-            detail={(() => {
-              const p = progress[zoomed.id] || {};
-              const on = earned.has(zoomed.id) ? moduleEarnedOn({ sticker: zoomed, logs }) : null;
-              return {
-                label: zoomed.subProgram || zoomed.program,
-                topic: p.total ? `${p.total} lesson${p.total === 1 ? '' : 's'}` : 'Not in the curriculum yet',
-                quest: on ? `Finished ${fmtDay(on)}` : null,
-              };
-            })()}
+            requirement={zoomed.requirement}
+            // The block CREATE fills with the level's topic and quest. These
+            // have neither, so they carry what they do have — the kit, and
+            // either the lessons in the module or the module a lesson sits in
+            // — and the day it landed, which is readable here unlike in the
+            // CREATE book because both are finished by a session DojoLink saw.
+            detail={{ ...zoomed.detail, quest: zoomed.earnedOn ? `Finished ${fmtDay(zoomed.earnedOn)}` : null }}
           />
         )}
       </AnimatePresence>

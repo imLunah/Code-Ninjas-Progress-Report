@@ -3,7 +3,7 @@ import { AnimatePresence, motion, useAnimationControls, useReducedMotion } from 
 import { CheckIcon, ChevronRightIcon, LockKeyholeIcon, SparklesIcon, XIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CREATE_STICKERS, stickerRequirement, stickersForBelt } from '../../lib/createStickers';
-import { wholeBook, BOOK_TOTAL } from '../../lib/stickerBook';
+import { wholeBook } from '../../lib/stickerBook';
 import { useCurriculum } from '../../context/CurriculumContext';
 import { useStickerRarity } from '../../lib/stickerRarity';
 import { levelInfo } from '../../lib/createCurriculum';
@@ -388,11 +388,11 @@ function BookSticker({ item, angle, onOpen, flat, rarity }) {
 export function StickerBook({ belt, level, logs, href, className = '' }) {
   const flat = useReducedMotion();
   const rarity = useStickerRarity();
-  const { curriculum } = useCurriculum() || {};
+  const { curriculum, subPrograms } = useCurriculum() || {};
   const { zoomed, open, close } = useStickerZoom();
   const book = useMemo(
-    () => wholeBook({ belt, level, logs, curriculum }),
-    [belt, level, logs, curriculum]);
+    () => wholeBook({ belt, level, logs, curriculum, subPrograms }),
+    [belt, level, logs, curriculum, subPrograms]);
   const recent = useMemo(() => book.recent(BOOK_COUNT), [book]);
   const empty = recent.length === 0;
   // Nothing earned yet is not an empty state to apologise for: it is the
@@ -414,7 +414,7 @@ export function StickerBook({ belt, level, logs, href, className = '' }) {
           </p>
         </div>
         <div className="flex-shrink-0 whitespace-nowrap pt-0.5 font-ninja text-[12px] font-extrabold text-ninja-blue">
-          {book.earned.length} of {BOOK_TOTAL} earned
+          {book.earned.length} of {book.total} earned
         </div>
       </div>
 
@@ -434,7 +434,7 @@ export function StickerBook({ belt, level, logs, href, className = '' }) {
           to={href}
           className="flex items-center justify-center gap-1 border-t border-ninja-navy/[0.08] px-4 py-3 font-ninja text-[12.5px] font-extrabold text-ninja-blue transition-colors hover:bg-ninja-blue/[0.04]"
         >
-          See all {BOOK_TOTAL} stickers
+          See all {book.total} stickers
           <ChevronRightIcon size={15} strokeWidth={3} aria-hidden />
         </Link>
       )}

@@ -7,7 +7,7 @@ import { useParentPortal } from '../../context/ParentPortalContext';
 import { Hero, PinnedHero, PageSheet, BackChip } from '../../components/parent/ParentUI';
 import { RarityChip, StickerZoom, useLockedShake, useStickerZoom } from '../../components/parent/StickerCollection';
 import { CREATE_STICKERS } from '../../lib/createStickers';
-import { wholeBook, BOOK_TOTAL } from '../../lib/stickerBook';
+import { wholeBook } from '../../lib/stickerBook';
 import { useCurriculum } from '../../context/CurriculumContext';
 import { stickerPercentile, useStickerCohort, useStickerRarity } from '../../lib/stickerRarity';
 import { SkeletonProfile } from '../../components/ui/Skeleton';
@@ -186,10 +186,10 @@ export default function ParentStickerBook() {
   // and AI sessions, and this page filtering them out is what made it a
   // CREATE-only book.
   const logs = useMemo(() => detail?.session_logs || [], [detail]);
-  const { curriculum } = useCurriculum() || {};
+  const { curriculum, subPrograms } = useCurriculum() || {};
   const book = useMemo(
-    () => wholeBook({ belt, level, logs, curriculum }),
-    [belt, level, logs, curriculum]);
+    () => wholeBook({ belt, level, logs, curriculum, subPrograms }),
+    [belt, level, logs, curriculum, subPrograms]);
 
   // ONE SHELF PER PROGRAM, which is the only division this book can honestly
   // draw. It was one shelf per BELT — nine of them, White through Black —
@@ -212,7 +212,7 @@ export default function ParentStickerBook() {
     );
   }
 
-  const total = BOOK_TOTAL;
+  const total = book.total;
   const earned = book.earned.length;
   const pct = Math.round((earned / total) * 100);
   const latest = book.recent(1)[0] || null;
