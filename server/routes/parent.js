@@ -499,25 +499,51 @@ router.get('/events/:id', requireParent, async (req, res) => {
 //
 // daily_assignments has no location: a ninja's check-in is attributed to the
 // centers they belong to, which double-counts the rare ninja at two centers.
+// How long one check-in keeps a ninja in the building.
+//
+// It is here for ONE reason: to recognise the same ninja checked in twice.
+// `daily_assignments` collects duplicates — Joah park has two rows twelve
+// minutes apart, Alexander Tehuitzil two in the same minute, student 149 two
+// one second apart — and every one of them made the chart draw a body that was
+// not in the room. A second check-in arriving while the first stay is still
+// running is the same child, so it is dropped; one far enough after it that the
+// first stay is over is a genuine second visit and is kept.
+//
+// It is NOT the chart's stay length. The client owns that (STAY_MIN in
+// ParentHome), and the two happening to agree at sixty minutes is a
+// coincidence of the same fact, not a constant shared across the wire. If the
+// chart ever draws a different stay, this number does not follow it: the
+// question here is only "is this the same arrival twice".
+const STAY_MIN = 60;
 const CENTER_TZ = 'America/Los_Angeles';
 router.get('/schedule', requireParent, async (req, res) => {
   const pool = req.app.get('db');
   const today = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.today || '')) ? req.query.today : null;
   try {
     const { rows } = await pool.query(`
-      WITH wk AS (SELECT date_trunc('week', COALESCE($2::date, CURRENT_DATE))::date AS start)
+      WITH wk AS (SELECT date_trunc('week', COALESCE($2::date, CURRENT_DATE))::date AS start),
+      ins AS (
+        SELECT da.student_id, da.session_date,
+               (EXTRACT(HOUR FROM (da.checked_in_at AT TIME ZONE $3))::int * 60
+                 + EXTRACT(MINUTE FROM (da.checked_in_at AT TIME ZONE $3))::int) AS at_min
+        FROM daily_assignments da, wk
+        WHERE da.session_date >= wk.start AND da.session_date < wk.start + 7
+          AND da.checked_in_at IS NOT NULL
+          AND EXISTS (SELECT 1 FROM student_locations sl WHERE sl.student_id = da.student_id AND sl.location_id = $1)
+      ),
+      spaced AS (
+        SELECT ins.*, LAG(at_min) OVER (PARTITION BY student_id, session_date ORDER BY at_min) AS prev
+        FROM ins
+      )
       SELECT to_char(wk.start, 'YYYY-MM-DD') AS week_start,
-             to_char(da.session_date, 'YYYY-MM-DD') AS day,
-             (EXTRACT(HOUR FROM (da.checked_in_at AT TIME ZONE $3))::int * 60
-               + FLOOR(EXTRACT(MINUTE FROM (da.checked_in_at AT TIME ZONE $3)) / 5)::int * 5) AS minute,
+             to_char(spaced.session_date, 'YYYY-MM-DD') AS day,
+             FLOOR(spaced.at_min / 5)::int * 5 AS minute,
              COUNT(*)::int AS count
-      FROM daily_assignments da, wk
-      WHERE da.session_date >= wk.start AND da.session_date < wk.start + 7
-        AND da.checked_in_at IS NOT NULL
-        AND EXISTS (SELECT 1 FROM student_locations sl WHERE sl.student_id = da.student_id AND sl.location_id = $1)
+      FROM spaced, wk
+      WHERE prev IS NULL OR at_min - prev >= $4
       GROUP BY 1, 2, 3
       ORDER BY 2, 3
-    `, [req.session.parentLocationId, today, CENTER_TZ]);
+    `, [req.session.parentLocationId, today, CENTER_TZ, STAY_MIN]);
     res.json({ slots: rows.map(({ day, minute, count }) => ({ day, minute, count })) });
   } catch (err) {
     console.error('Parent schedule error:', err);
