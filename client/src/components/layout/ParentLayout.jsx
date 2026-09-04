@@ -559,7 +559,49 @@ export default function ParentLayout({ children, bleed = false }) {
   const swipeable = !desktop && here >= 0;
   const room = typeof window === 'undefined' ? 390 : window.innerWidth;
 
+  // WHICH WAY THE THROW IS GOING, decided by whichever axis is actually
+  // winning. This used to be framer's own `dragDirectionLock` and that prop
+  // is gone on purpose: it tests the vertical axis FIRST, so a gesture that
+  // has drifted 14px down and 4px across locks to vertical and stays there
+  // for the rest of the throw, however far across it then goes. A thumb
+  // swiping a phone pivots, so it arcs, so it does exactly that.
+  //
+  // The result was the worst of both: the page did not follow the finger,
+  // because x was pinned by the lock, and on a real phone the browser took
+  // the gesture as a scroll and cancelled the pointer, so nothing happened
+  // at all. On a desktop, where nothing cancels it, the release still
+  // navigated — a section change with no movement in front of it.
+  //
+  // A plain comparison has no favourite axis. Vertical still wins outright
+  // when it deserves to, and `touch-action: pan-y` still leaves real
+  // scrolling to the browser.
+  const axis = useRef(null);
+
+  const onDecide = (_event, info) => {
+    const across = Math.abs(info.offset.x);
+    const down = Math.abs(info.offset.y);
+    const gone = Math.max(across, down);
+    // PROVISIONAL UNTIL THE GESTURE HAS GONE SOMEWHERE. Deciding on the first
+    // sample past a few pixels is the same mistake in a different coat: a
+    // thumb that dips before it travels reads as vertical for one frame and
+    // would be stuck with it. Up to 30px the answer keeps being revised, and
+    // after that it is settled and a change of mind mid-throw cannot yank the
+    // page sideways.
+    if (gone >= 8 && (!axis.current || gone < 30)) {
+      axis.current = across > down ? 'x' : 'y';
+    }
+    // A gesture that turned out to be a scroll leaves the page where it is.
+    if (axis.current === 'y') page.set({ x: 0 });
+  };
+
   const onThrow = (_event, info) => {
+    // Only a sideways throw changes section. Reading `offset.x` alone was
+    // what let a downward scroll with a little sideways drift in it land on
+    // another page.
+    if (axis.current !== 'x') {
+      page.start({ x: 0, transition: { type: 'spring', stiffness: 560, damping: 44 } });
+      return;
+    }
     const dir = info.offset.x < 0 ? 1 : -1;
     const to = here + dir;
     // Distance OR speed, because a slow deliberate drag past a quarter of the
@@ -636,10 +678,11 @@ export default function ParentLayout({ children, bleed = false }) {
           className="max-w-6xl mx-auto px-4 sm:px-6"
           animate={page}
           drag={swipeable ? 'x' : false}
-          dragDirectionLock
           dragMomentum={false}
           dragElastic={0.14}
           dragConstraints={{ left: here < SECTIONS.length - 1 ? -room : 0, right: here > 0 ? room : 0 }}
+          onDragStart={() => { axis.current = null; }}
+          onDrag={onDecide}
           onDragEnd={onThrow}
         >
           {children}
