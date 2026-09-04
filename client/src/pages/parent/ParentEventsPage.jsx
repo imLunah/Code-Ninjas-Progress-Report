@@ -108,9 +108,6 @@ export default function ParentEventsPage() {
           ) : count === 0 ? (
             <div className={`${FLAT} p-10 text-center space-y-1.5`}>
               <p className="text-ninja-navy font-ninja font-bold">Nothing on the calendar right now.</p>
-              <p className="text-ninja-muted font-ninja text-sm">
-                Open houses, camps, tournaments and parents night out all show up here as soon as the center posts them.
-              </p>
               <p className="pt-1"><MoreLink to="/parent/dashboard">Back to Home</MoreLink></p>
             </div>
           ) : (
