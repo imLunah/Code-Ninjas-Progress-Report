@@ -209,6 +209,12 @@ export default function FamilyPass({ parentName, relationship, phone, center, ce
                   maskImage: 'radial-gradient(110% 110% at 100% 0%, black 30%, transparent 72%)',
                 }}
               />
+              {/* The names, with no belt swatch in front of them. A 12px chip
+                  beside each one was a second, quieter way of saying what the
+                  stripes along the foot of the front already say in full
+                  width, and two ninjas in neighbouring belts put two little
+                  squares down the edge of the list that read as bullet points
+                  somebody had coloured in. */}
               <div className="flex flex-col flex-1" style={{ padding: '20px 26px 18px' }}>
                 <div className="font-ninja font-extrabold uppercase" style={{ fontSize: 11, letterSpacing: '0.24em', color: '#8a9bb8' }}>
                   {ninjas.length === 1 ? 'Ninja' : 'Ninjas'}
@@ -217,7 +223,6 @@ export default function FamilyPass({ parentName, relationship, phone, center, ce
                   {ninjas.length === 0 && <span className="font-ninja font-bold" style={{ fontSize: 15, color: '#8a9bb8' }}>No ninjas linked yet</span>}
                   {ninjas.slice(0, 4).map((n, i) => (
                     <div key={`${n.name}-${i}`} style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-                      <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: 4, background: BELT_COLOR[n.belt] || '#d6dfeb', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.12)', flexShrink: 0, alignSelf: 'center' }} />
                       <b className="font-ninja font-extrabold" style={{ fontSize: 16, color: NAVY, overflowWrap: 'anywhere' }}>{n.name}</b>
                       {n.age != null && (
                         <span className="font-ninja font-bold" style={{ fontSize: 12.5, color: '#506690', whiteSpace: 'nowrap' }}>
