@@ -143,8 +143,20 @@ export function PinnedHero({ children }) {
   useEffect(() => {
     const el = box.current;
     if (!el || !mark.current) return undefined;
+    // The refs are re-read on every call and checked, not captured once.
+    //
+    // A ResizeObserver fires when the thing it watches is REMOVED, and React
+    // detaches refs on unmount immediately while this effect's cleanup — the
+    // disconnect below — is deferred until after the next paint. So leaving a
+    // page with a pinned banner left a window in which the observer ran with
+    // both refs already null, and the read threw: "Cannot read properties of
+    // null (reading 'getBoundingClientRect')", once for every such page you
+    // navigated away from.
     const read = () => {
-      span.current = { top: mark.current.getBoundingClientRect().top + window.scrollY, height: el.offsetHeight };
+      const seen = box.current;
+      const at = mark.current;
+      if (!seen || !at) return;
+      span.current = { top: at.getBoundingClientRect().top + window.scrollY, height: seen.offsetHeight };
       settle(window.scrollY);
     };
     read();
