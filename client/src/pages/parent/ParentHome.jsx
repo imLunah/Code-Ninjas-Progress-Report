@@ -40,19 +40,20 @@ const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 // How long a check-in is taken to mean a ninja is in the building.
 //
-// TWO HOURS, WHICH IS DELIBERATELY GENEROUS. There is no check-OUT anywhere in
-// the data — `daily_assignments` records the arrival and nothing else — so the
-// length of a visit is an assumption, not a measurement, and this chart has to
-// pick one. It was an hour, and an hour is the shortest honest guess: a ninja
-// who came at 3:55 was counted out of the room at 4:55, so at twenty past five
-// an afternoon that six ninjas had walked into read as one. A session runs an
-// hour, but nobody arrives on the hour, siblings wait, and parents are late.
+// ONE HOUR, which is the session they were signed in for. A ninja counts on
+// the hour they arrived in, and on the next one too where their hour runs into
+// it — checked in at 3:40, they are in the room for the three o'clock bar and
+// for part of the four o'clock one, so both count them. When the hour is up
+// they stop counting anywhere.
 //
-// The error is deliberately on the high side. This bar answers "is it worth
-// coming now", and a parent who arrives to a quieter center than the chart
-// promised has lost nothing, while one who is told it is empty and finds it
-// full has been misled by the thing that was supposed to help.
-const STAY_MIN = 120;
+// It was two hours for a spell, on the reasoning that a session over-runs and
+// erring high is the kinder error for a parent deciding whether to come. That
+// reached too far: one arrival lit three consecutive bars, so a single late
+// check-in kept the chart busy until closing. An hour is the thing that
+// actually happened, and it is the only span the data supports — there is no
+// check-OUT anywhere in it (`daily_assignments` records the arrival and
+// nothing else), so a longer stay is a guess dressed as a measurement.
+const STAY_MIN = 60;
 
 // How busy the center is today, by the hour, drawn the way a map app draws
 // "popular times": bars on a baseline, a dashed line at the week's peak,
