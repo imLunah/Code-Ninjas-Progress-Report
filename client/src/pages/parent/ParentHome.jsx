@@ -38,11 +38,27 @@ function thisWeek() {
 
 const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+// How long a check-in is taken to mean a ninja is in the building.
+//
+// TWO HOURS, WHICH IS DELIBERATELY GENEROUS. There is no check-OUT anywhere in
+// the data — `daily_assignments` records the arrival and nothing else — so the
+// length of a visit is an assumption, not a measurement, and this chart has to
+// pick one. It was an hour, and an hour is the shortest honest guess: a ninja
+// who came at 3:55 was counted out of the room at 4:55, so at twenty past five
+// an afternoon that six ninjas had walked into read as one. A session runs an
+// hour, but nobody arrives on the hour, siblings wait, and parents are late.
+//
+// The error is deliberately on the high side. This bar answers "is it worth
+// coming now", and a parent who arrives to a quieter center than the chart
+// promised has lost nothing, while one who is told it is empty and finds it
+// full has been misled by the thing that was supposed to help.
+const STAY_MIN = 120;
+
 // How busy the center is today, by the hour, drawn the way a map app draws
 // "popular times": bars on a baseline, a dashed line at the week's peak,
 // hour ticks underneath, and the hour happening now in the strong colour
-// with a Live marker. Every check-in is an hour of a ninja in the building,
-// so a bar counts everyone whose hour touched it rather than everyone who
+// with a Live marker. Every check-in is a STAY of a ninja in the building,
+// so a bar counts everyone whose stay touched it rather than everyone who
 // walked in during it, and that includes the live one. Hours still to come
 // show what this week's earlier days did at that hour, faintly, so the shape
 // of the afternoon is there before it happens. Refreshes every minute while
@@ -69,12 +85,13 @@ function LiveSchedule({ center }) {
     return () => { alive = false; clearInterval(t); document.removeEventListener('visibilitychange', load); };
   }, []);
 
-  // A check-in is an HOUR of a ninja in the building, not a moment. So a bar
+  // A check-in is a STAY of a ninja in the building, not a moment. So a bar
   // is not "who arrived in this hour", it is "who was in the room during it":
   // an arrival at 3:40 is still here at 4:21 and belongs to both bars. That is
-  // why a ninja can be counted twice across the day and why the bars do not
-  // sum to the number of children who came — the chart answers how busy the
-  // room was, the way a map app draws popular times, and nobody adds those up.
+  // why a ninja can be counted more than once across the day and why the bars
+  // do not sum to the number of children who came — the chart answers how busy
+  // the room was, the way a map app draws popular times, and nobody adds those
+  // up.
   //
   // "day|hour" -> ninjas in the room at some point in that hour, plus the
   // week's busiest hour as the ceiling every bar is measured against.
@@ -90,17 +107,16 @@ function LiveSchedule({ center }) {
       const arrivals = byDay.get(d);
       if (!arrivals) continue;
       for (const h of slotsFor(date)) {
-        // [start, start + 60) overlaps [h:00, h+1:00) exactly when the arrival
-        // falls in the two hours either side of the bar's own start.
+        // [start, start + STAY_MIN) overlaps [h:00, h+1:00): they arrived
+        // before this hour was over and had not left before it began.
         //
-        // The lower bound INCLUDES the bucket exactly an hour back, because a
-        // bucket is five minutes wide and named after the earliest of them: a
-        // ninja filed under 3:00 checked in somewhere in 3:00 to 3:04, so
-        // their hour runs out somewhere in 4:00 to 4:04 and they were in the
-        // room when the four o'clock hour began. Excluding them read as the
-        // three o'clock crowd vanishing at four.
+        // The second test INCLUDES the stay that runs out exactly on the
+        // hour, because a bucket is five minutes wide and named after the
+        // earliest of them: a ninja filed under 3:00 checked in somewhere in
+        // 3:00 to 3:04, so they leave somewhere in 5:00 to 5:04 and were in
+        // the room when the five o'clock hour began.
         const n = arrivals.reduce((sum, a) =>
-          (a.minute >= h * 60 - 60 && a.minute < h * 60 + 60 ? sum + a.count : sum), 0);
+          (a.minute < h * 60 + 60 && a.minute + STAY_MIN >= h * 60 ? sum + a.count : sum), 0);
         if (n) counts.set(`${d}|${h}`, n);
       }
     }
