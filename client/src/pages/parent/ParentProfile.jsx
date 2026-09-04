@@ -238,16 +238,24 @@ export default function ParentProfile() {
               <ProgressVisuals programs={programs} sessionLogs={detail.session_logs || []} childName={first} courseHref={courseHref} />
             )}
 
-            {/* The stickers this ninja has actually earned, newest first, after
-                the courses that explain where they came from. Only for a ninja in
-                CREATE: the stickers are CREATE's belt art and there is nothing to
-                show a JR or Robotics ninja here. */}
-            {detail && createEnrollment && (
+            {/* The stickers this ninja has earned, newest first, after the
+                courses that explain where they came from.
+                
+                FOR EVERY NINJA, not just a CREATE one. This card used to be
+                behind `createEnrollment`, back when the book was 43 belt
+                badges and there was genuinely nothing in it for a JR or
+                Robotics ninja. There are 38 module stickers now and the book
+                holds all four programs, so the child with the emptiest book
+                is exactly the one who should be able to see what is in it.
+                
+                Every log goes in, not the CREATE ones: a module sticker is
+                earned out of JR, Robotics and AI sessions, and filtering
+                those out here is what kept them from ever appearing. */}
+            {detail && (
               <StickerBook
                 belt={belt}
                 level={level}
-                logs={(detail.session_logs || []).filter((l) => l.program === 'CREATE')}
-                childName={first}
+                logs={detail.session_logs || []}
                 href={`/parent/students/${target}/stickers`}
               />
             )}

@@ -3,7 +3,8 @@ import { AnimatePresence, motion, useAnimationControls, useReducedMotion } from 
 import { CheckIcon, ChevronRightIcon, LockKeyholeIcon, SparklesIcon, XIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CREATE_STICKERS, stickerRequirement, stickersForBelt } from '../../lib/createStickers';
-import { stickerProgress } from '../../lib/stickerProgress';
+import { wholeBook, BOOK_TOTAL } from '../../lib/stickerBook';
+import { useCurriculum } from '../../context/CurriculumContext';
 import { useStickerRarity } from '../../lib/stickerRarity';
 import { levelInfo } from '../../lib/createCurriculum';
 import { Group } from './ParentUI';
@@ -364,27 +365,39 @@ function BookSticker({ item, angle, onOpen, flat, rarity }) {
         <span className={`font-ninja text-[11.5px] font-extrabold leading-tight ${item.earned ? 'text-ninja-navy' : 'text-ninja-navy/55'}`}>
           {item.title}
         </span>
-        {/* The date only where the log actually has one. A ninja imported at
-            Green belt earned their White stickers before DojoLink ever saw
-            them. */}
+        {/* The date where the log has one, and nothing where it does not.
+            It used to name the belt instead, which was a CREATE label under a
+            book that now holds four programs, and a ninja imported at Green
+            belt earned their White stickers before DojoLink ever saw them —
+            so there is nothing honest to put there. The non-breaking space
+            holds the line so a dated sticker and an undated one are the same
+            height on the shelf. */}
         <span className="font-ninja text-[10.5px] leading-tight text-ninja-muted">
-          {item.earned ? (item.earnedOn ? fmtDay(item.earnedOn) : `${item.belt} belt`) : stickerRequirement(item)}
+          {item.earned ? (item.earnedOn ? fmtDay(item.earnedOn) : '\u00a0') : item.requirement}
         </span>
       </button>
     </motion.div>
   );
 }
 
-export function StickerBook({ belt, level, logs, childName, href, className = '' }) {
+// The book on a ninja's profile: the last few stickers they earned, out of
+// every program's set rather than CREATE's alone. `logs` is ALL of their
+// sessions now, not the CREATE ones — the module stickers are earned out of
+// JR, Robotics and AI logs and filtering those out upstream is what used to
+// make this card CREATE-only.
+export function StickerBook({ belt, level, logs, href, className = '' }) {
   const flat = useReducedMotion();
   const rarity = useStickerRarity();
+  const { curriculum } = useCurriculum() || {};
   const { zoomed, open, close } = useStickerZoom();
-  const progress = useMemo(() => stickerProgress({ belt, level, logs }), [belt, level, logs]);
-  const recent = useMemo(() => progress.recent(BOOK_COUNT), [progress]);
+  const book = useMemo(
+    () => wholeBook({ belt, level, logs, curriculum }),
+    [belt, level, logs, curriculum]);
+  const recent = useMemo(() => book.recent(BOOK_COUNT), [book]);
   const empty = recent.length === 0;
   // Nothing earned yet is not an empty state to apologise for: it is the
   // first sticker, shown as the thing to go and get.
-  const shown = empty ? [progress.next].filter(Boolean) : recent;
+  const shown = empty ? [book.next].filter(Boolean) : recent;
 
   return (
     <Group className={`relative ${className}`}>
@@ -396,12 +409,12 @@ export function StickerBook({ belt, level, logs, childName, href, className = ''
           </div>
           <p className="mt-1 font-ninja text-[12.5px] text-ninja-muted">
             {empty
-              ? 'The first sticker is one level away.'
+              ? 'The first one is waiting.'
               : `Newest first. Tap one to open it.`}
           </p>
         </div>
         <div className="flex-shrink-0 whitespace-nowrap pt-0.5 font-ninja text-[12px] font-extrabold text-ninja-blue">
-          {progress.earned.length} of {CREATE_STICKERS.length} earned
+          {book.earned.length} of {BOOK_TOTAL} earned
         </div>
       </div>
 
@@ -421,7 +434,7 @@ export function StickerBook({ belt, level, logs, childName, href, className = ''
           to={href}
           className="flex items-center justify-center gap-1 border-t border-ninja-navy/[0.08] px-4 py-3 font-ninja text-[12.5px] font-extrabold text-ninja-blue transition-colors hover:bg-ninja-blue/[0.04]"
         >
-          See all {CREATE_STICKERS.length} stickers
+          See all {BOOK_TOTAL} stickers
           <ChevronRightIcon size={15} strokeWidth={3} aria-hidden />
         </Link>
       )}
@@ -435,6 +448,8 @@ export function StickerBook({ belt, level, logs, childName, href, className = ''
             onClose={close}
             flat={flat}
             rarity={rarity?.[zoomed.id]}
+            requirement={zoomed.requirement}
+            detail={zoomed.detail}
           />
         )}
       </AnimatePresence>

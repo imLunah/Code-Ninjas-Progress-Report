@@ -6,8 +6,9 @@ import ParentLayout from '../../components/layout/ParentLayout';
 import { useParentPortal } from '../../context/ParentPortalContext';
 import { Hero, PinnedHero, PageSheet, BackChip } from '../../components/parent/ParentUI';
 import { RarityChip, StickerZoom, useLockedShake, useStickerZoom } from '../../components/parent/StickerCollection';
-import { CREATE_STICKERS, stickerRequirement } from '../../lib/createStickers';
-import { stickerProgress } from '../../lib/stickerProgress';
+import { CREATE_STICKERS } from '../../lib/createStickers';
+import { wholeBook, BOOK_TOTAL } from '../../lib/stickerBook';
+import { useCurriculum } from '../../context/CurriculumContext';
 import { stickerPercentile, useStickerCohort, useStickerRarity } from '../../lib/stickerRarity';
 import { SkeletonProfile } from '../../components/ui/Skeleton';
 import { Tilt } from '../../components/ui/Tilt';
@@ -117,7 +118,7 @@ function AwardSticker({ item, isEarned, onOpen, flat, rarity }) {
       <button
         type="button"
         onClick={() => (isEarned ? onOpen(item) : shake())}
-        aria-label={`${item.title}${rarity ? `, ${rarity.label}` : ''}, ${isEarned ? 'earned' : `locked, ${stickerRequirement(item)}`}`}
+        aria-label={`${item.title}${rarity ? `, ${rarity.label}` : ''}, ${isEarned ? 'earned' : `locked, ${item.requirement}`}`}
         className="group flex w-full min-w-0 flex-col items-center rounded-[22px] px-2 pb-4 pt-3 text-center transition-[transform,background-color] duration-150 hover:bg-ninja-blue/[0.035] active:scale-[0.97]"
       >
         <span className="relative flex h-[136px] w-full items-center justify-center sm:h-[150px]">
@@ -144,12 +145,14 @@ function AwardSticker({ item, isEarned, onOpen, flat, rarity }) {
           </span>
         </span>
         <span className={`mt-1 block max-w-full font-ninja text-[14px] font-extrabold leading-tight ${isEarned ? 'text-ninja-navy' : 'text-ninja-navy/50'}`}>{item.title}</span>
-        {/* The level, not the full requirement. Inside a belt's shelf the belt
-            name is already overhead, so "Complete Brown Belt Level 7" under
-            every badge is nine tenths repetition; the number is the part that
-            tells two badges apart. The check or padlock above carries the
-            state, so this only has to colour with it. */}
-        <span className={`mt-1 block font-ninja text-[11.5px] font-bold ${isEarned ? 'text-emerald-600' : 'text-ninja-muted'}`}>Level {item.level}</span>
+        {/* WHAT IS LEFT TO DO, or the day it was done. This used to print
+            "Level 7" under every badge, which was a coordinate in CREATE's
+            belt ladder — a taxonomy three quarters of this book does not
+            share, and one the shelves no longer sort by. An earned sticker
+            says when, where the log knows; a locked one says how far in. */}
+        <span className={`mt-1 block font-ninja text-[11.5px] font-bold ${isEarned ? 'text-emerald-600' : 'text-ninja-muted'}`}>
+          {isEarned ? (item.earnedOn ? fmtDay(item.earnedOn) : 'Earned') : item.requirement}
+        </span>
         <span className="mt-2"><RarityChip rarity={rarity} size="sm" /></span>
       </button>
     </motion.div>
@@ -179,30 +182,21 @@ export default function ParentStickerBook() {
   const level = createEnrollment?.belt_sublevel || null;
   const first = child?.full_name?.split(' ')[0] || 'this ninja';
 
-  const logs = useMemo(
-    () => (detail?.session_logs || []).filter((l) => l.program === 'CREATE'),
-    [detail]);
-  const progress = useMemo(
-    () => stickerProgress({ belt, level, logs }),
-    [belt, level, logs]);
+  // EVERY log, not CREATE's. A module sticker is earned out of JR, Robotics
+  // and AI sessions, and this page filtering them out is what made it a
+  // CREATE-only book.
+  const logs = useMemo(() => detail?.session_logs || [], [detail]);
+  const { curriculum } = useCurriculum() || {};
+  const book = useMemo(
+    () => wholeBook({ belt, level, logs, curriculum }),
+    [belt, level, logs, curriculum]);
 
-  // The book's shape: one shelf per belt, holding that belt's level badges.
-  // `progress.all` is already in curriculum order, so this only has to notice
-  // where the belt changes rather than sort anything.
-  const sections = useMemo(() => {
-    const out = [];
-    for (const item of progress.all) {
-      let belted = out[out.length - 1];
-      if (!belted || belted.belt !== item.belt) {
-        belted = { belt: item.belt, stickers: [], earned: 0, total: 0 };
-        out.push(belted);
-      }
-      belted.stickers.push(item);
-      belted.total += 1;
-      if (item.earned) belted.earned += 1;
-    }
-    return out;
-  }, [progress]);
+  // ONE SHELF PER PROGRAM, which is the only division this book can honestly
+  // draw. It was one shelf per BELT — nine of them, White through Black —
+  // and that is a CREATE coordinate system: there is no belt to file a VEX GO
+  // module under, and a Robotics ninja opening the book found nine headings
+  // naming a ladder they are not on.
+  const sections = book.shelves;
 
 
   if (students === null || (child && !detail && detailLoading)) {
@@ -218,16 +212,20 @@ export default function ParentStickerBook() {
     );
   }
 
-  const total = CREATE_STICKERS.length;
-  const earned = progress.earned.length;
+  const total = BOOK_TOTAL;
+  const earned = book.earned.length;
   const pct = Math.round((earned / total) * 100);
-  const latest = progress.earned.at(-1) || null;
+  const latest = book.recent(1)[0] || null;
   const remaining = total - earned;
 
   // The percentile needs the roster, which arrives after the page does and may
   // never arrive at all. Its card is dropped rather than shown as a dash: a
   // shelf of two solid numbers beats three where one is an apology.
-  const percentile = stickerPercentile(cohort, earned);
+  // The CREATE count, not the whole book's. The roster behind this is a
+  // histogram of where CREATE ninjas stand on the belt ladder, so ranking a
+  // count that includes 38 module stickers against it would be comparing two
+  // different quantities and printing the result as a position.
+  const percentile = stickerPercentile(cohort, book.createEarned);
 
   // The card shows the scarcest sticker in the book so far rather than the
   // newest one, which the card beside it is already showing. It is also the
@@ -235,7 +233,7 @@ export default function ParentStickerBook() {
   // ones putting this one ahead. Safe to reach for `rarity` here, because the
   // roster that makes a percentile measurable is the roster that makes the
   // tiers measurable.
-  const rarest = progress.earned.reduce(
+  const rarest = book.earned.reduce(
     (best, item) => (rarity?.[item.id] && (!best || rarity[item.id].share < rarity[best.id].share) ? item : best), null);
 
   const recordValues = {
@@ -248,7 +246,9 @@ export default function ParentStickerBook() {
     },
     latest: {
       value: latest ? latest.title : 'Not yet',
-      caption: latest?.earnedOn ? fmtDay(latest.earnedOn) : latest ? `${latest.belt} belt` : 'The first one is waiting',
+      // The day, or nothing. It used to name the belt when the log had no
+      // date, which is a label this book no longer sorts by.
+      caption: latest?.earnedOn ? fmtDay(latest.earnedOn) : latest ? 'Earned' : 'The first one is waiting',
       art: latest?.src || CREATE_STICKERS[0].src,
       headline: true,
     },
@@ -264,10 +264,15 @@ export default function ParentStickerBook() {
     <ParentLayout>
       <div className="relative">
         <PinnedHero>
+          {/* The banner keeps CREATE's colour because that is the house
+              gradient the portal's own pages wear, but it no longer SAYS
+              CREATE: the book is every program's now, and an eyebrow reading
+              "CREATE · Ivy" over a shelf of Robotics stickers is a claim
+              about the page that the page does not honour. */}
           <Hero program="CREATE" size="page" className="!mt-0">
             <div className="mb-8 lg:mb-6"><BackChip to={`/parent/students/${target}`} label="Back to profile" /></div>
-            <p className="font-ninja text-[12px] font-extrabold uppercase tracking-[0.08em] opacity-85 truncate">CREATE · {child.full_name}</p>
-            <h1 className="font-ninja font-extrabold text-[34px] lg:text-[42px] leading-none mt-1.5 tracking-[-0.02em]">Sticker achievements</h1>
+            <p className="font-ninja text-[12px] font-extrabold uppercase tracking-[0.08em] opacity-85 truncate">{child.full_name}</p>
+            <h1 className="font-ninja font-extrabold text-[34px] lg:text-[42px] leading-none mt-1.5 tracking-[-0.02em]">Sticker book</h1>
 
             {/* The bar is the one number a parent came for, drawn rather than
                 written. It fills on arrival, from nothing, so the length is read
@@ -308,20 +313,20 @@ export default function ParentStickerBook() {
             <div className="flex items-end justify-between gap-4 px-1 sm:px-2">
               <div>
                 <p className="font-ninja text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-ninja-blue">The collection</p>
-                <h2 id="awards-heading" className="mt-1 font-ninja text-[24px] font-extrabold tracking-[-0.02em] text-ninja-navy">Sticker awards</h2>
-                <p className="mt-1 font-ninja text-[12.5px] text-ninja-muted">One badge for every level of the CREATE curriculum.</p>
+                <h2 id="awards-heading" className="mt-1 font-ninja text-[24px] font-extrabold tracking-[-0.02em] text-ninja-navy">Every sticker</h2>
+                <p className="mt-1 font-ninja text-[12.5px] text-ninja-muted">One for every level of CREATE, and one for every module of the rest.</p>
               </div>
               <p className="flex-shrink-0 font-ninja text-[13px] font-extrabold text-ninja-blue">{earned} of {total}</p>
             </div>
 
-            {/* One shelf per belt, one badge per level on it. The belt heading
-                is what a parent scans for, and nine short shelves read better
-                than one run of 43. */}
+            {/* One shelf per program. Four short shelves read better than one
+                run of 81, and the program is the thing a parent can place a
+                sticker by without knowing a curriculum. */}
             {sections.map((section) => (
-              <section key={section.belt} aria-labelledby={`belt-${section.belt}`} className="mt-6 first:mt-5">
+              <section key={section.program} aria-labelledby={`shelf-${section.program}`} className="mt-6 first:mt-5">
                 <div className="flex items-baseline justify-between gap-3 px-1 sm:px-2">
-                  <h3 id={`belt-${section.belt}`} className="font-ninja text-[17px] font-extrabold tracking-[-0.01em] text-ninja-navy">
-                    {section.belt} belt
+                  <h3 id={`shelf-${section.program}`} className="font-ninja text-[17px] font-extrabold tracking-[-0.01em] text-ninja-navy">
+                    {section.program}
                   </h3>
                   <p className={`flex-shrink-0 font-ninja text-[12px] font-extrabold ${section.earned === section.total ? 'text-emerald-600' : 'text-ninja-muted'}`}>
                     {section.earned} of {section.total}
@@ -351,11 +356,13 @@ export default function ParentStickerBook() {
           <StickerZoom
             key={zoomed.id}
             item={zoomed}
-            isEarned={progress.earnedIds.has(zoomed.id)}
+            isEarned={book.earnedIds.has(zoomed.id)}
             childName={first}
             onClose={close}
             flat={flat}
             rarity={rarity?.[zoomed.id]}
+            requirement={zoomed.requirement}
+            detail={zoomed.detail}
           />
         )}
       </AnimatePresence>
