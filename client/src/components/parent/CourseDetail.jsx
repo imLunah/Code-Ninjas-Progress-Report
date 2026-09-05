@@ -8,10 +8,9 @@ import { lessonStickersFor } from '../../lib/lessonStickers';
 import { levelInfo, beltInfo, levelShot } from '../../lib/createCurriculum';
 import { stickerProgress } from '../../lib/stickerProgress';
 import StickerCollection from './StickerCollection';
-import ModuleStickerBook from './ModuleStickers';
+import { programStickers } from '../../lib/stickerBook';
 import { Tilt } from '../ui/Tilt';
 import { KIT_SHORT } from '../../lib/programTheme';
-import { trackArt, completeMedal, trackComplete } from '../../lib/programArt';
 import { useCurriculum } from '../../context/CurriculumContext';
 import BeltIcon from '../ui/BeltIcon';
 
@@ -57,14 +56,6 @@ function ProjectKindIcon({ kind, status }) {
       <Icon size={17} strokeWidth={2.7} className="text-white" />
     </span>
   );
-}
-
-// The line under a track's name: "Module 2 of 4 · Sensors".
-function trackLine(t) {
-  if (!t) return '';
-  if (t.working) return `Module ${t.working.index} of ${t.modules.length} · ${t.working.name}`;
-  if (t.modules.length) return `${t.done} of ${t.modules.length} modules`;
-  return t.sessions ? `${t.sessions} session${t.sessions === 1 ? '' : 's'}` : 'Not started yet';
 }
 
 function useTrackModel(enrollment, logs) {
@@ -385,90 +376,70 @@ function CreateDetail({ enrollment, logs, childName, backTo }) {
   );
 }
 
-// A module, and the lessons inside it once you open it.
+// One lesson of the open module: its badge, its title, and whether it is done.
 //
-// It used to be a flat row and nothing else, which meant the parent portal
-// stopped at "Module 4" and never said what a module was made of. A module is
-// three to twenty-four lessons, each one an afternoon a sensei logged by name,
-// and each one now carries its own achievement badge. Those are the finest
-// thing DojoLink actually knows happened, and they were only visible to staff.
+// A module is three to twenty-four lessons, each one an afternoon a sensei
+// logs by name, and each one carries its own achievement badge. Those are the
+// finest thing DojoLink actually knows happened, and they used to be visible
+// only to staff.
 //
 // The lessons are always shown, earned or not. A locked badge with the lesson
 // it is waiting on is what makes the list a map of what is coming rather than
 // a receipt for what is done, which is the whole reason a ninja opens it.
-function ModuleRow({ m, first, art, open, onToggle }) {
-  // A module that is only called "Module 3" should not be told it is Module 3 twice.
-  const label = m.name === `Module ${m.index}` ? null : `Module ${m.index}`;
-  const has = m.lessons && m.lessons.length > 0;
-  const sub = [label,
-    has ? `${m.lessonsDone} of ${m.lessons.length} lesson${m.lessons.length === 1 ? '' : 's'}` : null,
-    m.status === 'done' && m.date ? `done ${fmtDay(m.date)}` : null,
-    m.status === 'working' ? `working on it${m.date ? ` · ${fmtDay(m.date)}` : ''}` : null,
-  ].filter(Boolean).join(' · ') || null;
+function LessonRow({ l, badge }) {
   return (
-    <div>
-      <Row first={first} inset lead={<StatusDot status={m.status} />} dim={m.status === 'todo'}
-        chevron={has ? 'down' : null} expanded={open}
-        onClick={has ? onToggle : undefined}
-        title={m.name} subtitle={sub} trailing={m.status !== 'todo' ? <StatusText status={m.status} /> : null} />
-      <AnimatePresence initial={false}>
-        {open && has && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22, ease: EASE_OUT }}
-            className="overflow-hidden"
-          >
-            <ul className="tint-inset border-t border-ninja-navy/[0.08]">
-              {m.lessons.map((l) => {
-                const badge = art && art.get(`${m.name}\u0000${l.name}`);
-                return (
-                  <li key={l.name} className="flex items-center gap-3 py-2 pl-[52px] pr-4">
-                    {/* Robotics awards its badge at the module, not the
-                        lesson, so its lessons have no art to show. They get
-                        the same tick every other list in the portal uses
-                        rather than a blank where a picture would be. */}
-                    {badge ? (
-                      <img src={badge.src} alt="" aria-hidden draggable={false} loading="lazy"
-                        className={`h-8 w-8 flex-shrink-0 object-contain ${l.done ? '' : 'grayscale opacity-30'}`} />
-                    ) : (
-                      <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center">
-                        <StatusDot status={l.done ? 'done' : 'todo'} />
-                      </span>
-                    )}
-                    <span className="min-w-0 flex-1">
-                      <span className={`block truncate font-ninja text-[13.5px] font-bold ${l.done ? 'text-ninja-navy' : 'text-ninja-navy/55'}`}>{l.title}</span>
-                      <span className={`block font-ninja text-[11.5px] ${l.done ? 'font-bold text-emerald-600' : 'text-ninja-muted'}`}>
-                        {l.done ? (l.date ? fmtDay(l.date) : 'Done') : 'Not yet'}
-                      </span>
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+    <li className="flex items-center gap-3 py-2 px-4">
+      {/* Robotics awards its badge at the module, not the lesson, so its
+          lessons have no art to show. They get the same tick every other
+          list in the portal uses rather than a blank where a picture
+          would be. */}
+      {badge ? (
+        <img src={badge.src} alt="" aria-hidden draggable={false} loading="lazy"
+          className={`h-8 w-8 flex-shrink-0 object-contain ${l.done ? '' : 'grayscale opacity-30'}`} />
+      ) : (
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center">
+          <StatusDot status={l.done ? 'done' : 'todo'} />
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
+        <span className={`block truncate font-ninja text-[13.5px] font-bold ${l.done ? 'text-ninja-navy' : 'text-ninja-navy/55'}`}>{l.title}</span>
+        <span className={`block font-ninja text-[11.5px] ${l.done ? 'font-bold text-emerald-600' : 'text-ninja-muted'}`}>
+          {l.done ? (l.date ? fmtDay(l.date) : 'Done') : 'Not yet'}
+        </span>
+      </span>
+    </li>
   );
 }
 
-// A track's own picture. It is decoration in the strict sense — the track's
-// name is right next to it and says everything — so it is hidden from screen
-// readers rather than given an alt text invented for it. `ahead` dims a track
-// the ninja has not reached, the same 25% and grayscale LevelMedal and the
-// belt road use, so one rule covers every ladder in the portal.
-function TrackIcon({ name, size = 34, ahead = false }) {
-  const src = trackArt(name);
-  if (!src) return null;
+// A module's achievement sticker in a list row, earned in colour and waiting
+// in grey — the same 25% and grayscale LevelMedal and the belt road use, so
+// one rule covers every ladder in the portal. Decoration in the strict sense:
+// the module's name is right next to it, so it is hidden from screen readers
+// rather than given an alt text invented for it.
+function ModuleBadge({ sticker, earned, size = 40 }) {
   return (
-    <img src={src} alt="" aria-hidden draggable={false} loading="lazy" decoding="async"
+    <img src={sticker.src} alt="" aria-hidden draggable={false} loading="lazy" decoding="async"
       style={{ width: size, height: size }}
-      className={`object-contain flex-shrink-0 ${ahead ? 'opacity-25 grayscale' : ''}`} />
+      className={`object-contain flex-shrink-0 ${earned ? '' : 'opacity-25 grayscale'}`} />
   );
 }
 
+// A map key made of names, without inventing a separator no name may contain.
+const nameKey = (...parts) => JSON.stringify(parts);
+
+// The page for a program of tracks and modules, shaped the way CREATE's is:
+// the module being READ fills the left card with its lessons, and the right
+// column is the ladder of all modules to pick from. It used to be one card
+// with every module stacked inside it and the lessons folded behind a
+// chevron, which answered "what is in this kit" but hid the one thing a
+// parent opens the page for — what the ninja is doing NOW and what it earns.
+//
+// Each module row wears its own achievement sticker, earned in colour and
+// waiting in grey, which is also why the sticker book that used to sit under
+// the list is gone: every achievement it showed is now on the module it
+// belongs to, capstone on the row and lesson badges on the open module's own
+// list. The whole-collection view lives in the sticker book page, where a
+// collection belongs.
 function TrackDetail({ enrollment, logs, childName, backTo }) {
   const p = enrollment.program;
   const { curriculum, subPrograms } = useCurriculum();
@@ -489,17 +460,44 @@ function TrackDetail({ enrollment, logs, childName, backTo }) {
   const art = useMemo(() => {
     const by = new Map();
     for (const sticker of lessonStickersFor({ program: p, curriculum, subPrograms })) {
-      by.set(`${sticker.moduleName}\u0000${sticker.lessonName}`, sticker);
+      by.set(nameKey(sticker.moduleName, sticker.lessonName), sticker);
     }
     return by;
   }, [p, curriculum, subPrograms]);
 
-  // WHICH MODULE IS OPEN, and only one at a time. A kit is up to ten modules
-  // of up to twenty-four lessons; all of them open at once is two hundred rows
-  // and no shape. The one the ninja is working on opens itself, because that
-  // is the module they came to look at.
-  const [openModule, setOpenModule] = useState(null);
-  useEffect(() => { setOpenModule(open?.working?.name || null); }, [open?.name, open?.working?.name]);
+  // Each module's own achievement, keyed by the kit and module it caps, with
+  // `earned` already decided by the one shared definition (stickerBook asks
+  // moduleStickerProgress). The row and the open card both read this map, so
+  // a badge cannot be grey on the ladder and coloured on the card.
+  const capstones = useMemo(() => {
+    const by = new Map();
+    for (const sticker of programStickers({ programs: p, logs, curriculum, subPrograms })) {
+      if (sticker.kind !== 'module') continue;
+      by.set(nameKey(sticker.subProgram || sticker.program, sticker.moduleName), sticker);
+    }
+    return by;
+  }, [p, logs, curriculum, subPrograms]);
+
+  // WHICH MODULE IS OPEN — the one on the left card, the way CREATE keeps one
+  // level open. The one the ninja is working on opens itself, because that is
+  // the module they came to look at.
+  const [moduleName, setModuleName] = useState(null);
+  useEffect(() => {
+    setModuleName(open?.working?.name || open?.modules[0]?.name || null);
+  }, [enrollment.id, open?.name, open?.working?.name]);
+  const selected = open?.modules.find((m) => m.name === moduleName) || open?.working || open?.modules[0] || null;
+  const pickModule = (m) => {
+    setDir(m.index > (selected?.index || 0) ? 1 : -1);
+    setModuleName(m.name);
+  };
+
+  const cap = selected && open ? capstones.get(nameKey(open.name, selected.name)) : null;
+  const stateSuffix = selected ? (selected.status === 'working' ? ' · now' : selected.status === 'done' ? ' · done' : ' · ahead') : '';
+  const selectedSub = selected ? [
+    selected.lessons.length ? `${selected.lessonsDone} of ${selected.lessons.length} lesson${selected.lessons.length === 1 ? '' : 's'}` : null,
+    selected.status === 'done' && selected.date ? `done ${fmtDay(selected.date)}` : null,
+    selected.status === 'working' && selected.date ? `working on it · ${fmtDay(selected.date)}` : null,
+  ].filter(Boolean).join(' · ') : '';
 
   const meta = multi
     ? (current ? `${unit} ${current.index} of ${tracks.length} · ${current.name}` : 'Just getting started')
@@ -532,66 +530,77 @@ function TrackDetail({ enrollment, logs, childName, backTo }) {
           {open && (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
               <AnimatePresence mode="wait" initial={false}>
-                <motion.div key={open.index}
+                <motion.div key={`${open.index}-${selected?.name || 'none'}`}
                   initial={{ opacity: 0, x: 10 * dir }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 * dir }}
                   transition={{ duration: 0.18, ease: EASE_OUT }}>
-                  <Group tint={open.state === 'current' ? 'blue' : open.state === 'done' ? 'green' : undefined}>
-                    <div className="flex items-start gap-3 px-4 pt-3.5 pb-3">
+                  <Group tint={selected?.status === 'working' ? 'green' : selected?.status === 'done' ? 'blue' : undefined}>
+                    <div className="flex items-start gap-3 pl-4 pr-4 pt-3.5 pb-3">
                       <div className="min-w-0 flex-1">
-                        <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em]" style={open.state !== 'ahead' ? { color: 'var(--tint-ink)' } : { color: 'rgb(var(--ninja-muted))' }}>
-                          {multi ? `${unit} ${open.index}` : 'Modules'}{open.state === 'current' ? (started ? ' · now' : ' · next') : open.state === 'done' ? ' · done' : ''}
+                        <p className="font-ninja text-[11px] font-extrabold uppercase tracking-[0.08em]" style={selected && selected.status !== 'todo' ? { color: 'var(--tint-ink)' } : { color: 'rgb(var(--ninja-muted))' }}>
+                          {[multi ? open.name : null, selected ? selected.name : 'Modules'].filter(Boolean).join(' · ')}{stateSuffix}
                         </p>
-                        {multi && <p className="font-ninja font-extrabold text-[20px] text-ninja-navy leading-tight mt-0.5">{open.name}</p>}
-                        <p className="font-ninja text-[12.5px] v2 text-ninja-muted mt-0.5">
-                          {[trackLine(open), open.first ? `started ${fmtDay(open.first)}` : null].filter(Boolean).join(' · ')}
-                        </p>
+                        {/* The achievement's own name for the module, the way
+                            CREATE prints the poster's name for a level. A
+                            module without a sticker has no second name to
+                            print and skips the line. */}
+                        {cap?.title && (
+                          <p className="font-ninja font-extrabold text-[20px] text-ninja-navy leading-tight mt-0.5">{cap.title}</p>
+                        )}
+                        {selectedSub && <p className="font-ninja text-[12.5px] v2 text-ninja-muted mt-0.5">{selectedSub}</p>}
                       </div>
-                      {/* A finished track is shown by its medal instead of its
-                          icon: the identity picture has been earned out of, and
-                          the torii is the one thing on the page that says so. */}
-                      {trackComplete(open)
-                        ? <img src={completeMedal(p)} alt="" aria-hidden draggable={false} className="w-11 h-11 object-contain flex-shrink-0 -mt-0.5" />
-                        : <TrackIcon name={multi ? open.name : p} size={44} ahead={open.state === 'ahead'} />}
+                      {/* The module's achievement, big, in the corner CREATE
+                          keeps the level's screenshot: coloured once every
+                          lesson below it is done, grey while it waits. The 3
+                          degree rest angle pins it to the card like a photo. */}
+                      {cap && (
+                        <Tilt rest={3} amount={9} className="flex-shrink-0 mt-0.5">
+                          <img src={cap.src} alt="" aria-hidden draggable={false}
+                            className={`h-[84px] w-[84px] sm:h-[104px] sm:w-[104px] select-none object-contain ${cap.earned ? 'drop-shadow-[0_12px_16px_rgb(6_13_26_/_0.25)]' : 'opacity-30 grayscale'}`} />
+                        </Tilt>
+                      )}
                     </div>
-                    <div className="mx-3 mb-3 rounded-[14px] overflow-hidden border border-ninja-navy/[0.06]">
-                      {open.modules.map((m, i) => (
-                        <ModuleRow key={m.name} m={m} first={i === 0} art={art}
-                          open={openModule === m.name}
-                          onToggle={() => setOpenModule((v) => (v === m.name ? null : m.name))} />
-                      ))}
-                      {open.modules.length === 0 && <p className="px-4 py-3 font-ninja text-sm text-ninja-muted tint-inset">No modules listed for this {unit.toLowerCase()} yet.</p>}
+                    <div className={`mx-3 mb-3 rounded-[14px] overflow-hidden ${selected ? 'border border-ninja-navy/[0.06]' : ''}`}>
+                      {selected && selected.lessons.length > 0 && (
+                        <ul className="tint-inset">
+                          {selected.lessons.map((l) => (
+                            <LessonRow key={l.name} l={l} badge={art.get(nameKey(selected.name, l.name))} />
+                          ))}
+                        </ul>
+                      )}
+                      {selected && selected.lessons.length === 0 && (
+                        <p className="px-4 py-3 font-ninja text-sm text-ninja-muted tint-inset">No lessons listed for this module yet.</p>
+                      )}
+                      {!selected && (
+                        <p className="px-4 py-3 font-ninja text-sm text-ninja-muted tint-inset">No modules listed for this {unit.toLowerCase()} yet.</p>
+                      )}
                     </div>
                   </Group>
                 </motion.div>
               </AnimatePresence>
 
-              {multi && (
-                <Group title={`All ${unit.toLowerCase()}s`}>
-                  {tracks.map((t, i) => (
-                    <Row key={t.name} first={i === 0} onClick={() => pick(t.index)} active={t.index === openIdx} dim={t.state === 'ahead'}
-                      // The kit's own picture, not its number. The number was
-                      // the whole difference between one row and the next, and
-                      // it is already on the pill row above and in the heading.
-                      // A kit with no art falls back to the numbered tile.
-                      lead={trackArt(t.name)
-                        ? <TrackIcon name={t.name} ahead={t.state === 'ahead'} />
-                        : <Tile tint={t.state === 'done' ? 'rgb(34 197 94 / 0.14)' : t.state === 'current' ? 'rgb(var(--ninja-blue) / 0.14)' : 'rgb(var(--ninja-navy) / 0.06)'} color={t.state === 'done' ? '#15803d' : t.state === 'current' ? undefined : 'rgb(var(--ninja-muted))'}>{t.index}</Tile>}
-                      title={t.name}
-                      subtitle={[`${t.modules.length} module${t.modules.length === 1 ? '' : 's'}`, t.state === 'current' ? (started ? 'now' : 'next') : t.state === 'done' && t.last ? `done ${fmtDay(t.last)}` : null].filter(Boolean).join(' · ')}
-                      trailing={trackComplete(t) ? <img src={completeMedal(p)} alt="Every module done" draggable={false} className="w-7 h-7 object-contain flex-shrink-0" /> : null}
+              <Group title="All modules">
+                {open.modules.map((m, i) => {
+                  const sticker = capstones.get(nameKey(open.name, m.name));
+                  return (
+                    <Row key={m.name} first={i === 0} onClick={() => pickModule(m)} active={selected?.name === m.name} dim={m.status === 'todo'}
+                      // The module's own achievement, not its number: earned in
+                      // colour, waiting in grey. A module with no sticker falls
+                      // back to the numbered tile, the same as a kit with no art.
+                      lead={sticker
+                        ? <ModuleBadge sticker={sticker} earned={sticker.earned} />
+                        : <Tile tint={m.status === 'done' ? 'rgb(34 197 94 / 0.14)' : m.status === 'working' ? 'rgb(var(--ninja-blue) / 0.14)' : 'rgb(var(--ninja-navy) / 0.06)'} color={m.status === 'done' ? '#15803d' : m.status === 'working' ? undefined : 'rgb(var(--ninja-muted))'}>{m.index}</Tile>}
+                      title={m.name}
+                      subtitle={[
+                        m.lessons.length ? `${m.lessonsDone} of ${m.lessons.length} lesson${m.lessons.length === 1 ? '' : 's'}` : null,
+                        m.status === 'working' ? 'now' : m.status === 'done' && m.date ? `done ${fmtDay(m.date)}` : null,
+                      ].filter(Boolean).join(' · ') || null}
                     />
-                  ))}
-                </Group>
-              )}
+                  );
+                })}
+                {open.modules.length === 0 && <p className="px-4 py-3 font-ninja text-sm text-ninja-muted">No modules listed for this {unit.toLowerCase()} yet.</p>}
+              </Group>
             </div>
           )}
-
-          {/* The book, scoped to the kit the page is open on — the same
-              kit the pills and the module list above are showing. One
-              sticker per module, earned when every lesson in it is logged
-              Completed, not when the ninja has merely moved past it, which
-              is all `trackModel`'s own module state can tell you. */}
-          <ModuleStickerBook program={p} track={open?.name} logs={logs} curriculum={curriculum} subPrograms={subPrograms} />
         </div>
       </PageSheet>
     </div>
