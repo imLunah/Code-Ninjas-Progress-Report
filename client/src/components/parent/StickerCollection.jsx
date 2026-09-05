@@ -290,7 +290,10 @@ export function StickerZoom({ item, isEarned, onClose, flat, rarity, requirement
               not a line above it. */}
           {rarity && (
             <p className="mt-2 font-ninja text-[12px] text-ninja-muted">
-              {rarity.percent}% of ninjas have earned this sticker.
+              {/* The cohort is named because it is not the whole dojo: a JR
+                  sticker is measured against JR ninjas only, and "of ninjas"
+                  would quietly claim a comparison nobody ran. */}
+              {rarity.percent}% of {rarity.cohort ? `${rarity.cohort} ninjas` : 'ninjas'} have earned this sticker.
             </p>
           )}
 

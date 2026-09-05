@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client';
+import { useCurriculum } from '../context/CurriculumContext';
 import { BELTS } from '../utils/beltConfig';
 import { CREATE_STICKERS } from './createStickers';
+import { MODULE_STICKERS } from './moduleStickers';
+import { allLessonStickers } from './lessonStickers';
 
-// How rare each sticker is, measured against every CREATE ninja in the dojo.
+// How rare each sticker is, measured against the ninjas who could earn it.
 //
 // A sticker's rarity is not a property someone typed onto it. It is the share
 // of ninjas who have actually earned it, so it moves on its own: White belt
@@ -12,6 +15,13 @@ import { CREATE_STICKERS } from './createStickers';
 // is stored — /api/parent/sticker-rarity sends back where the roster is
 // standing on the ladder, and the counting happens here, next to the belt
 // order and the sticker definitions it needs.
+//
+// EVERY STICKER HAS A COHORT, AND THE COHORT IS ITS PROGRAM. A CREATE badge is
+// measured against every active CREATE ninja in the dojo; a JR lesson badge
+// against every active JR ninja, and so on. Measuring a JR sticker against a
+// roster that is mostly CREATE would make every one of them Legendary for the
+// dull reason that most ninjas were never enrolled in JR at all. The payload
+// carries each program's enrolled count for exactly this division.
 //
 // A ninja has earned a sticker once they are past the last level it covers,
 // which is stickerProgress.js's rule minus the one case it can only answer
@@ -103,18 +113,58 @@ function measurable(data) {
   return Boolean(data && data.ninjas >= MIN_NINJAS && Array.isArray(data.positions));
 }
 
-// sticker id -> { key, label, chip, tint, share, percent }. Null when there is
-// no roster to measure against.
-export function stickerRarity(data) {
-  if (!measurable(data)) return null;
-  const { ninjas, positions } = data;
+// One entry of the rarity map: the tier, the share, the percent the page
+// prints, and the cohort the share was measured against, so the zoom can say
+// "of JR ninjas" rather than implying the whole dojo.
+function rarityEntry(share, cohort) {
+  return { ...tierFor(share), share, percent: sharePercent(share), cohort };
+}
+
+const cohortKey = (...parts) => parts.map((p) => p || '').join('\u0000');
+
+// sticker id -> { key, label, chip, tint, share, percent, cohort }. Null when
+// there is no roster to measure against. Each program's stickers appear only
+// when that program's own enrolment clears MIN_NINJAS; a small CREATE roster
+// does not silence a big JR one, or the other way round.
+//
+// Lesson stickers are derived from the curriculum the browser loaded (the
+// same one the book itself is built from), so the curriculum rides in as an
+// argument rather than being imported — this file has no business fetching
+// it. Without one, module stickers still get their rarity and lessons wait.
+export function stickerRarity(data, { curriculum, subPrograms } = {}) {
+  if (!data) return null;
   const map = {};
-  for (const item of CREATE_STICKERS) {
-    const share = earnedCount(item, positions) / ninjas;
-    const tier = tierFor(share);
-    map[item.id] = { ...tier, share, percent: sharePercent(share) };
+
+  if (measurable(data)) {
+    const { ninjas, positions } = data;
+    for (const item of CREATE_STICKERS) {
+      map[item.id] = rarityEntry(earnedCount(item, positions) / ninjas, 'CREATE');
+    }
   }
-  return map;
+
+  const cohorts = data.programs || {};
+  const moduleCounts = new Map((data.modules || [])
+    .map((r) => [cohortKey(r.program, r.sub_program, r.module_name), r.count]));
+  const lessonCounts = new Map((data.lessons || [])
+    .map((r) => [cohortKey(r.program, r.sub_program, r.module_name, r.lesson_name), r.count]));
+
+  for (const sticker of MODULE_STICKERS) {
+    const enrolled = cohorts[sticker.program];
+    if (!enrolled || enrolled < MIN_NINJAS) continue;
+    const count = moduleCounts.get(cohortKey(sticker.program, sticker.subProgram, sticker.moduleName)) || 0;
+    map[sticker.id] = rarityEntry(count / enrolled, sticker.program);
+  }
+
+  if (curriculum) {
+    for (const sticker of allLessonStickers({ curriculum, subPrograms })) {
+      const enrolled = cohorts[sticker.program];
+      if (!enrolled || enrolled < MIN_NINJAS) continue;
+      const count = lessonCounts.get(cohortKey(sticker.program, sticker.subProgram, sticker.moduleName, sticker.lessonName)) || 0;
+      map[sticker.id] = rarityEntry(count / enrolled, sticker.program);
+    }
+  }
+
+  return Object.keys(map).length ? map : null;
 }
 
 // Where a ninja's sticker count sits against the whole CREATE roster, as the
@@ -168,5 +218,6 @@ export function useStickerCohort() {
 // failed request resolves to null and every surface simply omits the label.
 export function useStickerRarity() {
   const cohort = useStickerCohort();
-  return useMemo(() => stickerRarity(cohort), [cohort]);
+  const { curriculum, subPrograms } = useCurriculum() || {};
+  return useMemo(() => stickerRarity(cohort, { curriculum, subPrograms }), [cohort, curriculum, subPrograms]);
 }
