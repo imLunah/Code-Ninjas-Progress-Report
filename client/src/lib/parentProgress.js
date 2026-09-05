@@ -155,6 +155,15 @@ export function calcAge(birthday) {
 // same lesson name appears in more than one kit ("1. Introduction"), and a
 // module name is only unique inside its own program.
 //
+// ROADMAP ROWS COUNT HERE, unlike everywhere else in this file. The roadmap's
+// bulk mark-complete is not a session — it must not appear in the feed or the
+// session counts, which is what realSessions is for — but it IS the staff side
+// saying this lesson is finished, and the parent portal contradicting the
+// staff roadmap is worse drift than any it was filtered out to prevent. A
+// roadmap row carries no date though: its session_date is the day the box was
+// checked, not the day the lesson happened, so it completes the lesson as
+// "Done" and lets a real session's date claim the day if one ever names it.
+//
 // THE EARLIEST COMPLETION WINS. A lesson revisited weeks later is still the
 // one they finished the first time.
 export function lessonKey(program, subProgram, moduleName, lessonName) {
@@ -163,10 +172,10 @@ export function lessonKey(program, subProgram, moduleName, lessonName) {
 
 export function completedLessonDays(logs) {
   const days = new Map();
-  for (const l of realSessions(logs)) {
+  for (const l of logs || []) {
     if (l.status_at !== 'Completed' || !l.lesson_name || !l.module_name) continue;
     const key = lessonKey(l.program, l.sub_program, l.module_name, l.lesson_name);
-    const day = l.session_date ? String(l.session_date).split('T')[0] : null;
+    const day = !l.from_roadmap && l.session_date ? String(l.session_date).split('T')[0] : null;
     const seen = days.get(key);
     if (seen === undefined || (day && (seen === null || day < seen))) days.set(key, day);
   }

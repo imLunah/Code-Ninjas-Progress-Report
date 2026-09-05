@@ -48,17 +48,20 @@ function completedIn(logs, sticker) {
 }
 
 // Every module sticker earned in one program, as a Set of sticker ids.
+//
+// ROADMAP ROWS COUNT. They are not sessions — realSessions keeps them out of
+// the feed and the counts — but a lesson checked off on the staff roadmap is
+// finished, and a sticker the staff side has earned staying locked on the
+// parent side is exactly the drift this file exists to prevent. It also
+// matches the server's own arithmetic: recomputePercentComplete counts
+// roadmap rows too.
 export function earnedModuleStickers({ program, logs, curriculum }) {
-  // Roadmap rows are the curriculum printed into the log, not a session that
-  // happened, so they cannot earn anything. Same filter the rest of the
-  // parent portal's progress runs through.
-  const sessions = realSessions(logs);
   const earned = new Set();
   for (const sticker of MODULE_STICKERS) {
     if (program && sticker.program !== program) continue;
     const lessons = lessonsOf(curriculum, sticker);
     if (!lessons.length) continue;
-    const done = completedIn(sessions, sticker);
+    const done = completedIn(logs || [], sticker);
     if (lessons.every((name) => done.has(name))) earned.add(sticker.id);
   }
   return earned;
@@ -69,7 +72,7 @@ export function earnedModuleStickers({ program, logs, curriculum }) {
 export function moduleProgress({ sticker, logs, curriculum }) {
   const lessons = lessonsOf(curriculum, sticker);
   if (!lessons.length) return { done: 0, total: 0 };
-  const done = completedIn(realSessions(logs), sticker);
+  const done = completedIn(logs || [], sticker);
   return { done: lessons.filter((name) => done.has(name)).length, total: lessons.length };
 }
 
@@ -78,7 +81,10 @@ export function moduleProgress({ sticker, logs, curriculum }) {
 // Unlike the CREATE book, this one CAN be honest per sticker — a module is
 // finished by a session that DojoLink actually saw, so the date is read
 // rather than invented. It is still only a label; a ninja imported onto the
-// roster mid-program has no logs behind them and gets no date.
+// roster mid-program has no logs behind them and gets no date. Roadmap rows
+// stay out of it on purpose: they earn the sticker, but their session_date is
+// the day the box was checked, so a module finished that way says "Earned"
+// with no day rather than wearing the wrong one.
 export function moduleEarnedOn({ sticker, logs }) {
   const dates = realSessions(logs)
     .filter((l) => l.program === sticker.program
