@@ -425,10 +425,18 @@ function ModuleRow({ m, first, art, open, onToggle }) {
                 const badge = art && art.get(`${m.name}\u0000${l.name}`);
                 return (
                   <li key={l.name} className="flex items-center gap-3 py-2 pl-[52px] pr-4">
+                    {/* Robotics awards its badge at the module, not the
+                        lesson, so its lessons have no art to show. They get
+                        the same tick every other list in the portal uses
+                        rather than a blank where a picture would be. */}
                     {badge ? (
                       <img src={badge.src} alt="" aria-hidden draggable={false} loading="lazy"
                         className={`h-8 w-8 flex-shrink-0 object-contain ${l.done ? '' : 'grayscale opacity-30'}`} />
-                    ) : <span className="h-8 w-8 flex-shrink-0" />}
+                    ) : (
+                      <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center">
+                        <StatusDot status={l.done ? 'done' : 'todo'} />
+                      </span>
+                    )}
                     <span className="min-w-0 flex-1">
                       <span className={`block truncate font-ninja text-[13.5px] font-bold ${l.done ? 'text-ninja-navy' : 'text-ninja-navy/55'}`}>{l.title}</span>
                       <span className={`block font-ninja text-[11.5px] ${l.done ? 'font-bold text-emerald-600' : 'text-ninja-muted'}`}>

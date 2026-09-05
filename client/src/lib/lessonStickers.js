@@ -21,9 +21,20 @@ import { lessonBadge } from './lessonBadgeArt';
 // CREATE IS NOT HERE. Its book is the belt ladder, its lessons are belt
 // projects, and 43 IMPACT badges already stand for them.
 
-// The three programs whose lessons earn stickers. VR Coding is absent for the
-// same reason it is absent from the module book: it was not asked for.
-export const LESSON_PROGRAMS = ['JR', 'Robotics Academy', 'AI Academy'];
+// The programs whose lessons earn stickers.
+//
+// ROBOTICS ACADEMY IS NOT ONE OF THEM, by decision: its badge is the module
+// and stays the module, so its eighteen capstones across four kits are the
+// whole of what it awards. Its lessons are still listed under each module on
+// the course page — that is a different question from whether they earn
+// anything — they just do not carry a badge.
+//
+// VR Coding is absent for the same reason it is absent from the module book:
+// it was not asked for.
+//
+// Adding a program back is this line and nothing else. The book's size, the
+// shelves, the course-page album and the badge art all read from it.
+export const LESSON_PROGRAMS = ['JR', 'AI Academy'];
 
 const slug = (s) => String(s).toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
@@ -74,6 +85,11 @@ function kitsOf(program, subPrograms) {
 // same ten badges, and a shelf of Spike Essentials would repeat itself eight
 // times over.
 export function lessonStickersFor({ program, curriculum, subPrograms }) {
+  // The gate is here rather than only in `allLessonStickers`, because the
+  // course page asks for one program by name and must get the same answer the
+  // book would give it. A program that does not award lesson badges returns
+  // nothing, and every surface downstream draws nothing.
+  if (!LESSON_PROGRAMS.includes(program)) return [];
   const out = [];
   for (const kit of kitsOf(program, subPrograms)) {
     const modules = (curriculum && curriculum[kit]) || [];
