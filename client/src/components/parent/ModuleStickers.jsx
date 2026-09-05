@@ -5,16 +5,17 @@ import { useReducedMotion } from 'framer-motion';
 import { StickerCard, StickerZoom, useStickerZoom } from './StickerCollection';
 import { Group } from './ParentUI';
 import { programStickers } from '../../lib/stickerBook';
+import { useStickerRarity } from '../../lib/stickerRarity';
 import { fmtDay } from '../../lib/parentProgress';
 
 // The sticker book for JR, Robotics Academy and AI Academy: one badge per
 // MODULE, and one per LESSON underneath it.
 //
 // It reuses CREATE's card and zoom rather than copying them, which is why
-// those two grew a `requirement` prop. What it does NOT reuse is rarity: that
-// is computed from a cohort of CREATE belts, and there is no equivalent
-// reading for "how many ninjas finished VEX GO module 2" — so the chip is
-// simply absent rather than filled with a number nobody measured.
+// those two grew a `requirement` prop. Rarity is reused too, now that
+// /api/parent/sticker-rarity counts these programs: each badge is measured
+// against the ninjas enrolled in ITS program (lib/stickerRarity.js), so the
+// chip here means the same thing it means in the CREATE book.
 //
 // STICKERS, NOT ACHIEVEMENTS, in the words on screen as well as in the data.
 // CREATE's badges are real Code Ninjas achievements awarded in MakeCode; these
@@ -42,6 +43,7 @@ function inTrack(stickers, track, program) {
 export default function ModuleStickerBook({ program, track, logs, curriculum, subPrograms }) {
   const flat = useReducedMotion();
   const { zoomed, open, close } = useStickerZoom();
+  const rarity = useStickerRarity();
 
   const all = useMemo(
     () => programStickers({ programs: program, logs, curriculum, subPrograms }),
@@ -80,6 +82,7 @@ export default function ModuleStickerBook({ program, track, logs, curriculum, su
             isEarned={item.earned}
             onOpen={open}
             flat={flat}
+            rarity={rarity?.[item.id]}
             requirement={item.requirement}
             earnedLabel={item.earnedOn ? fmtDay(item.earnedOn) : undefined}
           />
@@ -94,6 +97,7 @@ export default function ModuleStickerBook({ program, track, logs, curriculum, su
             isEarned={zoomed.earned}
             onClose={close}
             flat={flat}
+            rarity={rarity?.[zoomed.id]}
             requirement={zoomed.requirement}
             // The block CREATE fills with the level's topic and quest. These
             // have neither, so they carry what they do have — the kit, and
