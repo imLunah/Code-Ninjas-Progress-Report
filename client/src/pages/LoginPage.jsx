@@ -63,7 +63,7 @@ export default function LoginPage() {
       {fromLanding && (
         <motion.div
           className="fixed inset-0 z-50 pointer-events-none"
-          style={{ background: '#1c2132' }}
+          style={{ background: 'rgb(var(--ninja-bg))' }}
           initial={{ opacity: 1 }}
           animate={{ opacity: 0 }}
           transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
