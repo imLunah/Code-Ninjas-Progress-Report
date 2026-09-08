@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import { CARD } from '../lib/surfaces';
+import { useLightOnly } from '../context/ThemeContext';
 import Logo from '../components/ui/Logo';
 
 export default function AccessibilityPage() {
+  useLightOnly();
   return (
     <div className="theme-locked min-h-[100dvh] bg-ninja-bg py-12 px-4">
       <div className="max-w-2xl mx-auto">
