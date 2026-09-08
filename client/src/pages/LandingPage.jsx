@@ -3,17 +3,19 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth, hadSession } from '../context/AuthContext';
 import { getHomePath } from '../lib/navTabs';
+import ThemeToggle from '../components/ui/ThemeToggle';
+import Logo from '../components/ui/Logo';
 
-const BG    = '#1c2132';
-const BLUE  = 'rgb(56,161,255)';
-const TEXT  = '#d0daed';
-const MUTED = '#8a9ab8';
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
+};
+const fadeUp = {
+  hidden: { opacity: 0, y: 18 },
+  show:   { opacity: 1, y:  0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
+};
 
-const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 24 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.65, delay, ease: [0.16, 1, 0.3, 1] },
-});
+const FEATURES = ['Front desk check-in', 'Belt and lesson progress', 'A portal for parents'];
 
 export default function LandingPage() {
   const { user, loading } = useAuth();
@@ -33,143 +35,154 @@ export default function LandingPage() {
 
   if ((loading && maybeSignedIn) || user) {
     return (
-      <div style={{ background: BG }} className="theme-locked min-h-[100dvh] flex items-center justify-center">
-        <div
-          className="w-8 h-8 rounded-full border-2 animate-spin"
-          style={{ borderColor: BLUE, borderTopColor: 'transparent' }}
-        />
+      <div className="theme-locked min-h-[100dvh] bg-ninja-bg flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-ninja-blue border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
     <motion.div
-      style={{ background: BG, color: TEXT }}
-      className="min-h-[100dvh] flex flex-col font-ninja relative"
+      className="theme-locked min-h-[100dvh] bg-ninja-bg text-ninja-navy font-ninja flex flex-col relative overflow-hidden"
       animate={{ opacity: leaving ? 0 : 1 }}
       transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
       onAnimationComplete={() => { if (leaving) navigate('/login', { state: { fromLanding: true } }); }}
     >
-      {/* Background texture */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: 'url(/ninja_background.webp)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          opacity: 0.12,
-        }}
-      />
-
-      {/* Background glow */}
+      {/* Soft brand glow, drawn from the token so it holds in both themes */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'radial-gradient(ellipse 60% 55% at 36% 46%, rgba(56,161,255,0.10) 0%, transparent 70%), ' +
-            'radial-gradient(ellipse 45% 40% at 88% 78%, rgba(56,161,255,0.08) 0%, transparent 72%)',
+            'radial-gradient(ellipse 55% 50% at 28% 38%, rgb(var(--ninja-blue) / 0.07) 0%, transparent 70%), ' +
+            'radial-gradient(ellipse 45% 45% at 82% 72%, rgb(var(--ninja-blue) / 0.06) 0%, transparent 72%)',
         }}
       />
 
-      {/* Main content */}
-      <div className="flex-1 flex items-center relative z-10 px-8 sm:px-12 lg:px-[84px]">
-        <div className="w-full max-w-[540px] mx-auto lg:mx-0 text-center lg:text-left">
-
-          {/* Wordmark */}
-          <motion.div className="mb-5 sm:mb-6" {...fadeUp(0)}>
-            <span
-              className="font-black leading-none"
-              style={{ fontSize: 'clamp(48px, 12vw, 88px)', letterSpacing: '-0.01em' }}
-            >
-              <span style={{ color: BLUE }}>DOJO</span>
-              <span style={{ color: '#ffffff' }}>LINK</span>
-            </span>
-          </motion.div>
-
-          {/* Headline */}
-          <motion.h1
-            className="font-extrabold leading-[1.18] tracking-tight mb-7 sm:mb-9"
-            style={{ fontSize: 'clamp(24px, 6vw, 50px)', color: TEXT }}
-            {...fadeUp(0.15)}
-          >
-            Dojo management<br />
-            for{' '}
-            <span style={{ color: BLUE }}>staff and parents.</span>
-          </motion.h1>
-
-          {/* CTA */}
-          <motion.div
-            className="flex justify-center lg:justify-start"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.32, duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <motion.button
-              onClick={handleSignIn}
-              className="relative overflow-hidden group font-ninja font-extrabold text-white w-full sm:w-auto"
-              style={{
-                padding: '16px 48px',
-                borderRadius: '16px',
-                fontSize: '18px',
-                letterSpacing: '0.01em',
-                background: 'linear-gradient(160deg, rgb(82,178,255) 0%, rgb(40,148,255) 100%)',
-                boxShadow:
-                  '0 0 40px rgba(56,161,255,0.32), 0 6px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25)',
-                border: 'none',
-                cursor: 'pointer',
-              }}
-              whileHover={{ scale: 1.04, boxShadow: '0 0 56px rgba(56,161,255,0.45), 0 8px 24px rgba(0,0,0,0.35)' }}
-              whileTap={{ scale: 0.97 }}
-            >
-              <span
-                className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out pointer-events-none"
-                style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)', transform: 'skewX(-20deg)' }}
-              />
-              <span className="relative z-10 flex items-center justify-center gap-3">
-                Get Started
-                <motion.span
-                  animate={{ x: [0, 5, 0] }}
-                  transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                >
-                  →
-                </motion.span>
-              </span>
-            </motion.button>
-          </motion.div>
-        </div>
+      {/* Watermark: the mark itself, barely there, anchoring the bottom corner */}
+      <div className="absolute -left-24 -bottom-28 pointer-events-none opacity-[0.04]" aria-hidden="true">
+        <Logo variant="mark" className="h-[440px] text-ninja-navy" accent="currentColor" title="" />
       </div>
 
-      {/* Ninja clip container — overflow-hidden traps horizontal slide-in, inset-0 prevents vertical clipping */}
-      <div className="hidden lg:block absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.img
-          src="/CodeNinjasCelebrate.webp"
-          alt=""
-          className="absolute object-contain select-none"
-          style={{
-            right: '4%',
-            top: '50%',
-            height: 'min(70vh, 540px)',
-            filter: 'drop-shadow(0 30px 50px rgba(0,0,0,0.55))',
-          }}
-          initial={{ x: 600, opacity: 0, y: '-50%' }}
-          animate={{ x: 0, opacity: 1, y: '-50%' }}
-          transition={{ delay: 0.5, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-        />
+      {/* Top bar */}
+      <motion.header
+        className="relative z-10 flex items-center justify-between px-6 sm:px-10 lg:px-14 pt-6"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Logo variant="lockup" className="h-8 sm:h-9 text-ninja-navy" />
+        <div className="flex items-center gap-2 sm:gap-4">
+          <ThemeToggle />
+          <button
+            onClick={handleSignIn}
+            className="font-ninja font-bold text-sm text-ninja-muted hover:text-ninja-blue transition-colors"
+          >
+            Sign in
+          </button>
+        </div>
+      </motion.header>
+
+      {/* Hero */}
+      <div className="flex-1 flex items-center relative z-10 px-6 sm:px-10 lg:px-14 py-10">
+        <div className="w-full max-w-6xl mx-auto grid lg:grid-cols-[1fr_auto] items-center gap-10 lg:gap-16">
+          <motion.div
+            className="text-center lg:text-left max-w-[560px] mx-auto lg:mx-0"
+            variants={stagger}
+            initial="hidden"
+            animate="show"
+          >
+            <motion.h1
+              variants={fadeUp}
+              className="font-black tracking-tight mb-5 sm:mb-6"
+              style={{ fontSize: 'clamp(34px, 6.5vw, 62px)', lineHeight: 1.08 }}
+            >
+              Dojo management for{' '}
+              <span className="text-ninja-blue">staff and parents.</span>
+            </motion.h1>
+
+            <motion.p
+              variants={fadeUp}
+              className="text-ninja-muted text-base sm:text-lg leading-relaxed mb-8 sm:mb-10 max-w-md mx-auto lg:mx-0"
+            >
+              The front desk, belt progress, and what parents see at home, all in one place.
+            </motion.p>
+
+            <motion.div variants={fadeUp} className="flex justify-center lg:justify-start mb-8 sm:mb-10">
+              <motion.button
+                onClick={handleSignIn}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="relative overflow-hidden group bg-ninja-blue text-white font-ninja font-bold text-lg px-12 py-4 rounded-2xl w-full sm:w-auto"
+                style={{ boxShadow: '0 6px 32px rgb(var(--ninja-blue) / 0.28)' }}
+              >
+                <span
+                  className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out pointer-events-none"
+                  style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)', transform: 'skewX(-20deg)' }}
+                />
+                <span className="relative flex items-center justify-center gap-2.5">
+                  Get Started
+                  <motion.span
+                    animate={{ x: [0, 5, 0] }}
+                    transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                  >
+                    →
+                  </motion.span>
+                </span>
+              </motion.button>
+            </motion.div>
+
+            <motion.ul
+              variants={fadeUp}
+              className="flex flex-wrap justify-center lg:justify-start gap-x-6 gap-y-2"
+            >
+              {FEATURES.map((f) => (
+                <li key={f} className="flex items-center gap-2 text-sm font-semibold text-ninja-muted">
+                  <svg className="w-4 h-4 text-ninja-blue flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  {f}
+                </li>
+              ))}
+            </motion.ul>
+          </motion.div>
+
+          {/* Mascot */}
+          <div className="hidden lg:block relative">
+            <div
+              className="absolute inset-0 scale-125 pointer-events-none"
+              style={{ background: 'radial-gradient(ellipse 60% 55% at 50% 55%, rgb(var(--ninja-blue) / 0.14) 0%, transparent 70%)' }}
+            />
+            <motion.img
+              src="/CodeNinjasCelebrate.webp"
+              alt=""
+              width="581"
+              height="694"
+              className="relative object-contain select-none"
+              style={{
+                height: 'min(58vh, 460px)',
+                width: 'auto',
+                filter: 'drop-shadow(0 24px 40px rgb(var(--ninja-navy) / 0.28))',
+              }}
+              initial={{ x: 80, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.35, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Footer */}
       <motion.footer
-        className="relative z-20 flex items-center justify-center lg:justify-start flex-wrap gap-3 pb-6 px-8 sm:px-12 lg:px-[84px] text-xs"
-        style={{ color: MUTED }}
+        className="relative z-10 flex items-center justify-center lg:justify-start flex-wrap gap-3 pb-6 px-6 sm:px-10 lg:px-14 text-xs text-ninja-muted"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.75, duration: 0.6 }}
+        transition={{ delay: 0.6, duration: 0.6 }}
       >
-        <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-        <span style={{ opacity: 0.3 }}>·</span>
-        <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
-        <span style={{ opacity: 0.3 }}>·</span>
-        <Link to="/accessibility" className="hover:text-white transition-colors">Accessibility</Link>
+        <Link to="/privacy" className="hover:text-ninja-blue transition-colors">Privacy Policy</Link>
+        <span className="opacity-40">·</span>
+        <Link to="/terms" className="hover:text-ninja-blue transition-colors">Terms</Link>
+        <span className="opacity-40">·</span>
+        <Link to="/accessibility" className="hover:text-ninja-blue transition-colors">Accessibility</Link>
       </motion.footer>
     </motion.div>
   );
