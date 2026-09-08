@@ -216,7 +216,8 @@ export default function LandingPage() {
               className="font-black tracking-tight text-white mb-5"
               style={{ fontSize: 'clamp(32px, 5.2vw, 58px)', lineHeight: 1.1 }}
             >
-              Dojo management for staff and parents.
+              TEACH. TRACK. REPORT.
+              <span className="block">All from one app.</span>
             </motion.h1>
             <motion.p
               variants={fadeUp}
