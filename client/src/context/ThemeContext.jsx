@@ -25,8 +25,10 @@ export function ThemeProvider({ children }) {
   const [dark, setDark] = useState(() => {
     try {
       const saved = localStorage.getItem('dj-theme');
-      return saved === null ? true : saved === 'dark';
-    } catch { return true; }
+      // No saved preference means a first visit, which lands on the public
+      // pages — those default light. A saved or account theme still wins.
+      return saved === 'dark';
+    } catch { return false; }
   });
 
   // 'default' = original DojoLink theme (no accent tint). Otherwise an accent id.
