@@ -23,45 +23,42 @@ const popSpring = { type: 'spring', stiffness: 420, damping: 17 };
 function CheckInVignette() {
   const still = useReducedMotion();
   return (
-    <div className="flex items-center gap-4 rounded-xl bg-ninja-bg border border-ninja-border/70 px-5 h-24">
+    <div className="flex items-center gap-5 h-28">
       <motion.img
         src="/ninjas/purple-cheer-medium.png"
         alt=""
-        className="w-16 h-16 rounded-full bg-white object-contain"
+        className="w-20 h-20 rounded-full bg-ninja-bg object-contain"
         whileHover={still ? undefined : { scale: 1.12, rotate: -6, y: -4 }}
         whileTap={still ? undefined : { scale: 0.94 }}
         transition={popSpring}
       />
-      <div className="min-w-0 flex-1">
-        <div className="text-[15px] font-bold text-ninja-navy leading-tight">Maya R.</div>
-        <div className="flex items-center gap-1.5 text-xs text-ninja-muted font-semibold">
+      <div className="min-w-0">
+        <div className="text-base font-extrabold text-ninja-navy leading-tight whitespace-nowrap">Maya R.</div>
+        <div className="flex items-center gap-1.5 text-xs text-ninja-muted font-semibold whitespace-nowrap mt-0.5">
           <img src="/belts/belt-purple.svg" alt="" className="h-4" />
           Purple belt
         </div>
+        <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 whitespace-nowrap mt-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          In · 4:01 pm
+        </div>
       </div>
-      <motion.span
-        className="text-xs font-bold text-emerald-700 bg-emerald-100 rounded-full px-3 py-1.5"
-        whileHover={still ? undefined : { scale: 1.1 }}
-        transition={popSpring}
-      >
-        In · 4:01 pm
-      </motion.span>
     </div>
   );
 }
 
 const LADDER = [
-  { belt: 'white',  cls: 'h-9' },
-  { belt: 'yellow', cls: 'h-9' },
-  { belt: 'orange', cls: 'h-14 drop-shadow-md' },
-  { belt: 'green',  cls: 'h-9 opacity-35' },
-  { belt: 'blue',   cls: 'h-9 opacity-35' },
+  { belt: 'white',  cls: 'h-11' },
+  { belt: 'yellow', cls: 'h-11' },
+  { belt: 'orange', cls: 'h-16 drop-shadow-md' },
+  { belt: 'green',  cls: 'h-11 opacity-35' },
+  { belt: 'blue',   cls: 'h-11 opacity-35' },
 ];
 
 function BeltLadderVignette() {
   const still = useReducedMotion();
   return (
-    <div className="flex items-center justify-between rounded-xl bg-ninja-bg border border-ninja-border/70 px-5 h-24">
+    <div className="flex items-center justify-between h-28 px-1">
       {LADDER.map(({ belt, cls }) => (
         <motion.img
           key={belt}
@@ -78,16 +75,16 @@ function BeltLadderVignette() {
 }
 
 const STICKERS = [
-  { src: 'yellow-2', cls: 'h-14 -rotate-6',                    hover: { scale: 1.16, rotate: 0, y: -5 } },
-  { src: 'orange-3', cls: 'h-[4.5rem] rotate-2 drop-shadow-md', hover: { scale: 1.16, rotate: 0, y: -5 } },
+  { src: 'yellow-2', cls: 'h-16 -rotate-6',                  hover: { scale: 1.16, rotate: 0, y: -5 } },
+  { src: 'orange-3', cls: 'h-24 rotate-2 drop-shadow-md',     hover: { scale: 1.16, rotate: 0, y: -5 } },
   // The locked one answers the hand but stays locked: a small shake, no colour.
-  { src: 'green-1',  cls: 'h-14 rotate-6 opacity-35 grayscale', hover: { scale: 1.05, rotate: [6, -2, 6] } },
+  { src: 'green-1',  cls: 'h-16 rotate-6 opacity-35 grayscale', hover: { scale: 1.05, rotate: [6, -2, 6] } },
 ];
 
 function StickerVignette() {
   const still = useReducedMotion();
   return (
-    <div className="flex items-center justify-center gap-3 rounded-xl bg-ninja-bg border border-ninja-border/70 px-5 h-24">
+    <div className="flex items-center justify-center gap-4 h-28">
       {STICKERS.map(({ src, cls, hover }) => (
         <motion.img
           key={src}
@@ -412,7 +409,7 @@ export default function LandingPage() {
               variants={fadeUp}
               className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5 sm:p-6"
             >
-              <div aria-hidden="true" className="select-none pointer-events-none">
+              <div aria-hidden="true" className="select-none">
                 <Art />
               </div>
               <h3 className="font-extrabold text-ninja-navy mt-4 mb-1.5">{title}</h3>
