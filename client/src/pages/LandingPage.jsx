@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth, hadSession } from '../context/AuthContext';
 import { getHomePath } from '../lib/navTabs';
-import ThemeToggle from '../components/ui/ThemeToggle';
+import { useLightOnly } from '../context/ThemeContext';
 import Logo from '../components/ui/Logo';
 
 const stagger = {
@@ -24,6 +24,9 @@ export default function LandingPage() {
   // Only someone who has signed in before is worth holding a spinner for. A first-time
   // visitor gets the hero on the first frame instead of waiting out /auth/me.
   const [maybeSignedIn] = useState(hadSession);
+  // The public face of the product is light, full stop — a staff member's dark
+  // preference waits for them past the sign-in door.
+  useLightOnly();
 
   useEffect(() => {
     if (!loading && user) {
@@ -72,7 +75,6 @@ export default function LandingPage() {
       >
         <Logo variant="lockup" className="h-8 sm:h-9 text-ninja-navy" />
         <div className="flex items-center gap-2 sm:gap-4">
-          <ThemeToggle />
           <button
             onClick={handleSignIn}
             className="font-ninja font-bold text-sm text-ninja-muted hover:text-ninja-blue transition-colors"

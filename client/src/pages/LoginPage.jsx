@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { getHomePath } from '../lib/navTabs';
 import { EyeIcon as LucideEye, EyeOffIcon as LucideEyeOff } from 'lucide-react';
 import { useParentAuth } from '../context/ParentAuthContext';
-import ThemeToggle from '../components/ui/ThemeToggle';
+import { useLightOnly } from '../context/ThemeContext';
 import Logo from '../components/ui/Logo';
 
 const stagger = {
@@ -38,6 +38,9 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const fromLanding = location.state?.fromLanding;
+  // Light-only like the landing page it fades in from; the saved theme takes
+  // over once sign-in succeeds and an app route mounts.
+  useLightOnly();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -69,9 +72,6 @@ export default function LoginPage() {
           transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
         />
       )}
-      <div className="fixed top-3 right-4 z-30"><ThemeToggle /></div>
-
-
       <motion.div
         className="w-full max-w-lg"
         variants={stagger}
