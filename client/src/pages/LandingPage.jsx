@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ClipboardCheck, Medal, Users } from 'lucide-react';
@@ -6,6 +6,9 @@ import { useAuth, hadSession } from '../context/AuthContext';
 import { getHomePath } from '../lib/navTabs';
 import { useLightOnly } from '../context/ThemeContext';
 import Logo from '../components/ui/Logo';
+
+// three.js stays out of the main bundle; the hero is complete without it.
+const LandingScene = lazy(() => import('../components/landing/LandingScene'));
 
 const stagger = {
   hidden: {},
@@ -166,6 +169,9 @@ export default function LandingPage() {
             <div className="absolute -left-24 -bottom-28 opacity-[0.06] text-white" aria-hidden="true">
               <Logo variant="mark" className="h-[440px]" accent="currentColor" title="" />
             </div>
+            <Suspense fallback={null}>
+              <LandingScene />
+            </Suspense>
           </div>
 
           {/* Top bar */}
@@ -250,8 +256,10 @@ export default function LandingPage() {
               <DeskMockup />
 
               {/* Floating stat cards, reference-style */}
+              {/* Floating cards hang off the window's edges without covering the
+                  row endings, and only at widths where they have room to. */}
               <motion.div
-                className="hidden lg:block absolute -left-28 top-6 w-44 bg-white rounded-2xl border border-ninja-border p-4 -rotate-3"
+                className="hidden xl:block absolute -left-40 top-10 w-44 bg-white rounded-2xl border border-ninja-border p-4 -rotate-3"
                 style={{ boxShadow: '0 18px 44px rgb(9 30 66 / 0.18)' }}
                 aria-hidden="true"
                 animate={{ y: [0, -7, 0] }}
@@ -271,7 +279,7 @@ export default function LandingPage() {
               </motion.div>
 
               <motion.div
-                className="hidden lg:block absolute -right-28 top-24 w-48 bg-white rounded-2xl border border-ninja-border p-4 rotate-2"
+                className="hidden xl:block absolute -right-44 top-20 w-48 bg-white rounded-2xl border border-ninja-border p-4 rotate-2"
                 style={{ boxShadow: '0 18px 44px rgb(9 30 66 / 0.18)' }}
                 aria-hidden="true"
                 animate={{ y: [0, -8, 0] }}
@@ -291,7 +299,7 @@ export default function LandingPage() {
               <motion.img
                 src="/CodeNinjasCelebrate.webp"
                 alt=""
-                className="hidden md:block absolute -right-14 -bottom-12 h-36 w-auto object-contain select-none pointer-events-none"
+                className="hidden md:block absolute -right-24 -bottom-16 h-32 w-auto object-contain select-none pointer-events-none"
                 style={{ filter: 'drop-shadow(0 14px 24px rgb(9 30 66 / 0.3))' }}
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -303,24 +311,36 @@ export default function LandingPage() {
       </div>
 
       {/* ── Features ── */}
-      <section className="max-w-5xl mx-auto px-5 sm:px-6 pt-32 sm:pt-52 pb-10 text-center">
-        <h2 className="font-black tracking-tight text-3xl sm:text-4xl mb-3">Everything the dojo runs on</h2>
-        <p className="text-ninja-muted max-w-xl mx-auto leading-relaxed mb-10 sm:mb-12">
+      <motion.section
+        className="max-w-5xl mx-auto px-5 sm:px-6 pt-32 sm:pt-52 pb-10 text-center"
+        variants={stagger}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: '-80px' }}
+      >
+        <motion.h2 variants={fadeUp} className="font-black tracking-tight text-3xl sm:text-4xl mb-3">
+          Everything the dojo runs on
+        </motion.h2>
+        <motion.p variants={fadeUp} className="text-ninja-muted max-w-xl mx-auto leading-relaxed mb-10 sm:mb-12">
           Built for the day-to-day: fewer tabs at the front desk, clearer progress on the floor,
           and parents who never have to ask how it went.
-        </p>
+        </motion.p>
         <div className="grid sm:grid-cols-3 gap-4 sm:gap-6 text-left">
           {FEATURES.map(({ icon: Icon, title, blurb }) => (
-            <div key={title} className="bg-white border border-ninja-border rounded-2xl shadow-sm p-6">
+            <motion.div
+              key={title}
+              variants={fadeUp}
+              className="bg-white border border-ninja-border rounded-2xl shadow-sm p-6"
+            >
               <div className="w-11 h-11 rounded-xl bg-ninja-blue/10 text-ninja-blue flex items-center justify-center">
                 <Icon className="w-5 h-5" strokeWidth={2.4} />
               </div>
               <h3 className="font-extrabold text-ninja-navy mt-4 mb-1.5">{title}</h3>
               <p className="text-sm text-ninja-muted leading-relaxed">{blurb}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
-      </section>
+      </motion.section>
 
       {/* Footer */}
       <footer className="flex items-center justify-center flex-wrap gap-3 pb-8 px-6 text-xs text-ninja-muted">
