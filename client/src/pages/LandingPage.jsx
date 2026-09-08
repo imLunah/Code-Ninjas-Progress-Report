@@ -16,43 +16,89 @@ const fadeUp = {
 };
 
 // Each feature card leads with a vignette built from the app's own parts,
-// the same way the hero draws its desk. Names are invented.
+// the same way the hero draws its desk. Names are invented. The art answers
+// the pointer, so the cards feel like the product rather than a brochure.
+const popSpring = { type: 'spring', stiffness: 420, damping: 17 };
+
 function CheckInVignette() {
+  const still = useReducedMotion();
   return (
-    <div className="flex items-center gap-2.5 rounded-xl bg-ninja-bg border border-ninja-border/70 px-3.5 py-2.5">
-      <img src="/ninjas/purple-cheer-medium.png" alt="" className="w-9 h-9 rounded-full bg-white object-contain" />
+    <div className="flex items-center gap-4 rounded-xl bg-ninja-bg border border-ninja-border/70 px-5 h-24">
+      <motion.img
+        src="/ninjas/purple-cheer-medium.png"
+        alt=""
+        className="w-16 h-16 rounded-full bg-white object-contain"
+        whileHover={still ? undefined : { scale: 1.12, rotate: -6, y: -4 }}
+        whileTap={still ? undefined : { scale: 0.94 }}
+        transition={popSpring}
+      />
       <div className="min-w-0 flex-1">
-        <div className="text-xs font-bold text-ninja-navy leading-tight">Maya R.</div>
-        <div className="flex items-center gap-1 text-[10px] text-ninja-muted font-semibold">
-          <img src="/belts/belt-purple.svg" alt="" className="h-3" />
+        <div className="text-[15px] font-bold text-ninja-navy leading-tight">Maya R.</div>
+        <div className="flex items-center gap-1.5 text-xs text-ninja-muted font-semibold">
+          <img src="/belts/belt-purple.svg" alt="" className="h-4" />
           Purple belt
         </div>
       </div>
-      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 rounded-full px-2.5 py-1">
+      <motion.span
+        className="text-xs font-bold text-emerald-700 bg-emerald-100 rounded-full px-3 py-1.5"
+        whileHover={still ? undefined : { scale: 1.1 }}
+        transition={popSpring}
+      >
         In · 4:01 pm
-      </span>
+      </motion.span>
     </div>
   );
 }
+
+const LADDER = [
+  { belt: 'white',  cls: 'h-9' },
+  { belt: 'yellow', cls: 'h-9' },
+  { belt: 'orange', cls: 'h-14 drop-shadow-md' },
+  { belt: 'green',  cls: 'h-9 opacity-35' },
+  { belt: 'blue',   cls: 'h-9 opacity-35' },
+];
 
 function BeltLadderVignette() {
+  const still = useReducedMotion();
   return (
-    <div className="flex items-center justify-between rounded-xl bg-ninja-bg border border-ninja-border/70 px-4 h-[58px]">
-      <img src="/belts/belt-white.svg" alt="" className="h-5" />
-      <img src="/belts/belt-yellow.svg" alt="" className="h-5" />
-      <img src="/belts/belt-orange.svg" alt="" className="h-8 drop-shadow-md" />
-      <img src="/belts/belt-green.svg" alt="" className="h-5 opacity-35" />
-      <img src="/belts/belt-blue.svg" alt="" className="h-5 opacity-35" />
+    <div className="flex items-center justify-between rounded-xl bg-ninja-bg border border-ninja-border/70 px-5 h-24">
+      {LADDER.map(({ belt, cls }) => (
+        <motion.img
+          key={belt}
+          src={`/belts/belt-${belt}.svg`}
+          alt=""
+          className={cls}
+          whileHover={still ? undefined : { scale: 1.25, y: -5 }}
+          whileTap={still ? undefined : { scale: 0.92 }}
+          transition={popSpring}
+        />
+      ))}
     </div>
   );
 }
 
+const STICKERS = [
+  { src: 'yellow-2', cls: 'h-14 -rotate-6',                    hover: { scale: 1.16, rotate: 0, y: -5 } },
+  { src: 'orange-3', cls: 'h-[4.5rem] rotate-2 drop-shadow-md', hover: { scale: 1.16, rotate: 0, y: -5 } },
+  // The locked one answers the hand but stays locked: a small shake, no colour.
+  { src: 'green-1',  cls: 'h-14 rotate-6 opacity-35 grayscale', hover: { scale: 1.05, rotate: [6, -2, 6] } },
+];
+
 function StickerVignette() {
+  const still = useReducedMotion();
   return (
-    <div className="flex items-center justify-center gap-1.5 rounded-xl bg-ninja-bg border border-ninja-border/70 px-4 h-[58px]">
-      <img src="/belt-stickers/yellow-2.png" alt="" className="h-9 -rotate-6" />
-      <img src="/belt-stickers/orange-3.png" alt="" className="h-11 rotate-2 drop-shadow-md" />
-      <img src="/belt-stickers/green-1.png" alt="" className="h-9 rotate-6 opacity-35 grayscale" />
+    <div className="flex items-center justify-center gap-3 rounded-xl bg-ninja-bg border border-ninja-border/70 px-5 h-24">
+      {STICKERS.map(({ src, cls, hover }) => (
+        <motion.img
+          key={src}
+          src={`/belt-stickers/${src}.png`}
+          alt=""
+          className={cls}
+          whileHover={still ? undefined : hover}
+          whileTap={still ? undefined : { scale: 0.92 }}
+          transition={popSpring}
+        />
+      ))}
     </div>
   );
 }
@@ -216,9 +262,6 @@ export default function LandingPage() {
                   'radial-gradient(ellipse 45% 45% at 12% 85%, rgba(255,255,255,0.07) 0%, transparent 70%)',
               }}
             />
-            <div className="absolute -left-24 -bottom-28 opacity-[0.06] text-white" aria-hidden="true">
-              <Logo variant="mark" className="h-[440px]" accent="currentColor" title="" />
-            </div>
           </div>
 
           {/* Top bar */}
