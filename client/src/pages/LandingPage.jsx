@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
-import { ClipboardCheck, Medal, Users } from 'lucide-react';
 import { useAuth, hadSession } from '../context/AuthContext';
 import { getHomePath } from '../lib/navTabs';
 import { useLightOnly } from '../context/ThemeContext';
@@ -16,19 +15,61 @@ const fadeUp = {
   show:   { opacity: 1, y:  0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
 };
 
+// Each feature card leads with a vignette built from the app's own parts,
+// the same way the hero draws its desk. Names are invented.
+function CheckInVignette() {
+  return (
+    <div className="flex items-center gap-2.5 rounded-xl bg-ninja-bg border border-ninja-border/70 px-3.5 py-2.5">
+      <img src="/ninjas/purple-cheer-medium.png" alt="" className="w-9 h-9 rounded-full bg-white object-contain" />
+      <div className="min-w-0 flex-1">
+        <div className="text-xs font-bold text-ninja-navy leading-tight">Maya R.</div>
+        <div className="flex items-center gap-1 text-[10px] text-ninja-muted font-semibold">
+          <img src="/belts/belt-purple.svg" alt="" className="h-3" />
+          Purple belt
+        </div>
+      </div>
+      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 rounded-full px-2.5 py-1">
+        In · 4:01 pm
+      </span>
+    </div>
+  );
+}
+
+function BeltLadderVignette() {
+  return (
+    <div className="flex items-center justify-between rounded-xl bg-ninja-bg border border-ninja-border/70 px-4 h-[58px]">
+      <img src="/belts/belt-white.svg" alt="" className="h-5" />
+      <img src="/belts/belt-yellow.svg" alt="" className="h-5" />
+      <img src="/belts/belt-orange.svg" alt="" className="h-8 drop-shadow-md" />
+      <img src="/belts/belt-green.svg" alt="" className="h-5 opacity-35" />
+      <img src="/belts/belt-blue.svg" alt="" className="h-5 opacity-35" />
+    </div>
+  );
+}
+
+function StickerVignette() {
+  return (
+    <div className="flex items-center justify-center gap-1.5 rounded-xl bg-ninja-bg border border-ninja-border/70 px-4 h-[58px]">
+      <img src="/belt-stickers/yellow-2.png" alt="" className="h-9 -rotate-6" />
+      <img src="/belt-stickers/orange-3.png" alt="" className="h-11 rotate-2 drop-shadow-md" />
+      <img src="/belt-stickers/green-1.png" alt="" className="h-9 rotate-6 opacity-35 grayscale" />
+    </div>
+  );
+}
+
 const FEATURES = [
   {
-    icon: ClipboardCheck,
+    art: CheckInVignette,
     title: 'Front desk check-in',
     blurb: 'Ninjas check in at the desk, attendance takes itself, and staff can see who is on the floor at a glance.',
   },
   {
-    icon: Medal,
+    art: BeltLadderVignette,
     title: 'Belt and lesson progress',
     blurb: 'Every lesson checked off moves a ninja up the ladder, so Senseis always know what comes next.',
   },
   {
-    icon: Users,
+    art: StickerVignette,
     title: 'A portal for parents',
     blurb: 'Parents follow belts, badges, and milestones from home, without having to catch someone at pickup.',
   },
@@ -137,8 +178,8 @@ export default function LandingPage() {
 
   // ── Scroll-linked 3D ─────────────────────────────────────────────────
   // The product window loads leaning back in perspective and stands up as
-  // the visitor scrolls, while the floating cards and mascot ride the scroll
-  // at different speeds. The speed differences are what make the group read
+  // the visitor scrolls, while the floating cards ride the scroll at
+  // different speeds. The speed differences are what make the group read
   // as layers in space instead of a flat picture.
   const { scrollY } = useScroll();
   const still = useReducedMotion();
@@ -146,7 +187,6 @@ export default function LandingPage() {
   const windowLift  = useTransform(scrollY, [0, 600], still ? [0, 0] : [0, -70]);
   const farCardLift = useTransform(scrollY, [0, 600], still ? [0, 0] : [0, -55]);
   const nearCardLift = useTransform(scrollY, [0, 600], still ? [0, 0] : [0, -120]);
-  const mascotLift  = useTransform(scrollY, [0, 600], still ? [0, 0] : [0, -170]);
 
   if ((loading && maybeSignedIn) || user) {
     return (
@@ -302,23 +342,6 @@ export default function LandingPage() {
                 </div>
               </motion.div>
               </motion.div>
-
-              {/* The mascot keeps a foot in the frame, nearest layer of all */}
-              <motion.div
-                className="hidden md:block absolute -right-24 -bottom-16"
-                style={{ y: mascotLift }}
-                aria-hidden="true"
-              >
-                <motion.img
-                  src="/CodeNinjasCelebrate.webp"
-                  alt=""
-                  className="h-32 w-auto object-contain select-none pointer-events-none"
-                  style={{ filter: 'drop-shadow(0 14px 24px rgb(9 30 66 / 0.3))' }}
-                  initial={{ opacity: 0, y: 24 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.7, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                />
-              </motion.div>
             </motion.div>
           </motion.div>
         </section>
@@ -340,14 +363,14 @@ export default function LandingPage() {
           and parents who never have to ask how it went.
         </motion.p>
         <div className="grid sm:grid-cols-3 gap-4 sm:gap-6 text-left">
-          {FEATURES.map(({ icon: Icon, title, blurb }) => (
+          {FEATURES.map(({ art: Art, title, blurb }) => (
             <motion.div
               key={title}
               variants={fadeUp}
-              className="bg-white border border-ninja-border rounded-2xl shadow-sm p-6"
+              className="bg-white border border-ninja-border rounded-2xl shadow-sm p-5 sm:p-6"
             >
-              <div className="w-11 h-11 rounded-xl bg-ninja-blue/10 text-ninja-blue flex items-center justify-center">
-                <Icon className="w-5 h-5" strokeWidth={2.4} />
+              <div aria-hidden="true" className="select-none pointer-events-none">
+                <Art />
               </div>
               <h3 className="font-extrabold text-ninja-navy mt-4 mb-1.5">{title}</h3>
               <p className="text-sm text-ninja-muted leading-relaxed">{blurb}</p>
