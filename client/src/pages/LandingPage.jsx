@@ -1,14 +1,11 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import { ClipboardCheck, Medal, Users } from 'lucide-react';
 import { useAuth, hadSession } from '../context/AuthContext';
 import { getHomePath } from '../lib/navTabs';
 import { useLightOnly } from '../context/ThemeContext';
 import Logo from '../components/ui/Logo';
-
-// three.js stays out of the main bundle; the hero is complete without it.
-const LandingScene = lazy(() => import('../components/landing/LandingScene'));
 
 const stagger = {
   hidden: {},
@@ -138,6 +135,19 @@ export default function LandingPage() {
 
   const handleSignIn = () => setLeaving(true);
 
+  // ── Scroll-linked 3D ─────────────────────────────────────────────────
+  // The product window loads leaning back in perspective and stands up as
+  // the visitor scrolls, while the floating cards and mascot ride the scroll
+  // at different speeds. The speed differences are what make the group read
+  // as layers in space instead of a flat picture.
+  const { scrollY } = useScroll();
+  const still = useReducedMotion();
+  const windowTilt  = useTransform(scrollY, [0, 420], still ? [0, 0] : [16, 0]);
+  const windowLift  = useTransform(scrollY, [0, 600], still ? [0, 0] : [0, -70]);
+  const farCardLift = useTransform(scrollY, [0, 600], still ? [0, 0] : [0, -55]);
+  const nearCardLift = useTransform(scrollY, [0, 600], still ? [0, 0] : [0, -120]);
+  const mascotLift  = useTransform(scrollY, [0, 600], still ? [0, 0] : [0, -170]);
+
   if ((loading && maybeSignedIn) || user) {
     return (
       <div className="theme-locked min-h-[100dvh] bg-ninja-bg flex items-center justify-center">
@@ -153,9 +163,9 @@ export default function LandingPage() {
       transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
       onAnimationComplete={() => { if (leaving) navigate('/login', { state: { fromLanding: true } }); }}
     >
-      {/* ── Hero: an inset brand-blue block the product rises out of ── */}
-      <div className="px-2.5 sm:px-5 pt-2.5 sm:pt-5">
-        <section className="relative rounded-3xl sm:rounded-[32px]">
+      {/* ── Hero: a full-bleed brand-blue block the product rises out of ── */}
+      <div>
+        <section className="relative rounded-b-3xl sm:rounded-b-[40px]">
           {/* Background layer clips to the rounded shape; content may overflow it */}
           <div className="absolute inset-0 rounded-[inherit] overflow-hidden bg-ninja-blue">
             <div
@@ -169,9 +179,6 @@ export default function LandingPage() {
             <div className="absolute -left-24 -bottom-28 opacity-[0.06] text-white" aria-hidden="true">
               <Logo variant="mark" className="h-[440px]" accent="currentColor" title="" />
             </div>
-            <Suspense fallback={null}>
-              <LandingScene />
-            </Suspense>
           </div>
 
           {/* Top bar */}
@@ -205,12 +212,6 @@ export default function LandingPage() {
             initial="hidden"
             animate="show"
           >
-            <motion.p
-              variants={fadeUp}
-              className="text-white/70 text-[11px] sm:text-xs font-extrabold tracking-[0.22em] mb-4"
-            >
-              WELCOME TO DOJOLINK
-            </motion.p>
             <motion.h1
               variants={fadeUp}
               className="font-black tracking-tight text-white mb-5"
@@ -249,20 +250,24 @@ export default function LandingPage() {
           {/* Product window, rising out of the hero's bottom edge */}
           <motion.div
             className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 mt-10 sm:mt-14 -mb-20 sm:-mb-36"
+            style={{ perspective: 1200 }}
             initial={{ opacity: 0, y: 48 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="relative">
+            <motion.div
+              className="relative"
+              style={{ rotateX: windowTilt, y: windowLift, transformStyle: 'preserve-3d' }}
+            >
               <DeskMockup />
 
-              {/* Floating stat cards, reference-style */}
               {/* Floating cards hang off the window's edges without covering the
-                  row endings, and only at widths where they have room to. */}
+                  row endings, and only at widths where they have room to. Each
+                  layer rides the scroll at its own speed. */}
+              <motion.div className="hidden xl:block absolute -left-40 top-10" style={{ y: farCardLift }} aria-hidden="true">
               <motion.div
-                className="hidden xl:block absolute -left-40 top-10 w-44 bg-white rounded-2xl border border-ninja-border p-4 -rotate-3"
+                className="w-44 bg-white rounded-2xl border border-ninja-border p-4 -rotate-3"
                 style={{ boxShadow: '0 18px 44px rgb(9 30 66 / 0.18)' }}
-                aria-hidden="true"
                 animate={{ y: [0, -7, 0] }}
                 transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
               >
@@ -278,11 +283,12 @@ export default function LandingPage() {
                   ))}
                 </div>
               </motion.div>
+              </motion.div>
 
+              <motion.div className="hidden xl:block absolute -right-44 top-20" style={{ y: nearCardLift }} aria-hidden="true">
               <motion.div
-                className="hidden xl:block absolute -right-44 top-20 w-48 bg-white rounded-2xl border border-ninja-border p-4 rotate-2"
+                className="w-48 bg-white rounded-2xl border border-ninja-border p-4 rotate-2"
                 style={{ boxShadow: '0 18px 44px rgb(9 30 66 / 0.18)' }}
-                aria-hidden="true"
                 animate={{ y: [0, -8, 0] }}
                 transition={{ duration: 5.2, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }}
               >
@@ -295,18 +301,25 @@ export default function LandingPage() {
                   <div className="h-full w-[78%] rounded-full bg-ninja-blue" />
                 </div>
               </motion.div>
+              </motion.div>
 
-              {/* The mascot keeps a foot in the frame */}
-              <motion.img
-                src="/CodeNinjasCelebrate.webp"
-                alt=""
-                className="hidden md:block absolute -right-24 -bottom-16 h-32 w-auto object-contain select-none pointer-events-none"
-                style={{ filter: 'drop-shadow(0 14px 24px rgb(9 30 66 / 0.3))' }}
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              />
-            </div>
+              {/* The mascot keeps a foot in the frame, nearest layer of all */}
+              <motion.div
+                className="hidden md:block absolute -right-24 -bottom-16"
+                style={{ y: mascotLift }}
+                aria-hidden="true"
+              >
+                <motion.img
+                  src="/CodeNinjasCelebrate.webp"
+                  alt=""
+                  className="h-32 w-auto object-contain select-none pointer-events-none"
+                  style={{ filter: 'drop-shadow(0 14px 24px rgb(9 30 66 / 0.3))' }}
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                />
+              </motion.div>
+            </motion.div>
           </motion.div>
         </section>
       </div>
