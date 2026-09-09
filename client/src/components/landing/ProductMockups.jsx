@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   BookOpenIcon, UsersIcon, CalendarIcon, ChevronDownIcon,
-  ChevronRightIcon, ChevronLeftIcon, LogOutIcon,
+  ChevronRightIcon, ChevronLeftIcon, LogOutIcon, SearchIcon, ClockIcon,
 } from 'lucide-react';
 import Logo from '../ui/Logo';
 
@@ -25,14 +25,6 @@ const NAV = [
   { id: 'staff',      label: 'Staff',         icon: '/icons/staff.png' },
   { id: 'curriculum', label: 'Curriculum',    Glyph: BookOpenIcon },
 ];
-
-const TITLES = {
-  today:      ["Today's ", 'Ninjas'],
-  ninjas:     ['The ', 'Roster'],
-  clubs:      ['Clubs ', 'Today'],
-  staff:      ['The ', 'Team'],
-  curriculum: ['The ', 'Curriculum'],
-};
 
 const STATS = [
   { label: 'CHECKED IN', value: 6, dot: 'bg-ninja-blue' },
@@ -70,33 +62,63 @@ const NOTE_TEXT = {
   overdue: 'text-red-600',
 };
 
-const ROSTER = [
-  { name: 'Mason Rivera',   belt: 'purple', program: 'CREATE',           meta: '48 sessions', seen: 'Today' },
-  { name: 'Sofia Martinez', belt: 'green',  program: 'CREATE',           meta: '31 sessions', seen: 'Today' },
-  { name: 'Emma Johnson',   belt: 'yellow', program: 'CREATE · Clubs',   meta: '12 sessions', seen: 'Today' },
-  { name: 'Ava Chen',       belt: 'white',  program: 'JR',               meta: '9 sessions',  seen: 'Yesterday' },
-  { name: 'Liam Patel',     belt: 'blue',   program: 'Robotics Academy', meta: '22 sessions', seen: 'Sat, Sep 5' },
-  { name: 'Noah Kim',       belt: 'orange', program: 'AI Academy',       meta: '17 sessions', seen: 'Today' },
+// The roster table. A ninja with a chosen sticker shows it on a white disc;
+// everyone else gets initials on a colour hashed from their name, which is
+// what the real page does. Belt is a bare word there, not a chip.
+const ROSTER_CHIPS = [
+  { label: 'All', count: 24 }, { label: 'CREATE', count: 12 },
+  { label: 'Robotics Academy', count: 4 }, { label: 'AI Academy', count: 3 },
+  { label: 'JR', count: 5 },
 ];
 
+const ROSTER = [
+  { name: 'Mason Rivera',   sticker: 'dragon.png',  programs: ['belt-purple'],                   belt: 'Purple', seen: 'Today' },
+  { name: 'Sofia Martinez', ink: '#22c55e',         programs: ['belt-green'],                    belt: 'Green',  seen: 'Today' },
+  { name: 'Emma Johnson',   sticker: 'unicorn.png', programs: ['belt-yellow', 'jr_logo.webp'],   belt: 'Yellow', seen: 'Today' },
+  { name: 'Ava Chen',       ink: '#8b5cf6',         programs: ['jr_logo.webp'],                  belt: null,     seen: 'Yesterday' },
+  { name: 'Liam Patel',     sticker: 'robot.png',   programs: ['robotics_logo.png'],             belt: null,     seen: 'Sat, Sep 5' },
+  { name: 'Noah Kim',       ink: '#f97316',         programs: ['ai_logo.png', 'belt-orange'],    belt: 'Orange', seen: 'Today' },
+];
+
+// Cover gradients are the club colour keys the real page uses.
 const CLUBS = [
-  { art: 'dragon.png',   name: 'Minecraft Club', when: 'Tuesday · 4:30 pm', count: '8 ninjas' },
-  { art: 'robot.png',    name: 'Robotics Lab',   when: 'Thursday · 5:00 pm', count: '6 ninjas' },
-  { art: 'unicorn.png',  name: 'Roblox Studio',  when: 'Saturday · 11:00 am', count: '11 ninjas' },
+  { name: 'Minecraft Club', solid: '#15803d', day: 'Tuesday',  blurb: 'Build and script worlds together, one afternoon a week.' },
+  { name: 'Robotics Lab',   solid: '#1d4ed8', day: 'Thursday', blurb: 'Drive, sense and solve with the kits from the shelf.' },
+  { name: 'Roblox Studio',  solid: '#7c3aed', day: 'Saturday', blurb: 'Publish a game your friends can actually play.' },
 ];
 
 const STAFF = [
-  { initials: 'KN', name: 'Kai Nakamura',  role: 'Sensei',          meta: '12 logged today' },
-  { initials: 'RM', name: 'Rosa Medina',   role: 'Center Director', meta: '4 logged today' },
-  { initials: 'DO', name: 'Dev Okonkwo',   role: 'Sensei',          meta: '9 logged today' },
-  { initials: 'HT', name: 'Hana Tran',     role: 'Sensei',          meta: '6 logged today' },
+  { initials: 'KN', name: 'Kai Nakamura', handle: 'kai.n',   role: 'Sensei',          logs: 12 },
+  { initials: 'RM', name: 'Rosa Medina',  handle: 'rosa.m',  role: 'Center Director', lead: true, logs: 4 },
+  { initials: 'DO', name: 'Dev Okonkwo',  handle: 'dev.o',   role: 'Sensei',          logs: 9 },
+  { initials: 'HT', name: 'Hana Tran',    handle: 'hana.t',  role: 'Sensei',          logs: 0 },
 ];
 
-const LADDER = [
-  { belt: 'white',  levels: 4 }, { belt: 'yellow', levels: 5 }, { belt: 'orange', levels: 5 },
-  { belt: 'green',  levels: 5 }, { belt: 'blue',   levels: 6 }, { belt: 'purple', levels: 6, here: true },
-  { belt: 'brown',  levels: 10 }, { belt: 'black',  levels: 2 },
+const PROGRAM_TABS = [
+  { name: 'CREATE',           logo: '/programs/create_logo.webp',   color: '#60a5fa' },
+  { name: 'JR',               logo: '/programs/jr_logo.webp',       color: '#a78bfa' },
+  { name: 'AI Academy',       logo: '/programs/ai_logo.png',        color: '#22d3ee' },
+  { name: 'Robotics Academy', logo: '/programs/robotics_logo.png',  color: '#38a1ff' },
+  { name: 'VR Coding',        logo: '/programs/vr_coding_logo.webp', color: '#2dd4bf' },
 ];
+
+const BELT_TABS = ['white', 'yellow', 'orange', 'green', 'blue', 'purple'];
+
+// Invented module titles. The franchise curriculum is not public, so the
+// mockup borrows the page's shape and none of its words.
+const MODULES = [
+  { name: 'Finding your way around the editor', count: 7 },
+  { name: 'Sprites, costumes and the stage',    count: 6 },
+  { name: 'Loops that keep the game running',   count: 7 },
+  { name: 'Keeping score',                      count: 5 },
+  { name: 'Publishing what you built',          count: 4 },
+];
+
+function todayLabel() {
+  return new Date().toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+  });
+}
 
 function Avatar({ belt, logo, size = 'w-10 h-10' }) {
   if (logo) {
@@ -112,9 +134,67 @@ function Avatar({ belt, logo, size = 'w-10 h-10' }) {
   );
 }
 
+// A program symbol is drawn bare, no pill: CREATE shows the belt, every other
+// program shows its own logo.
+function ProgramSymbol({ id }) {
+  const src = id.startsWith('belt-') ? `/belts/${id}.svg` : `/programs/${id}`;
+  return <img src={src} alt="" className="w-5 h-5 object-contain" />;
+}
+
+function PanelHeader({ title, blue, sub, right }) {
+  return (
+    <div className="flex items-start justify-between gap-4 mb-4">
+      <div className="min-w-0">
+        <h3 className="text-2xl font-extrabold text-ninja-navy tracking-tight leading-none">
+          {title}
+          {blue && <span className="text-ninja-blue">{blue}</span>}
+        </h3>
+        <div className="text-xs font-semibold text-ninja-muted mt-1.5">{sub}</div>
+      </div>
+      {right}
+    </div>
+  );
+}
+
+const PILL = 'text-[11px] font-bold rounded-lg px-3 py-1.5 whitespace-nowrap';
+const GHOST = `${PILL} bg-white border border-ninja-border text-ninja-navy`;
+const SOLID = `${PILL} bg-ninja-blue text-white`;
+
+function SearchBox({ placeholder, w = 'w-36' }) {
+  return (
+    <span className={`${w} flex items-center gap-1.5 bg-white border border-ninja-border rounded-lg px-2.5 py-1.5`}>
+      <SearchIcon className="w-3 h-3 text-ninja-muted shrink-0" aria-hidden="true" />
+      <span className="text-[11px] text-ninja-muted truncate">{placeholder}</span>
+    </span>
+  );
+}
+
 function TodayView() {
   return (
     <>
+      <div className="flex items-start justify-between mb-5">
+        <div>
+          <h3 className="text-3xl font-black tracking-tight leading-none">
+            <span className="text-ninja-navy">Today&apos;s </span>
+            <span className="text-ninja-blue">Ninjas</span>
+          </h3>
+          <div className="text-xs font-semibold text-ninja-muted mt-1.5">{todayLabel()}</div>
+          <div className="text-xs font-bold text-ninja-navy mt-0.5">Welcome Sensei Kai</div>
+        </div>
+        <div className="flex items-center gap-2" aria-hidden="true">
+          <span className="relative w-9 h-9 rounded-xl bg-white border border-ninja-border flex items-center justify-center">
+            <UsersIcon className="w-4 h-4 text-ninja-navy" />
+            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-ninja-blue text-white text-[9px] font-black flex items-center justify-center">6</span>
+          </span>
+          <span className="w-9 h-9 rounded-xl bg-white border border-ninja-border flex items-center justify-center">
+            <BookOpenIcon className="w-4 h-4 text-ninja-navy" />
+          </span>
+          <span className="w-9 h-9 rounded-xl bg-white border border-ninja-border flex items-center justify-center">
+            <CalendarIcon className="w-4 h-4 text-ninja-navy" />
+          </span>
+        </div>
+      </div>
+
       <div className="grid grid-cols-4 gap-3 mb-4">
         {STATS.map(({ label, value, dot, lead }) => (
           <div
@@ -163,86 +243,243 @@ function TodayView() {
           </div>
         ))}
       </div>
+
+      <div className="bg-white rounded-xl border border-ninja-border px-4 py-3 mt-3 flex items-center justify-between">
+        <span className="text-sm font-extrabold text-ninja-navy">Clubs today</span>
+        <span className={SOLID}>+ Check In Club</span>
+      </div>
     </>
   );
 }
 
+const ROSTER_COLS = { gridTemplateColumns: '18px 2fr 1.4fr 1fr 1.1fr 28px' };
+
 function RosterView() {
   return (
-    <div className="bg-white rounded-xl border border-ninja-border overflow-hidden">
-      {ROSTER.map((n) => (
-        <div key={n.name} className="flex items-center gap-3 px-4 py-3 border-b border-ninja-border/70 last:border-0">
-          <Avatar {...n} />
-          <div className="min-w-0 flex-1">
-            <div className="text-[13px] font-extrabold text-ninja-navy leading-tight">{n.name}</div>
-            <div className="text-[11px] font-semibold text-ninja-blue">{n.program}</div>
+    <>
+      <PanelHeader
+        title="Ninjas"
+        sub="24 active ninjas"
+        right={
+          <div className="flex items-center gap-2 shrink-0">
+            <span className={GHOST}>Archived</span>
+            <span className={GHOST}>Import CSV</span>
+            <span className={SOLID}>+ Add Ninja</span>
           </div>
-          <div className="text-[11px] font-semibold text-ninja-muted w-24 text-right">{n.meta}</div>
-          <div className="text-[11px] font-bold text-ninja-navy w-24 text-right">{n.seen}</div>
+        }
+      />
+
+      {/* The filter bar sits on the page, above the card, the way it does in the app */}
+      <div className="flex items-center gap-2 mb-3">
+        <SearchBox placeholder="Search..." />
+        {ROSTER_CHIPS.map(({ label, count }, i) => (
+          <span
+            key={label}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-[11px] border whitespace-nowrap ${
+              i === 0 ? 'bg-ninja-blue text-white border-ninja-blue' : 'bg-white text-ninja-navy border-ninja-border'
+            }`}
+          >
+            {label}
+            <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
+              i === 0 ? 'bg-white/25 text-white' : 'bg-ninja-bg text-ninja-muted'
+            }`}>{count}</span>
+          </span>
+        ))}
+        <span className="ml-auto text-[11px] text-ninja-muted font-semibold whitespace-nowrap">
+          Sort: <span className="text-ninja-navy font-bold">Last session ↓</span>
+        </span>
+      </div>
+
+      <div className="bg-white border border-ninja-border rounded-2xl shadow-sm overflow-hidden">
+        <div
+          className="grid gap-4 px-4 py-2.5 border-b border-ninja-border bg-ninja-bg text-[9px] font-bold text-ninja-muted uppercase tracking-widest"
+          style={ROSTER_COLS}
+        >
+          <span />
+          <span>Name</span>
+          <span>Programs</span>
+          <span>Belt</span>
+          <span>Last session</span>
+          <span />
         </div>
-      ))}
-    </div>
+        {ROSTER.map((r) => (
+          <div
+            key={r.name}
+            className="grid gap-4 px-4 py-2.5 items-center border-b border-ninja-border/60 last:border-b-0"
+            style={ROSTER_COLS}
+          >
+            <span className="w-3.5 h-3.5 rounded border border-ninja-border bg-white" />
+            <div className="flex items-center gap-2.5 min-w-0">
+              {r.sticker ? (
+                <span className="w-8 h-8 rounded-full bg-white border border-ninja-border flex items-center justify-center shrink-0">
+                  <img src={`/stickers/${r.sticker}`} alt="" className="w-full h-full object-contain p-0.5" />
+                </span>
+              ) : (
+                <span
+                  className="w-8 h-8 rounded-full text-white font-bold text-[11px] flex items-center justify-center shrink-0"
+                  style={{ background: r.ink }}
+                >
+                  {r.name.split(' ').map((w) => w[0]).join('')}
+                </span>
+              )}
+              <span className="text-[13px] font-bold text-ninja-navy truncate">{r.name}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              {r.programs.map((id) => <ProgramSymbol key={id} id={id} />)}
+            </div>
+            <span className="text-[12px] font-bold text-ninja-navy">
+              {r.belt || <span className="text-ninja-muted italic">—</span>}
+            </span>
+            <span className="text-[12px] font-semibold text-ninja-navy">{r.seen}</span>
+            <span className="text-ninja-muted text-right leading-none">···</span>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 
 function ClubsView() {
   return (
-    <div className="grid grid-cols-3 gap-3">
-      {CLUBS.map((c) => (
-        <div key={c.name} className="bg-white rounded-xl border border-ninja-border p-4">
-          <img src={`/stickers/${c.art}`} alt="" className="w-12 h-12 object-contain" />
-          <div className="text-[13px] font-extrabold text-ninja-navy mt-2.5">{c.name}</div>
-          <div className="text-[11px] font-semibold text-ninja-muted mt-0.5">{c.when}</div>
-          <div className="text-[11px] font-bold text-ninja-blue mt-0.5">{c.count}</div>
-          <div className="mt-3 w-full text-center text-[11px] font-bold text-white bg-ninja-blue rounded-lg py-2">
-            Check in club
+    <>
+      <PanelHeader
+        title="Clubs"
+        sub="Weekly optional clubs at your center."
+        right={<span className={SOLID}>+ Create Club</span>}
+      />
+      <div className="grid grid-cols-3 gap-4">
+        {CLUBS.map((c) => (
+          <div key={c.name} className="bg-white border border-ninja-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
+            <div
+              className="relative aspect-video"
+              style={{ background: `linear-gradient(135deg, ${c.solid} 0%, ${c.solid}b3 100%)` }}
+            >
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 font-black text-white/15 text-5xl leading-none">
+                {c.name[0]}
+              </span>
+            </div>
+            <div className="flex-1 flex flex-col px-4 pt-3 pb-3">
+              <div className="text-sm font-bold text-ninja-navy leading-snug">{c.name}</div>
+              <div className="flex items-center gap-1.5 mt-1.5 text-ninja-muted text-[10px] font-semibold">
+                <ClockIcon className="w-3 h-3" aria-hidden="true" />
+                {c.day}
+              </div>
+              <div className="text-[11px] text-ninja-muted leading-relaxed mt-2">{c.blurb}</div>
+              <div className="mt-auto pt-3 text-[11px] font-semibold text-ninja-muted">View club →</div>
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </>
   );
 }
 
 function StaffView() {
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {STAFF.map((s) => (
-        <div key={s.name} className="bg-white rounded-xl border border-ninja-border p-4 flex items-center gap-3">
-          <span className="w-11 h-11 rounded-full bg-ninja-blue text-white font-black text-sm flex items-center justify-center shrink-0">
-            {s.initials}
-          </span>
-          <div className="min-w-0">
-            <div className="text-[13px] font-extrabold text-ninja-navy leading-tight">{s.name}</div>
-            <div className="text-[11px] font-semibold text-ninja-blue">{s.role}</div>
+    <>
+      <PanelHeader
+        title="Center "
+        blue="Staff"
+        sub="Code Ninjas Yorba Linda"
+        right={
+          <div className="flex items-center gap-2 shrink-0">
+            <SearchBox placeholder="Search staff..." w="w-32" />
+            <span className={GHOST}>Archived</span>
+            <span className={SOLID}>+ Add Staff</span>
           </div>
-          <div className="ml-auto text-[11px] font-semibold text-ninja-muted whitespace-nowrap">{s.meta}</div>
+        }
+      />
+      <div className="bg-white border border-ninja-border rounded-xl shadow-sm overflow-hidden">
+        <div className="grid grid-cols-3 border-b border-ninja-border bg-ninja-bg px-4 py-2.5 text-[9px] font-semibold text-ninja-muted uppercase tracking-widest">
+          <span>Name</span>
+          <span>Username</span>
+          <span className="text-right">Progress Logs</span>
         </div>
-      ))}
-    </div>
-  );
-}
-
-function CurriculumView() {
-  return (
-    <div className="bg-white rounded-xl border border-ninja-border p-5">
-      <div className="text-[13px] font-extrabold text-ninja-navy mb-4">CREATE belt ladder</div>
-      <div className="flex items-end justify-between gap-2">
-        {LADDER.map(({ belt, levels, here }) => (
-          <div key={belt} className="flex flex-col items-center gap-1.5 min-w-0">
-            <img
-              src={`/belts/belt-${belt}.svg`}
-              alt=""
-              className={here ? 'h-12 drop-shadow-md' : 'h-8 opacity-60'}
-            />
-            <div className={`text-[11px] font-extrabold capitalize ${here ? 'text-ninja-navy' : 'text-ninja-muted'}`}>
-              {belt}
+        {STAFF.map((s) => (
+          <div key={s.name} className="grid grid-cols-3 items-center px-4 py-3 border-b border-ninja-border last:border-b-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="w-9 h-9 rounded-full bg-ninja-blue text-white font-bold text-[11px] flex items-center justify-center shrink-0">
+                {s.initials}
+              </span>
+              <div className="min-w-0">
+                <div className="text-[13px] font-bold text-ninja-navy truncate leading-tight">{s.name}</div>
+                <div className={`text-[9px] font-bold uppercase tracking-wide mt-0.5 ${s.lead ? 'text-ninja-blue' : 'text-ninja-muted'}`}>
+                  {s.role}
+                </div>
+              </div>
             </div>
-            <div className="text-[10px] font-semibold text-ninja-muted">{levels} levels</div>
+            <span className="text-[12px] text-ninja-muted">@{s.handle}</span>
+            <span className={`text-right text-lg font-bold ${s.logs ? 'text-ninja-blue' : 'text-ninja-border'}`}>
+              {s.logs}
+            </span>
           </div>
         ))}
       </div>
-      <div className="mt-5 pt-4 border-t border-ninja-border text-[11px] font-semibold text-ninja-muted">
-        276 stickers across CREATE, JR, Robotics and AI Academy.
+    </>
+  );
+}
+
+// Curriculum is the one page with no cards on it: a reading column, underline
+// tabs and hairline rules on the page background.
+function CurriculumView() {
+  return (
+    <div className="max-w-2xl">
+      <h3 className="text-2xl font-extrabold text-ninja-navy leading-none">Curriculum</h3>
+      <div className="text-xs text-ninja-muted mt-1.5">
+        Every program, module and lesson, plus the reference material for each.
+      </div>
+
+      <div className="flex flex-wrap gap-x-5 gap-y-2 border-b border-ninja-border mt-6">
+        {PROGRAM_TABS.map(({ name, logo, color }, i) => (
+          <span
+            key={name}
+            className={`flex items-center gap-2 px-1 pb-2 border-b-2 text-[11px] ${
+              i === 0 ? 'font-bold text-ninja-navy' : 'font-semibold text-ninja-muted border-transparent'
+            }`}
+            style={i === 0 ? { borderBottomColor: color } : undefined}
+          >
+            <img src={logo} alt="" className={`w-4 h-4 object-contain ${i === 0 ? '' : 'opacity-50'}`} />
+            {name}
+          </span>
+        ))}
+      </div>
+
+      <div className="flex items-baseline justify-between gap-4 pt-4 pb-3">
+        <div className="text-[11px] text-ninja-muted tabular-nums">
+          20 modules
+          <span className="px-2 text-ninja-border">/</span>
+          118 projects
+        </div>
+        <div className="flex gap-5">
+          <span className="text-[11px] font-bold text-ninja-navy border-b-2 border-ninja-navy pb-1.5">Modules</span>
+          <span className="text-[11px] font-semibold text-ninja-muted pb-1.5">Resources</span>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-x-4 gap-y-2 border-b border-ninja-border mb-1">
+        {BELT_TABS.map((b, i) => (
+          <span
+            key={b}
+            className={`flex items-center gap-1.5 px-1 pb-2 border-b-2 text-[11px] capitalize ${
+              i === 5 ? 'font-bold text-ninja-navy border-ninja-navy' : 'font-semibold text-ninja-muted border-transparent'
+            }`}
+          >
+            <img src={`/belts/belt-${b}.svg`} alt="" className={`w-4 h-4 object-contain ${i === 5 ? '' : 'opacity-50'}`} />
+            {b}
+          </span>
+        ))}
+      </div>
+
+      <div>
+        {MODULES.map((m) => (
+          <div key={m.name} className="border-b border-ninja-border last:border-b-0">
+            <div className="flex items-center gap-3 py-2.5">
+              <ChevronDownIcon className="w-3.5 h-3.5 text-ninja-muted -rotate-90 shrink-0" aria-hidden="true" />
+              <span className="flex-1 min-w-0 font-bold text-[12px] text-ninja-navy">{m.name}</span>
+              <span className="shrink-0 text-[10px] text-ninja-muted tabular-nums">{m.count} projects</span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -253,16 +490,13 @@ const VIEWS = {
   staff: StaffView, curriculum: CurriculumView,
 };
 
+
 // The desktop shot is the app, not a picture of it: the sidebar really
 // navigates, so a visitor can look around before they ever sign in.
 export function DeskMockup() {
   const [tab, setTab] = useState('today');
   const still = useReducedMotion();
   const View = VIEWS[tab];
-  const [head, tail] = TITLES[tab];
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
-  });
 
   return (
     <div
@@ -323,29 +557,6 @@ export function DeskMockup() {
 
         {/* Panel */}
         <div className="flex-1 min-w-0 bg-ninja-bg p-6 min-h-[780px] lg:min-h-[630px]">
-          <div className="flex items-start justify-between mb-5">
-            <div>
-              <h3 className="text-3xl font-black tracking-tight leading-none">
-                <span className="text-ninja-navy">{head}</span>
-                <span className="text-ninja-blue">{tail}</span>
-              </h3>
-              <div className="text-xs font-semibold text-ninja-muted mt-1.5">{today}</div>
-              <div className="text-xs font-bold text-ninja-navy mt-0.5">Welcome Sensei Kai</div>
-            </div>
-            <div className="flex items-center gap-2" aria-hidden="true">
-              <span className="relative w-9 h-9 rounded-xl bg-white border border-ninja-border flex items-center justify-center">
-                <UsersIcon className="w-4 h-4 text-ninja-navy" />
-                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-ninja-blue text-white text-[9px] font-black flex items-center justify-center">6</span>
-              </span>
-              <span className="w-9 h-9 rounded-xl bg-white border border-ninja-border flex items-center justify-center">
-                <BookOpenIcon className="w-4 h-4 text-ninja-navy" />
-              </span>
-              <span className="w-9 h-9 rounded-xl bg-white border border-ninja-border flex items-center justify-center">
-                <CalendarIcon className="w-4 h-4 text-ninja-navy" />
-              </span>
-            </div>
-          </div>
-
           <motion.div
             key={tab}
             initial={still ? false : { opacity: 0, y: 8 }}
@@ -354,13 +565,6 @@ export function DeskMockup() {
           >
             <View />
           </motion.div>
-
-          {tab === 'today' && (
-            <div className="bg-white rounded-xl border border-ninja-border px-4 py-3 mt-3 flex items-center justify-between">
-              <span className="text-sm font-extrabold text-ninja-navy">Clubs today</span>
-              <span className="text-[11px] font-bold text-white bg-ninja-blue rounded-lg px-3 py-2">+ Check In Club</span>
-            </div>
-          )}
         </div>
       </div>
     </div>
