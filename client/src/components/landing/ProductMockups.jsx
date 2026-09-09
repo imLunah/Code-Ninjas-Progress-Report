@@ -10,7 +10,7 @@ import Logo from '../ui/Logo';
 // tokens and art, so they stay crisp at any density and never fall out of step
 // with the brand. Every name here is invented; no real roster ships publicly.
 
-// Belt ribbon colours, for the ring a CREATE ninja's avatar wears. These are
+// Belt ribbon colours, for the ring a CREATE ninja's belt icon sits in. These are
 // the swatches the belt art is cut from, and they have no token because
 // nothing else in the app draws a belt as a bare colour.
 const BELT_HEX = {
@@ -46,12 +46,12 @@ const FILTERS = ['All', 'CREATE', 'JR', 'Robotics Academy', 'AI Academy'];
 // status drives the card's edge: green is logged, amber still owes a log,
 // red has been owing one since a past session.
 const BOARD = [
-  { name: 'Mason Rivera',  belt: 'purple', avatar: 'purple-cheer-medium', program: 'CREATE · Purple L3', status: 'logged',  note: 'Logged ✓',           action: 'Edit Log' },
-  { name: 'Ava Chen',      logo: 'jr_logo.webp',       program: 'JR',                status: 'todo',    note: 'Not logged yet',     action: 'Log Progress' },
-  { name: 'Liam Patel',    logo: 'robotics_logo.png',  program: 'Robotics Academy',  status: 'overdue', note: 'Overdue · Sat, Sep 5', action: 'Log Progress' },
-  { name: 'Sofia Martinez', belt: 'green', avatar: 'green-wave-light',  program: 'CREATE · Green L2',  status: 'todo',    note: 'Not logged yet',     action: 'Log Progress' },
-  { name: 'Noah Kim',      logo: 'ai_logo.png',        program: 'AI Academy',        status: 'logged',  note: 'Logged ✓',           action: 'Edit Log' },
-  { name: 'Emma Johnson',  belt: 'yellow', avatar: 'yellow-cheer-dark', program: 'CREATE · Yellow L1', status: 'todo',    note: 'Not logged yet',     action: 'Log Progress' },
+  { name: 'Mason Rivera',   belt: 'purple',             program: 'CREATE · Purple L3', status: 'logged',  note: 'Logged ✓',             action: 'Edit Log' },
+  { name: 'Ava Chen',       logo: 'jr_logo.webp',       program: 'JR',                 status: 'todo',    note: 'Not logged yet',       action: 'Log Progress' },
+  { name: 'Liam Patel',     logo: 'robotics_logo.png',  program: 'Robotics Academy',   status: 'overdue', note: 'Overdue · Sat, Sep 5', action: 'Log Progress' },
+  { name: 'Sofia Martinez', belt: 'green',              program: 'CREATE · Green L2',  status: 'todo',    note: 'Not logged yet',       action: 'Log Progress' },
+  { name: 'Noah Kim',       logo: 'ai_logo.png',        program: 'AI Academy',         status: 'logged',  note: 'Logged ✓',             action: 'Edit Log' },
+  { name: 'Emma Johnson',   belt: 'yellow',             program: 'CREATE · Yellow L1', status: 'todo',    note: 'Not logged yet',       action: 'Log Progress' },
 ];
 
 const EDGE = {
@@ -71,12 +71,12 @@ const NOTE_TEXT = {
 };
 
 const ROSTER = [
-  { name: 'Mason Rivera',   belt: 'purple', avatar: 'purple-cheer-medium', program: 'CREATE',           meta: '48 sessions', seen: 'Today' },
-  { name: 'Sofia Martinez', belt: 'green',  avatar: 'green-wave-light',    program: 'CREATE',           meta: '31 sessions', seen: 'Today' },
-  { name: 'Emma Johnson',   belt: 'yellow', avatar: 'yellow-cheer-dark',   program: 'CREATE · Clubs',   meta: '12 sessions', seen: 'Today' },
-  { name: 'Ava Chen',       belt: 'white',  avatar: 'white-wave-light',    program: 'JR',               meta: '9 sessions',  seen: 'Yesterday' },
-  { name: 'Liam Patel',     belt: 'blue',   avatar: 'blue-cheer-light',    program: 'Robotics Academy', meta: '22 sessions', seen: 'Sat, Sep 5' },
-  { name: 'Noah Kim',       belt: 'orange', avatar: 'orange-cheer-dark',   program: 'AI Academy',       meta: '17 sessions', seen: 'Today' },
+  { name: 'Mason Rivera',   belt: 'purple', program: 'CREATE',           meta: '48 sessions', seen: 'Today' },
+  { name: 'Sofia Martinez', belt: 'green',  program: 'CREATE',           meta: '31 sessions', seen: 'Today' },
+  { name: 'Emma Johnson',   belt: 'yellow', program: 'CREATE · Clubs',   meta: '12 sessions', seen: 'Today' },
+  { name: 'Ava Chen',       belt: 'white',  program: 'JR',               meta: '9 sessions',  seen: 'Yesterday' },
+  { name: 'Liam Patel',     belt: 'blue',   program: 'Robotics Academy', meta: '22 sessions', seen: 'Sat, Sep 5' },
+  { name: 'Noah Kim',       belt: 'orange', program: 'AI Academy',       meta: '17 sessions', seen: 'Today' },
 ];
 
 const CLUBS = [
@@ -98,7 +98,7 @@ const LADDER = [
   { belt: 'brown',  levels: 10 }, { belt: 'black',  levels: 2 },
 ];
 
-function Avatar({ belt, avatar, logo, size = 'w-10 h-10' }) {
+function Avatar({ belt, logo, size = 'w-10 h-10' }) {
   if (logo) {
     return <img src={`/programs/${logo}`} alt="" className={`${size} rounded-full object-contain shrink-0`} />;
   }
@@ -107,7 +107,7 @@ function Avatar({ belt, avatar, logo, size = 'w-10 h-10' }) {
       className={`${size} rounded-full p-[2.5px] shrink-0`}
       style={{ background: BELT_HEX[belt] }}
     >
-      <img src={`/ninjas/${avatar}.png`} alt="" className="w-full h-full rounded-full bg-white object-contain" />
+      <img src={`/belts/belt-${belt}.svg`} alt="" className="w-full h-full rounded-full bg-white object-contain p-0.5" />
     </span>
   );
 }
