@@ -171,7 +171,7 @@ export default function LandingPage() {
       <div>
         <section className="relative rounded-b-3xl sm:rounded-b-[40px]">
           {/* Background layer clips to the rounded shape; content may overflow it */}
-          <div className="absolute inset-0 rounded-[inherit] overflow-hidden bg-ninja-blue">
+          <div className="absolute inset-x-0 top-0 bottom-32 sm:bottom-0 rounded-[inherit] overflow-hidden bg-ninja-blue">
             <div
               className="absolute inset-0"
               style={{
