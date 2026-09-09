@@ -104,8 +104,8 @@ function StickerVignette() {
 const FEATURES = [
   {
     art: CheckInVignette,
-    title: 'Front desk check-in',
-    blurb: 'Ninjas check in at the desk, attendance takes itself, and staff can see who is on the floor at a glance.',
+    title: 'Check in and keep track',
+    blurb: 'Attendance takes itself at the desk, so instructors can see who is on the floor and keep track of how each student is progressing.',
   },
   {
     art: BeltLadderVignette,
