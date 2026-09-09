@@ -304,7 +304,7 @@ export default function LandingPage() {
               variants={fadeUp}
               className="text-white/85 text-base sm:text-lg leading-relaxed max-w-xl mx-auto mb-8 sm:mb-10"
             >
-              The front desk, belt progress, and what parents see at home, all in one place.
+              Link check-ins, student progress, and operations tracker together.
             </motion.p>
             <motion.div variants={fadeUp} className="flex justify-center">
               <motion.button
