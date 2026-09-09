@@ -131,69 +131,153 @@ const DESK_ROWS = [
 
 const CHART_BARS = [34, 52, 40, 68, 58, 82, 64];
 
+// The mini sidebar carries the app's real nav art, so the window in the hero
+// is the same product a director signs into rather than a set of grey squares.
+const DESK_NAV = ['today', 'roster', 'clubs', 'staff'];
+
 function DeskMockup() {
   return (
     <div
       aria-hidden="true"
-      className="rounded-xl sm:rounded-2xl bg-white border border-ninja-border overflow-hidden select-none pointer-events-none text-left"
+      className="rounded-2xl bg-white border border-ninja-border overflow-hidden select-none pointer-events-none text-left"
       style={{ boxShadow: '0 30px 80px rgb(9 30 66 / 0.28)' }}
     >
       {/* Browser chrome */}
-      <div className="flex items-center gap-1.5 px-4 h-9 bg-ninja-bg border-b border-ninja-border">
-        <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
-        <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
-        <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
-        <span className="mx-auto bg-white border border-ninja-border rounded-md px-4 py-0.5 text-[10px] text-ninja-muted font-semibold">
+      <div className="flex items-center gap-2 px-5 h-11 bg-ninja-bg border-b border-ninja-border">
+        <span className="w-3 h-3 rounded-full bg-[#ff5f57]" />
+        <span className="w-3 h-3 rounded-full bg-[#febc2e]" />
+        <span className="w-3 h-3 rounded-full bg-[#28c840]" />
+        <span className="mx-auto bg-white border border-ninja-border rounded-full px-6 py-1 text-xs text-ninja-muted font-bold">
           dojolink.app
         </span>
-        <span className="w-[54px]" />
+        <span className="w-[68px]" />
       </div>
 
       <div className="flex">
         {/* Mini sidebar */}
-        <div className="hidden sm:flex w-14 flex-col items-center gap-3 py-4 border-r border-ninja-border bg-ninja-bg">
-          <Logo variant="mark" className="h-6 text-ninja-navy" title="" />
-          <span className="mt-2 w-8 h-8 rounded-lg bg-ninja-blue/15 border border-ninja-blue/20" />
-          <span className="w-8 h-8 rounded-lg bg-ninja-border/60" />
-          <span className="w-8 h-8 rounded-lg bg-ninja-border/60" />
-          <span className="w-8 h-8 rounded-lg bg-ninja-border/60" />
+        <div className="w-20 flex flex-col items-center gap-2.5 py-5 border-r border-ninja-border bg-ninja-bg">
+          <Logo variant="mark" className="h-7 text-ninja-navy" title="" />
+          {DESK_NAV.map((id, i) => (
+            <span
+              key={id}
+              className={`w-11 h-11 rounded-xl flex items-center justify-center ${
+                i === 0 ? 'mt-2 bg-ninja-blue/15 border border-ninja-blue/20' : 'bg-ninja-border/40'
+              }`}
+            >
+              <img src={`/icons/${id}.png`} alt="" className={`w-6 h-6 object-contain ${i === 0 ? '' : 'opacity-45'}`} />
+            </span>
+          ))}
         </div>
 
         {/* Front desk panel */}
-        <div className="flex-1 p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
+        <div className="flex-1 p-7">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="text-sm sm:text-base font-extrabold text-ninja-navy">Front desk</div>
-              <div className="text-[10px] sm:text-[11px] text-ninja-muted font-semibold">Tuesday · 4:00 pm session</div>
+              <div className="text-2xl font-extrabold text-ninja-navy leading-tight">Front desk</div>
+              <div className="text-sm text-ninja-muted font-semibold mt-0.5">Tuesday · 4:00 pm session</div>
             </div>
-            <span className="bg-emerald-100 text-emerald-700 rounded-full px-2.5 py-1 text-[10px] font-bold">
+            <span className="bg-emerald-100 text-emerald-700 rounded-full px-4 py-1.5 text-xs font-bold whitespace-nowrap">
               3 on the floor
             </span>
           </div>
 
           <div>
             {DESK_ROWS.map((r) => (
-              <div key={r.name} className="flex items-center gap-2.5 sm:gap-3 py-2 sm:py-2.5 border-b border-ninja-border/70 last:border-0">
-                <img src={`/ninjas/${r.avatar}.png`} alt="" className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-ninja-bg object-contain" />
+              <div key={r.name} className="flex items-center gap-4 py-3 border-b border-ninja-border/70 last:border-0">
+                <img src={`/ninjas/${r.avatar}.png`} alt="" className="w-12 h-12 rounded-full bg-ninja-bg object-contain shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <div className="text-[11px] sm:text-xs font-bold text-ninja-navy leading-tight">{r.name}</div>
-                  <div className="flex items-center gap-1 text-[9px] sm:text-[10px] text-ninja-muted font-semibold capitalize">
-                    <img src={`/belts/belt-${r.belt}.svg`} alt="" className="h-3" />
-                    {r.belt} belt
+                  <div className="text-lg font-extrabold text-ninja-navy leading-tight">{r.name}</div>
+                  <div className="flex items-center gap-1.5 text-[13px] text-ninja-muted font-semibold capitalize mt-0.5">
+                    <img src={`/belts/belt-${r.belt}.svg`} alt="" className="h-4" />
+                    {r.belt} Belt
                   </div>
                 </div>
                 {r.in ? (
-                  <span className="text-[9px] sm:text-[10px] font-bold text-emerald-700 bg-emerald-100 rounded-full px-2 sm:px-2.5 py-1">
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-100 rounded-full px-4 py-2 whitespace-nowrap">
                     In · {r.time}
                   </span>
                 ) : (
-                  <span className="text-[9px] sm:text-[10px] font-bold text-white bg-ninja-blue rounded-full px-2.5 sm:px-3 py-1">
+                  <span className="text-xs font-bold text-white bg-ninja-blue rounded-full px-5 py-2 whitespace-nowrap">
                     Check in
                   </span>
                 )}
               </div>
             ))}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// On a phone the hero shows the phone: the same front desk in the app's own
+// mobile shell, large title and floating tab bar included, rather than a
+// desktop window shrunk down to where nothing in it can be read.
+function PhoneMockup() {
+  return (
+    <div
+      aria-hidden="true"
+      className="mx-auto w-full max-w-[300px] rounded-[2.25rem] bg-white border border-ninja-border overflow-hidden select-none pointer-events-none text-left"
+      style={{ boxShadow: '0 30px 80px rgb(9 30 66 / 0.32)' }}
+    >
+      {/* Status bar */}
+      <div className="flex items-center justify-between px-6 pt-3 pb-1 text-[11px] font-bold text-ninja-navy">
+        <span>4:00</span>
+        <span className="flex items-center gap-1">
+          <span className="w-1 h-2.5 rounded-sm bg-ninja-navy/70" />
+          <span className="w-1 h-3 rounded-sm bg-ninja-navy/70" />
+          <span className="ml-1 w-5 h-2.5 rounded-[3px] border border-ninja-navy/60 p-[1.5px]">
+            <span className="block h-full w-2/3 rounded-[1px] bg-ninja-navy/70" />
+          </span>
+        </span>
+      </div>
+
+      <div className="px-5 pt-3">
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="min-w-0">
+            <div className="text-[26px] font-black text-ninja-navy leading-tight">Front desk</div>
+            <div className="text-[11px] text-ninja-muted font-semibold mt-0.5">Tuesday · 4:00 pm</div>
+          </div>
+          <span className="bg-emerald-100 text-emerald-700 rounded-full px-2.5 py-1 text-[10px] font-bold whitespace-nowrap mt-1">
+            3 in
+          </span>
+        </div>
+
+        {DESK_ROWS.slice(0, 4).map((r) => (
+          <div key={r.name} className="flex items-center gap-2.5 py-2.5 border-b border-ninja-border/70 last:border-0">
+            <img src={`/ninjas/${r.avatar}.png`} alt="" className="w-9 h-9 rounded-full bg-ninja-bg object-contain shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="text-[13px] font-extrabold text-ninja-navy leading-tight">{r.name}</div>
+              <div className="flex items-center gap-1 text-[10px] text-ninja-muted font-semibold capitalize">
+                <img src={`/belts/belt-${r.belt}.svg`} alt="" className="h-3" />
+                {r.belt} Belt
+              </div>
+            </div>
+            {r.in ? (
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 rounded-full px-2.5 py-1.5 whitespace-nowrap">
+                {r.time}
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold text-white bg-ninja-blue rounded-full px-3 py-1.5 whitespace-nowrap">
+                Check in
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Floating glass tab bar, the way the app wears it */}
+      <div className="px-5 pt-5 pb-4">
+        <div className="flex items-center justify-around rounded-full bg-white/70 backdrop-blur border border-ninja-border px-2 py-2"
+             style={{ boxShadow: '0 8px 24px rgb(9 30 66 / 0.12)' }}>
+          {DESK_NAV.map((id, i) => (
+            <span
+              key={id}
+              className={`w-9 h-9 rounded-full flex items-center justify-center ${i === 0 ? 'bg-ninja-blue/15' : ''}`}
+            >
+              <img src={`/icons/${id}.png`} alt="" className={`w-5 h-5 object-contain ${i === 0 ? '' : 'opacity-40'}`} />
+            </span>
+          ))}
         </div>
       </div>
     </div>
@@ -304,7 +388,7 @@ export default function LandingPage() {
               variants={fadeUp}
               className="text-white/85 text-base sm:text-lg leading-relaxed max-w-xl mx-auto mb-8 sm:mb-10"
             >
-              Link check-ins, student progress, and operations tracker together.
+              Link check-ins, student progress, and operations tracker all together.
             </motion.p>
             <motion.div variants={fadeUp} className="flex justify-center">
               <motion.button
@@ -329,7 +413,7 @@ export default function LandingPage() {
 
           {/* Product window, rising out of the hero's bottom edge */}
           <motion.div
-            className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 mt-10 sm:mt-14 -mb-20 sm:-mb-36"
+            className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 mt-10 sm:mt-14 -mb-16 sm:-mb-36"
             style={{ perspective: 1200 }}
             initial={{ opacity: 0, y: 48 }}
             animate={{ opacity: 1, y: 0 }}
@@ -339,12 +423,13 @@ export default function LandingPage() {
               className="relative"
               style={{ rotateX: windowTilt, y: windowLift, transformStyle: 'preserve-3d' }}
             >
-              <DeskMockup />
+              <div className="sm:hidden"><PhoneMockup /></div>
+              <div className="hidden sm:block"><DeskMockup /></div>
 
               {/* Floating cards hang off the window's edges without covering the
                   row endings, and only at widths where they have room to. Each
                   layer rides the scroll at its own speed. */}
-              <motion.div className="hidden xl:block absolute -left-40 top-10" style={{ y: farCardLift }} aria-hidden="true">
+              <motion.div className="hidden 2xl:block absolute -left-40 top-10" style={{ y: farCardLift }} aria-hidden="true">
               <motion.div
                 className="w-44 bg-white rounded-2xl border border-ninja-border p-4 -rotate-3"
                 style={{ boxShadow: '0 18px 44px rgb(9 30 66 / 0.18)' }}
@@ -365,7 +450,7 @@ export default function LandingPage() {
               </motion.div>
               </motion.div>
 
-              <motion.div className="hidden xl:block absolute -right-44 top-20" style={{ y: nearCardLift }} aria-hidden="true">
+              <motion.div className="hidden 2xl:block absolute -right-44 top-20" style={{ y: nearCardLift }} aria-hidden="true">
               <motion.div
                 className="w-48 bg-white rounded-2xl border border-ninja-border p-4 rotate-2"
                 style={{ boxShadow: '0 18px 44px rgb(9 30 66 / 0.18)' }}
