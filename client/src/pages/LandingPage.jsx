@@ -126,10 +126,10 @@ function GetStarted({ onClick, tone = 'white' }) {
       onClick={onClick}
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.97 }}
-      className={`font-ninja font-bold text-lg px-12 py-4 rounded-2xl w-full sm:w-auto ${
+      className={`font-ninja font-bold text-lg px-12 py-4 rounded-2xl ${
         solid ? 'bg-ninja-blue text-white' : 'bg-white text-ninja-blue'
       }`}
-      style={{ boxShadow: solid ? '0 12px 36px rgb(0 106 221 / 0.30)' : '0 12px 36px rgb(9 30 66 / 0.28)' }}
+      style={{ boxShadow: solid ? '0 10px 26px rgb(0 106 221 / 0.22)' : '0 12px 36px rgb(9 30 66 / 0.28)' }}
     >
       <span className="flex items-center justify-center gap-2.5">
         Get Started
@@ -269,10 +269,11 @@ export default function LandingPage() {
           </motion.div>
 
           <motion.div
-            className="sm:hidden relative z-10 px-5 pt-14"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="sm:hidden relative z-10 px-5 pt-9 flex justify-center"
+            initial={still ? false : { opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
           >
             <GetStarted onClick={handleSignIn} tone="solid" />
           </motion.div>
