@@ -104,8 +104,8 @@ function StickerVignette() {
 const FEATURES = [
   {
     art: CheckInVignette,
-    title: 'Check in and keep track',
-    blurb: 'Attendance takes itself at the desk, so instructors can see who is on the floor and keep track of how each student is progressing.',
+    title: 'Pick up where they left off',
+    blurb: 'Instructors open a ninja and see the last session logged, what comes next, and any special instructions on file.',
   },
   {
     art: BeltLadderVignette,
@@ -119,7 +119,30 @@ const FEATURES = [
   },
 ];
 
-const CHART_BARS = [34, 52, 40, 68, 58, 82, 64];
+function GetStarted({ onClick, tone = 'white' }) {
+  const solid = tone === 'solid';
+  return (
+    <motion.button
+      onClick={onClick}
+      whileHover={{ scale: 1.03 }}
+      whileTap={{ scale: 0.97 }}
+      className={`font-ninja font-bold text-lg px-12 py-4 rounded-2xl w-full sm:w-auto ${
+        solid ? 'bg-ninja-blue text-white' : 'bg-white text-ninja-blue'
+      }`}
+      style={{ boxShadow: solid ? '0 12px 36px rgb(0 106 221 / 0.30)' : '0 12px 36px rgb(9 30 66 / 0.28)' }}
+    >
+      <span className="flex items-center justify-center gap-2.5">
+        Get Started
+        <motion.span
+          animate={{ x: [0, 5, 0] }}
+          transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          →
+        </motion.span>
+      </span>
+    </motion.button>
+  );
+}
 
 export default function LandingPage() {
   const { user, loading } = useAuth();
@@ -142,15 +165,11 @@ export default function LandingPage() {
 
   // ── Scroll-linked 3D ─────────────────────────────────────────────────
   // The product window loads leaning back in perspective and stands up as
-  // the visitor scrolls, while the floating cards ride the scroll at
-  // different speeds. The speed differences are what make the group read
-  // as layers in space instead of a flat picture.
+  // the visitor scrolls, rising a little as it goes.
   const { scrollY } = useScroll();
   const still = useReducedMotion();
   const windowTilt  = useTransform(scrollY, [0, 300], still ? [0, 0] : [10, 0]);
   const windowLift  = useTransform(scrollY, [0, 600], still ? [0, 0] : [0, -70]);
-  const farCardLift = useTransform(scrollY, [0, 600], still ? [0, 0] : [0, -55]);
-  const nearCardLift = useTransform(scrollY, [0, 600], still ? [0, 0] : [0, -120]);
 
   if ((loading && maybeSignedIn) || user) {
     return (
@@ -171,7 +190,7 @@ export default function LandingPage() {
       <div>
         <section className="relative rounded-b-3xl sm:rounded-b-[40px]">
           {/* Background layer clips to the rounded shape; content may overflow it */}
-          <div className="absolute inset-x-0 top-0 bottom-32 sm:bottom-0 rounded-[inherit] overflow-hidden bg-ninja-blue">
+          <div className="absolute inset-x-0 top-0 bottom-56 sm:bottom-0 rounded-[inherit] overflow-hidden bg-ninja-blue">
             <div
               className="absolute inset-0"
               style={{
@@ -227,30 +246,14 @@ export default function LandingPage() {
             >
               Link check-ins, student progress, and operations tracker all together.
             </motion.p>
-            <motion.div variants={fadeUp} className="flex justify-center">
-              <motion.button
-                onClick={handleSignIn}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                className="bg-white text-ninja-blue font-ninja font-bold text-lg px-12 py-4 rounded-2xl w-full sm:w-auto"
-                style={{ boxShadow: '0 12px 36px rgb(9 30 66 / 0.28)' }}
-              >
-                <span className="flex items-center justify-center gap-2.5">
-                  Get Started
-                  <motion.span
-                    animate={{ x: [0, 5, 0] }}
-                    transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                  >
-                    →
-                  </motion.span>
-                </span>
-              </motion.button>
+            <motion.div variants={fadeUp} className="hidden sm:flex justify-center">
+              <GetStarted onClick={handleSignIn} />
             </motion.div>
           </motion.div>
 
           {/* Product window, rising out of the hero's bottom edge */}
           <motion.div
-            className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 mt-10 sm:mt-14 -mb-16 sm:-mb-36"
+            className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 mt-10 sm:mt-14 sm:-mb-36"
             style={{ perspective: 1200 }}
             initial={{ opacity: 0, y: 48 }}
             animate={{ opacity: 1, y: 0 }}
@@ -262,49 +265,16 @@ export default function LandingPage() {
             >
               <div className="sm:hidden"><PhoneMockup /></div>
               <div className="hidden sm:block"><DeskMockup /></div>
-
-              {/* Floating cards hang off the window's edges without covering the
-                  row endings, and only at widths where they have room to. Each
-                  layer rides the scroll at its own speed. */}
-              <motion.div className="hidden 2xl:block absolute -left-40 top-10" style={{ y: farCardLift }} aria-hidden="true">
-              <motion.div
-                className="w-44 bg-white rounded-2xl border border-ninja-border p-4 -rotate-3"
-                style={{ boxShadow: '0 18px 44px rgb(9 30 66 / 0.18)' }}
-                animate={{ y: [0, -7, 0] }}
-                transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <div className="text-[10px] font-extrabold tracking-widest text-ninja-muted mb-1">TODAY</div>
-                <div className="text-2xl font-black text-ninja-navy leading-none">23 check-ins</div>
-                <div className="flex items-end gap-1 h-9 mt-3">
-                  {CHART_BARS.map((h, i) => (
-                    <span
-                      key={i}
-                      className={`flex-1 rounded-sm ${i === 5 ? 'bg-ninja-blue' : 'bg-ninja-blue/20'}`}
-                      style={{ height: `${h}%` }}
-                    />
-                  ))}
-                </div>
-              </motion.div>
-              </motion.div>
-
-              <motion.div className="hidden 2xl:block absolute -right-44 top-20" style={{ y: nearCardLift }} aria-hidden="true">
-              <motion.div
-                className="w-48 bg-white rounded-2xl border border-ninja-border p-4 rotate-2"
-                style={{ boxShadow: '0 18px 44px rgb(9 30 66 / 0.18)' }}
-                animate={{ y: [0, -8, 0] }}
-                transition={{ duration: 5.2, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <img src="/belts/belt-yellow.svg" alt="" className="h-5" />
-                  <div className="text-xs font-extrabold text-ninja-navy">Belt progress</div>
-                </div>
-                <div className="text-[11px] text-ninja-muted font-semibold mb-2">7 of 9 lessons</div>
-                <div className="h-1.5 rounded-full bg-ninja-bg overflow-hidden">
-                  <div className="h-full w-[78%] rounded-full bg-ninja-blue" />
-                </div>
-              </motion.div>
-              </motion.div>
             </motion.div>
+          </motion.div>
+
+          <motion.div
+            className="sm:hidden relative z-10 px-5 pt-14"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <GetStarted onClick={handleSignIn} tone="solid" />
           </motion.div>
         </section>
       </div>
