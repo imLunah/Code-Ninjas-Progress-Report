@@ -110,7 +110,7 @@ const FEATURES = [
   {
     art: BeltLadderVignette,
     title: 'Belt and lesson progress',
-    blurb: 'Every lesson checked off moves a ninja up the ladder, so Senseis always know what comes next.',
+    blurb: 'Every lesson checked off moves a ninja up the ladder, so instructors always know what comes next.',
   },
   {
     art: StickerVignette,
